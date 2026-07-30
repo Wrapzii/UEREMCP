@@ -19,6 +19,12 @@
 			"TargetAllowList": [ "Editor" ]
 		},
 		{
+			"Name": "UeremcpNiagara",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
 			"Name": "UeremcpCore",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
@@ -49,7 +55,11 @@
 		{
 			"Name": "FileSandbox",
 			"Enabled": true
+		},
+		{
+			"Name": "Niagara",
+			"Enabled": true
 		}
 	]
 }
-
+

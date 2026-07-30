@@ -22,14 +22,13 @@ public class UeremcpCore : ModuleRules
 			"JsonUtilities",
 			"Projects",
 
+			// ADR-0003 envelope parse/serialize (WS-05). Reference Ping/Echo route here.
+			"UeremcpProtocol",
+
 			// Epic's tool-declaration layer. ADR-0002.
 			// [VERIFIED: $TR/ToolsetRegistry.uplugin — Editor module]
 			"ToolsetRegistry",
 		});
-
-		// UeremcpProtocol is registered in .uplugin and now links as its own module.
-		// Ping/Echo still use Private/UeremcpMinimalEnvelope.h until Core is rewired
-		// to FUeremcpEnvelope (see docs/proposals/ws-03-protocol-module-blocker.md).
 		//
 		// RB-03 q10: ToolsetRegistry Private headers are NOT on the public include path.
 		// [VERIFIED: ToolsetRegistry.Build.cs PublicIncludePaths empty]

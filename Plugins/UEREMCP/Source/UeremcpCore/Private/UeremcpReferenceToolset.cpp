@@ -1,91 +1,52 @@
 #include "UeremcpReferenceToolset.h"
 
-
-
-#include "UeremcpMinimalEnvelope.h"
-
-
+#include "UeremcpEnvelope.h"
 
 FString UUeremcpReferenceToolset::Ping()
-
 {
-
-	return Ueremcp::MinimalEnvelope::MakeResponse(
-
-		/*RequestId*/ FString(),
-
-		TEXT("no_change_required"),
-
-		FString::Printf(
-
-			TEXT("UEREMCP reference toolset alive, protocol %s."),
-
-			*Ueremcp::MinimalEnvelope::GetProtocolVersion()));
-
+	FUeremcpResponse Response;
+	Response.ProtocolVersion = FUeremcpEnvelope::ProtocolVersion();
+	Response.Status = TEXT("no_change_required");
+	Response.Summary = FString::Printf(
+		TEXT("UEREMCP reference toolset alive, protocol %s."),
+		*FUeremcpEnvelope::ProtocolVersion());
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = 0;
+	return FUeremcpEnvelope::SerializeResponse(Response);
 }
-
-
 
 FString UUeremcpReferenceToolset::Echo(const FString& RequestJson)
-
 {
-
-	Ueremcp::MinimalEnvelope::FParsedRequest Request;
-
+	FUeremcpRequest Request;
 	FString ParseError;
 
-
-
-	if (!Ueremcp::MinimalEnvelope::ParseRequest(RequestJson, Request, ParseError))
-
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
 	{
-
-		return Ueremcp::MinimalEnvelope::MakeRejection(
-
+		return FUeremcpEnvelope::MakeRejection(
 			FString(),
-
 			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
-
 	}
 
-
-
-	if (!Ueremcp::MinimalEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
-
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
 	{
-
-		return Ueremcp::MinimalEnvelope::MakeRejection(
-
+		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
-
 			FString::Printf(
-
 				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
-
 				*Request.ProtocolVersion,
-
-				*Ueremcp::MinimalEnvelope::GetProtocolVersion()));
-
+				*FUeremcpEnvelope::ProtocolVersion()));
 	}
 
-
-
-	return Ueremcp::MinimalEnvelope::MakeResponse(
-
-		Request.RequestId,
-
-		TEXT("no_change_required"),
-
-		FString::Printf(
-
-			TEXT("Echoed request for action '%s'. No editor state was touched."),
-
-			*Request.Action),
-
-		Request.Action,
-
-		Request.TargetAssetPath);
-
+	FUeremcpResponse Response;
+	Response.ProtocolVersion = FUeremcpEnvelope::ProtocolVersion();
+	Response.RequestId = Request.RequestId;
+	Response.Status = TEXT("no_change_required");
+	Response.Summary = FString::Printf(
+		TEXT("Echoed request for action '%s'. No editor state was touched."),
+		*Request.Action);
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = 0;
+	return FUeremcpEnvelope::SerializeResponse(Response);
 }
-
-
