@@ -1,0 +1,101 @@
+{
+  "$comment": "POC D batched plan shape with depends_on + $ref into create_spell. Material/Niagara ops are placeholders for WS-07/WS-08 handlers; create_spell specification is schema-valid.",
+  "protocol_version": "1.0",
+  "request_id": "poc-d-batched-fireball",
+  "action": "execute_plan",
+  "options": {
+    "dry_run": false,
+    "atomic": true,
+    "save": true,
+    "validate": true,
+    "rollback_on_failure": true
+  },
+  "specification": {
+    "transaction": {
+      "atomic": true,
+      "rollback_on_failure": true,
+      "compile_policy": "at_boundaries",
+      "validate_policy": "at_end"
+    },
+    "operations": [
+      {
+        "id": "core_material",
+        "action": "create_vfx_material",
+        "mode": "create_or_update",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/VFX/Materials/MI_Fireball_Core"
+        },
+        "specification": {
+          "purpose": "fireball_core",
+          "features": [
+            "radial_falloff",
+            "animated_noise",
+            "fresnel",
+            "dynamic_color",
+            "dynamic_intensity"
+          ]
+        }
+      },
+      {
+        "id": "projectile_fx",
+        "action": "create_niagara_effect",
+        "depends_on": ["core_material"],
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/VFX/Spells/NS_Fireball"
+        },
+        "specification": {
+          "name": "Fireball",
+          "effect_type": "projectile",
+          "components": ["core", "flame_shell", "sparks", "smoke", "ribbon_trail"],
+          "core_material": {
+            "$ref": "core_material.result.primary_asset"
+          },
+          "parameters": {
+            "primary_color": [1.0, 0.12, 0.01, 1.0],
+            "secondary_color": [1.0, 0.75, 0.05, 1.0],
+            "scale": 1.0,
+            "intensity": 8.0
+          }
+        }
+      },
+      {
+        "id": "spell",
+        "action": "create_spell",
+        "depends_on": ["projectile_fx"],
+        "mode": "create_or_update",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Abilities/DT_Abilities_UeremcpTests"
+        },
+        "specification": {
+          "name": "Fireball UEREMCP",
+          "row_name": "Fireball_Ueremcp",
+          "element": "Fire",
+          "element_color": [1.0, 0.12, 0.01, 1.0],
+          "delivery": {
+            "type": "projectile",
+            "speed": 2400,
+            "range": 3200,
+            "projectile_radius": 24
+          },
+          "impact": {
+            "damage": 45,
+            "aoe_radius": 175,
+            "status": "Burn",
+            "status_duration": 3
+          },
+          "presentation": {
+            "projectile_effect": {
+              "$ref": "projectile_fx.result.primary_asset"
+            }
+          },
+          "networking": {
+            "pattern": "B",
+            "authority": "server",
+            "cast_path": "AuthorityCastAbility"
+          }
+        }
+      }
+    ],
+    "on_failure": "rollback_all"
+  }
+}

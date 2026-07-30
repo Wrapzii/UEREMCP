@@ -17,10 +17,21 @@ not recreate Niagara or material primitives. The networking block declares the
 existing RE Pattern B contract; it does not generate RPCs or claim multi-client
 runtime proof.
 
-Current implementation boundary:
+## Fixtures
 
-- deterministic specification-to-row planning and static validation: implemented;
-- DataTable mutation/re-read/save: gated by the ADR-0010 single-mutator queue;
-- agent-facing registration: gated by adding `UeremcpGameplay` to
-  `UEREMCP.uplugin` (WS-03-owned path);
-- listen-server replication proof: WS-11/RB-14.
+| File | Purpose |
+|---|---|
+| `fixtures/poc_d_execute_plan_create_spell.json` | One-op `execute_plan` → `create_spell` (schema-valid) |
+| `fixtures/poc_d_batched_spell_plan.json` | Material → Niagara → `create_spell` with `depends_on` / `$ref` |
+| `golden/dry_run_preflight.response.json` | Honest dry-run envelope |
+
+## Implementation boundary (2026-07-30)
+
+- deterministic specification-to-row planning and Pattern B static checks: **implemented**
+- sandboxed DataTable upsert, save, re-read, persist/discard: **implemented** via
+  `FUeremcpAbilityTableMutator` under `FUeremcpMutatingDispatch`
+- `create_spell` registered with `FUeremcpPlanExecutor` for `execute_plan`: **implemented**
+- production `DT_Abilities` mutation: **prohibited** (scratch root only)
+- listen-server / multi-client replication proof: **WS-11 / RB-14** (not claimed here)
+- shared `schemas/examples/batch-fireball-ability.json` still drifts from this schema
+  (WS-01-owned); WS-09 fixtures are the conforming POC D payloads

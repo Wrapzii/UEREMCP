@@ -1,0 +1,66 @@
+{
+  "$comment": "POC D fixture owned by WS-09: one execute_plan that upserts an RE FREAbilityDef row via create_spell under /Game/__UeremcpTests/. Specification conforms to create_spell.schema.json. Shared schemas/examples/batch-fireball-ability.json remains drifted (WS-01) — see docs/proposals/ws-09-gameplay-runtime-gates.md.",
+  "protocol_version": "1.0",
+  "request_id": "poc-d-create-spell-row",
+  "action": "execute_plan",
+  "mode": "create_or_update",
+  "options": {
+    "dry_run": true,
+    "atomic": true,
+    "save": true,
+    "validate": true,
+    "rollback_on_failure": true
+  },
+  "specification": {
+    "transaction": {
+      "atomic": true,
+      "rollback_on_failure": true,
+      "compile_policy": "at_boundaries",
+      "validate_policy": "at_end"
+    },
+    "operations": [
+      {
+        "id": "spell",
+        "action": "create_spell",
+        "mode": "create_or_update",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Abilities/DT_Abilities_UeremcpTests"
+        },
+        "specification": {
+          "name": "Fireball UEREMCP",
+          "row_name": "Fireball_Ueremcp",
+          "element": "Fire",
+          "element_color": [1.0, 0.12, 0.01, 1.0],
+          "tier": "S",
+          "wheel": "Q",
+          "timing": {
+            "cooldown_sec": 1.25,
+            "stamina_cost": 15
+          },
+          "delivery": {
+            "type": "projectile",
+            "speed": 2400,
+            "range": 3200,
+            "projectile_radius": 24
+          },
+          "impact": {
+            "damage": 45,
+            "aoe_radius": 175,
+            "status": "Burn",
+            "status_duration": 3
+          },
+          "presentation": {
+            "projectile_effect": "/Game/__UeremcpTests/VFX/Spells/NS_Fireball",
+            "impact_effect": "/Game/__UeremcpTests/VFX/Spells/NS_Fireball_Impact"
+          },
+          "networking": {
+            "pattern": "B",
+            "authority": "server",
+            "cast_path": "AuthorityCastAbility"
+          }
+        }
+      }
+    ],
+    "on_failure": "rollback_all"
+  }
+}

@@ -206,10 +206,64 @@ class GameplaySpecificationTests(unittest.TestCase):
             "GetOnPostEngineInit().AddRaw",
             "RegisterToolsetClass(",
             "UUeremcpGameplayToolset::StaticClass()",
+            "FUeremcpGameplayPlanHandlers::Register(",
+            "FUeremcpGameplayPlanHandlers::Unregister()",
             "GetOnPostEngineInit().Remove(OnPostEngineInitHandle)",
             "UnregisterToolsetClass(",
         ):
             self.assertIn(evidence, module)
+
+    def test_create_spell_plan_handler_registers_with_executor(self) -> None:
+        header = (
+            GAMEPLAY_SOURCE_DIR / "Public" / "UeremcpGameplayPlanHandlers.h"
+        ).read_text(encoding="utf-8")
+        source = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpGameplayPlanHandlers.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("create_spell", header)
+        self.assertIn("FUeremcpPlanExecutor::RegisterAction(", source)
+        self.assertIn("UUeremcpGameplayToolset::CreateSpell(", source)
+        self.assertIn('RegisteredActionName()', source)
+        self.assertIn('return TEXT("create_spell")', source)
+
+    def test_poc_d_fixtures_validate_create_spell_specs(self) -> None:
+        fixtures_dir = GAMEPLAY_DIR / "fixtures"
+        spell_only = json.loads(
+            (fixtures_dir / "poc_d_execute_plan_create_spell.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual("execute_plan", spell_only["action"])
+        spell_spec = spell_only["specification"]["operations"][0]["specification"]
+        self.validator.validate(spell_spec)
+        self.assertTrue(
+            spell_only["specification"]["operations"][0]["target"][
+                "asset_path"
+            ].startswith("/Game/__UeremcpTests/")
+        )
+
+        batched = json.loads(
+            (fixtures_dir / "poc_d_batched_spell_plan.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual("execute_plan", batched["action"])
+        ops = batched["specification"]["operations"]
+        self.assertEqual(
+            ["core_material", "projectile_fx", "spell"],
+            [op["id"] for op in ops],
+        )
+        self.assertEqual(["core_material"], ops[1]["depends_on"])
+        self.assertEqual(["projectile_fx"], ops[2]["depends_on"])
+        self.assertEqual(
+            {"$ref": "core_material.result.primary_asset"},
+            ops[1]["specification"]["core_material"],
+        )
+        # Pre-resolution $ref objects are not create_spell.schema.json strings;
+        # validate the post-substitution shape agents must produce.
+        resolved = json.loads(json.dumps(ops[2]["specification"]))
+        resolved["presentation"]["projectile_effect"] = (
+            "/Game/__UeremcpTests/VFX/Spells/NS_Fireball"
+        )
+        self.validator.validate(resolved)
 
     def test_write_plan_captures_guarded_envelope_controls(self) -> None:
         header = (
