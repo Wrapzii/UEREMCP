@@ -42,3 +42,9 @@ UnrealEditor-Cmd.exe "<Project>.uproject" -unattended -NullRHI -nop4 ^
 Optional: `set UEREMCP_PROTOCOL_GOLDEN_ROOT=<abs path to Tests/golden>`
 
 Do **not** claim C++/Python parity until these AutomationTests pass.
+
+ADR-0009 registry tests live in
+`Private/Tests/UeremcpJobRegistryTests.cpp` with filter prefix
+`UEREMCP.Protocol.JobRegistry`. They cover lifecycle/poll metrics, cooperative
+cancellation, bounded capacity, concurrent polls, active/terminal expiration,
+and the initiating timeout envelope.

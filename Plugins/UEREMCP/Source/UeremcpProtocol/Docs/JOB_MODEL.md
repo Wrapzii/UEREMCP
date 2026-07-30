@@ -48,22 +48,39 @@ must report those N round trips on the terminal response (or each poll response
 increments; the sum across the goal is what `docs/WHY.md` measures). Never pretend
 a polled job was a single round trip.
 
-## Helpers in this module
+## Registry and helpers in this module
 
 | API | Role |
 |---|---|
 | `FUeremcpJob` | Typed `job` block |
 | `FUeremcpJobDefaults` | Timeout / poll defaults |
+| `FUeremcpJobRegistry` | Thread-safe process-local lifecycle, poll, cooperative cancel, progress, capacity, and expiry |
+| `FUeremcpJobSnapshot` | Non-polling state inspection for Core/tests |
+| `FUeremcpJobRegistry::GetTimeoutResponse` | Initiating-call response without counting a poll |
 | `FUeremcpEnvelope::MakeJobTimeoutResponse` | `partially_completed` + running job handle |
-| `FUeremcpEnvelope::ShouldDispatchInline` | `timeout_ms == 0` → inline |
+| `FUeremcpJobUtil::ShouldDispatchInline` | `timeout_ms == 0` → inline |
 | `FUeremcpIdempotencyStore` | Unrelated session store; jobs are a separate registry (WS-03/Core wiring) |
 
-Job **registry** execution (spawn, poll, cancel) is not owned here — protocol
-only defines envelope fields, defaults, and validation. Domain/Core tools must
-conform to these constraints.
+The registry owns lifecycle state, not domain execution. Domain services dispatch
+work, provide an honoring cancellation callback before advertising `cancellable:
+true`, update semantic progress, and submit the verified terminal envelope. Core
+registers `get_job_result` / cancellation actions and delegates to the registry.
+
+State transitions are bounded to:
+
+```text
+queued -> running -> completed | failed | cancelled
+queued ---------> failed | cancelled
+```
+
+Terminal states cannot reopen. Progress is `[0,1]` and monotonic. The default
+registry retains at most 1024 entries, keeps terminal results for five minutes,
+and converts active jobs older than 24 hours to an honest `failed` / `error`
+result before later cleanup.
 
 ## Explicitly out of scope here
 
 - Finalising batch `$ref` grammar (still blocked on WS-02)
 - Editing ADR-0009 or envelope schemas (WS-01)
-- Wiring MCP `CancelAsync` / ToolsetRegistry cancel (WS-04 / WS-03)
+- Registering public `AICallable` Core actions (WS-03)
+- Mapping MCP `CancelAsync` to Core cancellation (WS-04 / WS-03)
