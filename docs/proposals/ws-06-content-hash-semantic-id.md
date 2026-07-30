@@ -82,5 +82,5 @@ JSON (not DSL). Align with existing `CONTENT_HASH.md` / goldens; if Blueprint
 needs extra omit rules, extend docs + goldens — do not invent a second hash.
 `semantic_id` algorithm is WS-06 domain ownership at implement time.
 `revision == content_hash` for graph v1 is fine unless non-graph assets need a
-counter (ADR-0006). Also see open ContentHash C++ golden mismatch
-(`ws-01-protocol-golden-contenthash.md`).
+counter (ADR-0006). ContentHash C++/Python golden parity closed
+(`ws-01-protocol-golden-contenthash.md`, WS-05 `93bcfa2`).

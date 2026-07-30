@@ -49,3 +49,9 @@ WS-05 `0f91f91`: `Tests/golden/` + Python `test_golden.py` (38 OK) + C++
 `UEREMCP.Protocol.Golden*` AutomationTests over `FUeremcp*`. Parity **not
 claimed** until editor AutomationTests pass (`Docs/CPP_PARITY.md`). Blocked on
 same shipping load issue as C-3: `UeremcpProtocol.dll` must build/link (WS-03).
+
+### Update 2026-07-30 — C-2 closed for Protocol goldens
+
+`UEREMCP.Protocol.Golden` all Success on RE (shipping plugin)
+`[VERIFIED-RUNTIME: WS-05 93bcfa2]`. ContentHash matches frozen
+`sha256:61b087…`. Python 38/38. WS-14 may clear C-2 in the wave-1 review.

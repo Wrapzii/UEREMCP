@@ -31,6 +31,7 @@ Protocol edit does not regress the compile.
 ## Closed (WS-05 / WS-01)
 
 WS-05 adopted the four Protocol files on `ws-05-protocol` (`0bd25fb`); Python
-goldens 38/38. Merged to `ws-01-orch` (`199a9c1`). C++ Automation parity still
-not claimed until editor `UEREMCP.Protocol.Golden` runs.
+goldens 38/38. Merged to `ws-01-orch` (`199a9c1`). **C++ Automation parity
+claimed** after `93bcfa2` — `UEREMCP.Protocol.Golden` all Success on RE
+`[VERIFIED-RUNTIME]`.
 

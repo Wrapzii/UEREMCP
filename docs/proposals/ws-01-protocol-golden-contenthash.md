@@ -63,3 +63,15 @@ string**.
 writer that emits object keys via an explicitly sorted key list (same as Python),
 or otherwise guarantee sorted emit independent of `TMap` iteration. Then rebuild
 Protocol (Live Coding off) and re-run `UEREMCP.Protocol.Golden.ContentHash`.
+
+## Closed (WS-05 / WS-01) — 2026-07-30
+
+WS-05 `93bcfa2`: recursive sorted-key `WriteCanonical` + case-sensitive
+`LexLessCaseSensitive` for pin/key sorts (Python `sorted()`). Merged orch
+`f3ba89b`.
+
+`UEREMCP.Protocol.Golden` — ContentHash / Envelope / Ref / Topo **all Success**;
+hash `sha256:61b087813c3a04831b2367a813e7bef2c050c75f12cdf6dec08666fd7e407308`
+`[VERIFIED-RUNTIME: KeepUeremcp -NoProbe on RE]`. Python 38/38. **C++/Python
+parity claimed for these goldens.** WS-05: flip `Docs/CPP_PARITY.md` status
+accordingly.
