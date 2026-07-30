@@ -301,6 +301,40 @@ namespace UeremcpBlueprintReadGraphTest
 		}
 		return (*Graphs)[0]->AsObject();
 	}
+
+	static FString MakeSubmitPatchRequest(
+		const FString& RequestId,
+		const FString& AssetPath,
+		const FString& ExpectedRevision)
+	{
+		TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>();
+		Request->SetStringField(TEXT("protocol_version"), TEXT("1.0"));
+		Request->SetStringField(TEXT("request_id"), RequestId);
+		Request->SetStringField(TEXT("action"), TEXT("submit_graph"));
+		Request->SetStringField(TEXT("mode"), TEXT("patch"));
+		Request->SetStringField(TEXT("expected_revision"), ExpectedRevision);
+
+		TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
+		Target->SetStringField(TEXT("asset_path"), AssetPath);
+		Target->SetStringField(TEXT("graph_id"), TEXT("EventGraph"));
+		Request->SetObjectField(TEXT("target"), Target);
+
+		TSharedPtr<FJsonObject> Patch = MakeShared<FJsonObject>();
+		Patch->SetStringField(TEXT("base_revision"), ExpectedRevision);
+		TSharedPtr<FJsonObject> Op = MakeShared<FJsonObject>();
+		Op->SetStringField(TEXT("op"), TEXT("ensure_entry"));
+		Op->SetStringField(TEXT("entry_kind"), TEXT("event"));
+		Op->SetStringField(TEXT("name"), TEXT("EventBeginPlay"));
+		TArray<TSharedPtr<FJsonValue>> Ops;
+		Ops.Add(MakeShared<FJsonValueObject>(Op));
+		Patch->SetArrayField(TEXT("ops"), Ops);
+
+		TSharedPtr<FJsonObject> Specification = MakeShared<FJsonObject>();
+		Specification->SetStringField(TEXT("graph_id"), TEXT("EventGraph"));
+		Specification->SetObjectField(TEXT("patch"), Patch);
+		Request->SetObjectField(TEXT("specification"), Specification);
+		return SerializeObject(Request);
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -390,6 +424,10 @@ bool FUeremcpBlueprintReadGraphRoundTripTest::RunTest(const FString& Parameters)
 	TSharedPtr<FJsonObject> SummaryRoot;
 	if (ParseResponse(UUeremcpBlueprintToolset::ReadGraph(SummaryRequest), SummaryRoot, *this))
 	{
+		FString Summary;
+		TestTrue(TEXT("summary text present"), SummaryRoot->TryGetStringField(TEXT("summary"), Summary));
+		TestFalse(TEXT("summary does not claim replace is unimplemented"),
+			Summary.Contains(TEXT("replace not implemented"), ESearchCase::IgnoreCase));
 		FString SummaryRevision;
 		TestTrue(TEXT("summary revision present"),
 			SummaryRoot->TryGetStringField(TEXT("revision"), SummaryRevision));
@@ -454,6 +492,43 @@ bool FUeremcpBlueprintSubmitGraphValidationTest::RunTest(const FString& Paramete
 	FString NoOpRevision;
 	NoOpRoot->TryGetStringField(TEXT("revision"), NoOpRevision);
 	TestEqual(TEXT("no-op revision unchanged"), NoOpRevision, Revision);
+	const TSharedPtr<FJsonObject>* NoOpValidation = nullptr;
+	TestTrue(TEXT("no-op validation present"),
+		NoOpRoot->TryGetObjectField(TEXT("validation"), NoOpValidation)
+		&& NoOpValidation
+		&& NoOpValidation->IsValid());
+	bool bNoOpReread = true;
+	if (NoOpValidation && NoOpValidation->IsValid())
+	{
+		TestTrue(TEXT("no-op reread evidence present"),
+			(*NoOpValidation)->TryGetBoolField(TEXT("reread_after_write"), bNoOpReread));
+		TestFalse(TEXT("no-op performs no post-write reread"), bNoOpReread);
+	}
+
+	TSharedPtr<FJsonObject> RepeatedNoOpRoot;
+	const FString RepeatedNoOpRequest =
+		MakeSubmitReplaceRequest(TEXT("bp-submit-noop-repeat"), AssetPath, Graph, Revision);
+	if (!ParseResponse(UUeremcpBlueprintToolset::SubmitGraph(RepeatedNoOpRequest), RepeatedNoOpRoot, *this))
+	{
+		return false;
+	}
+	RepeatedNoOpRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("repeated identical replace remains idempotent"),
+		Status,
+		FString(TEXT("no_change_required")));
+	const TSharedPtr<FJsonObject>* RepeatedMetrics = nullptr;
+	TestTrue(TEXT("repeat metrics present"),
+		RepeatedNoOpRoot->TryGetObjectField(TEXT("metrics"), RepeatedMetrics)
+		&& RepeatedMetrics
+		&& RepeatedMetrics->IsValid());
+	double RepeatInternalOperations = -1.0;
+	if (RepeatedMetrics && RepeatedMetrics->IsValid())
+	{
+		TestTrue(TEXT("repeat internal_operations present"),
+			(*RepeatedMetrics)->TryGetNumberField(TEXT("internal_operations"), RepeatInternalOperations));
+		TestTrue(TEXT("repeat performs read-only comparison"),
+			RepeatInternalOperations >= 1.0);
+	}
 
 	TSharedPtr<FJsonObject> StaleRoot;
 	const FString StaleRequest = MakeSubmitReplaceRequest(
@@ -470,6 +545,71 @@ bool FUeremcpBlueprintSubmitGraphValidationTest::RunTest(const FString& Paramete
 	FString CurrentRevision;
 	StaleRoot->TryGetStringField(TEXT("revision"), CurrentRevision);
 	TestEqual(TEXT("conflict returns current revision"), CurrentRevision, Revision);
+	const TSharedPtr<FJsonObject>* StaleValidation = nullptr;
+	bool bStaleReread = true;
+	TestTrue(TEXT("stale conflict validation present"),
+		StaleRoot->TryGetObjectField(TEXT("validation"), StaleValidation)
+		&& StaleValidation
+		&& StaleValidation->IsValid());
+	if (StaleValidation && StaleValidation->IsValid())
+	{
+		TestTrue(TEXT("stale reread evidence present"),
+			(*StaleValidation)->TryGetBoolField(TEXT("reread_after_write"), bStaleReread));
+		TestFalse(TEXT("stale conflict performs no post-write reread"), bStaleReread);
+	}
+
+	TSharedPtr<FJsonObject> PatchRoot;
+	const FString PatchRequest = MakeSubmitPatchRequest(
+		TEXT("bp-submit-patch-rejected"),
+		AssetPath,
+		Revision);
+	if (!ParseResponse(UUeremcpBlueprintToolset::SubmitGraph(PatchRequest), PatchRoot, *this))
+	{
+		return false;
+	}
+	PatchRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("undefined patch contract rejected"), Status, FString(TEXT("rejected")));
+	const TSharedPtr<FJsonObject>* PatchDiagnostics = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* PatchItems = nullptr;
+	TestTrue(TEXT("patch diagnostic items present"),
+		PatchRoot->TryGetObjectField(TEXT("diagnostics"), PatchDiagnostics)
+		&& PatchDiagnostics
+		&& (*PatchDiagnostics)->TryGetArrayField(TEXT("items"), PatchItems)
+		&& PatchItems
+		&& PatchItems->Num() == 1);
+	if (PatchItems && PatchItems->Num() == 1)
+	{
+		FString DiagnosticCode;
+		TestTrue(TEXT("patch diagnostic code present"),
+			(*PatchItems)[0]->AsObject()->TryGetStringField(TEXT("code"), DiagnosticCode));
+		TestEqual(TEXT("patch diagnostic code stable"),
+			DiagnosticCode,
+			FString(TEXT("blueprint.patch_contract_undefined")));
+	}
+	const TSharedPtr<FJsonObject>* PatchMetrics = nullptr;
+	double PatchInternalOperations = -1.0;
+	TestTrue(TEXT("patch metrics present"),
+		PatchRoot->TryGetObjectField(TEXT("metrics"), PatchMetrics)
+		&& PatchMetrics
+		&& PatchMetrics->IsValid());
+	if (PatchMetrics && PatchMetrics->IsValid())
+	{
+		TestTrue(TEXT("patch internal_operations present"),
+			(*PatchMetrics)->TryGetNumberField(TEXT("internal_operations"), PatchInternalOperations));
+		TestEqual(TEXT("patch rejected before editor operations"), PatchInternalOperations, 0.0);
+	}
+	const TSharedPtr<FJsonObject>* PatchValidation = nullptr;
+	bool bPatchReread = true;
+	TestTrue(TEXT("patch validation present"),
+		PatchRoot->TryGetObjectField(TEXT("validation"), PatchValidation)
+		&& PatchValidation
+		&& PatchValidation->IsValid());
+	if (PatchValidation && PatchValidation->IsValid())
+	{
+		TestTrue(TEXT("patch reread evidence present"),
+			(*PatchValidation)->TryGetBoolField(TEXT("reread_after_write"), bPatchReread));
+		TestFalse(TEXT("patch rejection performs no post-write reread"), bPatchReread);
+	}
 
 	TSharedPtr<FJsonObject> ChangedGraph = MakeShared<FJsonObject>();
 	ChangedGraph->Values = Graph->Values;
@@ -503,6 +643,18 @@ bool FUeremcpBlueprintSubmitGraphValidationTest::RunTest(const FString& Paramete
 	FString DryRunRevision;
 	DryRunRoot->TryGetStringField(TEXT("revision"), DryRunRevision);
 	TestEqual(TEXT("dry_run leaves revision unchanged"), DryRunRevision, Revision);
+	const TSharedPtr<FJsonObject>* DryRunValidation = nullptr;
+	bool bDryRunReread = true;
+	TestTrue(TEXT("dry_run validation present"),
+		DryRunRoot->TryGetObjectField(TEXT("validation"), DryRunValidation)
+		&& DryRunValidation
+		&& DryRunValidation->IsValid());
+	if (DryRunValidation && DryRunValidation->IsValid())
+	{
+		TestTrue(TEXT("dry_run reread evidence present"),
+			(*DryRunValidation)->TryGetBoolField(TEXT("reread_after_write"), bDryRunReread));
+		TestFalse(TEXT("dry_run performs no post-write reread"), bDryRunReread);
+	}
 	return true;
 }
 

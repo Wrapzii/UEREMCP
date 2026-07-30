@@ -136,6 +136,9 @@ namespace UeremcpBlueprintToolset
 			SkippedChecks.Add(MakeShared<FJsonValueString>(Check));
 		}
 		Validation->SetArrayField(TEXT("checks_skipped"), SkippedChecks);
+		Validation->SetBoolField(
+			TEXT("reread_after_write"),
+			Performed.Contains(TEXT("blueprint.reread_after_write")));
 		Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
 	}
 
@@ -170,6 +173,34 @@ namespace UeremcpBlueprintToolset
 		}
 
 		AttachGraphDiagnostics(Response, WriteResult.RereadGraph);
+	}
+
+	static void AttachDiagnostic(
+		FUeremcpResponse& Response,
+		const FString& Severity,
+		const FString& Code,
+		const FString& Message,
+		const FString& Remediation)
+	{
+		if (!Response.ExtraFields.IsValid())
+		{
+			Response.ExtraFields = MakeShared<FJsonObject>();
+		}
+
+		TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
+		Item->SetStringField(TEXT("severity"), Severity);
+		Item->SetStringField(TEXT("code"), Code);
+		Item->SetStringField(TEXT("message"), Message);
+		if (!Remediation.IsEmpty())
+		{
+			Item->SetStringField(TEXT("remediation"), Remediation);
+		}
+
+		TArray<TSharedPtr<FJsonValue>> Items;
+		Items.Add(MakeShared<FJsonValueObject>(Item));
+		TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
+		Diagnostics->SetArrayField(TEXT("items"), Items);
+		Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
 	}
 }
 
@@ -277,7 +308,7 @@ FString UUeremcpBlueprintToolset::ReadGraph(const FString& RequestJson)
 	Response.RequestId = Request.RequestId;
 	Response.Status = TEXT("no_change_required");
 	Response.Summary = FString::Printf(
-		TEXT("Read Blueprint graph from '%s' (revision %s). Round-trip replace not implemented (P2)."),
+		TEXT("Read Blueprint graph from '%s' (revision %s)."),
 		*Request.TargetAssetPath,
 		*ReadResult.ContentHash);
 	Response.UnderstoodAction = Request.Action;
@@ -339,14 +370,44 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 	Response.PrimaryAsset = Request.TargetAssetPath;
 	Response.Metrics.McpRoundTrips = 1;
 
+	if (Request.Mode.Equals(TEXT("patch"), ESearchCase::CaseSensitive))
+	{
+		Response.Status = TEXT("rejected");
+		Response.Summary =
+			TEXT("submit_graph mode 'patch' is unavailable because the Blueprint domain schema does not yet define typed semantic operation payloads; no mutation was performed.");
+		Response.CapabilityNotes = {
+			TEXT("submit_graph.patch_contract_undefined"),
+			TEXT("submit_graph.replace_supported"),
+			TEXT("submit_graph.no_mutation"),
+		};
+		AttachDiagnostic(
+			Response,
+			TEXT("error"),
+			TEXT("blueprint.patch_contract_undefined"),
+			TEXT("ADR-0004 names semantic patching, but submit_graph.schema.json currently constrains only operation names and does not define their required operands or verification semantics."),
+			TEXT("Submit a complete graph with mode=replace, or wait for an accepted typed Blueprint patch specification."));
+		AttachSubmitValidation(
+			Response,
+			false,
+			{TEXT("blueprint.submit_mode_dispatch")},
+			{
+				TEXT("blueprint.current_graph_read"),
+				TEXT("blueprint.expected_revision_compare"),
+				TEXT("blueprint.graph_write"),
+				TEXT("blueprint.compile"),
+				TEXT("blueprint.reread_after_write"),
+			});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
 	if (!Request.Mode.Equals(TEXT("replace"), ESearchCase::CaseSensitive))
 	{
 		Response.Status = TEXT("rejected");
 		Response.Summary = FString::Printf(
-			TEXT("submit_graph mode '%s' is not implemented; the current P2 slice supports replace on scratch assets only."),
+			TEXT("submit_graph mode '%s' is unsupported; the current Blueprint implementation supports replace on scratch assets only."),
 			*Request.Mode);
 		Response.CapabilityNotes = {
-			TEXT("submit_graph.patch_not_implemented"),
+			TEXT("submit_graph.unsupported_mode"),
 		};
 		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
