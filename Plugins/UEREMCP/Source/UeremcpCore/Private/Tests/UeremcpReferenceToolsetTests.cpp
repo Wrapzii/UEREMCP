@@ -190,6 +190,31 @@ bool FUeremcpReferenceToolsetEchoTest::RunTest(const FString& Parameters)
 
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpReferenceToolsetExecutePlanTest,
+	"UeremcpCore.ReferenceToolset.ExecutePlan",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpReferenceToolsetExecutePlanTest::RunTest(const FString& Parameters)
+{
+	const FString Json = UUeremcpReferenceToolset::ExecutePlan(TEXT("not-json"));
+
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(
+		TEXT("ExecutePlan delegates malformed input to a parseable rejection"),
+		FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	if (!Root.IsValid())
+	{
+		return false;
+	}
+
+	FString Status;
+	Root->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("malformed execute_plan request is rejected"), Status, FString(TEXT("rejected")));
+	return true;
+}
+
 
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -283,6 +308,7 @@ bool FUeremcpReferenceToolsetRegisterAndSchemaTest::RunTest(const FString& Param
 	TestTrue(TEXT("tools array"), SchemaRoot->TryGetArrayField(TEXT("tools"), Tools) && Tools);
 
 	bool bFoundEchoParam = false;
+	bool bFoundExecutePlanParam = false;
 
 	if (Tools)
 
@@ -306,7 +332,9 @@ bool FUeremcpReferenceToolsetRegisterAndSchemaTest::RunTest(const FString& Param
 
 			ToolObj->TryGetStringField(TEXT("name"), ToolName);
 
-			if (!ToolName.Contains(TEXT("Echo")))
+			const bool bIsEcho = ToolName.Contains(TEXT("Echo"));
+			const bool bIsExecutePlan = ToolName.Contains(TEXT("ExecutePlan"));
+			if (!bIsEcho && !bIsExecutePlan)
 
 			{
 
@@ -346,7 +374,8 @@ bool FUeremcpReferenceToolsetRegisterAndSchemaTest::RunTest(const FString& Param
 
 			{
 
-				bFoundEchoParam = true;
+				bFoundEchoParam |= bIsEcho;
+				bFoundExecutePlanParam |= bIsExecutePlan;
 
 				FString ParamType;
 
@@ -391,6 +420,7 @@ bool FUeremcpReferenceToolsetRegisterAndSchemaTest::RunTest(const FString& Param
 	}
 
 	TestTrue(TEXT("found Echo requestJson property schema"), bFoundEchoParam);
+	TestTrue(TEXT("found ExecutePlan requestJson property schema"), bFoundExecutePlanParam);
 
 	return true;
 

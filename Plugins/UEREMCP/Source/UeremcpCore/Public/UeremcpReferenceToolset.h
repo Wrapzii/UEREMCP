@@ -1,8 +1,9 @@
 // UEREMCP — reference toolset proving ADR-0002.
 //
-// Two tools:
+// Agent-facing tools:
 //   Ping : no args — registration / reachability
 //   Echo : one FString request envelope — ADR-0003 shape + RB-03 q6 schema capture
+//   ExecutePlan : one complete plan request — ADR-0008 execution path
 //
 // Reference pattern: UAgentSkillToolset
 // [VERIFIED: $TR/Source/ToolsetRegistry/Public/ToolsetRegistry/AgentSkill.h]
@@ -50,6 +51,17 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
 	static FString Echo(const FString& RequestJson);
+
+	/**
+	 * Execute a complete multi-operation plan (action=execute_plan).
+	 * Delegates to FUeremcpPlanActions — no additional parsing.
+	 *
+	 * @param RequestJson Request envelope JSON (schemas/batch/plan.schema.json
+	 *        as specification).
+	 * @return Response envelope JSON with consolidated result + change manifest.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
+	static FString ExecutePlan(const FString& RequestJson);
 
 	/**
 	 * Poll a long-running job by id (action=get_job_result).
