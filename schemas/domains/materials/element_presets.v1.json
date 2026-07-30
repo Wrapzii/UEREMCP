@@ -1,6 +1,6 @@
 {
-  "$comment": "WS-08 reference data: element → default MI parameters. Mirrored in UeremcpMaterialElementPresets.cpp. Tested by test_element_presets.py.",
-  "version": 1,
+  "$comment": "WS-08 reference data: element → default MI parameters + purpose feature defaults. Mirrored in C++. Tested by test_element_presets.py and test_features.py.",
+  "version": 2,
   "elements": {
     "fire": {
       "particle_color": [1.0, 0.35, 0.05, 1.0],
@@ -48,11 +48,39 @@
       "depth_fade": 130.0
     }
   },
-  "purpose_master_map": {
-    "elemental_projectile_core": "M_Ueremcp_VFX_Sprite_Additive",
-    "fireball_core": "M_Ueremcp_VFX_Sprite_Additive",
-    "elemental_projectile_trail": "M_Ueremcp_VFX_Ribbon",
-    "fireball_ribbon_trail": "M_Ueremcp_VFX_Ribbon"
+  "purpose_default_features": {
+    "elemental_projectile_core": [
+      "radial_falloff",
+      "animated_noise",
+      "fresnel",
+      "dynamic_color",
+      "dynamic_intensity"
+    ],
+    "fireball_core": [
+      "radial_falloff",
+      "animated_noise",
+      "fresnel",
+      "dynamic_color",
+      "dynamic_intensity"
+    ],
+    "elemental_projectile_trail": [
+      "panning_textures",
+      "erosion",
+      "depth_fade",
+      "dynamic_color"
+    ],
+    "fireball_ribbon_trail": [
+      "panning_textures",
+      "erosion",
+      "depth_fade",
+      "dynamic_color"
+    ]
+  },
+  "purpose_master_base": {
+    "elemental_projectile_core": "M_Ueremcp_ProjCore",
+    "fireball_core": "M_Ueremcp_ProjCore",
+    "elemental_projectile_trail": "M_Ueremcp_ProjTrail",
+    "fireball_ribbon_trail": "M_Ueremcp_ProjTrail"
   },
   "master_folder": "/Game/__UeremcpTests/Materials/Masters"
 }

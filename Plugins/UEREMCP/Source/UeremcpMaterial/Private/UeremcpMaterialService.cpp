@@ -13,6 +13,7 @@
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialCapabilityNotes.h"
 #include "UeremcpMaterialElementPresets.h"
+#include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialMasterBuilder.h"
 #include "UeremcpMaterialPaths.h"
 
@@ -71,7 +72,9 @@ namespace
 			Instance, FName(TEXT("SoftEdge")), Params.SoftEdge);
 		UMaterialEditingLibrary::SetMaterialInstanceScalarParameterValue(
 			Instance, FName(TEXT("DepthFade")), Params.DepthFade);
-		InOutOps += 7;
+		UMaterialEditingLibrary::SetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("DissolveAmount")), Params.DissolveAmount);
+		InOutOps += 8;
 		return true;
 	}
 
@@ -151,13 +154,19 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	FString Purpose;
 	FString Element;
 	TArray<FString> Modifiers;
+	TArray<FString> RequestedFeatures;
 	const TSharedPtr<FJsonObject> Spec = Request.Specification;
 	if (Spec.IsValid())
 	{
 		Spec->TryGetStringField(TEXT("purpose"), Purpose);
 		Spec->TryGetStringField(TEXT("element"), Element);
 		ParseModifiers(Spec, Modifiers);
+		UeremcpMaterialFeatures::ParseFeaturesFromSpec(Spec, RequestedFeatures);
 	}
+
+	const TArray<FString> Features =
+		UeremcpMaterialFeatures::ResolveFeaturesForPurpose(Purpose, RequestedFeatures);
+	const bool bTrailPurpose = UeremcpMaterialFeatures::IsTrailPurpose(Purpose);
 
 	if (Purpose.IsEmpty())
 	{
@@ -204,9 +213,21 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.InterpretationNotes.Add(TEXT("Merged specification.parameter_overrides."));
 	}
 
-	const FString MasterPath = UeremcpMaterialElementPresets::ResolveMasterPackagePath(Purpose);
+	const FString MasterPath = UeremcpMaterialFeatures::ResolveMasterPackagePath(Purpose, Features);
 	Result.InterpretationNotes.Add(
-		FString::Printf(TEXT("purpose '%s' → master '%s'."), *Purpose, *MasterPath));
+		FString::Printf(
+			TEXT("purpose '%s' → master '%s' (features: %s)."),
+			*Purpose,
+			*MasterPath,
+			*FString::Join(Features, TEXT(", "))));
+
+	const TArray<FString> UnimplementedFeatures =
+		UeremcpMaterialFeatures::FindUnimplementedFeatures(Features);
+	for (const FString& Unimplemented : UnimplementedFeatures)
+	{
+		Result.CapabilityNotes.Add(
+			FString::Printf(TEXT("feature '%s' is not yet implemented in master graph wiring."), *Unimplemented));
+	}
 
 	FUeremcpAssetRef MasterDep;
 	MasterDep.AssetPath = MasterPath;
@@ -219,19 +240,38 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.bSuccess = true;
 		Result.Status = TEXT("no_change_required");
 		Result.Summary = FString::Printf(
-			TEXT("dry_run: would create/update MI at '%s' from master '%s' (element='%s')."),
+			TEXT("dry_run: would create/update MI at '%s' from master '%s' (element='%s', features=[%s])."),
 			*Request.TargetAssetPath,
 			*MasterPath,
-			Element.IsEmpty() ? TEXT("(unset)") : *Element);
+			Element.IsEmpty() ? TEXT("(unset)") : *Element,
+			*FString::Join(Features, TEXT(", ")));
 		Result.PrimaryAsset = Request.TargetAssetPath;
 		return Result;
 	}
 
 	FScopedTransaction Transaction(NSLOCTEXT("UeremcpMaterial", "CreateVfxMaterial", "UEREMCP create_vfx_material"));
 
+	FUeremcpMaterialMasterBuildRequest MasterRequest;
+	MasterRequest.MasterPackagePath = MasterPath;
+	MasterRequest.Features = Features;
+	MasterRequest.bTrailPurpose = bTrailPurpose;
+
 	const FUeremcpMaterialMasterBuildResult MasterResult =
-		UeremcpMaterialMasterBuilder::EnsureMasterMaterial(MasterPath);
+		UeremcpMaterialMasterBuilder::EnsureMasterMaterial(MasterRequest);
 	Result.InternalOperations += MasterResult.InternalOperations;
+
+	if (!MasterResult.WiredFeatures.IsEmpty())
+	{
+		Result.InterpretationNotes.Add(
+			FString::Printf(
+				TEXT("Master wired features: %s"),
+				*FString::Join(MasterResult.WiredFeatures, TEXT(", "))));
+	}
+	for (const FString& Skipped : MasterResult.SkippedFeatures)
+	{
+		Result.CapabilityNotes.Add(
+			FString::Printf(TEXT("Skipped unimplemented feature token '%s' on master build."), *Skipped));
+	}
 
 	if (!MasterResult.bSuccess)
 	{
@@ -250,7 +290,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		CreatedMaster.AssetClass = TEXT("Material");
 		CreatedMaster.Role = TEXT("master_template");
 		Result.CreatedAssets.Add(CreatedMaster);
-		Result.InterpretationNotes.Add(TEXT("Created minimal VFX master via MaterialEditingLibrary (MaterialTools-equivalent substrate)."));
+		Result.InterpretationNotes.Add(TEXT("Created feature-driven VFX master via MaterialEditingLibrary (MaterialTools-equivalent substrate)."));
 	}
 
 	UEditorAssetSubsystem* AssetSubsystem = GetEditorAssetSubsystem();
@@ -364,13 +404,22 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	Result.PrimaryAsset = Request.TargetAssetPath;
 	Result.bSuccess = true;
 	Result.Status = bCreatedInstance ? TEXT("created_and_validated") : TEXT("modified_and_validated");
+	if (UnimplementedFeatures.Num() > 0)
+	{
+		if (bCreatedInstance)
+		{
+			Result.Status = TEXT("created_with_warnings");
+		}
+		Result.CapabilityNotes.Add(TEXT("One or more requested feature tokens are not implemented; see capability_notes."));
+	}
 	Result.Summary = FString::Printf(
-		TEXT("create_vfx_material %s '%s' from master '%s' (purpose='%s', element='%s'); parameters applied, parent recompiled, re-read verified."),
+		TEXT("create_vfx_material %s '%s' from master '%s' (purpose='%s', element='%s', features=[%s]); parameters applied, parent recompiled, re-read verified."),
 		bCreatedInstance ? TEXT("created") : TEXT("updated"),
 		*Request.TargetAssetPath,
 		*MasterPath,
 		*Purpose,
-		Element.IsEmpty() ? TEXT("(unset)") : *Element);
+		Element.IsEmpty() ? TEXT("(unset)") : *Element,
+		*FString::Join(Features, TEXT(", ")));
 
 	FUeremcpAssetRef InstanceRef;
 	InstanceRef.AssetPath = Request.TargetAssetPath;

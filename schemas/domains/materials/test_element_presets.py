@@ -19,6 +19,10 @@ PRESETS_CPP = (
     REPO_ROOT
     / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialElementPresets.cpp"
 )
+FEATURES_CPP = (
+    REPO_ROOT
+    / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialFeatures.cpp"
+)
 
 
 class ElementPresetParityTests(unittest.TestCase):
@@ -31,10 +35,11 @@ class ElementPresetParityTests(unittest.TestCase):
         for element in ("fire", "water", "wind", "earth", "ice"):
             self.assertIn(element, self.data["elements"])
 
-    def test_purpose_master_map_matches_cpp(self) -> None:
-        for purpose, master in self.data["purpose_master_map"].items():
-            self.assertIn(purpose, self.cpp_text)
-            self.assertIn(master, self.cpp_text)
+    def test_purpose_master_base_matches_cpp(self) -> None:
+        features_cpp = FEATURES_CPP.read_text(encoding="utf-8")
+        for purpose, master in self.data["purpose_master_base"].items():
+            self.assertIn(purpose, features_cpp)
+            self.assertIn(master, features_cpp)
 
     def test_fire_defaults_present_in_cpp(self) -> None:
         fire = self.data["elements"]["fire"]

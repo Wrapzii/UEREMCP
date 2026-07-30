@@ -3,6 +3,7 @@
 #include "UeremcpMaterialElementPresets.h"
 
 #include "Dom/JsonObject.h"
+#include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialPaths.h"
 
 namespace
@@ -43,24 +44,14 @@ namespace
 
 FString UeremcpMaterialElementPresets::ResolveMasterAssetName(const FString& Purpose)
 {
-	if (Purpose.Equals(TEXT("elemental_projectile_trail"), ESearchCase::CaseSensitive) ||
-		Purpose.Equals(TEXT("fireball_ribbon_trail"), ESearchCase::CaseSensitive))
-	{
-		return TEXT("M_Ueremcp_VFX_Ribbon");
-	}
-	if (Purpose.Equals(TEXT("elemental_projectile_core"), ESearchCase::CaseSensitive) ||
-		Purpose.Equals(TEXT("fireball_core"), ESearchCase::CaseSensitive))
-	{
-		return TEXT("M_Ueremcp_VFX_Sprite_Additive");
-	}
-	return TEXT("M_Ueremcp_VFX_Sprite_Additive");
+	return UeremcpMaterialFeatures::MasterBaseAssetName(Purpose);
 }
 
-FString UeremcpMaterialElementPresets::ResolveMasterPackagePath(const FString& Purpose)
+FString UeremcpMaterialElementPresets::ResolveMasterPackagePath(
+	const FString& Purpose,
+	const TArray<FString>& Features)
 {
-	return UeremcpMaterialPaths::JoinPackagePath(
-		UeremcpMaterialPaths::MastersFolder,
-		ResolveMasterAssetName(Purpose));
+	return UeremcpMaterialFeatures::ResolveMasterPackagePath(Purpose, Features);
 }
 
 bool UeremcpMaterialElementPresets::GetElementDefaults(const FString& Element, FUeremcpMaterialParameterSet& OutPreset)
@@ -181,5 +172,9 @@ void UeremcpMaterialElementPresets::MergeParameterOverrides(
 	if (Overrides->TryGetNumberField(TEXT("DepthFade"), Number))
 	{
 		InOutPreset.DepthFade = static_cast<float>(Number);
+	}
+	if (Overrides->TryGetNumberField(TEXT("DissolveAmount"), Number))
+	{
+		InOutPreset.DissolveAmount = static_cast<float>(Number);
 	}
 }

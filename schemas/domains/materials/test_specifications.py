@@ -36,7 +36,7 @@ EXPECTED_LOSSY_AREAS = frozenset({
 })
 
 EXPECTED_CAPABILITY_SNIPPETS = frozenset({
-    "Minimal master graph",
+    "feature_graph_v1",
     "textures.generate",
 })
 

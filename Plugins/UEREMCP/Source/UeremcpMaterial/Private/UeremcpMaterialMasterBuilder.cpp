@@ -6,24 +6,16 @@
 #include "Editor.h"
 #include "Factories/MaterialFactoryNew.h"
 #include "IAssetTools.h"
-#include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
-#include "Materials/MaterialExpressionMultiply.h"
-#include "Materials/MaterialExpressionScalarParameter.h"
-#include "Materials/MaterialExpressionVectorParameter.h"
-#include "Misc/PackageName.h"
 #include "Subsystems/EditorAssetSubsystem.h"
+#include "UeremcpMaterialFeatureGraph.h"
 #include "UeremcpMaterialPaths.h"
 
 namespace
 {
 	static UEditorAssetSubsystem* GetEditorAssetSubsystem()
 	{
-		if (!GEditor)
-		{
-			return nullptr;
-		}
-		return GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+		return GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
 	}
 
 	static UMaterial* LoadMaterialAtPath(const FString& PackagePath)
@@ -33,8 +25,7 @@ namespace
 		{
 			return nullptr;
 		}
-		UObject* Asset = AssetSubsystem->LoadAsset(PackagePath);
-		return Cast<UMaterial>(Asset);
+		return Cast<UMaterial>(AssetSubsystem->LoadAsset(PackagePath));
 	}
 
 	static bool SavePackagePath(const FString& PackagePath, int32& InOutOps)
@@ -66,174 +57,18 @@ namespace
 		if (!Material)
 		{
 			OutError = TEXT("AssetTools.CreateAsset did not return UMaterial.");
-			return nullptr;
 		}
 		return Material;
 	}
-
-	static bool BuildMinimalVfxMasterGraph(UMaterial* Material, FString& OutError, int32& InOutOps)
-	{
-		if (!Material)
-		{
-			OutError = TEXT("Null material.");
-			return false;
-		}
-
-		Material->BlendMode = BLEND_Additive;
-		Material->TwoSided = true;
-		Material->SetShadingModel(MSM_Unlit);
-
-		UMaterialExpressionVectorParameter* ColorParam = Cast<UMaterialExpressionVectorParameter>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionVectorParameter::StaticClass(),
-				-500,
-				0));
-		if (!ColorParam)
-		{
-			OutError = TEXT("Failed to create ParticleColor expression.");
-			return false;
-		}
-		ColorParam->ParameterName = FName(TEXT("ParticleColor"));
-		ColorParam->DefaultValue = FLinearColor::White;
-		++InOutOps;
-
-		UMaterialExpressionScalarParameter* EmissiveScale = Cast<UMaterialExpressionScalarParameter>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionScalarParameter::StaticClass(),
-				-500,
-				120));
-		if (!EmissiveScale)
-		{
-			OutError = TEXT("Failed to create EmissiveScale expression.");
-			return false;
-		}
-		EmissiveScale->ParameterName = FName(TEXT("EmissiveScale"));
-		EmissiveScale->DefaultValue = 1.0f;
-		++InOutOps;
-
-		UMaterialExpressionMultiply* Multiply = Cast<UMaterialExpressionMultiply>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionMultiply::StaticClass(),
-				-200,
-				0));
-		if (!Multiply)
-		{
-			OutError = TEXT("Failed to create multiply expression.");
-			return false;
-		}
-		++InOutOps;
-
-		if (!UMaterialEditingLibrary::ConnectMaterialExpressions(ColorParam, TEXT("RGB"), Multiply, TEXT("A")))
-		{
-			OutError = TEXT("Failed to wire ParticleColor to multiply.");
-			return false;
-		}
-		++InOutOps;
-
-		if (!UMaterialEditingLibrary::ConnectMaterialExpressions(EmissiveScale, TEXT(""), Multiply, TEXT("B")))
-		{
-			OutError = TEXT("Failed to wire EmissiveScale to multiply.");
-			return false;
-		}
-		++InOutOps;
-
-		if (!UMaterialEditingLibrary::ConnectMaterialProperty(Multiply, TEXT(""), MP_EmissiveColor))
-		{
-			OutError = TEXT("Failed to connect multiply to MP_EmissiveColor.");
-			return false;
-		}
-		++InOutOps;
-
-		// Expose secondary scalars for trail/core tuning (not wired in minimal graph v1).
-		UMaterialExpressionScalarParameter* FlowSpeed = Cast<UMaterialExpressionScalarParameter>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionScalarParameter::StaticClass(),
-				-500,
-				240));
-		if (FlowSpeed)
-		{
-			FlowSpeed->ParameterName = FName(TEXT("FlowSpeed"));
-			FlowSpeed->DefaultValue = 0.5f;
-			++InOutOps;
-		}
-
-		UMaterialExpressionScalarParameter* Turbulence = Cast<UMaterialExpressionScalarParameter>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionScalarParameter::StaticClass(),
-				-500,
-				360));
-		if (Turbulence)
-		{
-			Turbulence->ParameterName = FName(TEXT("Turbulence"));
-			Turbulence->DefaultValue = 0.5f;
-			++InOutOps;
-		}
-
-		UMaterialExpressionVectorParameter* ColorSecondary = Cast<UMaterialExpressionVectorParameter>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionVectorParameter::StaticClass(),
-				-500,
-				480));
-		if (ColorSecondary)
-		{
-			ColorSecondary->ParameterName = FName(TEXT("ColorSecondary"));
-			ColorSecondary->DefaultValue = FLinearColor::White;
-			++InOutOps;
-		}
-
-		UMaterialExpressionScalarParameter* SoftEdge = Cast<UMaterialExpressionScalarParameter>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionScalarParameter::StaticClass(),
-				-500,
-				600));
-		if (SoftEdge)
-		{
-			SoftEdge->ParameterName = FName(TEXT("SoftEdge"));
-			SoftEdge->DefaultValue = 0.75f;
-			++InOutOps;
-		}
-
-		UMaterialExpressionScalarParameter* DepthFade = Cast<UMaterialExpressionScalarParameter>(
-			UMaterialEditingLibrary::CreateMaterialExpression(
-				Material,
-				UMaterialExpressionScalarParameter::StaticClass(),
-				-500,
-				720));
-		if (DepthFade)
-		{
-			DepthFade->ParameterName = FName(TEXT("DepthFade"));
-			DepthFade->DefaultValue = 100.0f;
-			++InOutOps;
-		}
-
-		const TArray<FString> CompileErrors = UMaterialEditingLibrary::RecompileMaterial(Material);
-		++InOutOps;
-		if (CompileErrors.Num() > 0)
-		{
-			OutError = FString::Printf(
-				TEXT("Master recompile failed: %s"),
-				*FString::Join(CompileErrors, TEXT("; ")));
-			return false;
-		}
-
-		Material->MarkPackageDirty();
-		return true;
-	}
 }
 
-FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMaterial(const FString& MasterPackagePath)
+FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMaterial(
+	const FUeremcpMaterialMasterBuildRequest& Request)
 {
 	FUeremcpMaterialMasterBuildResult Result;
-	Result.MasterPackagePath = MasterPackagePath;
+	Result.MasterPackagePath = Request.MasterPackagePath;
 
-	if (!UeremcpMaterialPaths::IsUnderTestsRoot(MasterPackagePath))
+	if (!UeremcpMaterialPaths::IsUnderTestsRoot(Request.MasterPackagePath))
 	{
 		Result.Error = TEXT("Master materials may only be created under /Game/__UeremcpTests/.");
 		return Result;
@@ -245,19 +80,19 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 		return Result;
 	}
 
-	UMaterial* Existing = LoadMaterialAtPath(MasterPackagePath);
-	if (Existing)
+	if (UMaterial* Existing = LoadMaterialAtPath(Request.MasterPackagePath))
 	{
 		Result.bSuccess = true;
 		Result.bCreated = false;
+		Result.WiredFeatures = Request.Features;
 		return Result;
 	}
 
 	FString FolderPath;
 	FString AssetName;
-	if (!UeremcpMaterialPaths::SplitPackagePath(MasterPackagePath, FolderPath, AssetName))
+	if (!UeremcpMaterialPaths::SplitPackagePath(Request.MasterPackagePath, FolderPath, AssetName))
 	{
-		Result.Error = FString::Printf(TEXT("Invalid master package path '%s'."), *MasterPackagePath);
+		Result.Error = FString::Printf(TEXT("Invalid master package path '%s'."), *Request.MasterPackagePath);
 		return Result;
 	}
 
@@ -271,16 +106,23 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 	Result.bCreated = true;
 	Result.InternalOperations += 1;
 
-	FString BuildError;
-	if (!BuildMinimalVfxMasterGraph(Material, BuildError, Result.InternalOperations))
+	const FUeremcpFeatureGraphBuildResult GraphResult = UeremcpMaterialFeatureGraph::BuildGraph(
+		Material,
+		Request.Features,
+		Request.bTrailPurpose);
+	Result.InternalOperations += GraphResult.InternalOperations;
+	Result.WiredFeatures = GraphResult.WiredFeatures;
+	Result.SkippedFeatures = GraphResult.SkippedFeatures;
+
+	if (!GraphResult.bSuccess)
 	{
-		Result.Error = BuildError;
+		Result.Error = GraphResult.Error;
 		return Result;
 	}
 
-	if (!SavePackagePath(MasterPackagePath, Result.InternalOperations))
+	if (!SavePackagePath(Request.MasterPackagePath, Result.InternalOperations))
 	{
-		Result.Error = FString::Printf(TEXT("Failed to save master '%s'."), *MasterPackagePath);
+		Result.Error = FString::Printf(TEXT("Failed to save master '%s'."), *Request.MasterPackagePath);
 		return Result;
 	}
 

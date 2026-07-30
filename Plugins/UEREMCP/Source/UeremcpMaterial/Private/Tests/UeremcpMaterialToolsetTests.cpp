@@ -7,6 +7,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Subsystems/EditorAssetSubsystem.h"
+#include "Misc/Paths.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpMaterialPaths.h"
 #include "UeremcpMaterialToolset.h"
@@ -33,10 +34,21 @@ namespace UeremcpMaterialTests
 	{
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileCore_Fire"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileTrail_Ice"));
-		DeleteIfExists(UeremcpMaterialPaths::JoinPackagePath(
-			UeremcpMaterialPaths::MastersFolder, TEXT("M_Ueremcp_VFX_Sprite_Additive")));
-		DeleteIfExists(UeremcpMaterialPaths::JoinPackagePath(
-			UeremcpMaterialPaths::MastersFolder, TEXT("M_Ueremcp_VFX_Ribbon")));
+
+		UEditorAssetSubsystem* Subsystem = GetAssetSubsystem();
+		if (!Subsystem)
+		{
+			return;
+		}
+		const TArray<FString> Masters = Subsystem->ListAssets(UeremcpMaterialPaths::MastersFolder);
+		for (const FString& AssetPath : Masters)
+		{
+			const FString AssetName = FPaths::GetBaseFilename(AssetPath);
+			if (AssetName.StartsWith(TEXT("M_Ueremcp_")))
+			{
+				Subsystem->DeleteAsset(AssetPath);
+			}
+		}
 	}
 
 	static bool ParseStatus(const FString& Json, FString& OutStatus)

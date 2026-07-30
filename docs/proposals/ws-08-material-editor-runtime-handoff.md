@@ -44,7 +44,8 @@ Scratch assets (auto-deleted by tests): `/Game/__UeremcpTests/Materials/MI_WS08_
 
 ## Not covered by runtime gate (still stubbed)
 
-- `specification.features` → graph wiring
+- `distortion`, `flow_maps`, `flipbook_subuv` feature tokens
 - `textures.generate` / procedural textures
-- Full engine MaterialFunction composition
+- Engine MaterialFunction composition
+- Runtime JSON loader for `element_presets.v1.json` (C++ mirrors data)
 - Purposes outside elemental projectile core/trail family

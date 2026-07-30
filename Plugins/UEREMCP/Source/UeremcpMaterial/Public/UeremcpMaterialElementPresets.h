@@ -16,6 +16,7 @@ struct FUeremcpMaterialParameterSet
 	float Turbulence = 0.5f;
 	float SoftEdge = 0.75f;
 	float DepthFade = 100.0f;
+	float DissolveAmount = 0.0f;
 };
 
 namespace UeremcpMaterialElementPresets
@@ -23,8 +24,8 @@ namespace UeremcpMaterialElementPresets
 	/** Resolve purpose → master asset name (not full path). */
 	FString ResolveMasterAssetName(const FString& Purpose);
 
-	/** Resolve purpose → master package path under MastersFolder. */
-	FString ResolveMasterPackagePath(const FString& Purpose);
+	/** Resolve purpose + features → master package path under MastersFolder. */
+	FString ResolveMasterPackagePath(const FString& Purpose, const TArray<FString>& Features);
 
 	/** Element defaults; returns false when element is unknown (caller may use custom overrides only). */
 	bool GetElementDefaults(const FString& Element, FUeremcpMaterialParameterSet& OutPreset);

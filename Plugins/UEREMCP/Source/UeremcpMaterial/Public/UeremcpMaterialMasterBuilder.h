@@ -9,6 +9,13 @@
 
 class UMaterial;
 
+struct FUeremcpMaterialMasterBuildRequest
+{
+	FString MasterPackagePath;
+	TArray<FString> Features;
+	bool bTrailPurpose = false;
+};
+
 struct FUeremcpMaterialMasterBuildResult
 {
 	bool bSuccess = false;
@@ -16,13 +23,15 @@ struct FUeremcpMaterialMasterBuildResult
 	FString MasterPackagePath;
 	FString Error;
 	int32 InternalOperations = 0;
+	TArray<FString> WiredFeatures;
+	TArray<FString> SkippedFeatures;
 };
 
 namespace UeremcpMaterialMasterBuilder
 {
 	/**
-	 * Load or create a minimal unlit additive master with exposed VFX parameters.
-	 * Masters live only under /Game/__UeremcpTests/Materials/Masters/.
+	 * Load or create a feature-driven VFX master under /Game/__UeremcpTests/Materials/Masters/.
+	 * Master package path must include the feature signature (see UeremcpMaterialFeatures).
 	 */
-	FUeremcpMaterialMasterBuildResult EnsureMasterMaterial(const FString& MasterPackagePath);
+	FUeremcpMaterialMasterBuildResult EnsureMasterMaterial(const FUeremcpMaterialMasterBuildRequest& Request);
 }

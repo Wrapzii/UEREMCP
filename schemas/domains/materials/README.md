@@ -46,6 +46,24 @@ Elemental VFX materials use **one tooling surface** (`create_vfx_material`) with
 | `Turbulence` | Scalar | Noise scale/chaos |
 | `DissolveAmount` | Scalar | Erosion/dissolve |
 
+### Feature tokens → master graph wiring (Wave 2 slice)
+
+| Feature | Expression pattern | Verification |
+|---|---|---|
+| `dynamic_color` | Lerp(`ParticleColor`, `ColorSecondary`) | `[VERIFIED: MaterialExpressionLinearInterpolate.h]` |
+| `dynamic_intensity` | Multiply × `EmissiveScale` → `MP_EmissiveColor` | `[VERIFIED: MaterialEditingLibrary.h:232]` |
+| `radial_falloff` | `SphereMask` × `TextureCoordinate`, `SoftEdge` → hardness | `[VERIFIED: MaterialExpressionSphereMask.h]` |
+| `animated_noise` | Time + Panner → `Noise` × emissive, `Turbulence` → filter width | `[VERIFIED: MaterialExpressionNoise.h]` |
+| `fresnel` | `Fresnel` × emissive | `[VERIFIED: MaterialExpressionFresnel.h]` |
+| `panning_textures` | `Panner`(`FlowSpeed`) × emissive | `[VERIFIED: MaterialExpressionPanner.h]` |
+| `depth_fade` | `DepthFade`(`DepthFade` param) → `MP_Opacity` | `[VERIFIED: MaterialExpressionDepthFade.h]` |
+| `erosion` | `OneMinus`(`DissolveAmount`) × opacity | `[VERIFIED: MaterialExpressionOneMinus.h]` |
+
+Masters are named `{M_Ueremcp_ProjCore|ProjTrail}_{FeatureSignature}` so graph variants do not collide.
+Purpose defaults live in `element_presets.v1.json` → `purpose_default_features` (mirrored in C++).
+
+Not yet wired: `distortion`, `flow_maps`, `flipbook_subuv`, engine MaterialFunctions, `textures.generate`.
+
 ## Epic tool composition (implementation note)
 
 UEREMCP does **not** re-expose MaterialTools' 29 primitives. Internal batching via `ProgrammaticToolset.execute_tool_script`:
@@ -70,9 +88,10 @@ These keys match `UeremcpMaterialCapabilityNotes.h` and `create_vfx_material` `c
 
 | Gap | Severity | Mitigation |
 |---|---|---|
-| MaterialTools omits blend/shading/domain | High | `set_editor_property` on `UMaterial` before recompile |
+| MaterialTools omits blend/shading/domain | Mitigated | Set on `UMaterial` before recompile in feature graph builder |
+| Feature tokens not wired | Mitigated (projectile slice) | See feature table above; unimplemented tokens → `created_with_warnings` |
 | No procedural texture Epic tool | Medium | `create_procedural_texture` semantic op (WS-08) |
-| Element templates not loaded | Medium | WS-15 `templates/elements/` + instantiate path |
+| Element presets from JSON at runtime | Medium | C++ mirrors `element_presets.v1.json`; loader proposal pending |
 | Substrate shading overrides | Medium | Per-material runtime check in RE project |
 | Graph round-trip unproven | Medium | WS-11 harness under `/Game/__UeremcpTests/` |
 
@@ -86,6 +105,7 @@ Runtime probes and created assets: **`/Game/__UeremcpTests/Materials/**` only.
 python tools/validate_schemas.py
 python schemas/domains/materials/test_specifications.py
 python schemas/domains/materials/test_element_presets.py
+python schemas/domains/materials/test_features.py
 python tools/check_ownership.py --ws WS-08
 ```
 
