@@ -70,12 +70,13 @@ Misses remain honest (e.g. montage authoring expectation vs inspect-only; log to
 
 ### End-to-end / fresh-agent
 
-Recorded separately after live deploy:
-
-| Metric | Previous | Target / measured |
+| Metric | Previous | Measured (2026-07-30 live) |
 |---|---|---|
-| Calls to first successful dry-run | ~10 | Expect ≤3 with ResolveIntent (GetStarted→ResolveIntent→domain call) |
-| E2E scratch workflow | — | Pending live editor validation after build |
+| Calls to first successful dry-run | ~10 | **3** (`GetStarted` → `ResolveIntent` → `CreateNiagaraEffect` dry_run) |
+| Live helix plan | — | Material → Niagara → Capture (+ secondary Blueprint/Gameplay noise) |
+| Dry-run CreateNiagaraEffect | — | `no_change_required` on `/Game/__UeremcpTests/NS_RouterScratch` |
+
+Live SHA tip: see deploy-main HEAD after land. Descriptions verified via `describe_toolset` on `UeremcpCore.UeremcpReferenceToolset` (GetStarted / ResolveIntent / DescribeOperation present with Use-when vocabulary).
 
 ## Provenance
 
