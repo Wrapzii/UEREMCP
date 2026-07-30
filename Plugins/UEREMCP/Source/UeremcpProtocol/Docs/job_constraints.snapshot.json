@@ -1,0 +1,23 @@
+{
+  "$comment": "Snapshot of WS-04 transport_job_handoff.json ws05_constraints + job_defaults for protocol implementers. Authoritative live copy lives under UeremcpTransport (WS-04). Owner of this snapshot: WS-05. handoff_version ws04-wave1-1 / ADR-0009.",
+  "handoff_version": "ws04-wave1-1",
+  "job_defaults": {
+    "default_timeout_ms": 120000,
+    "min_timeout_ms": 1000,
+    "max_timeout_ms": 600000,
+    "poll_action": "get_job_result"
+  },
+  "ws05_constraints": {
+    "dispatch_inline_when_timeout_ms_zero": true,
+    "dispatch_poll_when_timeout_ms_positive": true,
+    "never_hold_mcp_sse_open_past_client_timeout": true,
+    "client_sse_risk_ms": 30000,
+    "job_id_scope": "per-editor-process",
+    "job_id_kind": "ueremcp-uuid",
+    "jobs_durable_across_crash": false,
+    "mcp_round_trips_metric_includes_polls": true,
+    "cancellable_default": false,
+    "semantic_progress_in_envelope_job": true,
+    "epic_progress_heartbeats_are_not_percent_complete": true
+  }
+}

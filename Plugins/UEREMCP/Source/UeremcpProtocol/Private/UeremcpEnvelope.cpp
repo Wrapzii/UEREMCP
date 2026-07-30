@@ -385,6 +385,23 @@ bool FUeremcpEnvelope::ValidateResponse(const FUeremcpResponse& Response, FStrin
 		OutError = TEXT("metrics counters must be >= 0");
 		return false;
 	}
+	if (Response.bHasJob)
+	{
+		if (!Response.Job.IsValid(OutError))
+		{
+			return false;
+		}
+		// In-flight job handles on the initiating call use partially_completed
+		// (ADR-0009). Terminal poll results may carry job.state completed|failed|
+		// cancelled with a matching envelope status.
+		if ((Response.Job.State.Equals(TEXT("running")) || Response.Job.State.Equals(TEXT("queued")))
+			&& !Response.Status.Equals(TEXT("partially_completed"))
+			&& !Response.Status.Equals(TEXT("error")))
+		{
+			OutError = TEXT("in-flight job handle requires status partially_completed (or error)");
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -455,6 +472,30 @@ FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 	if (!Response.Revision.IsEmpty())
 	{
 		Root->SetStringField(TEXT("revision"), Response.Revision);
+	}
+
+	if (Response.bHasJob)
+	{
+		TSharedPtr<FJsonObject> JobObj = MakeShared<FJsonObject>();
+		JobObj->SetStringField(TEXT("job_id"), Response.Job.JobId);
+		JobObj->SetStringField(TEXT("state"), Response.Job.State);
+		if (Response.Job.bHasProgress)
+		{
+			JobObj->SetNumberField(TEXT("progress"), Response.Job.Progress);
+		}
+		if (!Response.Job.ProgressMessage.IsEmpty())
+		{
+			JobObj->SetStringField(TEXT("progress_message"), Response.Job.ProgressMessage);
+		}
+		if (Response.Job.bHasCancellable)
+		{
+			JobObj->SetBoolField(TEXT("cancellable"), Response.Job.bCancellable);
+		}
+		const FString PollAction = Response.Job.PollAction.IsEmpty()
+			? FString(FUeremcpJobDefaults::PollAction())
+			: Response.Job.PollAction;
+		JobObj->SetStringField(TEXT("poll_action"), PollAction);
+		Root->SetObjectField(TEXT("job"), JobObj);
 	}
 
 	TSharedPtr<FJsonObject> Metrics = MakeShared<FJsonObject>();
@@ -529,5 +570,34 @@ FString FUeremcpEnvelope::MakeUnverified(const FString& RequestId, const FString
 	Response.CapabilityNotes = CapabilityNotes;
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = 0;
+	return SerializeResponse(Response);
+}
+
+FString FUeremcpEnvelope::MakeJobTimeoutResponse(
+	const FString& RequestId,
+	const FString& JobId,
+	const FString& ProgressMessage,
+	int32 McpRoundTrips)
+{
+	FUeremcpResponse Response;
+	Response.ProtocolVersion = ProtocolVersion();
+	Response.RequestId = RequestId;
+	Response.Status = TEXT("partially_completed");
+	Response.Summary = ProgressMessage.IsEmpty()
+		? TEXT("Operation exceeded timeout_ms; continuing in-process. Poll get_job_result.")
+		: ProgressMessage;
+	Response.bHasJob = true;
+	Response.Job.JobId = JobId;
+	Response.Job.State = TEXT("running");
+	Response.Job.ProgressMessage = ProgressMessage;
+	Response.Job.PollAction = FUeremcpJobDefaults::PollAction();
+	// ADR-0009: do not claim cancellable until cooperative cancel is wired.
+	Response.Job.bCancellable = false;
+	Response.Job.bHasCancellable = true;
+	Response.Metrics.McpRoundTrips = FMath::Max(1, McpRoundTrips);
+	Response.Metrics.InternalOperations = 0;
+	Response.CapabilityNotes.Add(
+		TEXT("Long-running job: Epic MCP progress heartbeats are not percent-complete; "
+			 "use job.progress / job.progress_message."));
 	return SerializeResponse(Response);
 }

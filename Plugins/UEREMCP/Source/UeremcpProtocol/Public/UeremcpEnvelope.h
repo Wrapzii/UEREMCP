@@ -8,11 +8,13 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "UeremcpJob.h"
 
 /** Mandatory on every response. ADR-0003 rule 3. */
 struct UEREMCPPROTOCOL_API FUeremcpMetrics
 {
-	/** MCP calls the agent spent for this result. Normally 1. */
+	/** MCP calls the agent spent for this result, including get_job_result polls
+	 *  (ADR-0009). A polled long job must not report 1 when the agent polled N times. */
 	int32 McpRoundTrips = 0;
 
 	/** Primitive editor operations performed internally. */
@@ -66,7 +68,15 @@ struct UEREMCPPROTOCOL_API FUeremcpRequest
 	bool bValidate = true;
 	bool bSave = true;
 	FString ResponseDetail = TEXT("summary");
+
+	/**
+	 * ADR-0009: 0 / omitted → complete inline on MCP SSE.
+	 * > 0 → on expiry return partially_completed + job handle; poll get_job_result.
+	 * Long-op default when choosing a positive timeout: FUeremcpJobDefaults::DefaultTimeoutMs
+	 * (120000). Never hold silent SSE past ~ClientSseRiskMs (30000).
+	 */
 	int32 TimeoutMs = 0;
+
 	FString OnRevisionConflict = TEXT("reject");
 	bool bContinueOnError = false;
 
@@ -102,6 +112,13 @@ struct UEREMCPPROTOCOL_API FUeremcpResponse
 	TArray<FUeremcpAssetRef> UnresolvedDependencies;
 
 	FString Revision;
+
+	/**
+	 * Present when the operation exceeded timeout_ms and continues asynchronously
+	 * (ADR-0009). Agent polls job.poll_action instead of resending the request.
+	 */
+	FUeremcpJob Job;
+	bool bHasJob = false;
 
 	FUeremcpMetrics Metrics;
 
@@ -140,6 +157,17 @@ public:
 	/** Convenience for reporting an operation that ran but could not be verified. */
 	static FString MakeUnverified(const FString& RequestId, const FString& Summary,
 	                              const TArray<FString>& CapabilityNotes);
+
+	/**
+	 * ADR-0009 timeout path: status partially_completed + job handle (state=running).
+	 * Does not invent a new envelope field — uses response.job from the frozen schema.
+	 * bCancellable defaults false until cooperative cancel is wired.
+	 */
+	static FString MakeJobTimeoutResponse(
+		const FString& RequestId,
+		const FString& JobId,
+		const FString& ProgressMessage = FString(),
+		int32 McpRoundTrips = 1);
 
 	/** Allowed mode values from schemas/common/defs.schema.json#/$defs/mode. */
 	static bool IsValidMode(const FString& Mode);

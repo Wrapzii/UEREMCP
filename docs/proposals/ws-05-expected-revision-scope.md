@@ -10,6 +10,8 @@
 
 **Keep both.** No ADR change required.
 
+**WS-01:** accepted 2026-07-29.
+
 | Surface | Field | Role |
 |---|---|---|
 | Envelope (`request.schema.json`) | `expected_revision` | Single-asset / single-graph optimistic concurrency (ADR-0006 rule 4) |

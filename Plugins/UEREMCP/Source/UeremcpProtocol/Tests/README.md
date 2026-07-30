@@ -16,6 +16,7 @@ Covers:
 - content hashing (`test_content_hash.py`) — see `../Docs/CONTENT_HASH.md`
 - dependency topological sort (`test_dependency_order.py`)
 - provisional `$ref` resolution (`test_ref_resolve.py`)
+- ADR-0009 job helpers (`test_job.py`) — see `../Docs/JOB_MODEL.md`
 
 The Python package `ueremcp_protocol/` is the executable specification; C++ in
 `Public/` / `Private/` must match.

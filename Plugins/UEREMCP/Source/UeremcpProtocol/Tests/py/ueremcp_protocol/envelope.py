@@ -218,6 +218,8 @@ def parse_request(json_text: str) -> dict[str, Any]:
 
 
 def serialize_response(response: dict[str, Any]) -> str:
+    from .job import validate_job
+
     status = response.get("status", "")
     if status not in STATUSES:
         raise EnvelopeError(f"invalid status '{status}'")
@@ -251,6 +253,36 @@ def serialize_response(response: dict[str, Any]) -> str:
         root["result"] = {"primary_asset": response["primary_asset"]}
     if response.get("revision"):
         root["revision"] = response["revision"]
+
+    job = response.get("job")
+    if job is not None:
+        if not isinstance(job, dict):
+            raise EnvelopeError("job must be an object")
+        try:
+            validate_job(job)
+        except Exception as exc:  # JobError
+            raise EnvelopeError(str(exc)) from exc
+        state = job["state"]
+        if state in ("running", "queued") and status not in (
+            "partially_completed",
+            "error",
+        ):
+            raise EnvelopeError(
+                "in-flight job handle requires status partially_completed (or error)"
+            )
+        job_out: dict[str, Any] = {
+            "job_id": job["job_id"],
+            "state": state,
+            "poll_action": job.get("poll_action") or "get_job_result",
+        }
+        if "progress" in job:
+            job_out["progress"] = job["progress"]
+        if job.get("progress_message"):
+            job_out["progress_message"] = job["progress_message"]
+        if "cancellable" in job:
+            job_out["cancellable"] = bool(job["cancellable"])
+        root["job"] = job_out
+
     if response.get("capability_notes"):
         root["capability_notes"] = list(response["capability_notes"])
 

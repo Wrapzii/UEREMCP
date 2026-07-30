@@ -4,6 +4,7 @@
 - **To:** WS-02, WS-01
 - **Date:** 2026-07-29
 - **Status:** blocked — no schema finalisation
+- **WS-01:** accepted 2026-07-29 — remain blocked until WS-02 audit lands
 
 ## What is blocked
 

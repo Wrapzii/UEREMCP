@@ -9,6 +9,8 @@
 
 **In-memory, process-scoped, editor-session lifetime.**
 
+**WS-01:** accepted 2026-07-29.
+
 Implemented as `FUeremcpIdempotencyStore` in `UeremcpProtocol`. A repeat of the
 same `idempotency_key` returns the stored response JSON; callers set
 `metrics.replayed: true` and perform no work.
