@@ -25,7 +25,9 @@ Editor gates already PASS on `8a8c75d`:
 
 **Option 2 (not chosen for B1):** ADR-0009 `partially_completed` + `get_job_result` for compile drain would require `mcp_round_trips > 1` — document only; breaks current B1 transport bar of `mcp_round_trips == 1`.
 
-WS-11: rerun one-call MCP fireball after orch rebuild (~`c5cd3fc`).
+**Metrics (2026-07-30):** B1 measured `internal_operations=46`. Niagara now emits `metrics.timing_ms` (`asset_creation`, `compilation`, `save`, `validation`, `server_total`). Primitive baseline sequence: `docs/proposals/ws-07-poc-b-primitive-baseline-sequence.md` — measured counts remain WS-14/WS-11 trials.
+
+WS-11: rerun one-call MCP fireball after orch rebuild (~`cd08c64`+).
 
 | Artifact | Purpose |
 |---|---|

@@ -408,6 +408,10 @@ class NiagaraSpecificationTests(unittest.TestCase):
             "niagara.compile_await_observed_via_script_state",
             gates["checks_performed_may_include"],
         )
+        metrics = gates["metrics_may_include"]
+        self.assertEqual(metrics["mcp_round_trips"], 1)
+        self.assertGreaterEqual(metrics["internal_operations_min"], 1)
+        self.assertIn("server_total", metrics["timing_ms_keys"])
 
     def test_poc_b_editor_gate_scaffold_fixture(self) -> None:
         fixture = load_fixture("poc_b_editor_gate_scaffold.json")

@@ -53,6 +53,9 @@ struct FUeremcpNiagaraCreateResult
 	TOptional<bool> bSaved;
 
 	int32 InternalOperations = 0;
+
+	/** Phase timings in milliseconds (schemas/common/defs.schema.json#/$defs/metrics.timing_ms). */
+	TMap<FString, double> TimingMs;
 };
 
 /** Duplicate-and-modify composer for POC B under /Game/__UeremcpTests/ only. */

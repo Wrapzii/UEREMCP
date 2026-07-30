@@ -131,6 +131,17 @@
     ],
     "checks_performed_may_include": [
       "niagara.compile_await_observed_via_script_state"
-    ]
+    ],
+    "metrics_may_include": {
+      "mcp_round_trips": 1,
+      "internal_operations_min": 1,
+      "timing_ms_keys": [
+        "asset_creation",
+        "compilation",
+        "save",
+        "validation",
+        "server_total"
+      ]
+    }
   }
 }

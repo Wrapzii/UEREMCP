@@ -15,6 +15,7 @@
 #include "UeremcpNiagaraRoundTrip.h"
 
 #include "NiagaraSystem.h"
+#include "HAL/PlatformTime.h"
 #include "UObject/SoftObjectPath.h"
 
 FString UUeremcpNiagaraToolset::Echo(const FString& RequestJson)
@@ -247,6 +248,8 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 			FString::Printf(TEXT("Invalid create_niagara_effect specification: %s"), *SpecError));
 	}
 
+	const double HandlerStartSeconds = FPlatformTime::Seconds();
+
 	FUeremcpNiagaraCreateResult CreateResult;
 	if (!FUeremcpNiagaraCreate::Run(Request, Spec, CreateResult))
 	{
@@ -256,9 +259,17 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	}
 
 	FUeremcpNiagaraRoundTripResult RoundTripResult;
-	const bool bRanRoundTrip = Request.bValidate
-		&& !Request.bDryRun
-		&& FUeremcpNiagaraRoundTrip::ValidateCreateResult(Request, CreateResult, RoundTripResult);
+	bool bRanRoundTrip = false;
+	TOptional<double> ValidationTimingMs;
+	if (Request.bValidate && !Request.bDryRun)
+	{
+		const double ValidationStartSeconds = FPlatformTime::Seconds();
+		bRanRoundTrip = FUeremcpNiagaraRoundTrip::ValidateCreateResult(
+			Request,
+			CreateResult,
+			RoundTripResult);
+		ValidationTimingMs = (FPlatformTime::Seconds() - ValidationStartSeconds) * 1000.0;
+	}
 
 	const FUeremcpNiagaraChangeManifestResult ChangeManifest =
 		FUeremcpNiagaraChangeManifest::BuildFromCreateResult(CreateResult, Request.bDryRun);
@@ -291,6 +302,17 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
 	Response.Metrics.AssetsAffected = ChangeManifest.AssetsAffected;
+	for (const TPair<FString, double>& TimingEntry : CreateResult.TimingMs)
+	{
+		Response.Metrics.TimingMs.Add(TimingEntry.Key, TimingEntry.Value);
+	}
+	if (ValidationTimingMs.IsSet())
+	{
+		Response.Metrics.TimingMs.Add(TEXT("validation"), ValidationTimingMs.GetValue());
+	}
+	Response.Metrics.TimingMs.Add(
+		TEXT("server_total"),
+		(FPlatformTime::Seconds() - HandlerStartSeconds) * 1000.0);
 	if (bRanRoundTrip)
 	{
 		Response.Metrics.InternalOperations += RoundTripResult.InternalOperations;

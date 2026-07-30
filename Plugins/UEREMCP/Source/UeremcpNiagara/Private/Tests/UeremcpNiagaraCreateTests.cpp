@@ -61,6 +61,22 @@ bool FUeremcpNiagaraCreateDryRunTest::RunTest(const FString& Parameters)
 	const TArray<TSharedPtr<FJsonValue>>* NotesArr = nullptr;
 	TestTrue(TEXT("capability_notes present"), Root->TryGetArrayField(TEXT("capability_notes"), NotesArr));
 
+	const TSharedPtr<FJsonObject>* MetricsObj = nullptr;
+	TestTrue(TEXT("metrics present"), Root->TryGetObjectField(TEXT("metrics"), MetricsObj) && MetricsObj && MetricsObj->IsValid());
+	const TSharedPtr<FJsonObject>* TimingObj = nullptr;
+	if (MetricsObj && MetricsObj->IsValid()
+		&& (*MetricsObj)->TryGetObjectField(TEXT("timing_ms"), TimingObj) && TimingObj && TimingObj->IsValid())
+	{
+		double ServerTotalMs = -1.0;
+		TestTrue(
+			TEXT("dry_run server_total timing present"),
+			(*TimingObj)->TryGetNumberField(TEXT("server_total"), ServerTotalMs));
+		TestTrue(TEXT("dry_run server_total non-negative"), ServerTotalMs >= 0.0);
+		TestFalse(
+			TEXT("dry_run skips asset_creation timing"),
+			(*TimingObj)->HasTypedField<EJson::Number>(TEXT("asset_creation")));
+	}
+
 	return true;
 }
 

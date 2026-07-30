@@ -16,12 +16,33 @@
 #include "NiagaraTypes.h"
 #include "NiagaraVariant.h"
 
+#include "HAL/PlatformTime.h"
 #include "Misc/PackageName.h"
 #include "UObject/SavePackage.h"
 #include "UObject/SoftObjectPath.h"
 
 namespace
 {
+	class FUeremcpPhaseTimer
+	{
+	public:
+		explicit FUeremcpPhaseTimer(TMap<FString, double>& InOutTimingMs)
+			: TimingMs(InOutTimingMs)
+			, LastMark(FPlatformTime::Seconds())
+		{
+		}
+
+		void MarkPhase(const FString& PhaseKey)
+		{
+			const double Now = FPlatformTime::Seconds();
+			TimingMs.Add(PhaseKey, (Now - LastMark) * 1000.0);
+			LastMark = Now;
+		}
+
+	private:
+		TMap<FString, double>& TimingMs;
+		double LastMark;
+	};
 	const TCHAR* GDefaultSystemTemplate = TEXT("/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight");
 
 	FString RoleToEmitterName(const FString& Role)
@@ -292,6 +313,8 @@ bool FUeremcpNiagaraCreate::Run(
 	const bool bReplaceMode = UeremcpNiagaraProbeAssets::IsReplaceMode(Request.Mode);
 	const bool bAssetExists = AssetExistsAtPath(CreatedPath);
 
+	FUeremcpPhaseTimer PhaseTimer(OutResult.TimingMs);
+
 	TMap<FString, FString> ResolvedMaterialPaths;
 	TArray<FUeremcpNiagaraInlineMaterialCreate> InlineMaterialCreates;
 	TArray<FString> UnresolvedMaterialPaths;
@@ -516,6 +539,8 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings"));
 	}
 
+	PhaseTimer.MarkPhase(TEXT("asset_creation"));
+
 	if (Request.bCompile)
 	{
 		FNiagaraExt_SystemCompileState CompileState;
@@ -555,6 +580,8 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.compile_await"));
 	}
 
+	PhaseTimer.MarkPhase(TEXT("compilation"));
+
 	if (Request.bSave)
 	{
 		FString SaveError;
@@ -570,6 +597,8 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		OutResult.ChecksSkipped.Add(TEXT("niagara.save_package"));
 	}
+
+	PhaseTimer.MarkPhase(TEXT("save"));
 
 	// POC B gaps — structural re-read, PIE smoke (material_bindings handled above when verified).
 	OutResult.ChecksSkipped.Add(TEXT("niagara.structural_re_read"));
