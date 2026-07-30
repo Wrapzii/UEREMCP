@@ -20,6 +20,13 @@
 
 namespace UeremcpDispatchTest
 {
+	static FString NormalizedProjectPath()
+	{
+		FString ProjectPath = FPaths::GetProjectFilePath();
+		ProjectPath.ReplaceInline(TEXT("\\"), TEXT("/"));
+		return ProjectPath;
+	}
+
 	static FString MutatingRequest(
 		const FString& RequestId,
 		const FString& Mode,
@@ -29,7 +36,7 @@ namespace UeremcpDispatchTest
 			TEXT("{\"protocol_version\":\"1.0\",\"request_id\":\"%s\",\"action\":\"submit_graph\","
 				"\"project\":{\"path\":\"%s\"},\"target\":{\"asset_path\":\"%s\"},\"mode\":\"%s\"}"),
 			*RequestId,
-			*FPaths::GetProjectFilePath().ReplaceCharWith(TCHAR('\\'), TCHAR('/')),
+			*NormalizedProjectPath(),
 			*TargetPath,
 			*Mode);
 	}
