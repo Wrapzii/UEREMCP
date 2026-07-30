@@ -177,6 +177,44 @@ class PocBBundleTest(unittest.TestCase):
         }
         self.assertEqual(poc_evidence.validate_poc_b_bundle(bundle), [])
 
+    def test_live_transport_b1_pass_preserves_partial_response_status(self):
+        bundle = {
+            "schema_version": 1,
+            "scenario": "poc_b",
+            "tested_tip_sha": "a" * 40,
+            "generated_at_utc": "2026-07-30T14:20:00Z",
+            "overall_poc_b_claimed": False,
+            "transport": {
+                "status": "pass",
+                "response_status": "partially_completed",
+            },
+            "criteria": {
+                f"B{index}": {
+                    "status": "pass",
+                    "scope": "MCP transport" if index == 1 else "editor evidence",
+                    "evidence": [
+                        {
+                            "path": (
+                                poc_evidence.POC_B_B1_LIVE_MCP_ARTIFACT
+                                if index == 1
+                                else f"tests/evidence/b{index}.log"
+                            ),
+                            "result": "pass",
+                        }
+                    ],
+                }
+                for index in range(1, 11)
+            },
+        }
+        self.assertEqual(poc_evidence.validate_poc_b_bundle(bundle), [])
+
+        bundle["transport"]["response_status"] = "created_and_validated"
+        errors = poc_evidence.validate_poc_b_bundle(bundle)
+        self.assertIn(
+            "B1 PASS transport.response_status must preserve partially_completed",
+            errors,
+        )
+
     def test_bundle_rejects_missing_criterion_and_overall_claim(self):
         bundle = {
             "schema_version": 1,

@@ -25,6 +25,9 @@ METRIC_FIELDS = (
 )
 POC_A_CRITERIA = tuple(f"A{index}" for index in range(1, 12))
 POC_B_CRITERIA = tuple(f"B{index}" for index in range(1, 11))
+POC_B_B1_LIVE_MCP_ARTIFACT = (
+    "docs/reviews/metrics/artifacts/poc_b_b1_live_mcp_20260730.json"
+)
 
 
 def extract_last_evidence(log_text: str) -> dict[str, Any] | None:
@@ -165,6 +168,33 @@ def validate_poc_b_bundle(bundle: Any) -> list[str]:
             for item in evidence
         ):
             errors.append(f"{name}.evidence entries require path")
+
+    b1 = criteria.get("B1")
+    if isinstance(b1, dict) and b1.get("status") == "pass":
+        if b1.get("scope") != "MCP transport":
+            errors.append("B1 PASS requires scope='MCP transport'")
+        evidence = b1.get("evidence")
+        live_artifact = next(
+            (
+                item
+                for item in evidence
+                if isinstance(item, dict)
+                and item.get("path") == POC_B_B1_LIVE_MCP_ARTIFACT
+            ),
+            None,
+        ) if isinstance(evidence, list) else None
+        if live_artifact is None:
+            errors.append("B1 PASS requires the live MCP artifact")
+        elif live_artifact.get("result") != "pass":
+            errors.append("B1 live MCP artifact must have result=pass")
+
+        transport = bundle.get("transport")
+        if not isinstance(transport, dict) or transport.get("status") != "pass":
+            errors.append("B1 PASS requires transport.status=pass")
+        elif transport.get("response_status") != "partially_completed":
+            errors.append(
+                "B1 PASS transport.response_status must preserve partially_completed"
+            )
     return errors
 
 
