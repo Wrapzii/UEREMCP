@@ -101,9 +101,14 @@ Assigned, not forgotten:
 - Can a Blueprint event graph be fully reconstructed from this representation, and
   where does fidelity break — delegates, latent nodes, custom K2 nodes, macro
   instances? (`RB-05`)
-- Niagara module stacks: are they expressible as `nodes`/`links`, or do they need a
-  first-class stack extension? (`RB-07`)
-- Control Rig and AnimBP state machines: what is even readable via public API? (`RB-09`)
+- ~~Niagara module stacks: are they expressible as `nodes`/`links`, or do they need a
+  first-class stack extension?~~ **Closed (RB-07):** no ADR fork —
+  `NiagaraModuleStack` / related `graph_type`s + `extensions.niagara`. Lossy:
+  event-handler stacks, module reorder (`ws-07-adr-0004-niagara-fit.md`).
+- ~~Control Rig and AnimBP state machines: what is even readable via public API?~~
+  **Closed (RB-09):** Control Rig **authorable** via Epic `ControlRigTools`;
+  AnimBP state machines **readable**, agent-facing **authoring unsupported**.
+  See R-08 refinement.
 - ~~What is `content_hash` computed over such that it is stable across irrelevant
   reordering but sensitive to real change?~~ **Closed for protocol v1:**
   `Plugins/UEREMCP/Source/UeremcpProtocol/Docs/CONTENT_HASH.md` (WS-05). Domain

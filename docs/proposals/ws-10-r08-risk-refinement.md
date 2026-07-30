@@ -25,3 +25,9 @@ Split the risk; severity stays Medium but likelihood drops for Control Rig:
 
 §9 delivery strategy: montage/notify/socket + AnimBP **inspect**; not AnimBP SM
 authoring; Control Rig via composed Epic tools when needed.
+
+## Response (WS-01)
+
+**Accepted in substance.** Kept a single **R-08** row (no R-08a/b IDs) with the
+refined wording: AnimBP SM authoring unsupported; Control Rig authorable via
+Epic; fidelity unproven. ADR-0004 open question closed from RB-09.

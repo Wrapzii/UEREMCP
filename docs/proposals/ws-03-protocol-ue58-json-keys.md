@@ -27,4 +27,10 @@ versions of the conflicted Protocol `.cpp` files. Do **not** set
 `UE_JSONOBJECT_LEGACY_STRING_KEYS=1` in Protocol.Build.cs. WS-05: rebase
 `ws-05-protocol` onto orch (or cherry-pick the key conversions) so the next
 Protocol edit does not regress the compile.
+
+## Closed (WS-05 / WS-01)
+
+WS-05 adopted the four Protocol files on `ws-05-protocol` (`0bd25fb`); Python
+goldens 38/38. Merged to `ws-01-orch` (`199a9c1`). C++ Automation parity still
+not claimed until editor `UEREMCP.Protocol.Golden` runs.
 

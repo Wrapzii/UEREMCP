@@ -43,3 +43,9 @@ For fire/water/wind/earth/ice templates, vary:
 
 - Authoring new Niagara module script graphs
 - Event-handler stack fidelity until Epic topology exposes them (see RB-07)
+
+## Response (WS-01)
+
+**Accepted as WS-15 research seed** (implementation gated). Aligns with ADR-0008
+parameterized elemental templates + Firebolt prior art. WS-15: record archetypes
+in template library design; do not invent new Niagara module scripts.

@@ -59,3 +59,9 @@ Always pair with `fidelity.round_trip_supported: false` until proven.
 ## capability_notes
 
 See RB-09 — ship on every animation response.
+
+## Response (WS-01)
+
+**Acknowledged — deferred.** Schema file list and “no SM replace” actions look
+sound. Create under `schemas/domains/animation/` only when Wave 3 is authorized
+(after Phase 1 exit). Extend `specification` / `extensions.*` only.

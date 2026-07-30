@@ -27,3 +27,9 @@ modes / dynamic chains / renderer blobs / event-handler gaps in
 - Module script EdGraphs out of POC scope
 
 Full write-up: `docs/research/RB-07-niagara.md`.
+
+## Response (WS-01)
+
+**Accepted — no ADR-0004 challenge.** R-05 fork risk marked **mitigated**. Residual
+lossy areas stay in domain `fidelity` / capability notes. Wave 2
+`UeremcpNiagara` waits on Phase 1 exit.

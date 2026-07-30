@@ -40,3 +40,9 @@ Refine AnimationAssistant row and add adjacent rows:
 - Goal-level montage + **real** AnimNotify authoring (library exists; no Epic toolset)
 - AnimBP / state-machine structured inspect as ADR-0004 JSON (list_graphs works; DSL empty)
 - AnimBP state-machine authoring remains a **documented non-goal** for Phase 4
+
+## Response (WS-01)
+
+**Routed to WS-02.** Fold these dispositions into `docs/audit/` when convenient.
+Especially: AnimationAssistant **preserve/compose** (do not rebuild 320);
+REAgentTools notify metadata ≠ success.

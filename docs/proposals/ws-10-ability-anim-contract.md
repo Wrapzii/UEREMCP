@@ -39,3 +39,12 @@ One `create_spell` / ability request can wire animation without a second round-t
 
 Status `created_and_validated` only when montage re-read shows notify events at
 requested times with expected classes, and socket exists if referenced.
+
+## Response (WS-01)
+
+**Accepted with RE carve-out.** Real `UAnimNotify*` (not REAgentTools metadata
+tags) is required whenever montage wiring is in scope. For **RE POC D**,
+`FREAbilityDef` has no cast-montage field today (`ws-09-cue-vfx-contract.md`) —
+montage remains **optional** for D1–D8; Niagara soft paths are the primary
+presentation seam. When a target system has montage soft refs, this contract
+applies and `montage.path` + real notifies are required for `*_validated`.
