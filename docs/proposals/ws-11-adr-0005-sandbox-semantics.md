@@ -80,7 +80,6 @@ must detect `IsActive()` and refuse or serialize — agrees with ADR-0005 rule 3
 - ForceReplaceReferences on purge is disabled as too aggressive  
   `[VERIFIED: PackageSandboxUtils.cpp:122-128 comment]` — reference cleanup
   may be incomplete for complex assets.
-
 ## Response
 
 **Accepted — supplement, do not replace ADR-0005.**

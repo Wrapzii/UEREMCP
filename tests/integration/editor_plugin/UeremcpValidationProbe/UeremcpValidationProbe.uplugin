@@ -1,0 +1,35 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "UEREMCP Validation Probe",
+	"Description": "Standalone WS-11 FileSandbox empirical probe + Rollback.MultiAssetDiscard. Temporary until UeremcpValidation is registered in UEREMCP.uplugin.",
+	"Category": "Testing",
+	"CreatedBy": "UEREMCP WS-11",
+	"EnabledByDefault": false,
+	"IsExperimentalVersion": true,
+	"CanContainContent": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "UeremcpValidationProbe",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ToolsetRegistry",
+			"Enabled": true
+		},
+		{
+			"Name": "FileSandbox",
+			"Enabled": true
+		},
+		{
+			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		}
+	]
+}

@@ -1,0 +1,41 @@
+// UEREMCP — validation & testing module (WS-11).
+//
+// Editor-only. Depends on ToolsetRegistry for FGlobalSandbox (ADR-0005) and on
+// UnrealEd for asset create/save/registry assertions. Does NOT depend on
+// ModelContextProtocol — tests must be runnable via Automation / UnrealEditor-Cmd
+// without an MCP client (RB-14).
+
+using UnrealBuildTool;
+
+public class UeremcpValidation : ModuleRules
+{
+	public UeremcpValidation(ReadOnlyTargetRules Target) : base(Target)
+	{
+		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core",
+			"CoreUObject",
+			"Engine",
+		});
+
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"UnrealEd",
+			"AssetRegistry",
+			"AssetTools",
+			"EditorScriptingUtilities",
+			"Json",
+			"JsonUtilities",
+			"Projects",
+
+			// ADR-0005 outer layer. [VERIFIED: $TR/.../Public/ToolsetRegistry/SandboxLibrary.h]
+			"ToolsetRegistry",
+
+			// FileSandboxCore types (FSandboxedFileChangeInfo, ESandboxFileChange).
+			// [VERIFIED: $FS/.../Public/Types/SandboxedFileChangeInfo.h]
+			"FileSandboxCore",
+		});
+	}
+}
