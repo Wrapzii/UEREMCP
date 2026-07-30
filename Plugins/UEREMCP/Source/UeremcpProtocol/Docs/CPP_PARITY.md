@@ -1,8 +1,23 @@
 # C++ / Python golden-vector parity (WS-14 C-2)
 
 **Owner:** WS-05  
-**Status:** Python goldens green in CI-less local run; **C++ parity is NOT claimed
-until AutomationTests pass** against the same `Tests/golden/` files.
+**Status:** **C++/Python golden parity verified** — Python 38/38 (`Tests/py/test_golden.py`);
+C++ `UEREMCP.Protocol.Golden` (ContentHash, Envelope, Ref, Topo) all **Success** on RE
+editor AutomationTests.
+
+`[VERIFIED-RUNTIME: UEREMCP.Protocol.Golden all Success on RE; commit 93bcfa2]`
+
+**Evidence record (2026-07-30):**
+
+| Check | Result |
+|---|---|
+| Python goldens | 38/38 pass |
+| C++ `UEREMCP.Protocol.Golden.ContentHash` | Success |
+| C++ `UEREMCP.Protocol.Golden.Envelope` | Success |
+| C++ `UEREMCP.Protocol.Golden.Ref` | Success |
+| C++ `UEREMCP.Protocol.Golden.Topo` | Success |
+| Commit | `93bcfa2` — ContentHash JSON sorted keys (TMap-safe) |
+| Golden corpus fingerprint | `sha256:61b087813c3a04831b2367a813e7bef2c050c75f12cdf6dec08666fd7e407308` |
 
 ## Contract
 
@@ -64,12 +79,11 @@ When running from a worktree that is not the project Plugins tree, set:
 set UEREMCP_PROTOCOL_GOLDEN_ROOT=$UEREMCP_ROOT-ws05\Plugins\UEREMCP\Source\UeremcpProtocol\Tests\golden
 ```
 
-## Parity checklist (do not claim done early)
+## Parity checklist
 
 - [x] Golden inputs + expected outputs checked in under `Tests/golden/`
 - [x] Python `test_golden.py` asserts against goldens
 - [x] C++ AutomationTests load the same goldens and call `FUeremcp*`
-- [ ] C++ AutomationTests observed **PASS** in editor/commandlet (pending local UE build)
+- [x] C++ AutomationTests observed **PASS** in editor/commandlet (RE, 2026-07-30)
 
-Until the last box is checked, handoff language is: **Python regression green;
-C++ parity pending runtime AutomationTest.**
+Handoff language: **C++/Python golden parity verified for envelope, content_hash, ref, topo.**
