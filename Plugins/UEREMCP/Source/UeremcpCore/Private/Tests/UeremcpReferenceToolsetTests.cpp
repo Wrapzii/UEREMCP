@@ -22,9 +22,8 @@
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
 
+#include "UeremcpEnvelope.h"
 #include "UeremcpReferenceToolset.h"
-
-#include "UeremcpMinimalEnvelope.h"
 
 
 
@@ -68,9 +67,25 @@ bool FUeremcpReferenceToolsetPingTest::RunTest(const FString& Parameters)
 
 	FString Status;
 
+	FString ProtocolVersion;
+
 	TestTrue(TEXT("status present"), Root->TryGetStringField(TEXT("status"), Status));
 
 	TestEqual(TEXT("status is no_change_required"), Status, FString(TEXT("no_change_required")));
+
+	TestTrue(
+
+		TEXT("protocol_version present"),
+
+		Root->TryGetStringField(TEXT("protocol_version"), ProtocolVersion));
+
+	TestEqual(
+
+		TEXT("protocol_version matches schema"),
+
+		ProtocolVersion,
+
+		FUeremcpEnvelope::ProtocolVersion());
 
 
 
@@ -110,7 +125,7 @@ bool FUeremcpReferenceToolsetEchoTest::RunTest(const FString& Parameters)
 
 	const FString Request = TEXT(
 
-		R"({"protocol_version":"1.0.0","request_id":"echo-1","action":"reference.echo","target":{"asset_path":"/Game/None"}})");
+		R"({"protocol_version":"1.0","request_id":"echo-1","action":"reference_echo","target":{"asset_path":"/Game/None"}})");
 
 	const FString Json = UUeremcpReferenceToolset::Echo(Request);
 
