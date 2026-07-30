@@ -112,6 +112,7 @@ python schemas/domains/materials/test_element_presets.py
 python schemas/domains/materials/test_features.py
 python schemas/domains/materials/test_procedural_texture.py
 python schemas/domains/materials/test_niagara_export.py
+python schemas/domains/materials/test_validate_contract.py
 python tools/check_ownership.py --ws WS-08
 ```
 

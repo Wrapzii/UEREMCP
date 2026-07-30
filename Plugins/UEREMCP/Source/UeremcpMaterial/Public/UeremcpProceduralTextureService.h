@@ -16,6 +16,7 @@ struct FUeremcpProceduralTextureRequest
 	int32 Seed = 0;
 	bool bDryRun = false;
 	bool bSave = true;
+	bool bValidate = true;
 };
 
 struct FUeremcpProceduralTextureResult

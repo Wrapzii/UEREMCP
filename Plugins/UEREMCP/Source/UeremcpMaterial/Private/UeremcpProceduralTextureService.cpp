@@ -244,6 +244,30 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 		++Result.InternalOperations;
 	}
 
+	if (!Request.bValidate)
+	{
+		Result.bSuccess = true;
+		Result.bCreated = true;
+		Result.Status = TEXT("partially_completed");
+		Result.PrimaryAsset = Request.TargetAssetPath;
+		Result.Summary = FString::Printf(
+			TEXT("Created procedural texture '%s' (%s, %dx%d, seed=%d); options.validate=false — dimension re-read skipped."),
+			*Request.TargetAssetPath,
+			*Request.GenerateKind,
+			Request.Width,
+			Request.Height,
+			Seed);
+		Result.InterpretationNotes.Add(
+			TEXT("options.validate=false: envelope contract forbids *_validated status."));
+
+		FUeremcpAssetRef Created;
+		Created.AssetPath = Request.TargetAssetPath;
+		Created.AssetClass = TEXT("Texture2D");
+		Created.Role = Request.GenerateKind;
+		Result.CreatedAssets.Add(Created);
+		return Result;
+	}
+
 	UTexture2D* Reloaded = Cast<UTexture2D>(AssetSubsystem->LoadAsset(Request.TargetAssetPath));
 	if (!Reloaded)
 	{
@@ -319,6 +343,7 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::ExecuteFromEnve
 	TextureRequest.Seed = Seed;
 	TextureRequest.bDryRun = Request.bDryRun;
 	TextureRequest.bSave = Request.bSave;
+	TextureRequest.bValidate = Request.bValidate;
 
 	return Execute(TextureRequest);
 }

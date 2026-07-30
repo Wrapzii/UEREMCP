@@ -36,6 +36,8 @@ namespace UeremcpMaterialTests
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileCore_Fire"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileTrail_Ice"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_NS_WS08_ExportProbe_core"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ValidateFalse_Core"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_WS08_ValidateFalse_Noise"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map"));
 
 		UEditorAssetSubsystem* Subsystem = GetAssetSubsystem();
@@ -258,6 +260,68 @@ bool FUeremcpMaterialNiagaraExportServiceTest::RunTest(const FString& Parameters
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCreateVfxValidateFalseTest,
+	"UeremcpMaterial.Toolset.CreateVfxMaterial.ValidateFalse",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialCreateVfxValidateFalseTest::RunTest(const FString& Parameters)
+{
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+
+	const FString Target = TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ValidateFalse_Core");
+	const FString Request = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-validate-false",
+		"action":"create_vfx_material",
+		"target":{"asset_path":"%s"},
+		"specification":{
+			"purpose":"elemental_projectile_core",
+			"element":"fire",
+			"features":["radial_falloff","animated_noise","fresnel","dynamic_color","dynamic_intensity"]
+		},
+		"options":{"compile":true,"validate":false,"save":true}
+	})"), *Target);
+
+	const FString Json = UUeremcpMaterialToolset::CreateVfxMaterial(Request);
+	FString Status;
+	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
+	TestEqual(TEXT("partially_completed when validate false"), Status, FString(TEXT("partially_completed")));
+	TestFalse(TEXT("summary must not claim re-read verified"), Json.Contains(TEXT("re-read verified")));
+
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCreateProceduralTextureValidateFalseTest,
+	"UeremcpMaterial.Toolset.CreateProceduralTexture.ValidateFalse",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialCreateProceduralTextureValidateFalseTest::RunTest(const FString& Parameters)
+{
+	const FString Target = TEXT("/Game/__UeremcpTests/Textures/T_WS08_ValidateFalse_Noise");
+	UeremcpMaterialTests::DeleteIfExists(Target);
+
+	const FString Request = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-tex-validate-false",
+		"action":"create_procedural_texture",
+		"target":{"asset_path":"%s"},
+		"specification":{"generate":"noise","dimensions":[64,64],"seed":3},
+		"options":{"save":true,"validate":false}
+	})"), *Target);
+
+	const FString Json = UUeremcpMaterialToolset::CreateProceduralTexture(Request);
+	FString Status;
+	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
+	TestEqual(TEXT("partially_completed when validate false"), Status, FString(TEXT("partially_completed")));
+	TestFalse(TEXT("must not claim created_and_validated"), Json.Contains(TEXT("created_and_validated")));
+
+	UeremcpMaterialTests::DeleteIfExists(Target);
 	return true;
 }
 

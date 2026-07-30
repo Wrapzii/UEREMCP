@@ -106,6 +106,194 @@ namespace
 		return true;
 	}
 
+	static bool IsKnownTextureSlot(const FString& SlotName)
+	{
+		return SlotName == TEXT("MainTexture") ||
+			SlotName == TEXT("NoiseTexture") ||
+			SlotName == TEXT("FlowMap") ||
+			SlotName == TEXT("MaskTexture");
+	}
+
+	struct FTextureSlotBinding
+	{
+		FString SlotName;
+		FString AssetPath;
+	};
+
+	static FString ProceduralTextureAssetName(
+		const FString& MiAssetName,
+		const FString& SlotName,
+		const FString& GenerateKind)
+	{
+		return FString::Printf(TEXT("T_%s_%s_%s"), *MiAssetName, *SlotName, *GenerateKind);
+	}
+
+	static bool ResolveTextureSlotsFromSpec(
+		const TSharedPtr<FJsonObject>& Spec,
+		const FString& MiAssetName,
+		bool bDryRun,
+		bool bSave,
+		bool bValidate,
+		TArray<FTextureSlotBinding>& OutBindings,
+		TArray<FUeremcpAssetRef>& OutCreatedAssets,
+		TArray<FString>& OutInterpretationNotes,
+		TArray<FString>& OutCapabilityNotes,
+		int32& InOutOps,
+		FString& OutError)
+	{
+		const TSharedPtr<FJsonObject>* TexturesObj = nullptr;
+		if (!Spec.IsValid() || !Spec->TryGetObjectField(TEXT("textures"), TexturesObj) || !TexturesObj || !TexturesObj->IsValid())
+		{
+			return true;
+		}
+
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*TexturesObj)->Values)
+		{
+			const FString& SlotName = Pair.Key;
+			if (!IsKnownTextureSlot(SlotName))
+			{
+				OutError = FString::Printf(
+					TEXT("Unknown texture slot '%s'; expected MainTexture, NoiseTexture, FlowMap, or MaskTexture."),
+					*SlotName);
+				return false;
+			}
+
+			const TSharedPtr<FJsonValue>& Value = Pair.Value;
+			if (!Value.IsValid())
+			{
+				continue;
+			}
+
+			FString ResolvedPath;
+			if (Value->Type == EJson::String)
+			{
+				ResolvedPath = Value->AsString();
+				if (!UeremcpMaterialPaths::IsUnderTestsRoot(ResolvedPath))
+				{
+					OutError = FString::Printf(
+						TEXT("Texture slot '%s' path '%s' must be under /Game/__UeremcpTests/."),
+						*SlotName,
+						*ResolvedPath);
+					return false;
+				}
+				OutInterpretationNotes.Add(
+					FString::Printf(TEXT("Texture slot '%s' bound to existing asset '%s'."), *SlotName, *ResolvedPath));
+			}
+			else if (Value->Type == EJson::Object)
+			{
+				const TSharedPtr<FJsonObject> GenerateObject = Value->AsObject();
+				FString Kind;
+				int32 Width = 512;
+				int32 Height = 512;
+				int32 Seed = 0;
+				if (!UeremcpProceduralTextureService::ParseGenerateSpec(GenerateObject, Kind, Width, Height, Seed))
+				{
+					OutError = FString::Printf(
+						TEXT("Texture slot '%s' requires a valid generate spec."),
+						*SlotName);
+					return false;
+				}
+
+				const FString AssetName = ProceduralTextureAssetName(MiAssetName, SlotName, Kind);
+				ResolvedPath = UeremcpMaterialPaths::JoinPackagePath(UeremcpMaterialPaths::TexturesFolder, AssetName);
+
+				if (bDryRun)
+				{
+					OutInterpretationNotes.Add(
+						FString::Printf(
+							TEXT("dry_run: would generate slot '%s' (%s %dx%d) at '%s'."),
+							*SlotName,
+							*Kind,
+							Width,
+							Height,
+							*ResolvedPath));
+				}
+				else
+				{
+					FUeremcpProceduralTextureRequest TextureRequest;
+					TextureRequest.TargetAssetPath = ResolvedPath;
+					TextureRequest.GenerateKind = Kind;
+					TextureRequest.Width = Width;
+					TextureRequest.Height = Height;
+					TextureRequest.Seed = Seed;
+					TextureRequest.bSave = bSave;
+					TextureRequest.bValidate = bValidate;
+
+					const FUeremcpProceduralTextureResult TextureResult =
+						UeremcpProceduralTextureService::Execute(TextureRequest);
+					InOutOps += TextureResult.InternalOperations;
+					OutInterpretationNotes.Append(TextureResult.InterpretationNotes);
+					OutCapabilityNotes.Append(TextureResult.CapabilityNotes);
+
+					if (!TextureResult.bSuccess)
+					{
+						OutError = FString::Printf(
+							TEXT("Procedural texture generation failed for slot '%s': %s"),
+							*SlotName,
+							*TextureResult.Summary);
+						return false;
+					}
+
+					OutCreatedAssets.Append(TextureResult.CreatedAssets);
+					OutInterpretationNotes.Add(
+						FString::Printf(
+							TEXT("Generated slot '%s' via create_procedural_texture (%s → '%s')."),
+							*SlotName,
+							*Kind,
+							*ResolvedPath));
+				}
+			}
+			else
+			{
+				OutError = FString::Printf(
+					TEXT("Texture slot '%s' must be an asset path string or generate object."),
+					*SlotName);
+				return false;
+			}
+
+			FTextureSlotBinding Binding;
+			Binding.SlotName = SlotName;
+			Binding.AssetPath = ResolvedPath;
+			OutBindings.Add(Binding);
+		}
+
+		return true;
+	}
+
+	static bool ApplyTextureSlotsToInstance(
+		UMaterialInstanceConstant* Instance,
+		const TArray<FTextureSlotBinding>& Bindings,
+		UEditorAssetSubsystem* AssetSubsystem,
+		int32& InOutOps,
+		FString& OutError)
+	{
+		if (!Instance || !AssetSubsystem)
+		{
+			OutError = TEXT("Cannot apply texture slots: null instance or asset subsystem.");
+			return false;
+		}
+
+		for (const FTextureSlotBinding& Binding : Bindings)
+		{
+			UTexture* Texture = Cast<UTexture>(AssetSubsystem->LoadAsset(Binding.AssetPath));
+			if (!Texture)
+			{
+				OutError = FString::Printf(
+					TEXT("Failed to load texture '%s' for slot '%s'."),
+					*Binding.AssetPath,
+					*Binding.SlotName);
+				return false;
+			}
+
+			UMaterialEditingLibrary::SetMaterialInstanceTextureParameterValue(
+				Instance,
+				FName(*Binding.SlotName),
+				Texture);
+			++InOutOps;
+		}
+		return true;
+	}
+
 	static UMaterialInstanceConstant* CreateMaterialInstance(
 		const FString& FolderPath,
 		const FString& AssetName,
@@ -131,6 +319,59 @@ namespace
 		}
 		++InOutOps;
 		return Instance;
+	}
+
+	static FString ResolveMaterialSuccessStatus(
+		bool bCreatedInstance,
+		bool bValidate,
+		bool bHasUnimplementedFeatures)
+	{
+		if (!bValidate)
+		{
+			return TEXT("partially_completed");
+		}
+		if (bHasUnimplementedFeatures)
+		{
+			return bCreatedInstance ? TEXT("created_with_warnings") : TEXT("partially_completed");
+		}
+		return bCreatedInstance ? TEXT("created_and_validated") : TEXT("modified_and_validated");
+	}
+
+	static FString BuildMaterialSuccessSummary(
+		bool bCreatedInstance,
+		const FUeremcpRequest& Request,
+		const FString& TargetPath,
+		const FString& MasterPath,
+		const FString& Purpose,
+		const FString& Element,
+		const TArray<FString>& Features)
+	{
+		FString PostApplyClause;
+		if (Request.bValidate)
+		{
+			TArray<FString> Checks;
+			if (Request.bCompile)
+			{
+				Checks.Add(TEXT("parent recompiled"));
+			}
+			Checks.Add(TEXT("parameters re-read verified"));
+			Checks.Add(TEXT("PrimaryAsset load verified"));
+			PostApplyClause = FString::Printf(TEXT("; %s."), *FString::Join(Checks, TEXT(", ")));
+		}
+		else
+		{
+			PostApplyClause = TEXT("; options.validate=false — verification checks skipped (partially_completed).");
+		}
+
+		return FString::Printf(
+			TEXT("create_vfx_material %s '%s' from master '%s' (purpose='%s', element='%s', features=[%s])%s"),
+			bCreatedInstance ? TEXT("created") : TEXT("updated"),
+			*TargetPath,
+			*MasterPath,
+			*Purpose,
+			Element.IsEmpty() ? TEXT("(unset)") : *Element,
+			*FString::Join(Features, TEXT(", ")),
+			*PostApplyClause);
 	}
 }
 
@@ -254,6 +495,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		MiName,
 		Request.bDryRun,
 		Request.bSave,
+		Request.bValidate,
 		TextureBindings,
 		Result.CreatedAssets,
 		Result.InterpretationNotes,
@@ -423,7 +665,8 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		{
 			Result.Status = TEXT("partially_completed");
 			Result.Summary = FString::Printf(
-				TEXT("MI parameters applied and verified but save failed for '%s'."),
+				TEXT("MI parameters applied%s but save failed for '%s'."),
+				Request.bValidate ? TEXT(" and verified") : TEXT(""),
 				*Request.TargetAssetPath);
 			Result.PrimaryAsset = Request.TargetAssetPath;
 			return Result;
@@ -452,25 +695,29 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.InterpretationNotes.Add(
 			TEXT("PrimaryAsset re-load verified as UMaterialInterface (FSoftObjectPath-compatible package path)."));
 	}
+	else
+	{
+		Result.InterpretationNotes.Add(
+			TEXT("options.validate=false: envelope contract forbids *_validated status."));
+	}
 
 	Result.bSuccess = true;
-	Result.Status = bCreatedInstance ? TEXT("created_and_validated") : TEXT("modified_and_validated");
+	Result.Status = ResolveMaterialSuccessStatus(
+		bCreatedInstance,
+		Request.bValidate,
+		UnimplementedFeatures.Num() > 0);
 	if (UnimplementedFeatures.Num() > 0)
 	{
-		if (bCreatedInstance)
-		{
-			Result.Status = TEXT("created_with_warnings");
-		}
 		Result.CapabilityNotes.Add(TEXT("One or more requested feature tokens are not implemented; see capability_notes."));
 	}
-	Result.Summary = FString::Printf(
-		TEXT("create_vfx_material %s '%s' from master '%s' (purpose='%s', element='%s', features=[%s]); parameters applied, parent recompiled, re-read verified."),
-		bCreatedInstance ? TEXT("created") : TEXT("updated"),
-		*Request.TargetAssetPath,
-		*MasterPath,
-		*Purpose,
-		Element.IsEmpty() ? TEXT("(unset)") : *Element,
-		*FString::Join(Features, TEXT(", ")));
+	Result.Summary = BuildMaterialSuccessSummary(
+		bCreatedInstance,
+		Request,
+		Request.TargetAssetPath,
+		MasterPath,
+		Purpose,
+		Element,
+		Features);
 
 	FUeremcpAssetRef InstanceRef;
 	InstanceRef.AssetPath = Request.TargetAssetPath;
