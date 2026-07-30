@@ -13,13 +13,25 @@
 	"EnabledByDefault": false,
 	"Modules": [
 		{
+			"Name": "UeremcpProtocol",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
 			"Name": "UeremcpCore",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"TargetAllowList": [ "Editor" ]
 		},
 		{
-			"Name": "UeremcpProtocol",
+			"Name": "UeremcpTransport",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
+			"Name": "UeremcpValidation",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"TargetAllowList": [ "Editor" ]
@@ -33,6 +45,11 @@
 		{
 			"Name": "ModelContextProtocol",
 			"Enabled": true
+		},
+		{
+			"Name": "FileSandbox",
+			"Enabled": true
 		}
 	]
 }
+

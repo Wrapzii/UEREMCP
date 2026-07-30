@@ -335,7 +335,7 @@ bool FUeremcpProtocolGoldenRef::RunTest(const FString& Parameters)
 	{
 		if (Pair.Value.IsValid() && Pair.Value->Type == EJson::Object)
 		{
-			Completed.Add(Pair.Key, Pair.Value->AsObject());
+			Completed.Add(FString(Pair.Key), Pair.Value->AsObject());
 		}
 	}
 

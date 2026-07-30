@@ -1,11 +1,8 @@
-# UEREMCP plugin — scaffold
+# UEREMCP plugin
 
-> **STATUS: SCAFFOLD. THIS HAS NEVER BEEN COMPILED.**
->
-> It was written from a reading of UE 5.8 engine headers
-> (`docs/GROUNDED_FACTS.md`), not from a working build. Treat every construct in it as
-> `[UNVERIFIED]` until WS-03 makes it build. Expect it to be wrong in at least one
-> place — that is what RB-03 is for.
+> **STATUS: Core compiles against UE 5.8** (`UeremcpCore` + `UeremcpProtocol` +
+> `UeremcpTransport`). Ping/Echo are registered `AICallable` tools. MCP runtime
+> reachability and Live Coding findings: see `docs/research/RB-03-plugin-integration.md`.
 
 **Owner:** WS-03 (`UeremcpCore`, `.uplugin`), WS-05 (`UeremcpProtocol`).
 
