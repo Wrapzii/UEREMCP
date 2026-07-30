@@ -123,6 +123,22 @@ class HarnessLayoutTest(unittest.TestCase):
         path = REPO_ROOT / "tests" / "integration" / "Rollback.MultiAssetDiscard.md"
         self.assertTrue(path.is_file(), f"missing {path}")
 
+    def test_domain_runtime_handoff_profiles_are_documented(self):
+        path = REPO_ROOT / "tests" / "integration" / "Domain.Runtime.Handoffs.md"
+        self.assertTrue(path.is_file(), f"missing {path}")
+        handoff = path.read_text(encoding="utf-8")
+        self.assertIn('-Filter "UEREMCP.Niagara.Inspect"', handoff)
+        self.assertIn('-Filter "UeremcpMaterial.Toolset"', handoff)
+        self.assertIn("/Game/__UeremcpTests/NS_WS07_Probe", handoff)
+        self.assertIn("/Game/__UeremcpTests/Materials/", handoff)
+        self.assertIn("no runtime pass claimed", handoff.lower())
+
+    def test_validation_readme_records_scoped_six_of_six_gate(self):
+        readme = (REPO_ROOT / "tests" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("shipping Validation gate is green (6/6)", readme)
+        self.assertIn("PASS (scoped)", readme)
+        self.assertIn("DiscardFiles()", readme)
+
     def test_run_scripts_exist(self):
         self.assertTrue((REPO_ROOT / "tests" / "run_unit_tests.py").is_file())
         self.assertTrue((REPO_ROOT / "tests" / "run_editor_tests.ps1").is_file())

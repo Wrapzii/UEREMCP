@@ -17,6 +17,8 @@
 #
 # Usage:
 #   pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"
+#   pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Niagara.Inspect"
+#   pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UeremcpMaterial.Toolset"
 #   pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.ValidationProbe.Launch.Smoke"
 #   pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library" -NoProbe
 #
@@ -80,7 +82,7 @@ Write-Host "Exit code: $($proc.ExitCode)"
 # Surface automation summary lines for agents that cannot open the full log.
 if (Test-Path $LogFile) {
     Write-Host "---- automation result lines ----"
-    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|Sandbox\.Library|Automation Test Queue" |
+    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|UEREMCP\.Niagara\.Inspect|UeremcpMaterial\.Toolset|created_and_validated|Sandbox\.Library|Automation Test Queue" |
         Select-Object -Last 80 |
         ForEach-Object { $_.Line }
 }

@@ -26,8 +26,11 @@ pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library" -No
 Raw logs gitignored; redacted notes may live under `tests/integration/_logs/*.redacted.md`.  
 Scratch: `/Game/__UeremcpTests/` + `FUeremcpScratchGuard` — see RB-14.
 
-Until the **shipping** gate is green with UEREMCP enabled, **`rollback.available` stays
-`false`** (ADR-0005 + C-3). Engine probe evidence alone is not enough.
+The shipping Validation gate is green (6/6) with UEREMCP enabled
+`[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260730_005518.log]`. This permits
+`rollback.available: true` only for the tested Content/full-`Discard()` cases below.
+Engine probe evidence alone is not enough, and the runtime result must not be broadened
+to `Saved/`, `Config/`, `DiscardFiles()`, or untested asset/reference topologies.
 
 ## Layout
 
@@ -73,17 +76,27 @@ Named in the ADRs. Until each passes at runtime, the corresponding claim is not 
 
 | Automation path | Gates | ADR | Status (2026-07-30) |
 |---|---|---|---|
-| `UEREMCP.Validation.Rollback.MultiAssetDiscard` | `rollback.available` for Content/ adds | ADR-0005 | **PASS** (prior run) |
-| `UEREMCP.Validation.Rollback.DeletedAssetDiscard` | Deletion rollback (open q5) | ADR-0005 | **Implemented** — runtime blocked¹ |
-| `UEREMCP.Validation.Rollback.BlueprintCompileDiscard` | BP compile + Discard (open q4) | ADR-0005 | **Implemented** — runtime blocked¹ |
-| `UEREMCP.Validation.Idempotency.RepeatedCreate` | create_or_update idempotency | ADR-0006 | **Implemented** — runtime blocked¹ |
-| `UEREMCP.Validation.Revision.StaleRejected` | `expected_revision` reject | ADR-0006 | **Implemented** — runtime blocked¹ |
+| `UEREMCP.Validation.Rollback.MultiAssetDiscard` | Content package-add rollback | ADR-0005 q1/q3 | **PASS** |
+| `UEREMCP.Validation.Rollback.DeletedAssetDiscard` | One pre-existing `UCurveFloat` delete restored by full Discard | ADR-0005 q5 | **PASS (scoped)** |
+| `UEREMCP.Validation.Rollback.BlueprintCompileDiscard` | One trivial Actor Blueprint member edit, compile/save, disk/reload restoration | ADR-0005 q4 | **PASS (scoped)** |
+| `UEREMCP.Validation.Idempotency.RepeatedCreate` | In-process create replay through `TryGetReplay` | ADR-0006 | **PASS** |
+| `UEREMCP.Validation.Revision.StaleRejected` | `expected_revision` reject with no mutation | ADR-0006 | **PASS** |
 
-¹ **2026-07-30:** `RE.uproject` junction → `UEREMCP-ws03`. `UEREMCP.uplugin` lists
-`UeremcpBlueprint` with no `Source/UeremcpBlueprint/` tree; UnrealEditor-Cmd and UBT abort
-before Automation. See `docs/proposals/ws-11-ws03-uplugin-build-blocker.md`. SoT for new
-tests: `Plugins/UEREMCP/Source/UeremcpValidation/Private/Tests/*.spec.cpp` in **ws-11**
-worktree; sync to ws03 junction after WS-03 fixes uplugin parity.
+All five rows plus `UEREMCP.Validation.Harness.Smoke` passed in one shipping-plugin run
+`[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260730_005518.log]`; see
+`integration/_logs/editor_UEREMCP_Validation_20260730_6of6.redacted.md`.
+
+ADR-0005 q4/q5 are closed only for those fixtures. Remaining rollback residuals:
+
+- q4: arbitrary Blueprint graph/bytecode/CDO state and dependent loaded objects were
+  not exercised; the fixture proves restored package bytes and a clean reload.
+- q5: complex assets, referencers, redirectors, and multi-package deletion sets were
+  not exercised; the fixture proves one pre-existing curve is restored on disk and in
+  the asset registry.
+- `Saved/` and `Config/` are outside FileSandbox coverage
+  `[VERIFIED: ISandboxInstance.h:28-30]`.
+- Partial rollback through `DiscardFiles()` remains unproven and does not perform the
+  full purge/hot-reload path `[VERIFIED: SandboxLibrary.cpp:178-203]`.
 
 Full filter:
 
@@ -95,6 +108,9 @@ Plus, per family, the ADR-0004 round-trip test: retrieve → replace unchanged �
 asserting an identical `content_hash`. **A family that cannot pass it does not claim
 round-trip support** — it sets `fidelity.round_trip_supported: false` and lists
 `lossy_areas`.
+
+Upcoming Niagara and Material runtime filters have a no-claim handoff checklist in
+[`integration/Domain.Runtime.Handoffs.md`](integration/Domain.Runtime.Handoffs.md).
 
 ## `benchmark/`
 
