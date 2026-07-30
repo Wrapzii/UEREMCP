@@ -1,13 +1,13 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `98dcfce` (`[WS-01] Record persistent Niagara B7 assertion failure`)
+- **Current orchestration tip:** `d57f09d` (`[WS-07] Resolve mesh renderers via exported Niagara APIs`)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `eff241c`
+- **Latest Niagara re-run tip:** `d57f09d`
 - **Latest Material re-run tip:** `c881742`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Material, Animation, and Niagara Inspect green; Niagara B7 no longer crashes but still fails override/cleanup assertions. No A6 / POC-B completion claims.
+- **Status:** Material, Animation, and Niagara Inspect green; Niagara B7 has one remaining `bOverrideMaterials` EditCondition assertion failure. No A6 / POC-B completion claims.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -28,8 +28,15 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | SubmitGraphValidation | **PASS** | `UeremcpBlueprint.Toolset.SubmitGraphValidation`, `tests/integration/_logs/editor_UeremcpBlueprint_Toolset_20260730_022304.log`: `Test Completed. Result={Success}` at line 3019. |
 | Revision-hash mismatch / hash alignment | **PASS** | `UeremcpBlueprint.Toolset.ReadGraphRoundTrip`, same log: `Test Completed. Result={Success}` at line 2999. The test asserts graph `content_hash == revision` and summary revision equals complete revision. |
 
-No current-tip rerun was needed because the exact proof tip is an ancestor of `98dcfce` and the Blueprint module/test sources are unchanged since that proof.
+No additional rerun was needed because the exact proof tip remains an ancestor of the current lineage and the Blueprint module/test sources are unchanged since that proof.
 
+## Update on tip `d57f09d` (WS-11 Niagara B7 re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **FAIL, assertion_failure** | WS-07 | Only remaining failure is the `bOverrideMaterials` EditCondition `LogError`. Prior cleanup ensure, inspect crash, and link failure are resolved. Not a B7 / POC-B completion claim. |
+
+Standing by for the final WS-07 EditCondition fix.
 ## Update on tip `eff241c` (WS-11 Niagara B7 re-run)
 
 | Filter | Result | Owner | Notes |
@@ -132,9 +139,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-07 | Fix the persistent B7 `bOverrideMaterials` `LogEditCondition` and `ForceDeleteObjects` cleanup ensure; Inspect filter remains PASS 4/4. |
+| WS-07 | Fix the sole remaining B7 `bOverrideMaterials` EditCondition `LogError`; cleanup, crash, and link blockers are cleared. |
 | WS-08 | Material Toolset PASS on `c881742` — no further Material filter work from this triage. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
 | WS-11 | Re-run B7 after WS-07 fix; keep POC-B claims gated to their own criteria. |
 
-Standing by on orch for the deeper WS-07 B7 override/cleanup fix. No junction retarget.
+Standing by on orch for the final WS-07 B7 EditCondition fix. No junction retarget.
