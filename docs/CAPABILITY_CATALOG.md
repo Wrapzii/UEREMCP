@@ -65,8 +65,8 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `inspect_system` | niagara | WS-07 | partial | RB-07 — schema + `InspectSystem` stub; full read path TBD |
-| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — specification schema landed; authoring not verified |
+| `inspect_system` | niagara | WS-07 | partial | RB-07 — Wave-2 `/Game/__UeremcpTests/` probe; topology is intentionally lossy and runtime promotion is pending |
+| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — Wave-2 `/Game/__UeremcpTests/` probe; renderer/material and runtime-smoke validation are pending |
 | `create_niagara_template` | niagara | WS-07 | research | RB-07, RB-10 |
 | `create_effect_variation` | niagara | WS-07 | research | RB-07, RB-10 |
 
@@ -74,7 +74,7 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_vfx_material` | materials | WS-08 | research | RB-08 |
+| `create_vfx_material` | materials | WS-08 | partial | RB-08 — Wave-2 Epic MaterialTools wiring; test-root only and editor runtime validation is pending |
 | `create_material` | materials | WS-08 | planned | RB-08 |
 | `create_material_family` | materials | WS-08 | planned | RB-08 |
 | `import_and_configure_asset` | import_export | WS-08 | planned | RB-11 |
@@ -96,6 +96,7 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
+| `inspect_montage` | animation | WS-10 | partial | RB-09 — source-tested inspector; complete state is withheld pending `result.asset_state`, and editor runtime validation is pending |
 | `create_animation_blueprint` | animation | WS-10 | research | RB-09 |
 | `create_control_rig` | control_rig | WS-10 | research | RB-09 — **may prove read-only** |
 
