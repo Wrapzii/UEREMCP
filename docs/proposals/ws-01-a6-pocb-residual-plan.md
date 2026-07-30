@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `40cb2a5` (WS-07 MCP B1/B10 handoffs landed; residual commit follows)
+- **Orch tip at writing:** `73b930e` (script-state await `d07f8f1` rebuilt; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball and B8 restart proofs pass. WS-07's script-state-only MCP compile await landed as `d07f8f1` (`4dc53b7`) and Niagara rebuilt cleanly with no editor running; WS-11 must rerun B1/B6 and prove one round trip. B10 and complete metrics remain blocked — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11. Post-UV editor fireball B2–B9 and B8 restart PASS. Post-`d07f8f1` MCP fireball now proves **B1** and **B6** (`mcp_round_trips=1`, compile awaited, six materials). Honest `partially_completed` because B10 is skipped. Remaining for overall POC B: **B10 visible-render** and **complete metrics/baseline** (wall time, tokens, equivalent primitive-call count). **No overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -245,25 +245,44 @@ poll calls do not satisfy B1's explicit “no follow-up calls” wording.
 **Script-state await fix landed:** WS-07 `4dc53b7` is orch `d07f8f1`. MCP
 compile await now observes `GetSystemCompileState`
 `[VERIFIED: Plugins/UEREMCP/Source/UeremcpNiagara/Private/UeremcpNiagaraCompileAwait.cpp:77-111]`
-without the crash-inducing query path; Niagara rebuilt cleanly after confirming
-no editor was running. WS-11 must rerun the canonical fixture and prove
-`B1_single_request_complete: true`, `B6_compile_awaited: true`, and
-`metrics.mcp_round_trips: 1`. The fix/build alone is not a POC-B claim.
+without the crash-inducing query path; Niagara rebuilt cleanly (DLL 07:19:11).
+
+**Post-`d07f8f1` MCP B1/B6 on orch `73b930e`: PASS.** WS-11 loaded the rebuilt
+Niagara DLL and ran the canonical fireball fixture:
+
+- **B1 PASS** — `metrics.mcp_round_trips: 1`; single-request pipeline true
+- **B6 PASS** — compile awaited true
+- Six material assets present
+- `status: partially_completed` — honest because B10 remains skipped
+- Metrics partial: `mcp_round_trips=1`, `internal_operations=46`; wall time,
+  tokens, and equivalent primitive-call baseline still outstanding
+
+### Overall POC B evaluation
+
+B1–B9 are now covered by the combined editor + MCP + restart evidence trail.
+Remaining blockers for an **overall** claim:
+
+1. **B10** — required numbered criterion; still unproven (explains `partially_completed`)
+2. **Global POC metrics** — wall-clock, total tokens, and equivalent primitive-call
+   baseline not fully recorded (round trips and internal ops alone are insufficient)
+
+No other B1–B9 gap is currently open. Do not claim overall POC B until both
+remainders pass.
 
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
-| B1 | One MCP request produces the complete effect — no follow-ups | **OPEN after `d07f8f1`** — prior run failed; WS-11 must prove B1 true in one MCP round trip | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS on `8a8c75d` editor fireball** — all six MI roles represented | WS-08 + WS-07 |
-| B3 | Niagara system exists with all six requested emitters | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
-| B4 | Renderers configured and bound to valid materials | **PASS on `8a8c75d` editor fireball** — all six, including `ribbon_trail` | WS-07 + WS-08 |
-| B5 | User params for colour, scale, intensity | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
-| B6 | System compiles; compile genuinely awaited | **OPEN after `d07f8f1`** — editor gate passes; MCP script-state await requires runtime proof | WS-07 + WS-11 |
-| B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
-| B8 | Assets saved and survive editor restart | **PASS on `8a8c75d`** — Create→restart→Verify re-read all ten checkpoint assets | WS-11 |
-| B9 | One structured response with complete change manifest | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
-| B10 | Visibly renders as fireball when placed — screenshot supplementary only | **OPEN and required** — it is a numbered binary acceptance criterion; screenshot alone cannot satisfy it | WS-07 / WS-11 |
+| B1 | One MCP request produces the complete effect — no follow-ups | **PASS on `73b930e` MCP** — one round trip; single-request pipeline true | WS-07 + WS-11 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS** — editor gate + MCP six materials present | WS-08 + WS-07 |
+| B3 | Niagara system exists with all six requested emitters | **PASS** — editor fireball + MCP create path | WS-07 + WS-11 |
+| B4 | Renderers configured and bound to valid materials | **PASS** — editor fireball (all six roles including `ribbon_trail`) | WS-07 + WS-08 |
+| B5 | User params for colour, scale, intensity | **PASS** — editor fireball | WS-07 + WS-11 |
+| B6 | System compiles; compile genuinely awaited | **PASS on `73b930e` MCP** — compile awaited true | WS-07 + WS-11 |
+| B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS** — B7 scaffold + editor fireball structural gates | WS-07 |
+| B8 | Assets saved and survive editor restart | **PASS on `8a8c75d`** — Create→restart→Verify | WS-11 |
+| B9 | One structured response with complete change manifest | **PASS** — editor fireball + MCP structured response | WS-07 + WS-11 |
+| B10 | Visibly renders as fireball when placed — screenshot supplementary only | **OPEN and required** — still skipped; blocks overall claim | WS-07 / WS-11 |
 
 Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc/`; metrics reported numerically; success with only `validate:false` does **not** count (`docs/POC_ACCEPTANCE.md`).
 
@@ -273,11 +292,9 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Rerun canonical MCP fixture with script-state await | WS-11 | Expect B1/B6 true and exactly one MCP round trip; no claim until observed |
-| P0 | If using ADR-0009 job completion, preserve honest round-trip accounting | WS-07 + WS-05/WS-11 | Job polling may solve completion, but follow-up polls do not satisfy current B1 wording |
-| P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | Blocked by MCP B1; B10 remains honestly `null` |
-| P0 | Record POC-B MCP/internal-operation/token/wall metrics and equivalent primitive-call count | WS-11 / WS-14 | Blocked by MCP B1; required before overall claim |
-| P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
+| P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | B10 required; screenshot may supplement only |
+| P0 | Complete POC-B metrics: wall time, tokens, equivalent primitive-call baseline | WS-11 / WS-14 | Round trips + internal ops recorded; remainder required by global POC rules |
+| P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; POC-B entry still open |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
 
 **Claimed:** overall POC A (CRT A1–A11 on tip `3756244`, simple-graph / native slice scope).
