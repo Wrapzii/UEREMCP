@@ -3,6 +3,7 @@
 #include "UeremcpMaterialMasterBuilder.h"
 
 #include "AssetToolsModule.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Factories/MaterialFactoryNew.h"
 #include "IAssetTools.h"
@@ -84,6 +85,7 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 	{
 		Result.bSuccess = true;
 		Result.bCreated = false;
+		Result.MasterMaterial = Existing;
 		Result.WiredFeatures = Request.Features;
 		return Result;
 	}
@@ -105,6 +107,8 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 	}
 	Result.bCreated = true;
 	Result.InternalOperations += 1;
+	Result.MasterMaterial = Material;
+	FAssetRegistryModule::AssetCreated(Material);
 
 	const FUeremcpFeatureGraphBuildResult GraphResult = UeremcpMaterialFeatureGraph::BuildGraph(
 		Material,

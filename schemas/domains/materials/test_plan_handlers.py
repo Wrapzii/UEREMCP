@@ -31,6 +31,10 @@ PLAN_TESTS_CPP = (
     REPO_ROOT
     / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/Tests/UeremcpMaterialPlanHandlersTests.cpp"
 )
+TOOLSET_TESTS_CPP = (
+    REPO_ROOT
+    / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/Tests/UeremcpMaterialToolsetTests.cpp"
+)
 MATERIAL_SERVICE = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialService.cpp"
 README = MATERIALS_DIR / "README.md"
 DRY_FIXTURE = FIXTURES_DIR / "execute_plan_create_vfx_material_dry.json"
@@ -47,6 +51,7 @@ class MaterialPlanHandlerHonestyTests(unittest.TestCase):
         cls.handlers_cpp = PLAN_HANDLERS_CPP.read_text(encoding="utf-8")
         cls.module_cpp = MODULE_CPP.read_text(encoding="utf-8")
         cls.plan_tests_cpp = PLAN_TESTS_CPP.read_text(encoding="utf-8")
+        cls.toolset_tests_cpp = TOOLSET_TESTS_CPP.read_text(encoding="utf-8")
         cls.material_service = MATERIAL_SERVICE.read_text(encoding="utf-8")
         cls.readme = README.read_text(encoding="utf-8")
         cls.dry_fixture = json.loads(DRY_FIXTURE.read_text(encoding="utf-8"))
@@ -81,6 +86,8 @@ class MaterialPlanHandlerHonestyTests(unittest.TestCase):
         self.assertIn("UEREMCP.Material.PlanHandlers.Registration", self.plan_tests_cpp)
         self.assertIn("UEREMCP.Material.PlanHandlers.AtomicPreflightBlocked", self.plan_tests_cpp)
         self.assertIn("UEREMCP.Material.PlanHandlers.CreateHonestyDryRun", self.plan_tests_cpp)
+        self.assertIn("ExpectHonestValidatedCreateStatus", self.toolset_tests_cpp)
+        self.assertIn("ReadTextureDimensionX", self.toolset_tests_cpp)
         self.assertIn("dry-run aggregate status", self.plan_tests_cpp)
         self.assertIn("dry-run operation status", self.plan_tests_cpp)
         self.assertIn("direct dry-run status", self.plan_tests_cpp)

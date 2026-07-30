@@ -27,6 +27,8 @@ struct FUeremcpMaterialMasterBuildResult
 	TArray<FString> SkippedFeatures;
 	TArray<FString> InterpretationNotes;
 	TArray<FString> CapabilityNotes;
+	/** In-process master after create/ensure — avoids AssetRegistry reload race on fresh assets. */
+	UMaterial* MasterMaterial = nullptr;
 };
 
 namespace UeremcpMaterialMasterBuilder

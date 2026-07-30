@@ -80,6 +80,8 @@ class ProceduralTextureSchemaTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("IsImplementedGenerateKind", cpp)
         self.assertIn("GenerateFlipbookAtlasPixels", generator_cpp)
+        self.assertIn("ReadTextureDimensions", cpp)
+        self.assertIn("Source.GetSizeX()", cpp)
         self.assertEqual(IMPLEMENTED_GENERATE_KINDS, SUPPORTED_GENERATE_KINDS - {"flipbook_import"})
 
     def test_flipbook_import_example_validates(self) -> None:

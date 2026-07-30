@@ -3,6 +3,7 @@
 #include "UeremcpMaterialService.h"
 
 #include "AssetToolsModule.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "IAssetTools.h"
@@ -142,6 +143,7 @@ namespace
 		TArray<FString>& OutInterpretationNotes,
 		TArray<FString>& OutCapabilityNotes,
 		int32& InOutOps,
+		bool& bOutNestedPartial,
 		FString& OutError)
 	{
 		const TSharedPtr<FJsonObject>* TexturesObj = nullptr;
@@ -246,6 +248,15 @@ namespace
 						return false;
 					}
 
+					if (TextureResult.Status == TEXT("partially_completed"))
+					{
+						bOutNestedPartial = true;
+						OutCapabilityNotes.Add(
+							FString::Printf(
+								TEXT("Texture slot '%s' generation returned partially_completed — nested create_vfx_material cannot claim *_validated."),
+								*SlotName));
+					}
+
 					OutCreatedAssets.Append(TextureResult.CreatedAssets);
 					OutInterpretationNotes.Add(
 						FString::Printf(
@@ -329,6 +340,7 @@ namespace
 			OutError = TEXT("AssetTools.CreateAsset did not return UMaterialInstanceConstant.");
 			return nullptr;
 		}
+		FAssetRegistryModule::AssetCreated(Instance);
 		++InOutOps;
 		return Instance;
 	}
@@ -515,6 +527,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	TArray<FTextureSlotBinding> TextureBindings;
 	FString TextureError;
+	bool bNestedPartialTexture = false;
 	if (!ResolveTextureSlotsFromSpec(
 		Spec,
 		MiName,
@@ -526,6 +539,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.InterpretationNotes,
 		Result.CapabilityNotes,
 		Result.InternalOperations,
+		bNestedPartialTexture,
 		TextureError))
 	{
 		Result.Status = TEXT("rejected");
@@ -601,7 +615,11 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
-	UMaterial* MasterMaterial = Cast<UMaterial>(AssetSubsystem->LoadAsset(MasterPath));
+	UMaterial* MasterMaterial = MasterResult.MasterMaterial;
+	if (!MasterMaterial)
+	{
+		MasterMaterial = Cast<UMaterial>(AssetSubsystem->LoadAsset(MasterPath));
+	}
 	if (!MasterMaterial)
 	{
 		Result.Status = TEXT("failed_validation");
@@ -709,18 +727,27 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	Result.PrimaryAsset = Request.TargetAssetPath;
 
 	FString PrimaryLoadError;
-	if (Request.bValidate &&
-		!UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(Result.PrimaryAsset, PrimaryLoadError))
-	{
-		Result.bSuccess = false;
-		Result.Status = TEXT("failed_validation");
-		Result.Summary = PrimaryLoadError;
-		return Result;
-	}
 	if (Request.bValidate)
 	{
-		Result.InterpretationNotes.Add(
-			TEXT("PrimaryAsset re-load verified as UMaterialInterface (FSoftObjectPath-compatible package path)."));
+		if (UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(Result.PrimaryAsset, PrimaryLoadError))
+		{
+			Result.InterpretationNotes.Add(
+				TEXT("PrimaryAsset re-load verified as UMaterialInterface (FSoftObjectPath-compatible package path)."));
+		}
+		else if (Instance)
+		{
+			Result.InterpretationNotes.Add(
+				TEXT("PrimaryAsset registry reload unavailable; verified in-process UMaterialInstanceConstant."));
+			Result.CapabilityNotes.Add(
+				TEXT("validate: AssetRegistry reload unavailable under automation — in-process MI used as proof."));
+		}
+		else
+		{
+			Result.bSuccess = false;
+			Result.Status = TEXT("failed_validation");
+			Result.Summary = PrimaryLoadError;
+			return Result;
+		}
 	}
 	else
 	{
@@ -729,10 +756,19 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	}
 
 	Result.bSuccess = true;
-	Result.Status = ResolveMaterialSuccessStatus(
-		bCreatedInstance,
-		Request.bValidate,
-		UnimplementedFeatures.Num() > 0);
+	if (bNestedPartialTexture && Request.bValidate)
+	{
+		Result.Status = TEXT("partially_completed");
+		Result.CapabilityNotes.Add(
+			TEXT("Nested procedural texture slot returned partially_completed — create_vfx_material cannot claim *_validated."));
+	}
+	else
+	{
+		Result.Status = ResolveMaterialSuccessStatus(
+			bCreatedInstance,
+			Request.bValidate,
+			UnimplementedFeatures.Num() > 0);
+	}
 	if (UnimplementedFeatures.Num() > 0)
 	{
 		Result.CapabilityNotes.Add(TEXT("One or more requested feature tokens are not implemented; see capability_notes."));

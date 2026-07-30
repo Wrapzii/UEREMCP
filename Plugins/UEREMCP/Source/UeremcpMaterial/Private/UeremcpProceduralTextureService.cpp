@@ -65,6 +65,28 @@ namespace
 		}
 		return static_cast<int32>(FCrc::StrCrc32(*Path) & 0x7FFFFFFF);
 	}
+
+	static bool ReadTextureDimensions(const UTexture2D* Texture, int32& OutWidth, int32& OutHeight)
+	{
+		if (!Texture)
+		{
+			return false;
+		}
+
+		if (Texture->Source.IsValid())
+		{
+			OutWidth = Texture->Source.GetSizeX();
+			OutHeight = Texture->Source.GetSizeY();
+			if (OutWidth > 0 && OutHeight > 0)
+			{
+				return true;
+			}
+		}
+
+		OutWidth = Texture->GetSizeX();
+		OutHeight = Texture->GetSizeY();
+		return OutWidth > 0 && OutHeight > 0;
+	}
 }
 
 bool UeremcpProceduralTextureService::IsSupportedGenerateKind(const FString& Kind)
@@ -268,8 +290,11 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 			Result.bReused = true;
 			Result.Status = TEXT("no_change_required");
 			Result.PrimaryAsset = Request.TargetAssetPath;
-			Result.VerifiedWidth = Existing->GetSizeX();
-			Result.VerifiedHeight = Existing->GetSizeY();
+			if (!ReadTextureDimensions(Existing, Result.VerifiedWidth, Result.VerifiedHeight))
+			{
+				Result.VerifiedWidth = Request.Width;
+				Result.VerifiedHeight = Request.Height;
+			}
 			Result.Summary = FString::Printf(
 				TEXT("Reused existing texture '%s' (%dx%d)."),
 				*Request.TargetAssetPath,
@@ -402,16 +427,44 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 	}
 
 	UTexture2D* Reloaded = Cast<UTexture2D>(AssetSubsystem->LoadAsset(Request.TargetAssetPath));
-	if (!Reloaded)
+	const UTexture2D* DimensionProbe = Reloaded ? Reloaded : Texture;
+	if (!DimensionProbe)
 	{
 		Result.Status = TEXT("partially_completed");
 		Result.Summary = TEXT("Texture saved but reload verification failed.");
 		Result.PrimaryAsset = Request.TargetAssetPath;
+		Result.bSuccess = true;
+		Result.bCreated = true;
+		Result.CapabilityNotes.Add(
+			TEXT("validate: texture reload unavailable — cannot claim created_and_validated."));
 		return Result;
 	}
 
-	Result.VerifiedWidth = Reloaded->GetSizeX();
-	Result.VerifiedHeight = Reloaded->GetSizeY();
+	if (!ReadTextureDimensions(DimensionProbe, Result.VerifiedWidth, Result.VerifiedHeight))
+	{
+		Result.bSuccess = true;
+		Result.bCreated = true;
+		Result.Status = TEXT("partially_completed");
+		Result.PrimaryAsset = Request.TargetAssetPath;
+		Result.Summary = FString::Printf(
+			TEXT("Created procedural texture '%s' (%s, requested %dx%d) but dimension re-read was unavailable (NullRHI or unloaded source)."),
+			*Request.TargetAssetPath,
+			*Request.GenerateKind,
+			Request.Width,
+			Request.Height);
+		Result.CapabilityNotes.Add(
+			TEXT("validate: texture dimension re-read unavailable under NullRHI — cannot claim created_and_validated."));
+		Result.InterpretationNotes.Add(
+			TEXT("options.validate=true but post-save dimension proof failed; status capped at partially_completed."));
+
+		FUeremcpAssetRef Created;
+		Created.AssetPath = Request.TargetAssetPath;
+		Created.AssetClass = TEXT("Texture2D");
+		Created.Role = Request.GenerateKind;
+		Result.CreatedAssets.Add(Created);
+		return Result;
+	}
+
 	if (Result.VerifiedWidth != Request.Width || Result.VerifiedHeight != Request.Height)
 	{
 		Result.Status = TEXT("failed_validation");

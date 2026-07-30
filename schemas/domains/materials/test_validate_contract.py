@@ -34,6 +34,13 @@ class MaterialValidateContractTests(unittest.TestCase):
         self.assertIn("forfeits any *_validated status", self.envelope)
         self.assertIn("partially_completed", self.envelope)
 
+    def test_master_builder_registers_fresh_assets(self) -> None:
+        master_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialMasterBuilder.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("FAssetRegistryModule::AssetCreated", master_cpp)
+        self.assertIn("MasterMaterial = Material", master_cpp)
+
     def test_create_vfx_material_status_gated_on_validate(self) -> None:
         self.assertIn("ResolveMaterialSuccessStatus", self.material_cpp)
         self.assertRegex(
