@@ -41,3 +41,23 @@ junction.
 Therefore Blueprint, Material, Niagara, and B7 editor filters are **blocked before
 Automation discovery** on this orch tip. No A6, B7, Material, Niagara, or POC B runtime
 pass is claimed.
+
+## 2026-07-30 editor attempt after compile gate closed
+
+Orch `2866dc1` reported targeted Validation and full REEditor compile success. The
+same gate outcomes were reproduced on orch `fcdf2e5`. With the RE junction unchanged:
+
+- `UEREMCP.Validation.Blueprint.MutatingDispatchGate`: **PASS**. The runtime marker
+  was `proof=adapter_queue_release`. This proves only dispatch adapter queue
+  admission/release; it is not POC A criterion A6.
+- `UEREMCP.Niagara.POCB.SixEmitterGateScaffold`: **FAIL**. The create response was
+  `rejected`, so no `poc_b_gates` object existed. The first run also exposed harmless
+  missing-asset cleanup calls being promoted to Automation errors; the unbuilt follow-up test
+  guards cleanup with `DoesAssetExist` / `DoesDirectoryExist` and logs the rejection
+  summary.
+- The handoff runner's first Niagara attempt did not launch because its generic
+  dash-prefixed extra argument was misbound. A dedicated `-PocBScaffold` parameter now
+  carries the canonical fixture path, and aggregate exit status now treats marker
+  `FAIL` as process exit `1`.
+
+No A6, B7, Material, Niagara, or POC B completion pass is claimed by these results.

@@ -20,6 +20,7 @@ function Invoke-HandoffGate {
         [string]$Name,
         [string]$Filter,
         [string]$Marker,
+        [string]$PocBScaffold = "",
         [string[]]$ExtraArgs = @()
     )
 
@@ -33,6 +34,10 @@ function Invoke-HandoffGate {
     if ($ExtraArgs.Count -gt 0) {
         $runnerArgs += "-ExtraArgs"
         $runnerArgs += $ExtraArgs
+    }
+    if ($PocBScaffold) {
+        $runnerArgs += "-PocBScaffold"
+        $runnerArgs += $PocBScaffold
     }
 
     $output = & pwsh @runnerArgs 2>&1
@@ -102,11 +107,12 @@ if ($Gate -in @("All", "Niagara")) {
             -Name "WS-07 POC B B7 scaffold" `
             -Filter "UEREMCP.Niagara.POCB.SixEmitterGateScaffold" `
             -Marker "UEREMCP_POC_B_GATE_OUTCOME" `
-            -ExtraArgs @("-UeremcpPocBScaffold=`"$Scaffold`"")
+            -PocBScaffold $Scaffold
     }
 }
 
 $results | ConvertTo-Json -Depth 5
-if ($results.outcome -contains "failed") { exit 1 }
-if ($results.outcome -contains "skipped") { exit 2 }
+$outcomes = @($results | ForEach-Object { $_["outcome"] })
+if ($outcomes -contains "failed" -or $outcomes -contains "fail") { exit 1 }
+if ($outcomes -contains "skipped" -or $outcomes -contains "skip") { exit 2 }
 exit 0

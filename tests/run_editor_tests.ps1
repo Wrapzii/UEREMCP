@@ -30,6 +30,7 @@ param(
     [string]$LogDir = "",
     [string]$EnablePlugins = "UeremcpValidationProbe",
     [string]$DisablePlugins = "UEREMCP",
+    [string]$PocBScaffold = "",
     [string[]]$ExtraArgs = @(),
     [switch]$KeepUeremcp,
     [switch]$NoProbe
@@ -76,6 +77,9 @@ if ($KeepUeremcp) {
 if ($effectiveDisable) {
     $argList.Add("-DisablePlugins=`"$effectiveDisable`"")
     Write-Host "DisablePlugins: $effectiveDisable"
+}
+if ($PocBScaffold) {
+    $argList.Add("-UeremcpPocBScaffold=`"$PocBScaffold`"")
 }
 foreach ($extraArg in $ExtraArgs) {
     if ($extraArg) {

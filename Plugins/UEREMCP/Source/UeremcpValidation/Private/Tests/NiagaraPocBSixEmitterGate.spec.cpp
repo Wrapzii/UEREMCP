@@ -16,13 +16,26 @@ namespace UeremcpValidationNiagaraPocB
 {
 	static constexpr const TCHAR* ExpectedAsset =
 		TEXT("/Game/__UeremcpTests/NS_POCB_FireballProbe");
+	static constexpr const TCHAR* MaterialsDirectory =
+		TEXT("/Game/__UeremcpTests/Materials");
+
+	static void DeleteProbeAssets()
+	{
+		if (UEditorAssetLibrary::DoesAssetExist(ExpectedAsset))
+		{
+			UEditorAssetLibrary::DeleteAsset(ExpectedAsset);
+		}
+		if (UEditorAssetLibrary::DoesDirectoryExist(MaterialsDirectory))
+		{
+			UEditorAssetLibrary::DeleteDirectory(MaterialsDirectory);
+		}
+	}
 
 	struct FProbeCleanup
 	{
 		~FProbeCleanup()
 		{
-			UEditorAssetLibrary::DeleteAsset(ExpectedAsset);
-			UEditorAssetLibrary::DeleteDirectory(TEXT("/Game/__UeremcpTests/Materials"));
+			DeleteProbeAssets();
 		}
 	};
 
@@ -124,8 +137,7 @@ bool FUeremcpNiagaraPocBSixEmitterGate::RunTest(const FString& Parameters)
 	}
 
 	FProbeCleanup Cleanup;
-	UEditorAssetLibrary::DeleteAsset(ExpectedAsset);
-	UEditorAssetLibrary::DeleteDirectory(TEXT("/Game/__UeremcpTests/Materials"));
+	DeleteProbeAssets();
 
 	const FString ResponseJson = UUeremcpNiagaraToolset::CreateNiagaraEffect(RequestJson);
 	TSharedPtr<FJsonObject> Response;
@@ -139,6 +151,14 @@ bool FUeremcpNiagaraPocBSixEmitterGate::RunTest(const FString& Parameters)
 
 	FString Status;
 	Response->TryGetStringField(TEXT("status"), Status);
+	FString Summary;
+	Response->TryGetStringField(TEXT("summary"), Summary);
+	if (Status == TEXT("rejected"))
+	{
+		AddError(FString::Printf(TEXT("create_niagara_effect rejected scaffold: %s"), *Summary));
+		AddInfo(TEXT("UEREMCP_POC_B_GATE_OUTCOME=FAIL reason=create_rejected"));
+		return false;
+	}
 	TestEqual(TEXT("status remains honest"), Status, FString(TEXT("partially_completed")));
 	TestTrue(TEXT("never created_and_validated"), Status != TEXT("created_and_validated"));
 	TestTrue(TEXT("never modified_and_validated"), Status != TEXT("modified_and_validated"));

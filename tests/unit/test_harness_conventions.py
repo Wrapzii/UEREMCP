@@ -167,6 +167,8 @@ class HarnessLayoutTest(unittest.TestCase):
             "UEREMCP.Niagara.POCB.SixEmitterGateScaffold",
             "UEREMCP_BLUEPRINT_DISPATCH_OUTCOME",
             "UEREMCP_POC_B_GATE_OUTCOME",
+            '$_["outcome"]',
+            '-PocBScaffold',
             '"skipped"',
             "without retargeting the RE junction",
         ):
@@ -186,6 +188,8 @@ class HarnessLayoutTest(unittest.TestCase):
         self.assertIn("UeremcpPocBScaffold=", gate)
         self.assertIn("/Game/__UeremcpTests/NS_POCB_FireballProbe", gate)
         self.assertIn("status remains honest", gate)
+        self.assertIn("DoesAssetExist", gate)
+        self.assertIn("reason=create_rejected", gate)
         self.assertIn("UEREMCP_POC_B_GATE_OUTCOME=PASS", gate)
 
     def test_blueprint_dispatch_regression_does_not_claim_a6(self):
