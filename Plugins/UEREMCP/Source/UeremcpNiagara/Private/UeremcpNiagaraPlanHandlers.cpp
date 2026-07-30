@@ -23,10 +23,15 @@ namespace
 	}
 }
 
+const TCHAR* FUeremcpNiagaraPlanHandlers::RegisteredActionName()
+{
+	return TEXT("create_niagara_effect");
+}
+
 bool FUeremcpNiagaraPlanHandlers::Register(FString& OutError)
 {
 	const bool bRegistered = FUeremcpPlanExecutor::RegisterAction(
-		TEXT("create_niagara_effect"),
+		RegisteredActionName(),
 		DispatchCreateNiagaraEffect,
 		OutError);
 	if (bRegistered)
@@ -38,5 +43,5 @@ bool FUeremcpNiagaraPlanHandlers::Register(FString& OutError)
 
 void FUeremcpNiagaraPlanHandlers::Unregister()
 {
-	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_niagara_effect"));
+	FUeremcpPlanExecutor::UnregisterAction(RegisteredActionName());
 }

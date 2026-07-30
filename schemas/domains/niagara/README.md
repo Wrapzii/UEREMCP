@@ -93,9 +93,9 @@ until WS-11 proves retrieve → replace → retrieve stability.
 Response status remains **`partially_completed`**; `never_claims` lists `*_validated` statuses.
 
 `create_niagara_effect` registers with `FUeremcpPlanExecutor` at Niagara module startup
-(WS-15 handler contract). Template `execute_plan` instantiation remains
-**partially_completed** until WS-03 atomic transaction callbacks and WS-08
-`create_vfx_material` registration land.
+(WS-15 handler contract). Dry-run plan steps surface `no_change_required`; mutating
+create stays **`partially_completed`**. Atomic template plans still reject before
+mutation until WS-03 transaction callbacks and WS-08 `create_vfx_material` land.
 
 ## Epic tool composition (implementation note)
 

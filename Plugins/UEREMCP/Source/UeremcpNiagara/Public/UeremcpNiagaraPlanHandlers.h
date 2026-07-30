@@ -11,6 +11,9 @@
 class FUeremcpNiagaraPlanHandlers
 {
 public:
+	/** Goal-level action registered with FUeremcpPlanExecutor (WS-15 drift guard). */
+	static const TCHAR* RegisteredActionName();
+
 	/** Register create_niagara_effect. Fails closed if already registered. */
 	static bool Register(FString& OutError);
 

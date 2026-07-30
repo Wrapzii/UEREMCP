@@ -319,8 +319,17 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertEqual(operation["action"], "create_niagara_effect")
         self.assertTrue(operation["target"]["asset_path"].startswith("/Game/__UeremcpTests/"))
         self.assertTrue(expectations["requires_registered_handler"])
-        self.assertEqual(expectations["honest_domain_status"], "partially_completed")
+        self.assertEqual(expectations["dry_run_operation_status"], "no_change_required")
+        self.assertEqual(expectations["mutating_operation_status"], "partially_completed")
         self.assertTrue(expectations["atomic_plan_still_blocked_without_ws03_callbacks"])
+        self.assertIn(
+            expectations["atomic_preflight_rejection_contains"],
+            "atomic execute_plan requires transaction callbacks",
+        )
+        self.assertEqual(
+            set(expectations["validation_never_claims"]),
+            {"created_and_validated", "modified_and_validated"},
+        )
 
     def test_hash_round_trip_poc_b_scaffold_fixture(self) -> None:
         import sys

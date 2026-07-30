@@ -37,8 +37,10 @@
   },
   "expectations": {
     "requires_registered_handler": true,
-    "honest_domain_status": "partially_completed",
+    "dry_run_operation_status": "no_change_required",
+    "mutating_operation_status": "partially_completed",
     "validation_never_claims": ["created_and_validated", "modified_and_validated"],
-    "atomic_plan_still_blocked_without_ws03_callbacks": true
+    "atomic_plan_still_blocked_without_ws03_callbacks": true,
+    "atomic_preflight_rejection_contains": "transaction callbacks"
   }
 }
