@@ -3,6 +3,7 @@
   "$id": "https://uneremcp.dev/schemas/domains/animation/inspect_montage.asset-state.schema.json",
   "title": "inspect_montage asset state",
   "description": "Complete non-graph state emitted by the WS-10 montage inspector. Ready for the proposed result.asset_state two-pass validator; does not amend the frozen response envelope.",
+  "$comment": "Draft only: do not emit this object in result.asset_state until the ADR-0003 amendment and action-selected response validation are accepted.",
   "type": "object",
   "required": [
     "asset_path",
@@ -43,7 +44,7 @@
       "items": { "$ref": "#/$defs/notify" }
     },
     "content_hash": { "$ref": "../../common/defs.schema.json#/$defs/contentHash" },
-    "revision": { "$ref": "../../common/defs.schema.json#/$defs/revision" }
+    "revision": { "$ref": "../../common/defs.schema.json#/$defs/contentHash" }
   },
   "$defs": {
     "slot": {

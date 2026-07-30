@@ -162,8 +162,9 @@ class AnimationContractTests(unittest.TestCase):
         malformed = copy.deepcopy(schema["examples"][0])
         malformed.pop("notifies")
         malformed["raw_unreal_dump"] = {}
+        malformed["revision"] = None
         errors = list(validator.iter_errors(malformed))
-        self.assertGreaterEqual(len(errors), 2)
+        self.assertGreaterEqual(len(errors), 3)
 
     def test_editor_fixture_is_scratch_only_and_unsaved(self) -> None:
         source = (
