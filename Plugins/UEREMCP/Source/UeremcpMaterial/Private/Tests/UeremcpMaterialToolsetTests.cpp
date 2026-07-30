@@ -11,6 +11,7 @@
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "Misc/Paths.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialFeatures.h"
@@ -46,6 +47,8 @@ namespace UeremcpMaterialTests
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ReuseProbe_B"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Distortion_Probe"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Flipbook_Probe"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_StaleTrail_A"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_StaleTrail_B"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_WS08_ValidateFalse_Noise"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map"));
 
@@ -496,6 +499,15 @@ bool FUeremcpMaterialFireballRibbonTrailPocTest::RunTest(const FString& Paramete
 	Features.Add(MakeShared<FJsonValueString>(TEXT("depth_fade")));
 	Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_color")));
 	CreateSpec->SetArrayField(TEXT("features"), Features);
+	TSharedPtr<FJsonObject> Textures = MakeShared<FJsonObject>();
+	TSharedPtr<FJsonObject> FlowMap = MakeShared<FJsonObject>();
+	FlowMap->SetStringField(TEXT("generate"), TEXT("flow_map"));
+	TArray<TSharedPtr<FJsonValue>> Dimensions;
+	Dimensions.Add(MakeShared<FJsonValueNumber>(256));
+	Dimensions.Add(MakeShared<FJsonValueNumber>(256));
+	FlowMap->SetArrayField(TEXT("dimensions"), Dimensions);
+	Textures->SetObjectField(TEXT("FlowMap"), FlowMap);
+	CreateSpec->SetObjectField(TEXT("textures"), Textures);
 
 	const FUeremcpMaterialCreateResult Result =
 		UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraSystem(
@@ -540,6 +552,84 @@ bool FUeremcpMaterialFireballRibbonTrailPocTest::RunTest(const FString& Paramete
 		}
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialStaleTrailMasterRebuildTest,
+	"UeremcpMaterial.Toolset.CreateVfxMaterial.StaleTrailMasterRebuild",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialStaleTrailMasterRebuildTest::RunTest(const FString& Parameters)
+{
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+
+	const TArray<FString> TrailFeatures = {
+		TEXT("panning_textures"),
+		TEXT("erosion"),
+		TEXT("depth_fade"),
+		TEXT("dynamic_color"),
+	};
+	const FString MasterPath = UeremcpMaterialFeatures::ResolveMasterPackagePath(
+		TEXT("elemental_projectile_trail"),
+		TrailFeatures,
+		UeremcpMaterialPaths::TestsContentRoot);
+
+	const auto MakeTrailRequest = [](const FString& Target) {
+		return FString::Printf(TEXT(R"({
+			"protocol_version":"1.0",
+			"request_id":"mat-stale-trail",
+			"action":"create_vfx_material",
+			"target":{"asset_path":"%s"},
+			"specification":{
+				"purpose":"elemental_projectile_trail",
+				"element":"fire",
+				"features":["panning_textures","erosion","depth_fade","dynamic_color"],
+				"textures":{"FlowMap":{"generate":"flow_map","dimensions":[256,256]}}
+			},
+			"options":{"compile":true,"validate":false,"save":true}
+		})"), *Target);
+	};
+
+	const FString TargetA = TEXT("/Game/__UeremcpTests/Materials/MI_WS08_StaleTrail_A");
+	const FString JsonA = UUeremcpMaterialToolset::CreateVfxMaterial(MakeTrailRequest(TargetA));
+	FString StatusA;
+	TestTrue(TEXT("first create parseable"), UeremcpMaterialTests::ParseStatus(JsonA, StatusA));
+	TestFalse(TEXT("first create master incomplete"), JsonA.Contains(TEXT("Master material setup incomplete")));
+
+	UMaterial* Master = UeremcpMaterialAssetLoad::TryLoadRegisteredMaterial(MasterPath);
+	TestNotNull(TEXT("trail master exists after first create"), Master);
+	UMaterialEditingLibrary::DeleteAllMaterialExpressions(Master);
+	Master->MarkPackageDirty();
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	TestNotNull(TEXT("EditorAssetSubsystem"), Subsystem);
+	if (Subsystem)
+	{
+		TestTrue(TEXT("saved stripped stale master"), Subsystem->SaveAsset(MasterPath, false));
+	}
+
+	UeremcpMaterialFeatures::FFeatureGraphVerifyResult PreRebuildVerify;
+	TestFalse(
+		TEXT("stripped master fails verification"),
+		UeremcpMaterialFeatures::VerifyFeatureGraph(Master, TrailFeatures, PreRebuildVerify));
+
+	const FString TargetB = TEXT("/Game/__UeremcpTests/Materials/MI_WS08_StaleTrail_B");
+	const FString JsonB = UUeremcpMaterialToolset::CreateVfxMaterial(MakeTrailRequest(TargetB));
+	FString StatusB;
+	TestTrue(TEXT("second create parseable"), UeremcpMaterialTests::ParseStatus(JsonB, StatusB));
+	TestFalse(TEXT("second create master incomplete"), JsonB.Contains(TEXT("Master material setup incomplete")));
+	TestTrue(
+		TEXT("second create reports master reuse"),
+		UeremcpMaterialTests::ManifestContainsAsset(JsonB, TEXT("reused_assets"), MasterPath, TEXT("master_template")));
+
+	Master = UeremcpMaterialAssetLoad::TryLoadRegisteredMaterial(MasterPath);
+	TestNotNull(TEXT("trail master reloads after rebuild"), Master);
+	UeremcpMaterialFeatures::FFeatureGraphVerifyResult PostRebuildVerify;
+	TestTrue(
+		TEXT("rebuilt trail master verifies"),
+		UeremcpMaterialFeatures::VerifyFeatureGraph(Master, TrailFeatures, PostRebuildVerify));
+
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
 	return true;
 }
 

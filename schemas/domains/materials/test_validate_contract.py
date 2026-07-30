@@ -116,6 +116,20 @@ class MaterialValidateContractTests(unittest.TestCase):
         self.assertIn("TryLoadRegisteredMaterial", master_cpp)
         self.assertNotIn("ResolveMaterial(PackagePath)", master_cpp)
 
+    def test_master_builder_verifies_or_rebuilds_existing_master(self) -> None:
+        master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
+        self.assertIn("VerifyFeatureGraph", master_cpp)
+        self.assertIn("DeleteAllMaterialExpressions", master_cpp)
+        self.assertIn("failed feature-graph verification; rebuilding", master_cpp)
+        self.assertIn("Reused verified master", master_cpp)
+
+    def test_incomplete_master_not_persisted_on_graph_failure(self) -> None:
+        self.assertIn("Do not persist incomplete masters", self.material_cpp)
+        self.assertNotRegex(
+            self.material_cpp,
+            r"!MasterResult\.bSuccess[\s\S]{0,400}TryPersistVfxAssets[\s\S]{0,120}Master material setup incomplete",
+        )
+
     def test_create_vfx_material_save_uses_editor_asset_subsystem(self) -> None:
         self.assertIn("SaveAsset(PreferredPackagePath, false)", self.material_cpp)
         self.assertIn("SaveAsset(ActualPackagePath, false)", self.material_cpp)

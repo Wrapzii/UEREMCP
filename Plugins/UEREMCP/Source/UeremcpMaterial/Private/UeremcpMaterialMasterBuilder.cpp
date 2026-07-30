@@ -7,6 +7,7 @@
 #include "Editor.h"
 #include "Factories/MaterialFactoryNew.h"
 #include "IAssetTools.h"
+#include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialAssetLoad.h"
@@ -55,6 +56,78 @@ namespace
 		}
 		return Material;
 	}
+
+	static void CollectVerifiedWiredFeatures(
+		const UeremcpMaterialFeatures::FFeatureGraphVerifyResult& Verify,
+		const TArray<FString>& RequestedFeatures,
+		TArray<FString>& OutWiredFeatures)
+	{
+		for (const FString& Feature : RequestedFeatures)
+		{
+			if (!UeremcpMaterialFeatures::IsImplementedFeature(Feature))
+			{
+				continue;
+			}
+			const bool* bWired = Verify.FeatureWired.Find(Feature);
+			if (bWired && *bWired)
+			{
+				OutWiredFeatures.Add(Feature);
+			}
+		}
+	}
+
+	static bool ApplyGraphToMaster(
+		UMaterial* Material,
+		const FUeremcpMaterialMasterBuildRequest& Request,
+		bool bRebuildStaleGraph,
+		FUeremcpMaterialMasterBuildResult& Result)
+	{
+		if (!Material)
+		{
+			Result.Error = TEXT("Null material for graph build.");
+			return false;
+		}
+
+		if (bRebuildStaleGraph)
+		{
+			UMaterialEditingLibrary::DeleteAllMaterialExpressions(Material);
+			++Result.InternalOperations;
+			Result.InterpretationNotes.Add(
+				TEXT("Deleted stale master expressions before feature-graph rebuild."));
+		}
+
+		const FUeremcpFeatureGraphBuildResult GraphResult = UeremcpMaterialFeatureGraph::BuildGraph(
+			Material,
+			Request.Features,
+			Request.bTrailPurpose);
+		Result.InternalOperations += GraphResult.InternalOperations;
+		Result.WiredFeatures = GraphResult.WiredFeatures;
+		Result.SkippedFeatures = GraphResult.SkippedFeatures;
+		Result.InterpretationNotes.Append(GraphResult.InterpretationNotes);
+		Result.CapabilityNotes.Append(GraphResult.CapabilityNotes);
+
+		if (!GraphResult.bSuccess)
+		{
+			Result.Error = GraphResult.Error;
+			Result.MasterMaterial = Material;
+			return false;
+		}
+
+		if (!SaveMaterialAtPath(Request.MasterPackagePath, Material, Result.InternalOperations))
+		{
+			Result.bSuccess = true;
+			Result.MasterMaterial = Material;
+			Result.CapabilityNotes.Add(
+				TEXT("master save unverified under automation — in-process graph exists; disk persistence not proven."));
+			Result.InterpretationNotes.Add(
+				FString::Printf(TEXT("Failed to save master '%s' to disk."), *Request.MasterPackagePath));
+			return true;
+		}
+
+		Result.bSuccess = true;
+		Result.MasterMaterial = Material;
+		return true;
+	}
 }
 
 FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMaterial(
@@ -77,10 +150,28 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 
 	if (UMaterial* Existing = LoadRegisteredMaterialAtPath(Request.MasterPackagePath))
 	{
-		Result.bSuccess = true;
+		UeremcpMaterialFeatures::FFeatureGraphVerifyResult Verify;
+		if (UeremcpMaterialFeatures::VerifyFeatureGraph(Existing, Request.Features, Verify))
+		{
+			Result.bSuccess = true;
+			Result.bCreated = false;
+			Result.MasterMaterial = Existing;
+			CollectVerifiedWiredFeatures(Verify, Request.Features, Result.WiredFeatures);
+			Result.InterpretationNotes.Add(
+				TEXT("Reused verified master (feature graph satisfies requested features)."));
+			return Result;
+		}
+
 		Result.bCreated = false;
-		Result.MasterMaterial = Existing;
-		Result.WiredFeatures = Request.Features;
+		Result.InterpretationNotes.Add(
+			FString::Printf(
+				TEXT("Existing master '%s' failed feature-graph verification; rebuilding in-process graph."),
+				*Request.MasterPackagePath));
+		if (ApplyGraphToMaster(Existing, Request, true, Result))
+		{
+			Result.InterpretationNotes.Add(
+				TEXT("Rebuilt feature graph on stale/incomplete persisted master."));
+		}
 		return Result;
 	}
 
@@ -101,35 +192,13 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 	}
 	Result.bCreated = true;
 	Result.InternalOperations += 1;
-	Result.MasterMaterial = Material;
 	FAssetRegistryModule::AssetCreated(Material);
 
-	const FUeremcpFeatureGraphBuildResult GraphResult = UeremcpMaterialFeatureGraph::BuildGraph(
-		Material,
-		Request.Features,
-		Request.bTrailPurpose);
-	Result.InternalOperations += GraphResult.InternalOperations;
-	Result.WiredFeatures = GraphResult.WiredFeatures;
-	Result.SkippedFeatures = GraphResult.SkippedFeatures;
-	Result.InterpretationNotes = GraphResult.InterpretationNotes;
-	Result.CapabilityNotes = GraphResult.CapabilityNotes;
-
-	if (!GraphResult.bSuccess)
+	if (ApplyGraphToMaster(Material, Request, false, Result))
 	{
-		Result.Error = GraphResult.Error;
-		return Result;
-	}
-
-	if (!SaveMaterialAtPath(Request.MasterPackagePath, Material, Result.InternalOperations))
-	{
-		Result.bSuccess = true;
-		Result.CapabilityNotes.Add(
-			TEXT("master save unverified under automation — in-process graph exists; disk persistence not proven."));
 		Result.InterpretationNotes.Add(
-			FString::Printf(TEXT("Failed to save master '%s' to disk."), *Request.MasterPackagePath));
-		return Result;
+			TEXT("Created feature-driven VFX master via MaterialEditingLibrary (MaterialTools-equivalent substrate)."));
 	}
 
-	Result.bSuccess = true;
 	return Result;
 }

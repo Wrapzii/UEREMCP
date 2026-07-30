@@ -866,9 +866,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	{
 		if (MasterResult.MasterMaterial)
 		{
-			TryPersistVfxAssets(
-				MakePersistTargets(Request, nullptr, MasterResult.MasterMaterial, MasterPath, MasterResult.bCreated),
-				Result);
+			// Do not persist incomplete masters — partial graphs poison idempotent reuse.
 			CapPartialWhenProofUnavailable(
 				Result,
 				Request.TargetAssetPath,
@@ -906,7 +904,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.ReusedAssets.Add(ReusedMaster);
 		Result.InterpretationNotes.Add(
 			FString::Printf(
-				TEXT("Reused existing master '%s' (idempotent ensure; graph rebuild skipped)."),
+				TEXT("Reused verified master '%s' (feature graph satisfies requested features)."),
 				*MasterPath));
 	}
 
