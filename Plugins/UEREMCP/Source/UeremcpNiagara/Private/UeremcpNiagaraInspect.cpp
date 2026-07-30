@@ -9,6 +9,7 @@
 #include "UeremcpNiagaraPaths.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
+#include "NiagaraEmitter.h"
 #include "NiagaraSystem.h"
 #include "NiagaraRendererProperties.h"
 
@@ -278,6 +279,47 @@ namespace
 		return System;
 	}
 
+	bool ValidateSystemForSummary(const UNiagaraSystem* System, FString& OutError)
+	{
+		if (!IsValid(System))
+		{
+			OutError = TEXT(
+				"Niagara system is invalid or pending destruction; GetSystemSummary was not called.");
+			return false;
+		}
+
+		const TArray<FNiagaraEmitterHandle>& EmitterHandles = System->GetEmitterHandles();
+		for (int32 EmitterIndex = 0; EmitterIndex < EmitterHandles.Num(); ++EmitterIndex)
+		{
+			const FNiagaraEmitterHandle& EmitterHandle = EmitterHandles[EmitterIndex];
+			const FVersionedNiagaraEmitterData* EmitterData = EmitterHandle.GetEmitterData();
+			if (!EmitterData)
+			{
+				continue;
+			}
+
+			const TArray<UNiagaraRendererProperties*>& Renderers = EmitterData->GetRenderers();
+			for (int32 RendererIndex = 0; RendererIndex < Renderers.Num(); ++RendererIndex)
+			{
+				if (!IsValid(Renderers[RendererIndex]))
+				{
+					OutError = FString::Printf(
+						TEXT(
+							"Niagara system '%s' has an invalid renderer at emitter %d ('%s'), "
+							"renderer %d; GetSystemSummary was not called."),
+						*System->GetPathName(),
+						EmitterIndex,
+						*EmitterHandle.GetName().ToString(),
+						RendererIndex);
+					return false;
+				}
+			}
+		}
+
+		OutError.Reset();
+		return true;
+	}
+
 	void AddTrace(TArray<TSharedPtr<FJsonValue>>& Trace, const FString& Step, bool bOk, const FString& Detail = FString())
 	{
 		TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
@@ -415,10 +457,50 @@ bool FUeremcpNiagaraInspect::Run(
 	}
 	AddTrace(OutResult.ExecutionTrace, TEXT("load_system"), true, System->GetName());
 
+	FString SummaryPreflightError;
+	if (!ValidateSystemForSummary(System, SummaryPreflightError))
+	{
+		OutResult.Error = SummaryPreflightError;
+		AddTrace(
+			OutResult.ExecutionTrace,
+			TEXT("preflight_get_system_summary"),
+			false,
+			SummaryPreflightError);
+		return false;
+	}
+	AddTrace(
+		OutResult.ExecutionTrace,
+		TEXT("preflight_get_system_summary"),
+		true,
+		TEXT("system and renderer references are valid"));
+
 	FNiagaraExternalEditContext Context(System);
 	FNiagaraExt_SystemSummary Summary;
 	UNiagaraExternalEditUtilities::GetSystemSummary(System, Summary, Context);
 	++OutResult.InternalOperations;
+	if (Context.HasErrors())
+	{
+		TArray<FString> ContextErrors;
+		for (const FText& Error : Context.Errors)
+		{
+			ContextErrors.Add(Error.ToString());
+		}
+		OutResult.Error = FString::Printf(
+			TEXT("GetSystemSummary failed for '%s': %s"),
+			*Request.TargetAssetPath,
+			*FString::Join(ContextErrors, TEXT("; ")));
+		AddTrace(
+			OutResult.ExecutionTrace,
+			TEXT("get_system_summary"),
+			false,
+			OutResult.Error);
+		return false;
+	}
+	AddTrace(
+		OutResult.ExecutionTrace,
+		TEXT("get_system_summary"),
+		true,
+		Summary.SystemName.ToString());
 
 	const bool bOmitNodes = Request.ResponseDetail.Equals(TEXT("summary"), ESearchCase::IgnoreCase)
 		|| Request.ResponseDetail.Equals(TEXT("minimal"), ESearchCase::IgnoreCase);

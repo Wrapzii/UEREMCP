@@ -6,6 +6,8 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
+#include "NiagaraEmitter.h"
+#include "NiagaraSystem.h"
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraToolset.h"
@@ -82,6 +84,84 @@ bool FUeremcpNiagaraInspectPathGuardTest::RunTest(const FString& Parameters)
 	TestFalse(
 		TEXT("non-probe inspect may collect stack issues"),
 		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/VFX/NS_Fireball")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraInspectInvalidRendererFailsSoftTest,
+	"UEREMCP.Niagara.Inspect.InvalidRendererFailsSoft",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraInspectInvalidRendererFailsSoftTest::RunTest(const FString& Parameters)
+{
+	using namespace UeremcpNiagaraInspectTest;
+
+	if (!EnsureInspectProbeAsset(*this))
+	{
+		return false;
+	}
+
+	UNiagaraSystem* System = LoadObject<UNiagaraSystem>(
+		nullptr,
+		TEXT("/Game/__UeremcpTests/NS_WS07_Probe.NS_WS07_Probe"));
+	if (!TestNotNull(TEXT("probe system loads"), System))
+	{
+		return false;
+	}
+
+	FVersionedNiagaraEmitterData* EmitterData = nullptr;
+	for (const FNiagaraEmitterHandle& EmitterHandle : System->GetEmitterHandles())
+	{
+		EmitterData = EmitterHandle.GetEmitterData();
+		if (EmitterData)
+		{
+			break;
+		}
+	}
+	if (!TestNotNull(TEXT("probe has emitter data"), EmitterData))
+	{
+		return false;
+	}
+
+	TArray<UNiagaraRendererProperties*>& MutableRenderers =
+		const_cast<TArray<UNiagaraRendererProperties*>&>(EmitterData->GetRenderers());
+	const int32 InvalidRendererIndex = MutableRenderers.Add(nullptr);
+
+	FUeremcpRequest Request;
+	Request.TargetAssetPath = GInspectProbePath;
+	Request.ResponseDetail = TEXT("diagnostic");
+	FUeremcpNiagaraInspectSpec Spec;
+	FUeremcpNiagaraInspectResult Result;
+	const bool bInspectSucceeded = FUeremcpNiagaraInspect::Run(Request, Spec, Result);
+
+	MutableRenderers.RemoveAt(InvalidRendererIndex);
+
+	TestFalse(TEXT("invalid renderer inspection fails soft"), bInspectSucceeded);
+	TestTrue(
+		TEXT("diagnostic identifies invalid renderer"),
+		Result.Error.Contains(TEXT("invalid renderer")));
+
+	bool bFoundFailedPreflight = false;
+	for (const TSharedPtr<FJsonValue>& TraceValue : Result.ExecutionTrace)
+	{
+		const TSharedPtr<FJsonObject> Trace = TraceValue->AsObject();
+		if (!Trace.IsValid())
+		{
+			continue;
+		}
+
+		FString Step;
+		bool bOk = true;
+		if (Trace->TryGetStringField(TEXT("step"), Step)
+			&& Step == TEXT("preflight_get_system_summary")
+			&& Trace->TryGetBoolField(TEXT("ok"), bOk)
+			&& !bOk)
+		{
+			bFoundFailedPreflight = true;
+			break;
+		}
+	}
+	TestTrue(TEXT("failed summary preflight is traced"), bFoundFailedPreflight);
 	return true;
 }
 
