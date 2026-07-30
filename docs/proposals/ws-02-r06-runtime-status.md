@@ -1,60 +1,56 @@
 # WS-02 → WS-01: R-06 runtime schema capture status
 
-**Date:** 2026-07-30  
+**Date:** 2026-07-30 (updated)  
 **Author:** WS-02  
-**Context:** R-04 closed (Ping/Echo on `ws-01-orch` `bc57039`). WS-02 captured priority
-`describe_toolset` dumps on live RE at `127.0.0.1:8000`.
+**Context:** R-04 closed (Ping/Echo on `ws-01-orch` `bc57039`). Full `describe_toolset`
+matrix captured on live RE via MCP HTTP `127.0.0.1:8001/mcp`.
 
 ## What was captured
 
 | Artifact | Path | Tag |
 |---|---|---|
 | Full registry enumeration | `docs/audit/raw/runtime/list_toolsets.json` | 73 toolsets `[VERIFIED-RUNTIME: 2026-07-30]` |
-| Capture metadata | `docs/audit/raw/runtime/capture-metadata.json` | priority matrix list |
-| Priority JSON schemas (12) | `docs/audit/raw/schemas/*.json` | see capture-metadata |
+| Capture metadata | `docs/audit/raw/capture-metadata.json` | 73/73 dumped, 938 tools |
+| All JSON schemas | `docs/audit/raw/schemas/*.json` | 73 files `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]` |
+| Batch capture evidence | `docs/audit/raw/runtime/capture-batch-summary.json` | 61 new + 12 prior = 73 |
 
-### Priority toolsets with runtime schemas
+### Session timeline
 
-1. `editor_toolset.toolsets.blueprint.BlueprintTools` — 53 tools (source scan: 52; +1 runtime)
-2. `NiagaraToolsets.NiagaraToolset_System` — 46 tools
-3. `NiagaraToolsets.NiagaraToolset_Assets` — 3 tools
-4. `GASToolsets.GameplayCueToolset` — 8 tools
-5. `GASToolsets.AttributeSetToolset` — 2 tools
-6. `GASToolsets.AbilitySystemInspectorToolset` — 4 tools
-7. `GameplayTagsToolset.GameplayTagsToolset` — 6 tools
-8. `editor_toolset.toolsets.material.MaterialTools` — 22 tools
-9. `editor_toolset.toolsets.material_instance.MaterialInstanceTools` — 13 tools
-10. `animation_toolset.toolsets.controlrig.ControlRigTools` — 44 tools (sample)
-11. `editor_toolset.toolsets.programmatic.ProgrammaticToolset` — 2 tools
-12. `UeremcpCore.UeremcpReferenceToolset` — 2 tools (`Ping`, `Echo`) **confirmed present**
+1. **2026-07-30T04:24:12Z** — `list_toolsets` + 12 priority `describe_toolset` dumps (commit `7443fda`).
+2. **2026-07-30 (later)** — batch `capture_remaining_schemas.py` captured remaining 61 toolsets; 0 failures.
+
+### Coverage summary
+
+| Category | Toolsets | Tools (runtime) | Schema dump |
+|---|---|---|---|
+| Epic C++ plugins (AllToolsets + extras) | 28 | varies | yes |
+| EditorToolset Python (`editor_toolset.toolsets.*`) | 15 | 233 | yes |
+| AnimationAssistant / Sequencer (`animation_toolset.*`) | 8 | 319 | yes |
+| REAgentTools (`re_agent_tools.*`) | 15 | 60 | yes |
+| UEREMCP reference | 1 | 2 | yes |
+| Other (MetaHuman, Conversation, BT, AnimMixer, AgentSkill) | 6 | varies | yes |
+| **Total** | **73** | **938** | **73/73** |
 
 ## R-06 status recommendation
 
-**Mitigate, do not close.**
+**Close R-06 for schema-matrix scope.**
 
-R-06 is materially reduced for Wave 1 domains: disposition rows in `epic-toolsets.md`
-now have registry-generated JSON Schema for the highest-duplication-risk Epic surfaces.
-Agents can cite parameter shapes from `docs/audit/raw/schemas/` with
-`[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`.
+The audit matrix is now runtime-backed: every toolset in `list_toolsets` has a
+`describe_toolset` JSON file under `docs/audit/raw/schemas/`. `epic-toolsets.md` and
+`reagenttools.md` are updated to `runtime_complete` with `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`
+tags on disposition rows.
 
-R-06 remains **open** because:
+### Residual gaps (do not block R-06 closure; track separately)
 
-1. **Coverage gap** — 73 toolsets load at runtime; only 12 have `describe_toolset` dumps
-   (~16%). Remaining Epic plugins (PCG, UMG, SlateInspector, Sequencer*, Dataflow, etc.)
-   and all 15 REAgentTools workflow toolsets lack schema files.
-2. **REAgentTools schemas** — `list_toolsets` confirms all 15 RE toolsets register
-   `[VERIFIED-RUNTIME: list_toolsets 2026-07-30]` but no `describe_toolset` dumps yet;
-   `reagenttools.md` coexistence/cutover items still open.
-3. **Naming map** — Runtime MCP names use Python module paths (`editor_toolset.toolsets.*`)
-   while C++ plugins use short names (`EditorToolset.*`, `GASToolsets.*`). Dispositions
-   must cite runtime names for schema lookup; source scan names remain valid for tool
-   lists inside a class.
-4. **Payload calibration** — No live `tools/call` sample payloads or token-size measurements
-   for composite tools (`read_graph_dsl`, `get_connected_subgraph`, Niagara System ops).
-5. **Async classification** — `execute_tool_script` exposes `outputSchema.returnValue: string`
-   (JSON blob); per-tool async vs sync not exhaustively classified.
-6. **Epic vs RE coexistence** — Both register simultaneously with no name collisions observed
-   `[VERIFIED-RUNTIME: list_toolsets 2026-07-30]`; cutover bar still undefined (RB-15 q16).
+| Gap | Status | Owner / note |
+|---|---|---|
+| Payload calibration | **Open** — schemas only; no live `tools/call` sample payloads or token-size measurements for composite tools (`read_graph_dsl`, Sequencer reads, etc.) | WS-02 follow-up or WS-14 |
+| Async classification | **Partial** — `execute_tool_script` and all RE tools return `returnValue: string`; per-tool sync/async not exhaustively tagged | WS-02 / WS-05 |
+| Registry drift | **Monitor** — re-run `list_toolsets` when plugins change; `HairModeling` not in 73-toolset dump; `MCPClientToolset` correctly absent (0 tools) | WS-02 on plugin changes |
+| REAgentTools cutover bar | **Open** — coexistence confirmed; disable criteria undefined (RB-15 q16) | WS-05 / RB-15 |
+| `RECaptureWorkflowTools` GIF tools | **Negative finding** — source lists `capture_viewport_gif`, `make_gif_from_frames`; runtime registers 5/7 tools | WS-02 noted in `reagenttools.md` |
+| Blueprint tool count | **Resolved** — runtime and source scan both 53 tools (prior doc typo said 52) | — |
+| REAgentTools tool count | **Resolved at runtime** — 60 registered tools (source inventory 62 due to unregistered GIF helpers) | — |
 
 ## Runtime discoveries relevant to WS-01 / WS-03
 
@@ -64,35 +60,31 @@ R-06 remains **open** because:
 | UObject refs serialize as `{refPath}` in schemas | Matches ADR-0004 pressure (not envelope graph JSON) |
 | `GameplayTagsToolset.RenameTag` / `RemoveTag` lack `outputSchema` in dump | Agents get input-only guidance for destructive tag ops |
 | `ProgrammaticToolset.execute_tool_script` input is single `script` string | R-04 coupling: FString path works; batching primitive confirmed at schema layer |
+| `REBatchWorkflowTools.execute_editor_batch` schema matches source audit | WS-05 can finalize `execute_plan` grammar from live dump |
+| Sequencer family totals 319 tools across 8 toolsets | Confirms AnimationAssistant scale; compose, do not re-expose |
 
-## Suggested next captures (WS-02 or WS-14)
+## Suggested follow-ups (post R-06)
 
-When editor MCP is up, batch `describe_toolset` for:
-
-- Remaining Niagara toolsets (`Component`, `Blueprint`, `Info`)
-- `PCGToolset.PCGToolset`, `UMGToolSet.UMGToolSet`, `SlateInspectorToolset`
-- All 15 `re_agent_tools.toolsets.*` RE workflow toolsets (especially `REBatchWorkflowTools`)
-- One composite call per domain for payload size notes (read-only)
+1. Read-only `tools/call` samples for 1–2 composite tools per Wave-1 domain (payload notes only).
+2. Re-run `list_toolsets` when RE.uproject plugin set changes; diff against `capture-metadata.json`.
+3. WS-05: cutover checklist using live REAgentTools schemas + coexistence evidence.
 
 ## Blockers
 
-None for continuing Wave 1 workstreams. MCP was reachable via `user-unreal-mcp` and
-REAgentTools `unreal_mcp_proxy` client on 2026-07-30.
+None for closing R-06 schema-matrix scope. MCP reachable via `user-unreal-mcp` /
+`127.0.0.1:8001/mcp` on 2026-07-30.
 
 ## Response (WS-01)
 
 **Date:** 2026-07-30  
-**Decision:** Accept WS-02 recommendation — **mitigate R-06, do not close.**
+**Decision (supersedes prior mitigate-only response):** **R-06 closed** for schema-matrix scope.
 
-Integrated `7443fda` on `ws-01-orch` (no-ff). Risk register and roadmap updated to
-`runtime_partial`: 12 priority toolsets + full `list_toolsets` (73) captured on RE
-2026-07-30. Residual gaps (remaining Epic toolsets, REAgentTools `describe_toolset`
-dumps, payload calibration) stay on the R-06 open bar.
+Integrated 8cea492 on ws-01-orch (no-ff). Evidence: 73/73 describe_toolset dumps +
+938 tools on RE 2026-07-30 (8cea492). epic-toolsets.md / 
+eagenttools.md at
 
-**Wave 2:** Still gated on Phase 1 exit (R-01, R-03, R-04, **R-06 closed**). R-04 is
-closed; R-06 is materially reduced but not closed. No Wave 2 implementation started
-from this integration.
+untime_complete.
 
-**Further dumps:** WS-02 (or WS-14 opportunistically) may continue `describe_toolset`
-captures when MCP is up; not a Phase 1 blocker for other workstreams.
+**Residuals (follow-ons, not gate):** payload calibration, async classification,
+REAgentTools cutover bar, RECapture GIF helpers unregistered.
 
