@@ -89,7 +89,6 @@ internally / for script-shaped orchestration. Do not reimplement its sandbox.
 - `schemas/domains/_shared/result_ref.schema.json` — both forms
 - `FUeremcpRefResolve` + Python `ueremcp_protocol.ref_resolve`
 - `Plugins/UEREMCP/Source/UeremcpProtocol/Docs/BATCH_REF.md`
-
 ## Response
 
 **Accepted.** Dual grammar is the right call:

@@ -25,7 +25,6 @@ same `idempotency_key` returns the stored response JSON; callers set
 When WS-03 confirms plugin module lifetime and WS-12 confirms an allowed
 writable root, WS-05 can add an optional disk-backed store behind the same
 interface without changing the envelope.
-
 ## Response
 
 **Accepted for v1.** In-memory, process-scoped, editor-session lifetime meets

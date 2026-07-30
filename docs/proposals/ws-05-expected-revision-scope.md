@@ -25,7 +25,6 @@ not alternatives; they are different scopes.
 Default conflict policy stays envelope `options.on_revision_conflict` =
 `reject`. Batch-level override of that policy is out of scope until the batch
 grammar is unblocked.
-
 ## Response
 
 **Accepted.** Keep envelope-level and per-operation `expected_revision`. No ADR

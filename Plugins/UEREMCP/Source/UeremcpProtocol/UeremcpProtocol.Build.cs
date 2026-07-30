@@ -17,11 +17,11 @@ public class UeremcpProtocol : ModuleRules
 		{
 			"Core",
 			"CoreUObject",
+			"Json",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"Json",
 			"JsonUtilities",
 		});
 	}
