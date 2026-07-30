@@ -5,11 +5,11 @@
 The registry of every agent-facing `action`. An action that is not listed here does not
 exist as far as agents are concerned.
 
-**Freshness:** 2026-07-30 — post production-hardening consolidation
-(`docs/proposals/ws-01-hardening-consolidation-2026-07-30.md`). Overall POC A–E
-claimed; D5 multi-client and B10 rendered warm-pixel proofs closed live. **Not
-production-ready** — Epic MCP cancel adapter limitation and durable-idempotency
-crash/migration caveats remain.
+**Freshness:** 2026-07-30 — full-use integration. Overall POC A–E claimed; D5
+multi-client, B10 rendered pixels, fail-soft Niagara inspect, and deterministic
+visual capture are live-verified. **Not production-perfect** — Epic MCP cancel
+adapter, durable-idempotency crash/migration, broad graph-fidelity, and metrics
+caveats remain.
 
 ## How to register an action
 
@@ -72,6 +72,7 @@ names below are the semantic actions; notes map to the live tool surface.
 | `execute_plan` | project | WS-05 / WS-03 | partial | Agent-facing `UUeremcpReferenceToolset::ExecutePlan` (`AICallable`) delegates to `FUeremcpPlanActions` / `FUeremcpPlanExecutor`. Durable Claim/Complete idempotency under `Saved/UEREMCP/idempotency` (fingerprint-bound; restart replay verified). Still partial: metadata+package are not one atomic transaction; crash-after-mutation leaves a reclaimable in-progress claim; legacy `Put`/`TryGetReplay` call sites lack fingerprint conflict detection until migrated. |
 | `validate_asset` | validation | WS-11 | planned | |
 | `validate_system` | validation | WS-11 | planned | |
+| `capture_effect_frames` | validation | WS-11 | available | `UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames`; captures and rereads a deterministic PNG series with numeric baseline deltas. Cold renderer startup returns an ADR-0009 `partially_completed` job and completed successfully after one poll in a fresh RE editor. Requires an editor world and renderer/RHI; pixel change proves rendering, not appearance or structural correctness. |
 
 ### Niagara
 

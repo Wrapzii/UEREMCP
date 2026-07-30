@@ -1,9 +1,10 @@
 # Capability reference
 
 **Owner:** WS-13. Statuses are from
-[`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) on the post-hardening tip
-(parent `6a611cf`). **POC A–E claimed; not production-ready.** B10 warm-pixel PASS
-does not equal production visual perfection or a full metrics close.
+[`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) on the full-use
+integration tip. **Ready for practical use within cataloged partial scopes; not
+production-perfect.** Pixel-delta PASS does not equal correct appearance or a
+full metrics close.
 
 Do not paste full graph payloads into chat. Load the linked fixture; this page names
 the tool, the `action`, the fields that matter, and the ceiling.
@@ -126,6 +127,46 @@ B10 rendered warm-pixel / particle gate is **PASS** via
 `checks_skipped`. Do not equate B10 PASS with production visual perfection or E7
 metrics close. Materials contract companion:
 [`poc_b_fireball_materials.json`](../../schemas/domains/niagara/fixtures/poc_b_fireball_materials.json).
+
+---
+
+## Visual verification — `capture_effect_frames`
+
+| | |
+|---|---|
+| Status | **available** |
+| Toolset / tool | `UeremcpValidation.UeremcpVisualCaptureToolset` → `CaptureEffectFrames` |
+| Spec schema | [`capture_effect_frames.schema.json`](../../schemas/domains/validation/capture_effect_frames.schema.json) |
+
+```json
+{
+  "protocol_version": "1.0",
+  "request_id": "vfx-capture-1",
+  "action": "capture_effect_frames",
+  "target": {
+    "asset_path": "/Game/RE/VFX/Magecraft/Spells/NS_Spell_IceWall_Cast"
+  },
+  "specification": {
+    "frame_count": 4,
+    "duration_seconds": 1.5,
+    "camera": "three_quarter",
+    "width": 640,
+    "height": 360
+  },
+  "options": { "validate": true }
+}
+```
+
+The response returns PNG paths under
+`Saved/UEREMCP/VfxCapture/<asset>/<request-id>/`, per-frame luminance data, and
+`verification.rendered_something`. A cold renderer may first return
+`partially_completed`; poll its non-cancellable `get_job_result` handle. This
+fresh-editor path completed in two MCP round trips with 44 changed lit pixels
+`[VERIFIED-RUNTIME: RE, full-use-cold-delay-20260730, 2026-07-30]`.
+
+**Ceiling:** requires an editor world and renderer/RHI. Pixel delta proves only
+that the subject changed the captured frame; it does not judge appearance,
+compile validity, material correctness, or gameplay integration.
 
 ---
 

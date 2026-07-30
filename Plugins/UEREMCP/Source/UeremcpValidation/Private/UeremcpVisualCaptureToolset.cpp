@@ -5,6 +5,7 @@
 #include "Components/PointLightComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/StaticMeshComponent.h"
+#include "Containers/Ticker.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "Engine/DirectionalLight.h"
@@ -23,7 +24,10 @@
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "RenderingThread.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 #include "UeremcpEnvelope.h"
+#include "UeremcpJobRegistry.h"
 #include "UeremcpMutatingDispatch.h"
 
 namespace
@@ -131,9 +135,61 @@ namespace
 			}
 		}
 	}
+
+	bool ParseTerminalResponse(
+		const FString& Json,
+		FUeremcpResponse& OutResponse)
+	{
+		TSharedPtr<FJsonObject> Root;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+		if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid()
+			|| !Root->TryGetStringField(TEXT("status"), OutResponse.Status)
+			|| !Root->TryGetStringField(TEXT("summary"), OutResponse.Summary))
+		{
+			return false;
+		}
+
+		Root->TryGetStringField(TEXT("protocol_version"), OutResponse.ProtocolVersion);
+		Root->TryGetStringField(TEXT("request_id"), OutResponse.RequestId);
+		const TSharedPtr<FJsonObject>* Metrics = nullptr;
+		if (Root->TryGetObjectField(TEXT("metrics"), Metrics) && Metrics
+			&& Metrics->IsValid())
+		{
+			(*Metrics)->TryGetNumberField(
+				TEXT("mcp_round_trips"), OutResponse.Metrics.McpRoundTrips);
+			(*Metrics)->TryGetNumberField(
+				TEXT("internal_operations"), OutResponse.Metrics.InternalOperations);
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Notes = nullptr;
+		if (Root->TryGetArrayField(TEXT("capability_notes"), Notes) && Notes)
+		{
+			for (const TSharedPtr<FJsonValue>& Note : *Notes)
+			{
+				FString Value;
+				if (Note.IsValid() && Note->TryGetString(Value))
+				{
+					OutResponse.CapabilityNotes.Add(Value);
+				}
+			}
+		}
+
+		// Preserve result/verification extensions that are not represented by
+		// FUeremcpResponse's typed fields. SerializeResponse ignores duplicate
+		// standard fields already emitted from the typed response.
+		OutResponse.ExtraFields = Root;
+		return true;
+	}
+
+	FString CaptureEffectFramesImpl(
+		const FString& RequestJson,
+		const bool bAllowColdRetry);
 }
 
-FString UUeremcpVisualCaptureToolset::CaptureEffectFrames(const FString& RequestJson)
+namespace
+{
+FString CaptureEffectFramesImpl(
+	const FString& RequestJson,
+	const bool bAllowColdRetry)
 {
 	FUeremcpMutatingDispatch Dispatch;
 	FString BlockingResponse;
@@ -492,6 +548,90 @@ FString UUeremcpVisualCaptureToolset::CaptureEffectFrames(const FString& Request
 	const bool bRenderedSomething =
 		MaxDeltaLitPixels >= MinimumChangedLitPixels;
 
+	if (!bRenderedSomething && bAllowColdRetry)
+	{
+		FUeremcpJobRegistry& Registry = FUeremcpJobRegistry::Get();
+		FString JobId;
+		FString JobError;
+		if (!Registry.CreateJob(
+				Request.RequestId,
+				false,
+				TEXT("Cold Niagara renderer detected; retrying after an editor tick."),
+				JobId,
+				JobError)
+			|| !Registry.StartJob(JobId, JobError))
+		{
+			return CompleteFailure(
+				TEXT("failed_validation"),
+				FString::Printf(
+					TEXT("no material pixel change and cold-retry scheduling failed: %s"),
+					*JobError));
+		}
+
+		const FString RetryRequest = RequestJson;
+		const int32 FirstAttemptOperations = InternalOperations;
+		// [VERIFIED: Engine/Source/Runtime/Core/Public/Containers/Ticker.h:81]
+		FTSTicker::GetCoreTicker().AddTicker(
+			TEXT("UEREMCP.VisualCaptureColdRetry"),
+			0.25f,
+			[JobId, RetryRequest, FirstAttemptOperations](float)
+			{
+				FString ProgressError;
+				FUeremcpJobRegistry::Get().UpdateProgress(
+					JobId,
+					0.5,
+					TEXT("Capturing after the editor tick boundary."),
+					ProgressError);
+
+				const FString TerminalJson =
+					CaptureEffectFramesImpl(RetryRequest, false);
+				FUeremcpResponse TerminalResponse;
+				if (!ParseTerminalResponse(TerminalJson, TerminalResponse))
+				{
+					FString FailureError;
+					FUeremcpJobRegistry::Get().FailJob(
+						JobId,
+						TEXT("Cold visual-capture retry returned an invalid envelope."),
+						FailureError);
+					return false;
+				}
+				TerminalResponse.Metrics.InternalOperations += FirstAttemptOperations;
+				TerminalResponse.CapabilityNotes.Add(
+					TEXT("A cold first capture required one ADR-0009 editor-tick "
+						 "retry; this terminal result includes both attempts."));
+				FString CompletionError;
+				if (!FUeremcpJobRegistry::Get().CompleteJob(
+						JobId, TerminalResponse, CompletionError))
+				{
+					FString FailureError;
+					FUeremcpJobRegistry::Get().FailJob(
+						JobId,
+						FString::Printf(
+							TEXT("Cold visual-capture retry could not complete: %s"),
+							*CompletionError),
+						FailureError);
+				}
+				return false;
+			});
+
+		FUeremcpResponse InFlight;
+		if (!Registry.GetTimeoutResponse(JobId, InFlight, JobError))
+		{
+			return CompleteFailure(
+				TEXT("error"),
+				FString::Printf(
+					TEXT("cold-retry job could not be read: %s"), *JobError));
+		}
+		InFlight.UnderstoodAction = TEXT("capture_effect_frames");
+		InFlight.UnderstoodTarget = Request.TargetAssetPath;
+		InFlight.PrimaryAsset = Request.TargetAssetPath;
+		InFlight.Metrics.InternalOperations = InternalOperations;
+		InFlight.CapabilityNotes.Add(
+			TEXT("Poll get_job_result; the capture retry runs after a short editor-"
+				 "tick warmup and is not cancellable."));
+		return Dispatch.Complete(InFlight);
+	}
+
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
 	Response.Status = bRenderedSomething && bTeardownComplete
@@ -515,9 +655,9 @@ FString UUeremcpVisualCaptureToolset::CaptureEffectFrames(const FString& Request
 		TEXT("Output is written under Project/Saved/UEREMCP/VfxCapture; no content "
 			 "asset is created or modified."));
 	Response.CapabilityNotes.Add(
-		TEXT("A newly loaded Niagara renderer may need an editor tick boundary before "
-			 "it produces pixels; a cold first request can honestly return "
-			 "failed_validation while a warmed request succeeds."));
+		TEXT("A cold renderer is retried once after an editor tick through an "
+			 "ADR-0009 process-local job; a second zero-pixel result remains "
+			 "failed_validation."));
 
 	const TSharedRef<FJsonObject> Extra = MakeShared<FJsonObject>();
 	Extra->SetStringField(TEXT("output_directory"), OutputDirectory);
@@ -537,4 +677,11 @@ FString UUeremcpVisualCaptureToolset::CaptureEffectFrames(const FString& Request
 	Extra->SetObjectField(TEXT("verification"), Verification);
 	Response.ExtraFields = Extra;
 	return Dispatch.Complete(Response);
+}
+}
+
+FString UUeremcpVisualCaptureToolset::CaptureEffectFrames(
+	const FString& RequestJson)
+{
+	return CaptureEffectFramesImpl(RequestJson, true);
 }

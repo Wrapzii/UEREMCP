@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/validation/capture_effect_frames.schema.json",
+  "title": "Capture Effect Frames Specification",
+  "description": "Specification for capture_effect_frames. The target Niagara system is selected by envelope target.asset_path.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "frame_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64,
+      "default": 8
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "default": 1.5
+    },
+    "camera": {
+      "type": "string",
+      "enum": [
+        "front",
+        "three_quarter",
+        "side",
+        "top"
+      ],
+      "default": "three_quarter"
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 64,
+      "maximum": 4096,
+      "default": 960
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 64,
+      "maximum": 4096,
+      "default": 540
+    }
+  }
+}

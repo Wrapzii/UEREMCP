@@ -4,9 +4,10 @@
 post-hardening tip (parent `6a611cf` / documentation certification). An
 undocumented limitation is a defect (`AGENTS.md` rule 6).
 
-**POC A–E claimed; not production-ready.** Structural POC B is claimed with B10
-warm-pixel PASS — that is **not** production visual perfection or a full metrics
-close (E7 / R-17).
+**POC A–E claimed; practical goal-level use is ready within the cataloged
+partial scopes, not production-perfect.** Structural POC B and deterministic
+visual capture are live-verified; neither proves correct appearance across every
+asset, scene, renderer, or hardware configuration.
 
 ## Blueprint
 
@@ -22,6 +23,7 @@ close (E7 / R-17).
 | Limit | Detail |
 |---|---|
 | B10 | Programmatic warm-pixel / particle gate **PASS** via `UEREMCP.Niagara.POCB.VisibleRender` (`tests/run_poc_b10_visible_render.ps1`). Does **not** claim correct look on every scene/hardware/quality setting |
+| Visual capture | `capture_effect_frames` is available with warm and fresh-editor cold-job evidence. It requires a renderer/RHI and editor world; a cold request may require one `get_job_result` poll. A second zero-pixel capture remains an honest `failed_validation`, because some systems do not render standalone. |
 | Topology inspect | Intentionally lossy (event handler stacks, etc.) |
 | POC C | Claimed under accepted criteria; variation + C7 third generation proven |
 

@@ -190,11 +190,11 @@ bool FUeremcpNiagaraPocBSixEmitterGate::RunTest(const FString& Parameters)
 	TestTrue(TEXT("B7 renderers-present gate is bool/null"), IsBooleanOrNull(Gates, TEXT("B7_renderers_present")));
 	TestTrue(TEXT("B7 renderers-bound gate is bool/null"), IsBooleanOrNull(Gates, TEXT("B7_renderers_bound")));
 	TestTrue(TEXT("B7 data-interface gate is bool/null"), IsBooleanOrNull(Gates, TEXT("B7_data_interfaces_complete")));
-	TestTrue(
-		TEXT("never_claims lists created_and_validated"),
+	TestFalse(
+		TEXT("created_and_validated is not globally forbidden"),
 		StringArrayContains(Gates, TEXT("never_claims"), TEXT("created_and_validated")));
-	TestTrue(
-		TEXT("never_claims lists modified_and_validated"),
+	TestFalse(
+		TEXT("modified_and_validated is not globally forbidden"),
 		StringArrayContains(Gates, TEXT("never_claims"), TEXT("modified_and_validated")));
 
 	const TSharedPtr<FJsonValue> Structural = Gates->TryGetField(TEXT("B7_structural_match"));
