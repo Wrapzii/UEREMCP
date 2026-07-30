@@ -48,6 +48,27 @@ class InstantiateResult:
     has_template_validation_rules: bool = False
 
 
+@dataclass
+class PromotionRequest:
+    source_asset: str
+    base_template_id: str = ""
+    proposed_template_id: str = ""
+    description: str = ""
+    quarantine: bool = True
+    dry_run: bool = True
+
+
+@dataclass
+class PromotionResult:
+    success: bool
+    status: str
+    summary: str
+    proposed_template_id: str = ""
+    quarantine_path: str = ""
+    contract_gates: list[str] | None = None
+    capability_notes: list[str] | None = None
+
+
 class TemplateService:
     def __init__(self, store: TemplateStore) -> None:
         self._store = store
@@ -194,6 +215,83 @@ class TemplateService:
             has_template_validation_rules=bool(record.document.get("validation_rules")),
         )
 
+    def plan_promotion(self, request: PromotionRequest) -> PromotionResult:
+        if (
+            not request.source_asset.startswith("/Game/")
+            or ".." in request.source_asset
+            or request.source_asset.endswith("/")
+        ):
+            return PromotionResult(
+                success=False,
+                status="failed_validation",
+                summary="source_asset must be a non-traversing /Game/ asset path.",
+            )
+
+        base = None
+        if request.base_template_id:
+            base = self._store.find_by_id(request.base_template_id)
+            if base is None:
+                return PromotionResult(
+                    success=False,
+                    status="failed_validation",
+                    summary=f"Unknown base_template_id '{request.base_template_id}'.",
+                )
+
+        proposed_id = request.proposed_template_id
+        if not proposed_id:
+            domain = base.domain if base else "assets"
+            category = base.category if base else "promoted"
+            proposed_id = (
+                f"{domain.lower()}.{category.lower()}."
+                f"{_slug_from_asset_path(request.source_asset)}.v1"
+            )
+        if not re.fullmatch(r"[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+\.v[0-9]+", proposed_id):
+            return PromotionResult(
+                success=False,
+                status="failed_validation",
+                summary=(
+                    "proposed_template_id does not match the versioned template "
+                    "id contract."
+                ),
+            )
+
+        notes = [
+            "No source asset was inspected: a domain-neutral complete-state "
+            "retrieval dispatcher is not registered.",
+            "No construction_plan was synthesized or validated, and no quarantine "
+            "file or asset was written.",
+            "Promotion remains preview-only until UeremcpSecurity authorizes the "
+            "write and the generated template passes schema validation.",
+        ]
+        if not request.quarantine:
+            notes.append(
+                "quarantine=false was not honored: direct writes outside the agent "
+                "quarantine require a human-reviewed repository path."
+            )
+        if not request.dry_run:
+            notes.append(
+                "dry_run=false was requested, but mutation was withheld because "
+                "promotion contract gates are incomplete."
+            )
+        return PromotionResult(
+            success=True,
+            status="partially_completed",
+            summary=(
+                f"Validated promotion intent for '{request.source_asset}' as "
+                f"'{proposed_id}'; no source inspection or write occurred."
+            ),
+            proposed_template_id=proposed_id,
+            quarantine_path=f"/Game/__UeremcpTemplates/agent/{proposed_id}",
+            contract_gates=[
+                "template.promotion.complete_state_retrieval",
+                "template.promotion.reproduction_plan_synthesis",
+                "template.promotion.schema_validation",
+                "template.promotion.security_write_gate",
+                "template.promotion.quarantine_write",
+            ],
+            capability_notes=notes,
+        )
+
 
 def _score_record(record: TemplateRecord, query: str) -> float:
     if not query:
@@ -210,6 +308,14 @@ def _score_record(record: TemplateRecord, query: str) -> float:
         if needle in term.lower():
             score += 1.5
     return score
+
+
+def _slug_from_asset_path(source_asset: str) -> str:
+    source_name = source_asset.rsplit("/", 1)[-1].lower()
+    slug = re.sub(r"[^a-z0-9]+", "_", source_name).strip("_")
+    if not slug or not slug[0].isalpha():
+        slug = f"asset_{slug}"
+    return slug
 
 
 def _passes_element_filter(record: TemplateRecord, element: str) -> bool:
@@ -269,6 +375,44 @@ def _validate_inputs(schema: Any, inputs: dict[str, Any]) -> str:
             if "maximum" in property_schema and value > property_schema["maximum"]:
                 return f"Template input '{name}' is above its maximum."
     return ""
+
+
+def build_promotion_response(
+    original_envelope: dict[str, Any],
+    request: PromotionRequest,
+    result: PromotionResult,
+) -> dict[str, Any]:
+    response: dict[str, Any] = {
+        "protocol_version": "1.0",
+        "request_id": original_envelope.get("request_id", ""),
+        "status": result.status,
+        "summary": result.summary,
+        "understood": {"action": "promote_to_template"},
+        "metrics": {"mcp_round_trips": 1, "internal_operations": 0},
+    }
+    if result.proposed_template_id:
+        response["understood"]["template_used"] = result.proposed_template_id
+    if result.quarantine_path:
+        response["understood"]["resolved_target"] = result.quarantine_path
+    if result.success:
+        response["understood"]["interpretation_notes"] = [
+            (
+                "Promotion defaulted to preview-only dry_run behavior."
+                if request.dry_run
+                else "Promotion mutation was requested but withheld behind contract gates."
+            ),
+            (
+                "Resolved output to the agent quarantine."
+                if request.quarantine
+                else "Resolved a quarantine preview despite quarantine=false."
+            ),
+        ]
+        response["validation"] = {
+            "checks_skipped": list(result.contract_gates or [])
+        }
+    if result.capability_notes:
+        response["capability_notes"] = list(result.capability_notes)
+    return response
 
 
 def delegate_execute_plan(

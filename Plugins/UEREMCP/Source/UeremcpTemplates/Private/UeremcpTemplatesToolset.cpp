@@ -45,6 +45,25 @@ namespace
 		return SerializeJsonObject(RequestObject, OutRequestJson);
 	}
 
+	bool ResolvePromotionDryRun(const FString& RequestJson)
+	{
+		TSharedPtr<FJsonObject> Root;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(RequestJson);
+		if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
+		{
+			return true;
+		}
+		const TSharedPtr<FJsonObject>* Options = nullptr;
+		bool bDryRun = true;
+		if (Root->TryGetObjectField(TEXT("options"), Options)
+			&& Options
+			&& Options->IsValid())
+		{
+			(*Options)->TryGetBoolField(TEXT("dry_run"), bDryRun);
+		}
+		return bDryRun;
+	}
+
 	void AppendStringArrayValue(
 		const TSharedPtr<FJsonObject>& Object,
 		const FString& Field,
@@ -334,4 +353,76 @@ FString UUeremcpTemplatesToolset::InstantiateTemplate(const FString& RequestJson
 	}
 
 	return FinalResponseJson;
+}
+
+FString UUeremcpTemplatesToolset::PromoteToTemplate(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(FString(), ParseError);
+	}
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("Unsupported protocol_version for template promotion."));
+	}
+	if (!Request.Action.Equals(TEXT("promote_to_template"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("PromoteToTemplate requires action 'promote_to_template'."));
+	}
+
+	const TSharedPtr<FJsonObject> Spec = ParseSpecification(Request);
+	FUeremcpTemplatePromotionRequest PromotionRequest;
+	if (!Spec.IsValid() || !Spec->TryGetStringField(TEXT("source_asset"), PromotionRequest.SourceAsset))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("specification.source_asset is required."));
+	}
+	Spec->TryGetStringField(TEXT("base_template_id"), PromotionRequest.BaseTemplateId);
+	Spec->TryGetStringField(TEXT("proposed_template_id"), PromotionRequest.ProposedTemplateId);
+	Spec->TryGetStringField(TEXT("description"), PromotionRequest.Description);
+	Spec->TryGetBoolField(TEXT("quarantine"), PromotionRequest.bQuarantine);
+	PromotionRequest.bDryRun = ResolvePromotionDryRun(RequestJson);
+
+	const FUeremcpTemplatePromotionResult Result =
+		UeremcpTemplates::GetService().PlanPromotion(PromotionRequest);
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.Status = Result.Status;
+	Response.Summary = Result.Summary;
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Result.QuarantinePath;
+	Response.UnderstoodTemplate = Result.ProposedTemplateId;
+	Response.CapabilityNotes = Result.CapabilityNotes;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = 0;
+
+	if (Result.bSuccess)
+	{
+		Response.InterpretationNotes.Add(
+			PromotionRequest.bDryRun
+				? TEXT("Promotion defaulted to preview-only dry_run behavior.")
+				: TEXT("Promotion mutation was requested but withheld behind contract gates."));
+		Response.InterpretationNotes.Add(
+			PromotionRequest.bQuarantine
+				? TEXT("Resolved output to the agent quarantine.")
+				: TEXT("Resolved a quarantine preview despite quarantine=false."));
+
+		Response.ExtraFields = MakeShared<FJsonObject>();
+		const TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> Skipped;
+		for (const FString& Gate : Result.ContractGates)
+		{
+			Skipped.Add(MakeShared<FJsonValueString>(Gate));
+		}
+		Validation->SetArrayField(TEXT("checks_skipped"), Skipped);
+		Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
+	}
+	return FUeremcpEnvelope::SerializeResponse(Response);
 }

@@ -25,4 +25,8 @@ public:
 	/** action=instantiate_template */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Templates")
 	static FString InstantiateTemplate(const FString& RequestJson);
+
+	/** action=promote_to_template; preview-only until documented cross-domain gates are bound. */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Templates")
+	static FString PromoteToTemplate(const FString& RequestJson);
 };

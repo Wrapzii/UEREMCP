@@ -17,9 +17,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from validate_templates import load_registry  # noqa: E402
 from ueremcp_templates import (  # noqa: E402
     InstantiateRequest,
+    PromotionRequest,
     SearchQuery,
     TemplateService,
     TemplateStore,
+    build_promotion_response,
     delegate_execute_plan,
 )
 
@@ -394,12 +396,114 @@ class TemplateInstantiateTests(unittest.TestCase):
         self.assertEqual(list(self.response_validator.iter_errors(response)), [])
 
 
+class TemplatePromotionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.store = TemplateStore()
+        self.store.load_from_directory(ROOT / "templates")
+        self.service = TemplateService(self.store)
+        response_schema = json.loads(
+            (ROOT / "schemas" / "envelope" / "response.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.response_validator = Draft202012Validator(
+            response_schema,
+            registry=load_registry(ROOT / "schemas"),
+        )
+
+    def test_preview_derives_quarantine_id_without_writing(self) -> None:
+        before = sorted(path.relative_to(ROOT) for path in (ROOT / "templates").rglob("*"))
+        request = PromotionRequest(source_asset="/Game/VFX/Spells/NS_Fireball")
+        result = self.service.plan_promotion(request)
+        after = sorted(path.relative_to(ROOT) for path in (ROOT / "templates").rglob("*"))
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.status, "partially_completed")
+        self.assertEqual(result.proposed_template_id, "assets.promoted.ns_fireball.v1")
+        self.assertEqual(
+            result.quarantine_path,
+            "/Game/__UeremcpTemplates/agent/assets.promoted.ns_fireball.v1",
+        )
+        self.assertEqual(before, after)
+        self.assertEqual(len(result.contract_gates or []), 5)
+
+        response = build_promotion_response(
+            {
+                "protocol_version": "1.0",
+                "request_id": "promote-preview",
+                "action": "promote_to_template",
+            },
+            request,
+            result,
+        )
+        self.assertEqual(list(self.response_validator.iter_errors(response)), [])
+        self.assertNotIn("changes", response)
+        self.assertNotIn("result", response)
+        self.assertIn(
+            "template.promotion.complete_state_retrieval",
+            response["validation"]["checks_skipped"],
+        )
+
+    def test_base_template_drives_domain_and_category(self) -> None:
+        result = self.service.plan_promotion(
+            PromotionRequest(
+                source_asset="/Game/VFX/Spells/NS_IceShard",
+                base_template_id="niagara.projectile.elemental.v1",
+            )
+        )
+        self.assertTrue(result.success)
+        self.assertEqual(
+            result.proposed_template_id,
+            "niagara.projectile.ns_iceshard.v1",
+        )
+
+    def test_invalid_contract_inputs_fail_before_preview(self) -> None:
+        invalid_source = self.service.plan_promotion(
+            PromotionRequest(source_asset="/Engine/VFX/NS_Fireball")
+        )
+        self.assertFalse(invalid_source.success)
+        self.assertEqual(invalid_source.status, "failed_validation")
+
+        missing_base = self.service.plan_promotion(
+            PromotionRequest(
+                source_asset="/Game/VFX/NS_Fireball",
+                base_template_id="niagara.projectile.missing.v1",
+            )
+        )
+        self.assertFalse(missing_base.success)
+        self.assertIn("Unknown base_template_id", missing_base.summary)
+
+        invalid_id = self.service.plan_promotion(
+            PromotionRequest(
+                source_asset="/Game/VFX/NS_Fireball",
+                proposed_template_id="Niagara Projectile Fireball",
+            )
+        )
+        self.assertFalse(invalid_id.success)
+        self.assertIn("versioned template id contract", invalid_id.summary)
+
+    def test_mutation_and_non_quarantine_requests_remain_preview_only(self) -> None:
+        request = PromotionRequest(
+            source_asset="/Game/VFX/NS_Fireball",
+            proposed_template_id="niagara.projectile.fireball_promoted.v1",
+            quarantine=False,
+            dry_run=False,
+        )
+        result = self.service.plan_promotion(request)
+        self.assertTrue(result.success)
+        self.assertEqual(result.status, "partially_completed")
+        notes = " ".join(result.capability_notes or [])
+        self.assertIn("quarantine=false was not honored", notes)
+        self.assertIn("dry_run=false was requested", notes)
+
+
 def main() -> int:
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     suite.addTests(loader.loadTestsFromTestCase(TemplateStoreTests))
     suite.addTests(loader.loadTestsFromTestCase(TemplateSearchTests))
     suite.addTests(loader.loadTestsFromTestCase(TemplateInstantiateTests))
+    suite.addTests(loader.loadTestsFromTestCase(TemplatePromotionTests))
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     return 0 if result.wasSuccessful() else 1
 

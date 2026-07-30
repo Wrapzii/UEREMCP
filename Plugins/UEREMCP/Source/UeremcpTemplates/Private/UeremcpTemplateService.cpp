@@ -101,6 +101,82 @@ namespace
 			return false;
 		}
 	}
+
+	bool IsTemplateIdToken(const FString& Token, bool bRequireLeadingLetter)
+	{
+		if (Token.IsEmpty() || (bRequireLeadingLetter && !FChar::IsAlpha(Token[0])))
+		{
+			return false;
+		}
+		for (const TCHAR Character : Token)
+		{
+			if (!(FChar::IsLower(Character) || FChar::IsDigit(Character) || Character == TEXT('_')))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool IsValidTemplateId(const FString& TemplateId)
+	{
+		TArray<FString> Tokens;
+		TemplateId.ParseIntoArray(Tokens, TEXT("."), true);
+		if (Tokens.Num() < 3 || !IsTemplateIdToken(Tokens[0], true))
+		{
+			return false;
+		}
+		for (int32 Index = 1; Index < Tokens.Num() - 1; ++Index)
+		{
+			if (!IsTemplateIdToken(Tokens[Index], false))
+			{
+				return false;
+			}
+		}
+		const FString& Version = Tokens.Last();
+		if (Version.Len() < 2 || Version[0] != TEXT('v'))
+		{
+			return false;
+		}
+		for (int32 Index = 1; Index < Version.Len(); ++Index)
+		{
+			if (!FChar::IsDigit(Version[Index]))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	FString SlugFromAssetPath(const FString& SourceAsset)
+	{
+		const FString SourceName = FPaths::GetBaseFilename(SourceAsset).ToLower();
+		FString Slug;
+		bool bPreviousUnderscore = false;
+		for (const TCHAR Character : SourceName)
+		{
+			const bool bAllowed = FChar::IsLower(Character) || FChar::IsDigit(Character);
+			if (bAllowed)
+			{
+				Slug.AppendChar(Character);
+				bPreviousUnderscore = false;
+			}
+			else if (!bPreviousUnderscore && !Slug.IsEmpty())
+			{
+				Slug.AppendChar(TEXT('_'));
+				bPreviousUnderscore = true;
+			}
+		}
+		while (Slug.EndsWith(TEXT("_")))
+		{
+			Slug.LeftChopInline(1);
+		}
+		if (Slug.IsEmpty() || !FChar::IsAlpha(Slug[0]))
+		{
+			Slug = TEXT("asset_") + Slug;
+		}
+		return Slug;
+	}
 }
 
 FUeremcpTemplateService::FUeremcpTemplateService(FUeremcpTemplateStore& InStore)
@@ -307,6 +383,82 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 		TEXT("Materialized an execute_plan specification for '%s'."),
 		*Request.TemplateId);
 	Result.MaterializedPlan = Plan;
+	return Result;
+}
+
+FUeremcpTemplatePromotionResult FUeremcpTemplateService::PlanPromotion(
+	const FUeremcpTemplatePromotionRequest& Request) const
+{
+	FUeremcpTemplatePromotionResult Result;
+	if (!Request.SourceAsset.StartsWith(TEXT("/Game/"))
+		|| Request.SourceAsset.Contains(TEXT(".."))
+		|| Request.SourceAsset.EndsWith(TEXT("/")))
+	{
+		Result.Summary = TEXT("source_asset must be a non-traversing /Game/ asset path.");
+		return Result;
+	}
+
+	const FUeremcpTemplateRecord* BaseTemplate = nullptr;
+	if (!Request.BaseTemplateId.IsEmpty())
+	{
+		BaseTemplate = Store.FindById(Request.BaseTemplateId);
+		if (!BaseTemplate)
+		{
+			Result.Summary = FString::Printf(
+				TEXT("Unknown base_template_id '%s'."),
+				*Request.BaseTemplateId);
+			return Result;
+		}
+	}
+
+	Result.ProposedTemplateId = Request.ProposedTemplateId;
+	if (Result.ProposedTemplateId.IsEmpty())
+	{
+		const FString Domain = BaseTemplate ? BaseTemplate->Domain : TEXT("assets");
+		const FString Category = BaseTemplate ? BaseTemplate->Category : TEXT("promoted");
+		Result.ProposedTemplateId = FString::Printf(
+			TEXT("%s.%s.%s.v1"),
+			*Domain.ToLower(),
+			*Category.ToLower(),
+			*SlugFromAssetPath(Request.SourceAsset));
+	}
+	if (!IsValidTemplateId(Result.ProposedTemplateId))
+	{
+		Result.Summary = TEXT("proposed_template_id does not match the versioned template id contract.");
+		return Result;
+	}
+
+	Result.bSuccess = true;
+	Result.Status = TEXT("partially_completed");
+	Result.QuarantinePath = FString::Printf(
+		TEXT("/Game/__UeremcpTemplates/agent/%s"),
+		*Result.ProposedTemplateId);
+	Result.ContractGates = {
+		TEXT("template.promotion.complete_state_retrieval"),
+		TEXT("template.promotion.reproduction_plan_synthesis"),
+		TEXT("template.promotion.schema_validation"),
+		TEXT("template.promotion.security_write_gate"),
+		TEXT("template.promotion.quarantine_write"),
+	};
+	Result.CapabilityNotes = {
+		TEXT("No source asset was inspected: a domain-neutral complete-state retrieval dispatcher is not registered."),
+		TEXT("No construction_plan was synthesized or validated, and no quarantine file or asset was written."),
+		TEXT("Promotion remains preview-only until UeremcpSecurity authorizes the write and the generated template passes schema validation."),
+	};
+	if (!Request.bQuarantine)
+	{
+		Result.CapabilityNotes.Add(
+			TEXT("quarantine=false was not honored: direct writes outside the agent quarantine require a human-reviewed repository path."));
+	}
+	if (!Request.bDryRun)
+	{
+		Result.CapabilityNotes.Add(
+			TEXT("dry_run=false was requested, but mutation was withheld because promotion contract gates are incomplete."));
+	}
+	Result.Summary = FString::Printf(
+		TEXT("Validated promotion intent for '%s' as '%s'; no source inspection or write occurred."),
+		*Request.SourceAsset,
+		*Result.ProposedTemplateId);
 	return Result;
 }
 

@@ -76,3 +76,26 @@ struct UEREMCPTEMPLATES_API FUeremcpTemplateInstantiateResult
 	TArray<FString> CapabilityNotes;
 	TSharedPtr<FJsonObject> MaterializedPlan;
 };
+
+/** promote_to_template specification (schemas/domains/templates/promote_to_template.schema.json). */
+struct UEREMCPTEMPLATES_API FUeremcpTemplatePromotionRequest
+{
+	FString SourceAsset;
+	FString BaseTemplateId;
+	FString ProposedTemplateId;
+	FString Description;
+	bool bQuarantine = true;
+	bool bDryRun = true;
+};
+
+/** Contract-validated promotion preview. No write occurs until every gate is bound. */
+struct UEREMCPTEMPLATES_API FUeremcpTemplatePromotionResult
+{
+	bool bSuccess = false;
+	FString Status = TEXT("failed_validation");
+	FString Summary;
+	FString ProposedTemplateId;
+	FString QuarantinePath;
+	TArray<FString> ContractGates;
+	TArray<FString> CapabilityNotes;
+};

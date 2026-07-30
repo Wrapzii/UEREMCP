@@ -69,3 +69,22 @@ additional operation list; names alone are not executable.
 - A delegated domain result is downgraded to `partially_completed` when template
   validation rules could not run, with `template.validation_rules` listed under
   `validation.checks_skipped`.
+
+## Promotion scaffold (WS-15)
+
+`promote_to_template` now validates the owned specification, resolves an existing
+`base_template_id`, derives or validates a versioned template id, and previews the
+agent quarantine path. It performs zero asset or filesystem mutations and reports
+`partially_completed`.
+
+The response lists these unrun contract gates under `validation.checks_skipped`:
+
+- `template.promotion.complete_state_retrieval`
+- `template.promotion.reproduction_plan_synthesis`
+- `template.promotion.schema_validation`
+- `template.promotion.security_write_gate`
+- `template.promotion.quarantine_write`
+
+Both `options.dry_run: false` and `quarantine: false` remain non-mutating requests
+until those gates are implemented. This is deliberate fail-closed behavior, not a
+successful promotion.

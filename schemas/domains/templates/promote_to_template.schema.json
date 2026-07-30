@@ -13,11 +13,13 @@
     },
     "base_template_id": {
       "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+\\.v[0-9]+$",
       "description": "Optional parent template this promotion varies from."
     },
     "proposed_template_id": {
       "type": "string",
-      "description": "Desired new template_id. If omitted, derived deterministically from source + base."
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+\\.v[0-9]+$",
+      "description": "Desired new template_id. If omitted, derived deterministically from source + base. Contract validation does not imply the source was inspected or a template was written."
     },
     "description": {
       "type": "string"
@@ -25,7 +27,7 @@
     "quarantine": {
       "type": "boolean",
       "default": true,
-      "description": "When true, write under /Game/__UeremcpTemplates/agent/ only."
+      "description": "When true, resolve output under /Game/__UeremcpTemplates/agent/ only. The current scaffold remains preview-only until complete-state retrieval, plan synthesis, schema validation, and the shared security write gate are bound."
     }
   }
 }

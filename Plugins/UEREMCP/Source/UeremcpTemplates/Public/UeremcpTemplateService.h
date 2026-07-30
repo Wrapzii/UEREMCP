@@ -21,6 +21,8 @@ public:
 
 	FUeremcpTemplateInstantiateResult Instantiate(const FUeremcpTemplateInstantiateRequest& Request) const;
 
+	FUeremcpTemplatePromotionResult PlanPromotion(const FUeremcpTemplatePromotionRequest& Request) const;
+
 private:
 	static float ScoreRecord(const FUeremcpTemplateRecord& Record, const FUeremcpTemplateSearchQuery& Query);
 	static bool PassesElementFilter(const FUeremcpTemplateRecord& Record, const FString& ElementFilter);
