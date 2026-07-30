@@ -742,7 +742,7 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	TMap<const UEdGraphNode*, FString> SemanticIds;
 	AssignSemanticIds(Graph, GraphName, SemanticIds);
 
-	const bool bIncludeFullNodes =
+	const bool bIncludeFullNodesInResponse =
 		Options.ResponseDetail.Equals(TEXT("complete"), ESearchCase::IgnoreCase)
 		|| Options.ResponseDetail.Equals(TEXT("diagnostic"), ESearchCase::IgnoreCase);
 
@@ -788,7 +788,9 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	EdOptions.AssetPath = AssetPath;
 	EdOptions.GraphName = GraphName;
 	EdOptions.GraphType = ResolveGraphType(Blueprint, Graph);
-	EdOptions.bEmitNodesAndLinks = bIncludeFullNodes;
+	// ADR-0006: revision/content_hash is always computed from the full semantic graph;
+	// summary payloads omit nodes/links only after hashing (see bIncludeFullNodesInResponse).
+	EdOptions.bEmitNodesAndLinks = true;
 	EdOptions.bIncludePinDefaults = true;
 	EdOptions.bRoundTripSupported = false;
 	EdOptions.LossyAreas = DefaultLossyAreas();
@@ -864,7 +866,7 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	GraphObj->SetStringField(TEXT("content_hash"), ContentHash);
 	GraphObj->SetStringField(TEXT("revision"), ContentHash);
 
-	if (!bIncludeFullNodes)
+	if (!bIncludeFullNodesInResponse)
 	{
 		GraphObj->RemoveField(TEXT("nodes"));
 		GraphObj->RemoveField(TEXT("links"));
