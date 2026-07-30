@@ -40,8 +40,11 @@ bool ValidateFieldTypes(
 
 	for (const TPair<FString, EJson>& Expected : ExpectedTypes)
 	{
-		const TSharedPtr<FJsonValue>* Value = Object->Values.Find(Expected.Key);
-		if (Value && (!Value->IsValid() || (*Value)->Type != Expected.Value))
+		// FJsonObject keys are UE::FSharedString in UE 5.8; use the public
+		// FStringView lookup instead of searching Values with FString.
+		// [VERIFIED: JsonObject.h:98-105,237,351-355]
+		const TSharedPtr<FJsonValue> Value = Object->TryGetField(Expected.Key);
+		if (Value.IsValid() && Value->Type != Expected.Value)
 		{
 			OutError = FString::Printf(
 				TEXT("%s.%s has the wrong JSON type"),

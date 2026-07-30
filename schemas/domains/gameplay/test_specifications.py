@@ -189,13 +189,14 @@ class GameplaySpecificationTests(unittest.TestCase):
         self.assertIn('Response.Status = TEXT("created_and_validated")', toolset)
         self.assertIn('Response.Status = TEXT("modified_and_validated")', toolset)
         for evidence in (
-            'SetNullField(TEXT("saved"))',
-            'SetNullField(TEXT("reread_after_write"))',
+            'SetJsonNull(Validation, TEXT("saved"))',
+            'SetJsonNull(Validation, TEXT("reread_after_write"))',
             'SetArrayField(\n\t\tTEXT("changes")',
             'SetObjectField(TEXT("rollback")',
             'SetObjectField(TEXT("diagnostics")',
         ):
             self.assertIn(evidence, toolset)
+        self.assertNotIn("SetNullField", toolset)
 
     def test_gameplay_toolset_registers_on_post_engine_init(self) -> None:
         module = (

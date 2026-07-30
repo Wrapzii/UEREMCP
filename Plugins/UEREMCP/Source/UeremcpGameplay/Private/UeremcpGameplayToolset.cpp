@@ -28,6 +28,13 @@ bool IsVerifiedTerminalStatus(const FString& Status)
 		|| Status == TEXT("modified_and_validated")
 		|| Status == TEXT("no_change_required");
 }
+
+void SetJsonNull(const TSharedPtr<FJsonObject>& Object, const FStringView Field)
+{
+	// UE 5.8 expresses JSON null through generic SetField.
+	// [VERIFIED: JsonObject.h:127-135; JsonValue.h FJsonValueNull]
+	Object->SetField(Field, MakeShared<FJsonValueNull>());
+}
 }
 
 FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
@@ -326,10 +333,10 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	}
 
 	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
-	Validation->SetNullField(TEXT("compiled"));
+	SetJsonNull(Validation, TEXT("compiled"));
 	if (Request.bDryRun)
 	{
-		Validation->SetNullField(TEXT("saved"));
+		SetJsonNull(Validation, TEXT("saved"));
 	}
 	else
 	{
@@ -341,7 +348,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		bDependenciesResolved);
 	if (Request.bDryRun)
 	{
-		Validation->SetNullField(TEXT("reread_after_write"));
+		SetJsonNull(Validation, TEXT("reread_after_write"));
 	}
 	else
 	{
@@ -349,8 +356,8 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 			TEXT("reread_after_write"),
 			MutationResult.bRereadAfterWrite);
 	}
-	Validation->SetNullField(TEXT("runtime_smoke_test"));
-	Validation->SetNullField(TEXT("editor_validation_run"));
+	SetJsonNull(Validation, TEXT("runtime_smoke_test"));
+	SetJsonNull(Validation, TEXT("editor_validation_run"));
 	TArray<FString> ChecksPerformed = Plan.StaticChecks;
 	ChecksPerformed.Add(TEXT("deterministic_datatable_write_plan_prepared"));
 	ChecksPerformed.Add(TEXT("presentation_dependency_resolution_completed"));
@@ -445,7 +452,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		Change->SetStringField(TEXT("asset_class"), TEXT("/Script/Engine.DataTable"));
 		if (MutationResult.RevisionBefore.IsEmpty())
 		{
-			Change->SetNullField(TEXT("revision_before"));
+			SetJsonNull(Change, TEXT("revision_before"));
 		}
 		else
 		{
