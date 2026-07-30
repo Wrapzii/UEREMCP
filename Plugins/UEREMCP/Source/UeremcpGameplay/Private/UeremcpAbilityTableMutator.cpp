@@ -177,9 +177,17 @@ bool FUeremcpAbilityTableMutator::Execute(
 		return true;
 	}
 
+	FString SandboxRequestToken = WritePlan.RequestId;
+	for (TCHAR& Character : SandboxRequestToken)
+	{
+		if (!FChar::IsAlnum(Character) && Character != TEXT('_') && Character != TEXT('-'))
+		{
+			Character = TEXT('_');
+		}
+	}
 	const FString SandboxName = FString::Printf(
 		TEXT("UEREMCP_create_spell_%s"),
-		*WritePlan.RequestId);
+		*SandboxRequestToken);
 	if (!FGlobalSandbox::Enter(
 		SandboxName,
 		TEXT("UEREMCP create_spell FREAbilityDef row mutation")))

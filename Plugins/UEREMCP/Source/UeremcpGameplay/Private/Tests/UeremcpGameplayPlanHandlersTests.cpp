@@ -129,8 +129,8 @@ bool FUeremcpGameplayPlanHandlersRegistrationTest::RunTest(const FString& Parame
 	TestTrue(TEXT("plan response parsed"), Response.IsValid());
 	if (Response.IsValid())
 	{
-		// Dry-run create_spell is intentionally not IsSuccess for plan deps; aggregate
-		// remains partially_completed rather than a false *_validated claim.
+		// Dry-run create_spell returns a usable primary asset preview. The plan
+		// preserves that honest partial status without claiming validation.
 		TestEqual(
 			TEXT("dry-run aggregate status is honest"),
 			Response->GetStringField(TEXT("status")),

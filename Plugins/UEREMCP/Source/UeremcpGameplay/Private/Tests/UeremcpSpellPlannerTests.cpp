@@ -114,6 +114,19 @@ bool FUeremcpSpellPlannerValidTest::RunTest(const FString& Parameters)
 			TEXT("RE status enum retained"),
 			Plan.RowPayload->GetStringField(TEXT("ImpactStatus")),
 			FString(TEXT("Burn")));
+		const TSharedPtr<FJsonObject>* ElementColor = nullptr;
+		TestTrue(
+			TEXT("FLinearColor row value uses object representation"),
+			Plan.RowPayload->TryGetObjectField(TEXT("ElementColor"), ElementColor)
+				&& ElementColor
+				&& ElementColor->IsValid());
+		if (ElementColor && ElementColor->IsValid())
+		{
+			TestEqual(TEXT("ElementColor.r retained"), (*ElementColor)->GetNumberField(TEXT("r")), 1.0);
+			TestEqual(TEXT("ElementColor.g retained"), (*ElementColor)->GetNumberField(TEXT("g")), 0.12);
+			TestEqual(TEXT("ElementColor.b retained"), (*ElementColor)->GetNumberField(TEXT("b")), 0.01);
+			TestEqual(TEXT("ElementColor.a retained"), (*ElementColor)->GetNumberField(TEXT("a")), 1.0);
+		}
 	}
 	TestEqual(TEXT("both VFX dependencies returned"), Plan.DependencyAssetPaths.Num(), 2);
 
@@ -595,7 +608,11 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 			EUeremcpPermissionTier::Write);
 	TestTrue(TEXT("test blocker acquires queue"), Blocker.bAcquired);
 	const FString ContendedRequest =
-		Request.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-queued-cancel"));
+		Request
+			.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-queued-cancel"))
+			.Replace(
+				TEXT("\"idempotency_key\":\"ws09-create-spell-lifecycle\""),
+				TEXT("\"idempotency_key\":\"ws09-create-spell-queued-cancel\""));
 	const TSharedPtr<FJsonObject> ContendedResponse =
 		ParseObject(UUeremcpGameplayToolset::CreateSpell(ContendedRequest));
 	TestTrue(TEXT("contended response parses"), ContendedResponse.IsValid());

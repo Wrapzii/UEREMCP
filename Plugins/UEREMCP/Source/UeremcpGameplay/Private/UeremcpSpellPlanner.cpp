@@ -228,7 +228,7 @@ bool FUeremcpSpellPlanner::BuildPlan(
 		OutError = TEXT("specification.element_color must contain four numeric components");
 		return false;
 	}
-	TArray<TSharedPtr<FJsonValue>> NormalizedColor;
+	TArray<double> NormalizedColor;
 	for (const TSharedPtr<FJsonValue>& Value : *ColorValues)
 	{
 		if (!Value.IsValid() || Value->Type != EJson::Number)
@@ -236,7 +236,7 @@ bool FUeremcpSpellPlanner::BuildPlan(
 			OutError = TEXT("specification.element_color must contain four numeric components");
 			return false;
 		}
-		NormalizedColor.Add(MakeShared<FJsonValueNumber>(Value->AsNumber()));
+		NormalizedColor.Add(Value->AsNumber());
 	}
 
 	const TSharedPtr<FJsonObject> Delivery = OptionalObject(Specification, TEXT("delivery"));
@@ -467,7 +467,12 @@ bool FUeremcpSpellPlanner::BuildPlan(
 	Row->SetStringField(TEXT("Wheel"), Wheel);
 	Row->SetStringField(TEXT("CastType"), *CastType);
 	Row->SetStringField(TEXT("CircleTier"), CircleTier);
-	Row->SetArrayField(TEXT("ElementColor"), NormalizedColor);
+	const TSharedPtr<FJsonObject> ElementColor = MakeShared<FJsonObject>();
+	ElementColor->SetNumberField(TEXT("r"), NormalizedColor[0]);
+	ElementColor->SetNumberField(TEXT("g"), NormalizedColor[1]);
+	ElementColor->SetNumberField(TEXT("b"), NormalizedColor[2]);
+	ElementColor->SetNumberField(TEXT("a"), NormalizedColor[3]);
+	Row->SetObjectField(TEXT("ElementColor"), ElementColor);
 	Row->SetNumberField(TEXT("CastTimeSec"), CastTimeSec);
 	Row->SetNumberField(TEXT("CooldownSec"), CooldownSec);
 	Row->SetNumberField(TEXT("StaminaCost"), StaminaCost);
