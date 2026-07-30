@@ -104,31 +104,47 @@ namespace UeremcpValidation::PocB10
 		return Backdrop;
 	}
 
-	static int32 CountActiveParticles(UNiagaraComponent& Component)
+	struct FParticleObservation
 	{
+		int32 LiveParticles = 0;
+		int32 TotalSpawnedParticles = 0;
+		int32 RuntimeEmitterInstances = 0;
+		bool bValid = false;
+	};
+
+	static FParticleObservation ObserveParticles(UNiagaraComponent& Component)
+	{
+		FParticleObservation Observation;
 		const FNiagaraSystemInstanceControllerPtr Controller =
 			Component.GetSystemInstanceController();
 		if (!Controller.IsValid())
 		{
-			return -1;
+			return Observation;
 		}
+
+		// Niagara may finish its simulation tick concurrently with the viewport draw.
+		// Finalize it before reading emitter datasets on the game thread.
+		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraSystemInstanceController.h:153]
+		Controller->WaitForConcurrentTickAndFinalize();
 
 		// Forced-solo instances are explicitly safe to inspect from the game thread.
 		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraSystemInstanceController.h:82-88]
 		FNiagaraSystemInstance* Instance = Controller->GetSoloSystemInstance();
 		if (!Instance)
 		{
-			return -1;
+			return Observation;
 		}
 
-		int32 ParticleCount = 0;
 		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraSystemInstance.h:277-278]
 		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraEmitterInstance.h:71-73]
+		Observation.RuntimeEmitterInstances = Instance->GetEmitters().Num();
 		for (const FNiagaraEmitterInstanceRef& Emitter : Instance->GetEmitters())
 		{
-			ParticleCount += Emitter->GetNumParticles();
+			Observation.LiveParticles += Emitter->GetNumParticles();
+			Observation.TotalSpawnedParticles += Emitter->GetTotalSpawnedParticles();
 		}
-		return ParticleCount;
+		Observation.bValid = true;
+		return Observation;
 	}
 
 	struct FVisibleRenderState
@@ -152,6 +168,9 @@ namespace UeremcpValidation::PocB10
 		bool bCapturedBefore = false;
 		int32 WarmupFrames = 0;
 		double WarmupElapsedSeconds = 0.0;
+		int32 MaxLiveParticles = 0;
+		int32 TotalSpawnedParticles = 0;
+		int32 RuntimeEmitterInstances = 0;
 	};
 
 	static FString ResolveOutputPath()
@@ -271,10 +290,22 @@ public:
 			: nullptr;
 		if (State->Component)
 		{
-			// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraComponent.h:295,307]
-			State->Component->SetAsset(State->System);
+			// ANiagaraActor's registered component defaults to auto-activate. Configure
+			// the solo observation instance before SetAsset, which otherwise activates
+			// immediately and creates an intermediate non-solo simulation.
+			// [VERIFIED: NiagaraComponent.cpp:685,4620-4694]
+			// [VERIFIED: ActorComponent.cpp:2856-2865]
+			State->Component->bAutoActivate = false;
+			State->Component->DeactivateImmediate();
 			State->Component->SetForceSolo(true);
+			State->Component->SetAutoDestroy(false);
+			State->Component->SetAsset(State->System);
 			State->Component->Activate(/*bReset=*/true);
+			// A realtime editor viewport ticks with LEVELTICK_ViewportsOnly, which does
+			// not reliably promote a newly activated Niagara instance out of pending
+			// spawn. Match the proven runtime probe's first full world tick.
+			// [VERIFIED: NiagaraSystemSimulation.cpp:1425-1502]
+			State->World->Tick(LEVELTICK_All, 1.0f / 60.0f);
 		}
 		return true;
 	}
@@ -304,6 +335,27 @@ public:
 		++State->WarmupFrames;
 		State->WarmupElapsedSeconds = FPlatformTime::Seconds() - StartSeconds;
 		State->Viewport->Invalidate();
+		if (State->Component)
+		{
+			// Advance the forced-solo simulation deterministically. Latent command
+			// callbacks and viewport invalidation alone do not guarantee that this
+			// production system advances in an editor world.
+			// [VERIFIED: NiagaraSystemInstance.cpp:987-1009]
+			State->Component->AdvanceSimulation(1, 1.0f / 60.0f);
+			const FParticleObservation Observation = ObserveParticles(*State->Component);
+			if (Observation.bValid)
+			{
+				State->MaxLiveParticles = FMath::Max(
+					State->MaxLiveParticles,
+					Observation.LiveParticles);
+				State->TotalSpawnedParticles = FMath::Max(
+					State->TotalSpawnedParticles,
+					Observation.TotalSpawnedParticles);
+				State->RuntimeEmitterInstances = FMath::Max(
+					State->RuntimeEmitterInstances,
+					Observation.RuntimeEmitterInstances);
+			}
+		}
 
 		// AddRealtimeOverride makes this a realtime editor viewport. Between latent
 		// command updates, UEditorEngine advances its world with
@@ -343,8 +395,23 @@ public:
 		const FString OutputPath = ResolveOutputPath();
 		const bool bSavedScreenshot =
 			bCapturedAfter && SavePng(OutputPath, AfterSize, AfterPixels);
-		const int32 ParticleCount =
-			State->Component ? CountActiveParticles(*State->Component) : 0;
+		if (State->Component)
+		{
+			const FParticleObservation Observation = ObserveParticles(*State->Component);
+			if (Observation.bValid)
+			{
+				State->MaxLiveParticles = FMath::Max(
+					State->MaxLiveParticles,
+					Observation.LiveParticles);
+				State->TotalSpawnedParticles = FMath::Max(
+					State->TotalSpawnedParticles,
+					Observation.TotalSpawnedParticles);
+				State->RuntimeEmitterInstances = FMath::Max(
+					State->RuntimeEmitterInstances,
+					Observation.RuntimeEmitterInstances);
+			}
+		}
+		const int32 ParticleCount = State->MaxLiveParticles;
 
 		int32 ChangedPixels = 0;
 		int32 WarmChangedPixels = 0;
@@ -393,7 +460,7 @@ public:
 		{
 			FailureReason = TEXT("viewport_unavailable");
 		}
-		else if (ParticleCount == 0)
+		else if (State->TotalSpawnedParticles == 0)
 		{
 			FailureReason = TEXT("system_emits_no_particles");
 		}
@@ -402,6 +469,7 @@ public:
 			TEXT("UEREMCP_POC_B10_EVIDENCE={\"status\":\"%s\",\"screenshot\":\"%s\",")
 			TEXT("\"width\":%d,\"height\":%d,\"changed_pixels\":%d,")
 			TEXT("\"warm_changed_pixels\":%d,\"particle_count\":%d,")
+			TEXT("\"total_spawned_particles\":%d,\"runtime_emitter_instances\":%d,")
 			TEXT("\"warmup_frames\":%d,\"warmup_seconds\":%.3f,")
 			TEXT("\"system\":\"%s\",\"dark_backdrop\":true,")
 			TEXT("\"programmatic_pixel_validation\":true}"),
@@ -412,6 +480,8 @@ public:
 			ChangedPixels,
 			WarmChangedPixels,
 			ParticleCount,
+			State->TotalSpawnedParticles,
+			State->RuntimeEmitterInstances,
 			State->WarmupFrames,
 			State->WarmupElapsedSeconds,
 			*State->SystemPath.ReplaceCharWithEscapedChar()));

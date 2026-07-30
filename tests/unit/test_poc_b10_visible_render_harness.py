@@ -42,7 +42,17 @@ class PocB10VisibleRenderHarnessTest(unittest.TestCase):
             "EngineShowFlags.SetNiagara(true)",
             "CreateDarkBackdrop",
             "/Engine/BasicShapes/Plane.Plane",
-            "CountActiveParticles",
+            "ObserveParticles",
+            "WaitForConcurrentTickAndFinalize",
+            "GetTotalSpawnedParticles",
+            "TotalSpawnedParticles",
+            "RuntimeEmitterInstances",
+            "bAutoActivate = false",
+            "DeactivateImmediate",
+            "SetForceSolo(true)",
+            "SetAutoDestroy(false)",
+            "World->Tick(LEVELTICK_All",
+            "AdvanceSimulation(1, 1.0f / 60.0f)",
             "system_emits_no_particles",
             "viewport_unavailable",
             "visible_fire_signature_not_observed",
@@ -55,7 +65,6 @@ class PocB10VisibleRenderHarnessTest(unittest.TestCase):
         ):
             self.assertIn(token, source)
         self.assertNotIn("ProcessThreadUntilIdle(", source)
-        self.assertNotIn("AdvanceSimulation(/*TickCount=*/", source)
 
     def test_runner_enables_rendering_and_requires_pass_artifact(self):
         runner = (
