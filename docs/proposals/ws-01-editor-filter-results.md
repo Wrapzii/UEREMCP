@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. MCP B1, required B10 visible rendering, and global POC-B metrics/baseline remain open — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. MCP B1 currently crashes in `AwaitCompile`; B10 and metrics are blocked — **no overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; one-request MCP B1, required B10 visible rendering, and global POC-B metrics/baseline remain open. No overall POC-B claim.
+Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1 crashes in `AwaitCompile`, blocking required B10 and metrics. No overall POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -133,6 +133,16 @@ document's binary acceptance rules; “screenshot as supplementary evidence only
 means a screenshot cannot itself be the validation, not that B10 is optional.
 Global POC-B metrics and the equivalent primitive-call baseline also remain
 unrecorded. **Overall POC B remains unclaimed.**
+
+## MCP B1 attempt on orch `3b69e8f`
+
+| Proof | Result | Evidence / residual |
+|---|---|---|
+| Canonical one-request MCP fireball | **FAIL (editor crash)** | `CreateNiagaraEffect` with six materials and validation enabled crashed at `UeremcpNiagaraCreate.cpp:589` in `AwaitCompile` |
+| Editor `FireballInlineMaterials` | **PASS** | Existing editor proof remains green; it is not MCP transport B1 |
+| B10 / metrics | **BLOCKED** | Await WS-07 crash fix and successful WS-11 MCP rerun |
+
+No B1, B10, metrics, or overall POC-B claim.
 
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
@@ -362,7 +372,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Run one-request MCP fireball, B10 visible-render proof, and record complete POC-B metrics/baseline. |
+| WS-07 + WS-11 | Fix the MCP `AwaitCompile` crash, rerun B1, then run B10 and record complete POC-B metrics/baseline. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1, required B10, and global POC-B metrics/baseline remain open. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1 crashes in `AwaitCompile`, blocking B10 and metrics. No overall POC-B claim. No junction retarget.

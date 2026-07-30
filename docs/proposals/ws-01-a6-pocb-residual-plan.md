@@ -2,7 +2,7 @@
 
 - **Orch tip at writing:** `40cb2a5` (WS-07 MCP B1/B10 handoffs landed; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball B2–B6/B9 and B8 Create→restart→Verify now pass. Acceptance B1 still lacks a one-request MCP transport proof, B10 visible rendering is required and unproven, and global POC-B metrics/baseline are unrecorded — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball B2–B6/B9 and B8 Create→restart→Verify pass. WS-11's canonical MCP B1 attempt crashes in `AwaitCompile`; WS-07 is fixing it. B10 and metrics remain blocked — **no overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -203,11 +203,18 @@ Verify editor processes. Verify reports `restart_observed` and
 `editor_UEREMCP_Niagara_POCB_Restart_Create_20260730_064653.log` and
 `editor_UEREMCP_Niagara_POCB_Restart_Verify_20260730_064733.log`.
 
+**WS-11 MCP B1 attempt on orch `3b69e8f`: FAIL.** The canonical fixture reached
+`CreateNiagaraEffect` with six materials and validation enabled, then the editor
+crashed in `UeremcpNiagaraCreate.cpp:589` during `AwaitCompile`. The editor
+`FireballInlineMaterials` proof remains PASS; it does not supersede this MCP
+transport failure. WS-07 owns the crash fix. B10 and POC-B metrics are blocked
+behind a successful MCP create. **No overall POC-B claim.**
+
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
-| B1 | One MCP request produces the complete effect — no follow-ups | **OPEN** — editor single-create pipeline PASS after UV, but no MCP transport one-call proof | WS-07 + WS-11 |
+| B1 | One MCP request produces the complete effect — no follow-ups | **FAIL on `3b69e8f`** — MCP create crashes at `UeremcpNiagaraCreate.cpp:589` `AwaitCompile`; editor gate remains PASS | WS-07 + WS-11 |
 | B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS on `8a8c75d` editor fireball** — all six MI roles represented | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
 | B4 | Renderers configured and bound to valid materials | **PASS on `8a8c75d` editor fireball** — all six, including `ribbon_trail` | WS-07 + WS-08 |
@@ -226,9 +233,9 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Run canonical fireball fixture through one MCP request | WS-11 | Fixture landed in `40cb2a5`; editor single-create is not MCP transport proof |
-| P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | B10 remains honestly `null`; screenshot may supplement but cannot be the validation |
-| P0 | Record POC-B MCP/internal-operation/token/wall metrics and equivalent primitive-call count | WS-11 / WS-14 | Required by global POC rules before overall claim |
+| P0 | Fix MCP create crash at `AwaitCompile`, then rerun canonical fixture | WS-07 + WS-11 | B1 currently FAIL; editor PASS is not MCP transport proof |
+| P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | Blocked by MCP B1; B10 remains honestly `null` |
+| P0 | Record POC-B MCP/internal-operation/token/wall metrics and equivalent primitive-call count | WS-11 / WS-14 | Blocked by MCP B1; required before overall claim |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
 
