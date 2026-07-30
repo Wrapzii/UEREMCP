@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/_shared/job_action.schema.json",
+  "title": "UEREMCP Job Action Specification",
+  "description": "Shared specification for get_job_result and cancel_job. The action selects behavior; the specification identifies one process-local ADR-0009 job.",
+  "type": "object",
+  "required": ["job_id"],
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "UEREMCP process-local job UUID returned in response.job.job_id."
+    }
+  },
+  "examples": [
+    {
+      "job_id": "1a02dc46-aef4-489f-afca-3f353d038aef"
+    }
+  ]
+}
