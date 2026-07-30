@@ -92,13 +92,13 @@ Named in the ADRs. Until each passes at runtime, the corresponding claim is not 
 | `UEREMCP.Validation.Honesty.DestructiveDryRunDefault` | destructive omit → dry_run forced | ADR-0010 | **gate (this branch)** |
 | `UEREMCP.Validation.Domain.Blueprint.IdempotencyRepeatedReplace` | Blueprint `no_change_required` x3 | ADR-0006 / E3 | **gate (this branch)** |
 | `UEREMCP.Validation.Domain.Blueprint.RevisionStaleRejected` | Blueprint stale revision rejected | ADR-0006 / E4 | **gate (this branch)** |
-| `UEREMCP.Validation.PocE.Restart.Create` / `Verify` | Validation scratch restart (E1 scoped) | POC E | **harness (this branch)** |
+| `UEREMCP.Validation.PocE.Restart.Create` / `Verify` | Full accepted A–D assets + C5 gameplay rows across restart | POC E | **PASS (this branch)** |
 
 All five ADR rows plus `UEREMCP.Validation.Harness.Smoke` passed in one shipping-plugin run
 `[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260730_005518.log]`; see
 `integration/_logs/editor_UEREMCP_Validation_20260730_6of6.redacted.md`.
 
-POC E criterion bundle (honest, **overall not claimed**):
+POC E criterion bundle (**overall claimed**, with E3/E4 scope explicit):
 `integration/_logs/poc_e_criterion_bundle.json` — validate with
 `python tests/poc_evidence.py --poc-e-bundle …`. Orchestrator:
 `pwsh tests/run_poc_acceptance.ps1 -Scenario E`.

@@ -14,7 +14,7 @@
 | C | closed | `mcp_round_trips=1` measured; other cells unavailable with reasons |
 | D | closed | one `execute_plan` round trip measured; other cells unavailable with reasons |
 | E | closed (harness) | durability — not a goal MCP scenario |
-| Overall POC E | **false** | E1 full A–D unmet |
+| Overall POC E | **true** | E1 full A–D restart proof landed at `713ad70`; E3/E4 scoped limitations remain explicit |
 
 ## Artifacts
 

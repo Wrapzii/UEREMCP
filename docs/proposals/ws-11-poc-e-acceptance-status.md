@@ -2,26 +2,26 @@
 
 **From:** WS-11  
 **Branch:** `ws-01-poc-cde-integration` @ worktree `UEREMCP-integration`  
-**Base tip at closeout:** `785300383b3ab5fac2ad06199c78f3dbaa411725` (+ pending WS-11/WS-14/WS-01 commits)  
-**Overall POC E claimed:** **false**  
+**Tested implementation tip:** `713ad7014caa1472bba4c0f5d6a097a61c866e34`
+**Overall POC E claimed:** **true**
 **Machine bundle:** `tests/integration/_logs/poc_e_criterion_bundle.json`  
-**E1 live:** `tests/integration/_logs/poc_e1_ad_restart_clean_20260730.json`  
-**E harness:** `tests/integration/_logs/poc_e_acceptance_20260730_e7close.json`  
+**E1 live:** `tests/integration/_logs/poc_e1_ad_restart_full_20260730.json`
+**E harness:** `tests/integration/_logs/poc_e_acceptance_full_20260730.json`
 **E7 numbers:** `tests/integration/_logs/poc_e7_metrics_20260730.json`
 
 ## E1–E7
 
 | # | Status | What was locked | Residual / blocker |
 |---|---|---|---|
-| E1 | **PASS (partial scope)** | Two-process Validation.PocE.Restart Create/Verify after seeding B/C/D; checkpointed A+B+C+D+scratch all survived restart (`survived_by_poc` all_survived=true). `full_ad_results_claimed=false`. | Overall E1 (“all POC A–D results”) unmet: **C5 FAIL** (no networking/damage assets to survive); **D5** static-only Pattern B (DT survival ≠ multi-client). TransportFixture.Setup recreate crashes if BP already loaded — seed skipped; A CRT asset still checkpointed. |
+| E1 | **PASS (full A–D)** | Two-process Validation.PocE.Restart Create/Verify checkpointed every accepted A–D result plus scratch. `full_ad_results_claimed=true`; all assets survived, and both `DT_POCC_Variations` rows matched their pre-restart snapshots. | — |
 | E2 | **PASS** | `Rollback.MultiAssetDiscard` | Scoped to Content package-add full Discard (ADR-0005 residuals unchanged) |
 | E3 | **PASS (scoped)** | `Idempotency.RepeatedCreate` + Blueprint domain gate live | Niagara/Material domain pipelines not gated |
 | E4 | **PASS (scoped)** | `Revision.StaleRejected` + Blueprint domain gate live | Niagara/Material residuals |
 | E5 | **PASS** | `ValidateFalseForbidsValidated` live | — |
 | E6 | **PASS** | `BrokenRequestFailedValidation` live | — |
-| E7 | **PASS (rows recorded)** | A/B/C/D/E cells in `docs/reviews/poc-metrics.md` + `poc_e7_metrics_20260730.json` | Tokens/`internal_operations`/wall/primitive often `unavailable` with machine-checkable reasons (same honesty as POC B). **Not** an overall POC E claim. |
+| E7 | **PASS (rows recorded)** | A/B/C/D/E cells in `docs/reviews/poc-metrics.md` + `poc_e7_metrics_20260730.json` | Tokens/`internal_operations`/wall/primitive often `unavailable` with machine-checkable reasons (same honesty as POC B). |
 
-## Assets that survived restart (E1 partial)
+## Assets that survived restart (E1 full)
 
 From verify evidence (`missing_after_restart=[]`):
 
@@ -33,7 +33,19 @@ From verify evidence (`missing_after_restart=[]`):
 | C | `NS_POCC_IceVariationDirect`, `NS_POCC_IceVariation`, `NS_POCC_WindThirdGeneration` + Core/Trail MIs |
 | D | `DT_PocD_Live` |
 
-**Not in checkpoint (criteria still fail):** C5 networking/damage contract (none exists); D5 multi-client proof (not an asset).
+The C checkpoint also includes
+`/Game/__UeremcpPoc/Abilities/DT_POCC_Variations`. Verify loaded the table in
+the fresh process and asserted `poc_c_ice_fire_s` and `poc_c_wind_fire_s`
+serialized identically to Create. The accepted D5 criterion is the Pattern B
+static checklist; its optional multi-client proof is not an E1 durability
+asset `[VERIFIED: docs/POC_ACCEPTANCE.md:123-130]`.
+
+## Scoped limitations
+
+E3/E4 remain scoped to their named protocol gates plus the Blueprint domain
+gates. Niagara and Material domain-specific idempotency/revision pipelines are
+not gated. This limitation is explicit but does not add an unstated
+all-domains requirement to E3/E4 `[VERIFIED: docs/POC_ACCEPTANCE.md:143-151]`.
 
 ## Destructive dry_run default
 
@@ -54,5 +66,6 @@ pwsh tests/run_poc_acceptance.ps1 -Scenario E -SkipDomainSeed -EvidenceOutput te
 ## Non-claims
 
 - No project-complete claim.
-- **No overall POC E claim** — E1 full A–D unmet while C5/D5 remain.
+- Overall POC E is claimed only under the frozen E1–E7 wording; scoped
+  E3/E4 domain coverage remains documented above.
 - Junction restored to `UEREMCP-ws01` after this closeout.
