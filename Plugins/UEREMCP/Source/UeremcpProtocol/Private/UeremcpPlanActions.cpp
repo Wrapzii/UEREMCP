@@ -44,18 +44,33 @@ namespace
 		return State == TEXT("running") || State == TEXT("queued");
 	}
 
-	void StoreIdempotencyIfNeeded(const FUeremcpRequest& Request, const FString& ResponseJson)
+	FString StoreIdempotencyIfNeeded(
+		const FUeremcpRequest& Request,
+		const FString& RequestFingerprint,
+		const FString& ResponseJson)
 	{
 		if (Request.IdempotencyKey.IsEmpty() || ResponseJson.IsEmpty())
 		{
-			return;
+			return ResponseJson;
 		}
 		TSharedPtr<FJsonObject> Response;
 		if (!ParseObject(ResponseJson, Response) || IsInFlightPartial(Response))
 		{
-			return;
+			return ResponseJson;
 		}
-		FUeremcpIdempotencyStore::Get().Put(Request.IdempotencyKey, ResponseJson);
+		FString StoreError;
+		if (!FUeremcpIdempotencyStore::Get().Complete(
+			Request.IdempotencyKey,
+			RequestFingerprint,
+			ResponseJson,
+			StoreError))
+		{
+			return FUeremcpEnvelope::MakeUnverified(
+				Request.RequestId,
+				TEXT("Plan completed, but its durable idempotency record could not be committed."),
+				{StoreError});
+		}
+		return ResponseJson;
 	}
 
 	bool ExtractStatusSummary(
@@ -83,18 +98,23 @@ namespace
 		return !OutStatus.IsEmpty();
 	}
 
-	FString RunInline(const FUeremcpRequest& Request, const FString& RequestJson)
+	FString RunInline(
+		const FUeremcpRequest& Request,
+		const FString& RequestJson,
+		const FString& RequestFingerprint)
 	{
 		FString ResponseJson;
 		FString Error;
 		const bool bOk = FUeremcpPlanExecutor::ExecuteRequest(RequestJson, ResponseJson, Error);
 		if (!ResponseJson.IsEmpty())
 		{
-			StoreIdempotencyIfNeeded(Request, ResponseJson);
-			return ResponseJson;
+			return StoreIdempotencyIfNeeded(Request, RequestFingerprint, ResponseJson);
 		}
 		if (!bOk)
 		{
+			FString Ignored;
+			FUeremcpIdempotencyStore::Get().Abandon(
+				Request.IdempotencyKey, RequestFingerprint, Ignored);
 			return Reject(
 				Request,
 				Error.IsEmpty() ? TEXT("execute_plan failed without a response envelope") : Error);
@@ -102,7 +122,10 @@ namespace
 		return Reject(Request, TEXT("execute_plan returned an empty response"));
 	}
 
-	FString RunWithTimeout(const FUeremcpRequest& Request, const FString& RequestJson)
+	FString RunWithTimeout(
+		const FUeremcpRequest& Request,
+		const FString& RequestJson,
+		const FString& RequestFingerprint)
 	{
 		FUeremcpJobRegistry& Registry = FUeremcpJobRegistry::Get();
 		FString Error;
@@ -185,10 +208,11 @@ namespace
 				Error);
 		}
 
-		StoreIdempotencyIfNeeded(Request, ResponseJson);
+		const FString StoredResponse = StoreIdempotencyIfNeeded(
+			Request, RequestFingerprint, ResponseJson);
 		// Return the full consolidated plan envelope from the initiating call.
 		// Job retention exists so a later get_job_result poll remains honest.
-		return ResponseJson;
+		return StoredResponse;
 	}
 }
 
@@ -229,21 +253,34 @@ FString FUeremcpPlanActions::ExecutePlan(const FString& RequestJson)
 		return Reject(Request, TEXT("specification.operations is required"));
 	}
 
+	FString RequestFingerprint;
 	if (!Request.IdempotencyKey.IsEmpty())
 	{
-		FString Replay;
-		if (FUeremcpIdempotencyStore::Get().TryGetReplay(
-			Request.IdempotencyKey,
-			Request.RequestId,
-			Replay))
+		if (!FUeremcpIdempotencyStore::FingerprintRequestJson(
+			RequestJson, RequestFingerprint, Error))
 		{
-			return Replay;
+			return Reject(Request, Error);
+		}
+		const FUeremcpIdempotencyClaim Claim =
+			FUeremcpIdempotencyStore::Get().Claim(
+				Request.IdempotencyKey,
+				RequestFingerprint,
+				Request.RequestId);
+		if (Claim.Status == EUeremcpIdempotencyClaimStatus::Replay)
+		{
+			return Claim.ResponseJson;
+		}
+		if (Claim.Status == EUeremcpIdempotencyClaimStatus::Conflict
+			|| Claim.Status == EUeremcpIdempotencyClaimStatus::InProgress
+			|| Claim.Status == EUeremcpIdempotencyClaimStatus::Error)
+		{
+			return Reject(Request, Claim.Error);
 		}
 	}
 
 	if (FUeremcpJobUtil::ShouldDispatchInline(Request.TimeoutMs))
 	{
-		return RunInline(Request, RequestJson);
+		return RunInline(Request, RequestJson, RequestFingerprint);
 	}
-	return RunWithTimeout(Request, RequestJson);
+	return RunWithTimeout(Request, RequestJson, RequestFingerprint);
 }

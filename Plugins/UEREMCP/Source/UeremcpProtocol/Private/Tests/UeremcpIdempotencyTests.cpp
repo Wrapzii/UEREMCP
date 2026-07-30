@@ -4,6 +4,7 @@
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformProcess.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
@@ -163,6 +164,165 @@ bool FUeremcpIdempotencyDurableRoot::RunTest(const FString& Parameters)
 		TEXT("distinct keys get distinct stems"),
 		Stem,
 		FUeremcpIdempotencyStore::DurableFileStemForKey(TEXT("abd")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpIdempotencyClaimConflictRestart,
+	"UEREMCP.Protocol.Idempotency.ClaimConflictRestart",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpIdempotencyClaimConflictRestart::RunTest(const FString& Parameters)
+{
+	const FString TempRoot = FPaths::ConvertRelativePathToFull(FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("UEREMCP"),
+		TEXT("__UeremcpTests"),
+		TEXT("idempotency_claim")));
+	IFileManager::Get().DeleteDirectory(*TempRoot, false, true);
+
+	const FString RequestA = TEXT(
+		R"({"protocol_version":"1.0","request_id":"one","action":"execute_plan","idempotency_key":"claim-key","expected_revision":"sha256:aaa","specification":{"operations":[]}})");
+	const FString RequestARetry = TEXT(
+		R"({"specification":{"operations":[]},"expected_revision":"sha256:aaa","idempotency_key":"claim-key","action":"execute_plan","request_id":"two","protocol_version":"1.0"})");
+	const FString RequestB = TEXT(
+		R"({"protocol_version":"1.0","request_id":"three","action":"execute_plan","idempotency_key":"claim-key","expected_revision":"sha256:bbb","specification":{"operations":[]}})");
+	FString FingerprintA;
+	FString FingerprintARetry;
+	FString FingerprintB;
+	FString Error;
+	TestTrue(
+		TEXT("fingerprint first request"),
+		FUeremcpIdempotencyStore::FingerprintRequestJson(RequestA, FingerprintA, Error));
+	TestTrue(
+		TEXT("fingerprint retry"),
+		FUeremcpIdempotencyStore::FingerprintRequestJson(RequestARetry, FingerprintARetry, Error));
+	TestTrue(
+		TEXT("fingerprint conflicting request"),
+		FUeremcpIdempotencyStore::FingerprintRequestJson(RequestB, FingerprintB, Error));
+	TestEqual(TEXT("retry-only fields do not change fingerprint"), FingerprintA, FingerprintARetry);
+	TestNotEqual(TEXT("expected_revision changes fingerprint"), FingerprintA, FingerprintB);
+
+	const FString Stored = TEXT(
+		R"({"protocol_version":"1.0","request_id":"one","status":"created_and_validated","summary":"persisted","metrics":{"mcp_round_trips":1,"internal_operations":1}})");
+	{
+		FUeremcpIdempotencyStore Writer;
+		Writer.SetDurableRootOverride(TempRoot);
+		const FUeremcpIdempotencyClaim First =
+			Writer.Claim(TEXT("claim-key"), FingerprintA, TEXT("one"));
+		TestEqual(
+			TEXT("first process acquires claim"),
+			First.Status,
+			EUeremcpIdempotencyClaimStatus::Acquired);
+		const FUeremcpIdempotencyClaim Concurrent =
+			Writer.Claim(TEXT("claim-key"), FingerprintA, TEXT("concurrent"));
+		TestEqual(
+			TEXT("concurrent duplicate does not mutate"),
+			Concurrent.Status,
+			EUeremcpIdempotencyClaimStatus::InProgress);
+		TestTrue(
+			TEXT("completion is persisted"),
+			Writer.Complete(TEXT("claim-key"), FingerprintA, Stored, Error));
+	}
+
+	FUeremcpIdempotencyStore Restarted;
+	Restarted.SetDurableRootOverride(TempRoot);
+	const FUeremcpIdempotencyClaim Replay =
+		Restarted.Claim(TEXT("claim-key"), FingerprintARetry, TEXT("two"));
+	TestEqual(
+		TEXT("fresh store replays after restart"),
+		Replay.Status,
+		EUeremcpIdempotencyClaimStatus::Replay);
+	const TSharedPtr<FJsonObject> ReplayObject = ParseObject(Replay.ResponseJson);
+	TestTrue(TEXT("restart replay parses"), ReplayObject.IsValid());
+	TestEqual(
+		TEXT("restart replay uses current request id"),
+		ReplayObject->GetStringField(TEXT("request_id")),
+		FString(TEXT("two")));
+	TestTrue(
+		TEXT("restart replay annotation"),
+		ReplayObject->GetObjectField(TEXT("metrics"))->GetBoolField(TEXT("replayed")));
+
+	const FUeremcpIdempotencyClaim Conflict =
+		Restarted.Claim(TEXT("claim-key"), FingerprintB, TEXT("three"));
+	TestEqual(
+		TEXT("conflicting key reuse is rejected after restart"),
+		Conflict.Status,
+		EUeremcpIdempotencyClaimStatus::Conflict);
+
+	TArray<FString> TempFiles;
+	IFileManager::Get().FindFiles(
+		TempFiles,
+		*FPaths::Combine(TempRoot, TEXT("*.tmp.*")),
+		true,
+		false);
+	TestEqual(TEXT("atomic write leaves no temp files"), TempFiles.Num(), 0);
+
+	Restarted.PurgeDurable();
+	IFileManager::Get().DeleteDirectory(*TempRoot, false, true);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpIdempotencyCorruptionAndExpiry,
+	"UEREMCP.Protocol.Idempotency.CorruptionAndExpiry",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpIdempotencyCorruptionAndExpiry::RunTest(const FString& Parameters)
+{
+	const FString TempRoot = FPaths::ConvertRelativePathToFull(FPaths::Combine(
+		FPaths::ProjectSavedDir(),
+		TEXT("UEREMCP"),
+		TEXT("__UeremcpTests"),
+		TEXT("idempotency_corruption")));
+	IFileManager::Get().DeleteDirectory(*TempRoot, false, true);
+	IFileManager::Get().MakeDirectory(*TempRoot, true);
+
+	const FString Key = TEXT("corrupt-key");
+	const FString Path = FPaths::Combine(
+		TempRoot,
+		FUeremcpIdempotencyStore::DurableFileStemForKey(Key) + TEXT(".json"));
+	TestTrue(
+		TEXT("write corrupt fixture"),
+		FFileHelper::SaveStringToFile(TEXT("{not-json"), *Path));
+
+	FUeremcpIdempotencyStore Store;
+	Store.SetDurableRootOverride(TempRoot);
+	const FUeremcpIdempotencyClaim Corrupt =
+		Store.Claim(Key, TEXT("sha256:fingerprint"), TEXT("request"));
+	TestEqual(
+		TEXT("corrupt record fails closed"),
+		Corrupt.Status,
+		EUeremcpIdempotencyClaimStatus::Error);
+	TestFalse(TEXT("corrupt record is quarantined"), FPaths::FileExists(Path));
+	TArray<FString> Quarantined;
+	IFileManager::Get().FindFiles(
+		Quarantined,
+		*FPaths::Combine(TempRoot, TEXT("*.corrupt.*")),
+		true,
+		false);
+	TestEqual(TEXT("one corrupt record retained for diagnosis"), Quarantined.Num(), 1);
+
+	const FString ExpiringKey = TEXT("expiring-key");
+	const FString Response = TEXT(
+		R"({"protocol_version":"1.0","request_id":"expire","status":"no_change_required","summary":"done","metrics":{"mcp_round_trips":1,"internal_operations":0}})");
+	FString Error;
+	Store.SetRetention(FTimespan(1));
+	TestEqual(
+		TEXT("expiring claim acquired"),
+		Store.Claim(ExpiringKey, TEXT("sha256:expire"), TEXT("expire")).Status,
+		EUeremcpIdempotencyClaimStatus::Acquired);
+	TestTrue(
+		TEXT("expiring claim completes"),
+		Store.Complete(ExpiringKey, TEXT("sha256:expire"), Response, Error));
+	FPlatformProcess::Sleep(0.01f);
+	TestEqual(
+		TEXT("expired completed record is reclaimed"),
+		Store.Claim(ExpiringKey, TEXT("sha256:expire"), TEXT("retry")).Status,
+		EUeremcpIdempotencyClaimStatus::Acquired);
+
+	Store.PurgeDurable();
+	IFileManager::Get().DeleteDirectory(*TempRoot, false, true);
 	return true;
 }
 

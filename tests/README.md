@@ -87,6 +87,9 @@ Named in the ADRs. Until each passes at runtime, the corresponding claim is not 
 | `UEREMCP.Validation.Rollback.BlueprintCompileDiscard` | One trivial Actor Blueprint member edit, compile/save, disk/reload restoration | ADR-0005 q4 | **PASS (scoped)** |
 | `UEREMCP.Validation.Idempotency.RepeatedCreate` | In-process create replay through `TryGetReplay` | ADR-0006 | **PASS** |
 | `UEREMCP.Validation.Revision.StaleRejected` | `expected_revision` reject with no mutation | ADR-0006 | **PASS** |
+| `UEREMCP.Protocol.Idempotency.ClaimConflictRestart` | Durable claim/replay, conflict binding, atomic replacement | ADR-0006 | **PASS** |
+| `UEREMCP.Protocol.Idempotency.CorruptionAndExpiry` | Fail-closed quarantine and retention cleanup | ADR-0006 | **PASS** |
+| `UEREMCP.Validation.Idempotency.Restart.Create` / `Verify` | Two-process replay/no-mutation, conflict, stale revision after restart | ADR-0006 | **PASS** |
 | `UEREMCP.Validation.Honesty.ValidateFalseForbidsValidated` | `validate=false` never `*_validated` (E5) | POC E | **gate (this branch)** |
 | `UEREMCP.Validation.Honesty.BrokenRequestFailedValidation` | broken request → `failed_validation` (E6) | POC E | **gate (this branch)** |
 | `UEREMCP.Validation.Honesty.DestructiveDryRunDefault` | destructive omit → dry_run forced | ADR-0010 | **gate (this branch)** |
@@ -119,6 +122,12 @@ Full filter:
 
 ```powershell
 pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP"
+```
+
+Focused two-process idempotency/revision restart gate:
+
+```powershell
+pwsh tests/run_idempotency_restart.ps1
 ```
 
 Plus, per family, the ADR-0004 round-trip test: retrieve → replace unchanged → retrieve,

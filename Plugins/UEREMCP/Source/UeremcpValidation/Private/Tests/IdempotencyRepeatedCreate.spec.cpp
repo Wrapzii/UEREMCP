@@ -68,6 +68,7 @@ namespace UeremcpValidationTests
 		const FString& AssetName,
 		int32 SpecKeyCount,
 		int32& InOutWouldCompileCount,
+		FUeremcpIdempotencyStore& Store,
 		FAutomationTestBase& Test)
 	{
 		FScratchCreateOutcome Outcome;
@@ -77,7 +78,7 @@ namespace UeremcpValidationTests
 		if (!Request.IdempotencyKey.IsEmpty())
 		{
 			FString ReplayJson;
-			if (FUeremcpIdempotencyStore::Get().TryGetReplay(
+			if (Store.TryGetReplay(
 					Request.IdempotencyKey, Request.RequestId, ReplayJson))
 			{
 				Outcome.ResponseJson = ReplayJson;
@@ -133,7 +134,7 @@ namespace UeremcpValidationTests
 
 		if (!Request.IdempotencyKey.IsEmpty())
 		{
-			FUeremcpIdempotencyStore::Get().Put(Request.IdempotencyKey, Outcome.ResponseJson);
+			Store.Put(Request.IdempotencyKey, Outcome.ResponseJson);
 		}
 		return Outcome;
 	}
@@ -156,7 +157,10 @@ bool FUeremcpIdempotencyRepeatedCreate::RunTest(const FString& Parameters)
 	static const FString IdemKey = TEXT("idem-repeated-create-v1");
 
 	FUeremcpScratchGuard Guard(SuiteName);
-	FUeremcpIdempotencyStore::Get().Clear();
+	FUeremcpIdempotencyStore Store;
+	// The protocol-level harness intentionally isolates itself from project Saved
+	// records. Restart durability is covered by the dedicated two-process test.
+	Store.SetDurableEnabled(false);
 
 	const FString StablePackage = UeremcpMakeScratchPackagePath(SuiteName, AssetName);
 	const FString StableSoft = StablePackage + TEXT(".") + AssetName;
@@ -179,7 +183,13 @@ bool FUeremcpIdempotencyRepeatedCreate::RunTest(const FString& Parameters)
 		AttemptRequest.RequestId = FString::Printf(TEXT("req-%d"), Attempt + 1);
 
 		const FScratchCreateOutcome Outcome = ExecuteCreateOrUpdateHarness(
-			AttemptRequest, SuiteName, AssetName, /*SpecKeyCount=*/1, WouldCompileCount, *this);
+			AttemptRequest,
+			SuiteName,
+			AssetName,
+			/*SpecKeyCount=*/1,
+			WouldCompileCount,
+			Store,
+			*this);
 
 		FString ParsedStatus;
 		bool bReplayed = false;
