@@ -1,17 +1,53 @@
 # WS-01 editor automation filter results
 
-- **Current integration tip:** `a9977cf` (`[WS-07] Initialize Niagara particle fire color`)
+- **Current integration tip:** `268a102` (`[WS-08] Restore warm Niagara material output`)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `a9977cf` (fresh fireball create **PASS**; production B10 **FAIL**, 0 warm / ~412 live / 715 spawned)
+- **Latest Niagara re-run tip:** `268a102` (fresh fireball create **PASS**; production B10 **PASS**, 30,454 warm / 41,231 changed / 412 live / 705 spawned)
 - **Latest Material re-run tip:** `d691316` (**PASS 14/14**); current tip also includes Material security integration `d3e35cd`
 - **Latest transport integration tip:** `dae0e5c`
 - **Latest Templates re-run tip:** `f15ea96`
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. On `a9977cf`, WS-07 writes the requested warm value to `Particles.Color`; fresh fireball create **PASSES**, while production B10 still **FAILS** `visible_fire_signature_not_observed` with 0 warm pixels, approximately 412 live particles, and 715 spawned. Harness observation and emission are closed. Remaining ownership is WS-08's visually black generated materials; see [`ws-07-b10-warm-signature-fix.md`](./ws-07-b10-warm-signature-fix.md). POC-B metrics and the current-lineage evidence bundle remain open. **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. On `268a102`, stale production assets were freshly recreated with WS-08's Particle Color material path and the unchanged production B10 gate **PASSES** with 30,454 warm changed pixels, 41,231 total changed pixels, 412 live particles, and 705 spawned. The B10 visibility residual is closed. POC-B metrics and the complete current-lineage evidence bundle remain open. **No overall POC-B claim.**
 - **Junction:** Not changed.
+
+## WS-08 warm-material integration (`268a102`): production B10 PASS
+
+WS-08 source commit `e26caa5` was cherry-picked without conflicts as orchestration
+commit `268a102`. `UeremcpMaterial` rebuilt successfully. The first editor launch
+exposed a stale `UeremcpSecurity` DLL import; rebuilding the aligned dependent module
+set with `-NoUBTMakefiles` relinked it, after which the plugin loaded normally.
+
+The production asset was then freshly recreated with
+`-UeremcpPreservePocBAssets`. The filter deletes known POC-path assets before its
+single goal-level create, so stale black masters/MIs were not reused:
+
+```text
+Test Completed. Result={Success} Name={FireballInlineMaterials}
+UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_expanded_gates
+```
+
+Production-create log:
+`tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_095322.log`.
+
+The unchanged production B10 threshold then passed:
+
+```text
+UEREMCP_POC_B10_EVIDENCE={"status":"pass","screenshot":"C:\\Users\\$USER\\Documents\\GitHub\\UEREMCP-ws01\\tests\\integration\\_artifacts\\poc_b10_fireball.png","width":1530,"height":605,"changed_pixels":42131,"warm_changed_pixels":30454,"particle_count":412,"total_spawned_particles":705,"runtime_emitter_instances":6,"warmup_frames":175,"warmup_seconds":1.508,"system":"/Game/__UeremcpPoc/NS_POCB_Fireball.NS_POCB_Fireball","dark_backdrop":true,"programmatic_pixel_validation":true}
+UEREMCP_POC_B10_OUTCOME=PASS proof=viewport_pixel_delta_with_fire_signature
+```
+
+B10 log:
+`tests/integration/_logs/editor_UEREMCP_Niagara_POCB_VisibleRender_20260730_095353.log`.
+PNG evidence:
+`tests/integration/_artifacts/poc_b10_fireball.png` (**93,837 bytes**, 1530x605).
+No canary rerun was needed; the production path itself passed with
+`warm_changed_pixels > 0`.
+
+This closes B10 only. POC-B metrics/baseline and the complete current-lineage
+evidence bundle remain open. **No overall POC-B claim.**
 
 ## WS-07 warm-color re-run (`a9977cf`)
 
