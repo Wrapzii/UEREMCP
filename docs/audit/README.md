@@ -21,7 +21,7 @@ defect.
 | File | Contents | Brief | Status |
 |---|---|---|---|
 | `epic-toolsets.md` | Per-tool inventory of all loaded Epic toolsets | RB-02 | **complete (source); runtime schemas pending** |
-| `reagenttools.md` | Per-toolset disposition for REAgentTools' 15 toolsets | RB-15 | not started |
+| `reagenttools.md` | Per-toolset disposition for REAgentTools' 15 toolsets | RB-15 | **in_progress — execute_editor_batch done** |
 | `coverage-assertion.md` | Proof that UEREMCP covers everything marked `supersede` | — | not started |
 | `raw/` | Verbatim schema dumps so others can grep without repeating the work | RB-02 | — |
 

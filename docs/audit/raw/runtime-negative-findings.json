@@ -35,5 +35,15 @@
       "tag": "[VERIFIED-RUNTIME: Test-NetConnection port 8001 open, 8000 closed; HTTP error 2026-07-29]"
     }
   ],
-  "conclusion": "Runtime toolset enumeration and JSON Schema dumps were NOT obtained. Inventory below is from static source scan of UE 5.8 installed headers/Python with line citations. Re-run list_toolsets/describe_toolset when RE editor is up with ModelContextProtocol serving on :8000."
+    {
+      "call": "user-unreal-mcp.list_toolsets",
+      "attempt_3": {
+        "date": "2026-07-29 (follow-up)",
+        "result": "error",
+        "message": "MCP error -32000: Unreal MCP transport error: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      "tag": "[VERIFIED-RUNTIME: MCP client error payload 2026-07-29 follow-up]"
+    }
+  ],
+  "conclusion": "Runtime toolset enumeration and JSON Schema dumps were NOT obtained after three attempts. Inventory remains from static source scan. Re-run list_toolsets/describe_toolset when RE editor is up with ModelContextProtocol serving on :8000."
 }

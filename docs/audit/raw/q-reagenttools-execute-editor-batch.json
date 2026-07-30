@@ -1,0 +1,179 @@
+{
+  "artifact": "REAgentTools execute_editor_batch grammar",
+  "auditor": "WS-02",
+  "audit_date": "2026-07-29",
+  "source_of_truth": "REAgentTools/Content/Python/re_agent_tools/toolsets/batch_workflow_tools.py",
+  "tag": "[VERIFIED: batch_workflow_tools.py — read 2026-07-29]",
+  "tool": {
+    "toolset_class": "REBatchWorkflowTools",
+    "tool_name": "execute_editor_batch",
+    "registration": "batch_workflow toolset via re_agent_tools/toolsets/_registration.py",
+    "signature": {
+      "operations_json": "str — JSON array (or single object coerced to one-element array) of operation dicts",
+      "dry_run": "bool, default false",
+      "stop_on_error": "bool, default true",
+      "returns": "str — compact JSON WorkflowResult from common/results.py",
+      "tag": "[VERIFIED: batch_workflow_tools.py:66-70,216-231]"
+    }
+  },
+  "allowed_actions": {
+    "set": [
+      "resolve_actor",
+      "spawn_actor",
+      "set_actor_properties",
+      "set_actor_transform",
+      "save_level",
+      "compile_blueprint",
+      "set_asset_properties",
+      "save_asset"
+    ],
+    "count": 8,
+    "definition": "ALLOWED_ACTIONS frozenset at module scope",
+    "enforcement": "run_op raises ValueError('Action not allowlisted: …') if action not in set",
+    "tag": "[VERIFIED: batch_workflow_tools.py:17-26,94-95]"
+  },
+  "ref_grammar": {
+    "function": "_resolve_ref(step_results, ref)",
+    "syntax": "String values starting with '$' reference a prior step by id",
+    "algorithm": [
+      "If ref does not start with '$', return ref unchanged (literal value)",
+      "step_id = ref[1:] (strip leading '$')",
+      "If step_id not in step_results, raise ValueError('Unknown $ref: …')",
+      "If step_results[step_id] has key 'label', return that string",
+      "Else if it has key 'path', return that string",
+      "Else raise ValueError('$ref … has no label/path')"
+    ],
+    "step_result_shapes": {
+      "resolve_actor": {"label": "actor label", "path": "actor path name"},
+      "spawn_actor": {"label": "spawned or planned label"},
+      "other_actions": "do not write step_results unless action defines id"
+    },
+    "example": {
+      "operations": [
+        {"id": "a1", "action": "spawn_actor", "class_path": "/Script/Engine.StaticMeshActor", "label": "MyActor"},
+        {"action": "set_actor_transform", "label": "$a1", "location": [100, 0, 0]}
+      ],
+      "note": "Second op resolves '$a1' → step_results['a1']['label'] → 'MyActor'"
+    },
+    "fields_using_refs": [
+      "resolve_actor: label|actor_label|name|actor via _entry_label then _resolve_ref",
+      "set_actor_properties: same label fields",
+      "set_actor_transform: same label fields",
+      "compile_blueprint: path field",
+      "set_asset_properties: path field",
+      "save_asset: path field"
+    ],
+    "tag": "[VERIFIED: batch_workflow_tools.py:37-48,98-197]"
+  },
+  "label_aliases": {
+    "function": "_entry_label(entry)",
+    "accepted_keys_in_order": ["label", "actor_label", "name", "actor"],
+    "returns": "first non-empty string value, or empty string",
+    "tag": "[VERIFIED: batch_workflow_tools.py:51-57]"
+  },
+  "operations_json": {
+    "parser": "parse_json_list — accepts JSON array or single object (wrapped as one-element list)",
+    "tag": "[VERIFIED: serialization.py:22-28, batch_workflow_tools.py:74]"
+  },
+  "limits": {
+    "BATCH_LIMIT": 20,
+    "source_code_default": "limits.BATCH_LIMIT = 20",
+    "ini_default": "Config/DefaultREAgentTools.ini BatchLimit=20",
+    "behaviour_when_exceeded": "Immediate error_result; no ops executed; message 'Batch limit 20 exceeded (N ops)'",
+    "tag": "[VERIFIED: limits.py:11, DefaultREAgentTools.ini:5, batch_workflow_tools.py:75-81]"
+  },
+  "dry_run": {
+    "default": false,
+    "mutating_ops_skipped": [
+      "spawn_actor (records would-spawn warning; still writes step_results[step_id] with label if id present)",
+      "set_actor_properties",
+      "set_actor_transform",
+      "save_level",
+      "compile_blueprint",
+      "set_asset_properties",
+      "save_asset"
+    ],
+    "still_executes": ["resolve_actor — NOT guarded by dry_run; always resolves actor"],
+    "warnings": "Each skipped op appends a dry_run: … string to warnings list",
+    "response": "extra.dry_run echoed in result payload",
+    "tag": "[VERIFIED: batch_workflow_tools.py:105-197,227]"
+  },
+  "stop_on_error": {
+    "default": true,
+    "invalid_op_not_dict": "errors.append('Invalid op: …'); break loop if stop_on_error else continue",
+    "ResolutionError_or_ValueError": "errors.append(str(exc)); break if stop_on_error",
+    "outer_exception": "errors.append(str(exc)); transaction context exits",
+    "success_field": "success = not errors (any error → success false)",
+    "tag": "[VERIFIED: batch_workflow_tools.py:199-214,216-218]"
+  },
+  "transaction": {
+    "wrapper": "scoped_transaction('RE execute_editor_batch') → unreal.ScopedEditorTransaction",
+    "scope": "Entire batch in one editor transaction",
+    "tag": "[VERIFIED: batch_workflow_tools.py:200, transactions.py:12-14]"
+  },
+  "per_action_fields": {
+    "resolve_actor": {
+      "required": "label|actor_label|name|actor (after ref resolution)",
+      "writes_step_results": {"label": "actor label", "path": "actor path name"},
+      "requires_id": "step id recommended for downstream $refs"
+    },
+    "spawn_actor": {
+      "required": "class_path",
+      "optional": "label|actor_label|name, location, rotation, scale (default [0,0,0] / [0,0,0] / [1,1,1])",
+      "writes_step_results": {"label": "label or spawned actor label"}
+    },
+    "set_actor_properties": {
+      "required": "actor label field",
+      "optional": "properties_json (default '{}')"
+    },
+    "set_actor_transform": {
+      "required": "actor label field",
+      "optional": "transform_json OR inline location/rotation/scale arrays"
+    },
+    "save_level": {
+      "required": "none",
+      "effect": "EditorLoadingAndSavingUtils.save_dirty_packages(True, True)"
+    },
+    "compile_blueprint": {
+      "required": "path (may be $ref)",
+      "effect": "compile_blueprint_paths([path]); compile errors appended to errors list (does not stop unless stop_on_error on exception path — compile errs extend errors but run_op does not raise)"
+    },
+    "set_asset_properties": {
+      "required": "path (may be $ref)",
+      "optional": "properties_json (default '{}')"
+    },
+    "save_asset": {
+      "required": "path (may be $ref)",
+      "effect": "EditorAssetSubsystem.save_asset(path)"
+    },
+    "tag": "[VERIFIED: batch_workflow_tools.py:97-197]"
+  },
+  "response_shape": {
+    "format": "compact JSON string from workflow_result",
+    "fields": ["success", "request_id", "operation", "summary", "changed", "created", "compiled", "saved", "warnings", "errors", "duration_ms", "dry_run", "step_results"],
+    "step_results_in_response": "Full step_results dict returned in extra for agent chaining visibility",
+    "tag": "[VERIFIED: batch_workflow_tools.py:216-229, results.py:30-73]"
+  },
+  "disposition": {
+    "grammar": "preserve — $ref-by-step-id, allowlisted actions, dry_run, stop_on_error, BATCH_LIMIT are proven patterns for WS-05 execute_plan schema",
+    "surface": "supersede — replace REAgentTools JSON-string tool with ADR-0003 envelope execute_plan action",
+    "implementation": "internalise — REAgentTools batch_workflow may remain during migration; hide via SetNameFilters once UEREMCP covers allowlisted ops",
+    "tag": "[VERIFIED: audit disposition per RB-15 q6]"
+  },
+  "relationship_to_epic_execute_tool_script": {
+    "epic_tool": "EditorToolset.ProgrammaticToolset.execute_tool_script",
+    "epic_input": "Python script with run() calling execute_tool(dotted_name, json_input)",
+    "epic_scope": "Any registered toolset tool; sandboxed Python; async; editor transaction with undo on failure",
+    "reagent_scope": "8 fixed RE editor ops; JSON array; sync; ScopedEditorTransaction",
+    "relationship": "compose — do not rebuild execute_tool_script. UEREMCP execute_plan should: (1) adopt REAgentTools $ref/allowlist/dry_run semantics for plan steps; (2) delegate Epic-domain batches (Niagara, Blueprint DSL, etc.) to execute_tool_script steps inside the same plan",
+    "niagara_pattern": "REAgentTools NIAGARA_BATCHING.md uses execute_tool_script for Epic NiagaraToolsets — orthogonal to execute_editor_batch",
+    "tag": "[VERIFIED: programmatic.py:906-953; batch_workflow_tools.py; docs/audit/raw/q7-programmatic-execute-tool-script.json]"
+  },
+  "ws05_recommendations": [
+    "Plan step id + $stepId.field ref syntax should mirror _resolve_ref (label preferred, path fallback)",
+    "Keep allowlist extensibility — REAgentTools frozenset is minimal; UEREMCP plan should reference domain action schemas not raw editor subs",
+    "Preserve dry_run default false, stop_on_error default true",
+    "BATCH_LIMIT 20 is a tuned default — consider making configurable per security tier (WS-12)",
+    "Plan steps wrapping Epic tools should use execute_tool_script composition, not reimplement sandbox"
+  ]
+}
