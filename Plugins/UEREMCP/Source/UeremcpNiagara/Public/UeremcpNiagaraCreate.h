@@ -8,6 +8,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "UeremcpEnvelope.h"
+#include "UeremcpNiagaraMaterialBinding.h"
 
 /** Parsed create_niagara_effect specification (schemas/domains/niagara/create_niagara_effect.schema.json). */
 struct FUeremcpNiagaraCreateSpec
@@ -24,6 +25,9 @@ struct FUeremcpNiagaraCreateSpec
 
 	/** User-parameter knobs from specification.parameters. */
 	TSharedPtr<FJsonObject> Parameters;
+
+	/** specification.materials entries (direct path or create_spec placeholder). */
+	TArray<FUeremcpNiagaraMaterialRequest> MaterialRequests;
 };
 
 /** Result of a create/modify Niagara compose pass. */
@@ -41,6 +45,8 @@ struct FUeremcpNiagaraCreateResult
 	TArray<FString> ChecksSkipped;
 
 	bool bReplacedExisting = false;
+
+	FUeremcpNiagaraMaterialBindingResult MaterialBindings;
 
 	TOptional<bool> bCompiled;
 	TOptional<bool> bSaved;

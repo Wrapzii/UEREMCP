@@ -111,6 +111,14 @@ Use envelope **`mode: "replace"`** (not a specification field) to delete and rec
 
 Example target: `/Game/__UeremcpTests/NS_WS07_RoundTripProbe`.
 
+### Material bindings (`specification.materials`)
+
+Direct probe material paths under `/Game/__UeremcpTests/Materials/` are assigned via
+`GetRendererData` / `SetRendererData` on matching emitter renderers, with re-read
+verification. Inline `{create_spec}` entries remain blocked until WS-08 exports
+`UeremcpMaterialService` with `UEREMCPMATERIAL_API`. Status stays **`partially_completed`**
+unless every requested role re-reads equal — never `*_validated` without full POC B gate.
+
 ### Content hash scaffolding (`FUeremcpNiagaraGraphHash` / `FUeremcpNiagaraHashRoundTrip`)
 
 Every inspect graph receives `content_hash` + `revision` via `FUeremcpContentHash`

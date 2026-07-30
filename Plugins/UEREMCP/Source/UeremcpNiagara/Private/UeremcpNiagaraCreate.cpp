@@ -3,8 +3,10 @@
 #include "UeremcpNiagaraCreate.h"
 
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraMaterialBinding.h"
 #include "UeremcpNiagaraPaths.h"
 #include "UeremcpNiagaraProbeAssets.h"
+#include "UeremcpNiagaraRoleNames.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraEmitter.h"
@@ -22,18 +24,7 @@ namespace
 
 	FString RoleToEmitterName(const FString& Role)
 	{
-		FString Out;
-		TArray<FString> Parts;
-		Role.ParseIntoArray(Parts, TEXT("_"), true);
-		for (FString& Part : Parts)
-		{
-			if (Part.Len() > 0)
-			{
-				Part[0] = FChar::ToUpper(Part[0]);
-			}
-			Out += Part;
-		}
-		return Out.IsEmpty() ? Role : Out;
+		return UeremcpNiagaraRoles::RoleToEmitterName(Role);
 	}
 
 	FString ResolveEmitterTemplatePath(const FString& Role)
@@ -299,6 +290,11 @@ bool FUeremcpNiagaraCreate::ParseSpecification(
 		OutSpec.Parameters = Spec->GetObjectField(TEXT("parameters"));
 	}
 
+	if (!FUeremcpNiagaraMaterialBinding::ParseMaterialRequests(Spec, OutSpec.MaterialRequests, OutError))
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -330,6 +326,24 @@ bool FUeremcpNiagaraCreate::Run(
 	const bool bReplaceMode = UeremcpNiagaraProbeAssets::IsReplaceMode(Request.Mode);
 	const bool bAssetExists = AssetExistsAtPath(CreatedPath);
 
+	TMap<FString, FString> ResolvedMaterialPaths;
+	TArray<FString> PendingMaterialCreates;
+	TArray<FString> UnresolvedMaterialPaths;
+	if (Spec.MaterialRequests.Num() > 0 && !Request.bDryRun)
+	{
+		FString MaterialError;
+		if (!FUeremcpNiagaraMaterialBinding::ResolveDirectMaterialPaths(
+			Spec.MaterialRequests,
+			ResolvedMaterialPaths,
+			UnresolvedMaterialPaths,
+			PendingMaterialCreates,
+			MaterialError))
+		{
+			OutResult.Error = MaterialError;
+			return false;
+		}
+	}
+
 	if (Request.bDryRun)
 	{
 		OutResult.bSuccess = true;
@@ -351,6 +365,10 @@ bool FUeremcpNiagaraCreate::Run(
 				*Spec.EffectType,
 				Spec.ComponentRoles.Num());
 			OutResult.ChecksSkipped.Add(TEXT("niagara.create_all_steps_dry_run"));
+		}
+		if (Spec.MaterialRequests.Num() > 0)
+		{
+			OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings"));
 		}
 		return true;
 	}
@@ -465,6 +483,42 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.add_user_variables"));
 	}
 
+	if (ResolvedMaterialPaths.Num() > 0 || PendingMaterialCreates.Num() > 0 || UnresolvedMaterialPaths.Num() > 0)
+	{
+		OutResult.MaterialBindings.ResolvedMaterialPaths = ResolvedMaterialPaths;
+		OutResult.MaterialBindings.CreatedMaterialAssetsPendingWs08 = PendingMaterialCreates;
+		OutResult.MaterialBindings.UnresolvedMaterialBindings = UnresolvedMaterialPaths;
+	}
+
+	if (ResolvedMaterialPaths.Num() > 0)
+	{
+		if (!FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
+			System,
+			OutResult.EmittersAdded,
+			ResolvedMaterialPaths,
+			Spec.MaterialRequests,
+			Context,
+			OutResult.MaterialBindings,
+			OutResult.InternalOperations))
+		{
+			OutResult.Error = TEXT("Renderer material binding failed re-read verification.");
+			return false;
+		}
+
+		if (OutResult.MaterialBindings.bAllRequestedVerified)
+		{
+			OutResult.ChecksPerformed.Add(TEXT("niagara.material_bindings"));
+		}
+		else
+		{
+			OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings"));
+		}
+	}
+	else if (Spec.MaterialRequests.Num() > 0)
+	{
+		OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings"));
+	}
+
 	if (Request.bCompile)
 	{
 		FNiagaraExt_SystemCompileState CompileState;
@@ -510,8 +564,7 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.save_package"));
 	}
 
-	// POC B gaps — materials, renderer binding, structural re-read, PIE smoke.
-	OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings"));
+	// POC B gaps — structural re-read, PIE smoke (material_bindings handled above when verified).
 	OutResult.ChecksSkipped.Add(TEXT("niagara.structural_re_read"));
 	OutResult.ChecksSkipped.Add(TEXT("niagara.runtime_smoke_test"));
 
@@ -520,20 +573,29 @@ bool FUeremcpNiagaraCreate::Run(
 	if (OutResult.bReplacedExisting)
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s). Materials and renderer binding not validated — status is not *_validated."),
+			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s). Status is not *_validated."),
 			*CreatedPath,
 			*Spec.EffectType,
 			OutResult.EmittersAdded.Num(),
-			OutResult.UserVariablesAdded.Num());
+			OutResult.UserVariablesAdded.Num(),
+			OutResult.MaterialBindings.RendererBindingsVerified.Num());
 	}
 	else
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Created Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s). Materials and renderer binding not validated — status is not *_validated."),
+			TEXT("Created Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s). Status is not *_validated."),
 			*CreatedPath,
 			*Spec.EffectType,
 			OutResult.EmittersAdded.Num(),
-			OutResult.UserVariablesAdded.Num());
+			OutResult.UserVariablesAdded.Num(),
+			OutResult.MaterialBindings.RendererBindingsVerified.Num());
+	}
+
+	if (PendingMaterialCreates.Num() > 0)
+	{
+		OutResult.Summary += FString::Printf(
+			TEXT(" WS-08 handoff: %d create_spec material(s) not inlined."),
+			PendingMaterialCreates.Num());
 	}
 
 	return true;

@@ -181,6 +181,20 @@ class NiagaraSpecificationTests(unittest.TestCase):
             )
         self.assertIn("niagara.replace_delete_probe_asset", expectations["checks_when_replacing"])
 
+    def test_create_material_bindings_fixture(self) -> None:
+        fixture = load_fixture("create_material_bindings.json")
+        spec = fixture["request"]["specification"]
+        self.assertIn("materials", spec)
+        self.assertTrue(
+            spec["materials"]["sparks"].startswith(fixture["expectations"]["allowed_material_root"])
+        )
+        expectations = fixture["expectations"]
+        self.assertIn("create_spec", spec["materials"]["ribbon_trail"])
+        self.assertEqual(
+            set(expectations["validation_never_claims"]),
+            {"created_and_validated", "modified_and_validated"},
+        )
+
     def test_hash_round_trip_scaffold_fixture(self) -> None:
         import sys
 

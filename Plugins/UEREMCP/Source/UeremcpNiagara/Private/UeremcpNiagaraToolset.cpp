@@ -342,7 +342,67 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	}
 	Validation->SetField(TEXT("runtime_smoke_test"), MakeShared<FJsonValueNull>());
 
+	if (CreateResult.MaterialBindings.bAttempted || CreateResult.MaterialBindings.UnresolvedMaterialBindings.Num() > 0)
+	{
+		Validation->SetBoolField(
+			TEXT("material_bindings_verified"),
+			CreateResult.MaterialBindings.bAllRequestedVerified);
+	}
+	else
+	{
+		Validation->SetField(TEXT("material_bindings_verified"), MakeShared<FJsonValueNull>());
+	}
+
 	Extra->SetObjectField(TEXT("validation"), Validation);
+
+	if (CreateResult.MaterialBindings.ResolvedMaterialPaths.Num() > 0
+		|| CreateResult.MaterialBindings.UnresolvedMaterialBindings.Num() > 0
+		|| CreateResult.MaterialBindings.CreatedMaterialAssetsPendingWs08.Num() > 0)
+	{
+		TSharedPtr<FJsonObject> Materials = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Resolved = MakeShared<FJsonObject>();
+		for (const TPair<FString, FString>& Pair : CreateResult.MaterialBindings.ResolvedMaterialPaths)
+		{
+			Resolved->SetStringField(Pair.Key, Pair.Value);
+		}
+		Materials->SetObjectField(TEXT("resolved_paths"), Resolved);
+
+		auto StringArray = [](const TArray<FString>& Items) {
+			TArray<TSharedPtr<FJsonValue>> Values;
+			for (const FString& Item : Items)
+			{
+				Values.Add(MakeShared<FJsonValueString>(Item));
+			}
+			return Values;
+		};
+
+		if (CreateResult.MaterialBindings.RendererBindingsApplied.Num() > 0)
+		{
+			Materials->SetArrayField(
+				TEXT("renderer_bindings_applied"),
+				StringArray(CreateResult.MaterialBindings.RendererBindingsApplied));
+		}
+		if (CreateResult.MaterialBindings.RendererBindingsVerified.Num() > 0)
+		{
+			Materials->SetArrayField(
+				TEXT("renderer_bindings_verified"),
+				StringArray(CreateResult.MaterialBindings.RendererBindingsVerified));
+		}
+		if (CreateResult.MaterialBindings.UnresolvedMaterialBindings.Num() > 0)
+		{
+			Materials->SetArrayField(
+				TEXT("unresolved"),
+				StringArray(CreateResult.MaterialBindings.UnresolvedMaterialBindings));
+		}
+		if (CreateResult.MaterialBindings.CreatedMaterialAssetsPendingWs08.Num() > 0)
+		{
+			Materials->SetArrayField(
+				TEXT("ws08_create_spec_pending"),
+				StringArray(CreateResult.MaterialBindings.CreatedMaterialAssetsPendingWs08));
+		}
+
+		Extra->SetObjectField(TEXT("material_bindings"), Materials);
+	}
 
 	if (bRanRoundTrip && RoundTripResult.InspectGraphs.Num() > 0)
 	{

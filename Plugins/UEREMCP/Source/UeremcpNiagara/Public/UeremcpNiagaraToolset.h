@@ -24,7 +24,7 @@ class UEREMCPNIAGARA_API UUeremcpNiagaraToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.7.0-hash-scaffold"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.8.0-material-bindings"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.
