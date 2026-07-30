@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/niagara/create_niagara_effect.schema.json",
+  "title": "create_niagara_effect specification",
+  "description": "Goal-level Niagara effect creation (POC B). Duplicate-and-modify from a template system; compose emitter archetypes; expose user parameters. Elemental variants are one parameterized family (pending ADR-0008), not per-element tools. Owned by WS-07.",
+  "type": "object",
+  "required": ["effect_type"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Asset name (without path). Target path comes from envelope target.asset_path."
+    },
+    "effect_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Open-ended category (projectile, explosion, beam, aura, …). New values add WS-15 templates, not schema forks."
+    },
+    "element": {
+      "type": "string",
+      "description": "Elemental palette for parameterized variation (fire, water, wind, earth, ice, lightning, arcane, custom). One family, not per-element actions."
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "required": ["role"],
+            "additionalProperties": false,
+            "properties": {
+              "role": {
+                "type": "string",
+                "description": "Semantic role: core, flame_shell, sparks, smoke, ribbon_trail, impact_burst, …"
+              },
+              "archetype": {
+                "type": "string",
+                "description": "WS-15 template id, e.g. niagara.emitter.sparks"
+              },
+              "enabled": { "type": "boolean", "default": true },
+              "overrides": {
+                "type": "object",
+                "description": "Per-component parameter/material overrides applied after instantiate."
+              }
+            }
+          }
+        ]
+      },
+      "description": "Emitter roles to compose. Strings are shorthand role names; objects allow archetype + overrides."
+    },
+    "parameters": {
+      "type": "object",
+      "description": "User-exposed Niagara parameters (User.* namespace).",
+      "additionalProperties": true,
+      "properties": {
+        "primary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+        "secondary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+        "scale": { "type": "number", "exclusiveMinimum": 0 },
+        "intensity": { "type": "number", "minimum": 0 }
+      }
+    },
+    "materials": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+          {
+            "type": "object",
+            "required": ["create_spec"],
+            "additionalProperties": false,
+            "properties": {
+              "create_spec": { "type": "object", "description": "Delegated to WS-08 create_vfx_material." },
+              "reuse_if_present": { "type": "boolean", "default": true }
+            }
+          }
+        ]
+      },
+      "description": "Role → material path or create spec (core, shell, sparks, …)."
+    },
+    "template_system": {
+      "$ref": "../../common/defs.schema.json#/$defs/assetRef",
+      "description": "Base Niagara system to duplicate. Required by Epic CreateNiagaraSystem (template mandatory — RB-07 B.11)."
+    },
+    "base_system": {
+      "$ref": "../../common/defs.schema.json#/$defs/assetRef",
+      "description": "Alias for variation flows: existing system to derive from (POC C)."
+    },
+    "emitters": {
+      "type": "array",
+      "description": "Advanced: explicit per-emitter stack plans. Prefer components + archetypes for POC B.",
+      "items": { "type": "object" }
+    }
+  },
+  "examples": [
+    {
+      "name": "Fireball",
+      "effect_type": "projectile",
+      "element": "fire",
+      "components": ["core", "flame_shell", "sparks", "smoke", "ribbon_trail", "impact_burst"],
+      "parameters": {
+        "primary_color": [1.0, 0.12, 0.01, 1.0],
+        "secondary_color": [1.0, 0.75, 0.05, 1.0],
+        "scale": 1.0,
+        "intensity": 8.0
+      },
+      "template_system": {
+        "asset_path": "/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight"
+      }
+    },
+    {
+      "name": "Fireball_Ice",
+      "effect_type": "projectile",
+      "element": "ice",
+      "base_system": { "asset_path": "/Game/VFX/Spells/NS_Fireball" },
+      "components": [
+        { "role": "core", "enabled": true },
+        { "role": "crystalline", "archetype": "niagara.emitter.sparks", "enabled": true }
+      ],
+      "parameters": {
+        "primary_color": [0.6, 0.85, 1.0, 1.0],
+        "secondary_color": [0.9, 0.95, 1.0, 1.0],
+        "scale": 1.0,
+        "intensity": 6.0
+      }
+    }
+  ]
+}
