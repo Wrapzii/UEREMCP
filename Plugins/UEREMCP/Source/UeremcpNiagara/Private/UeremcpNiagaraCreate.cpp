@@ -172,9 +172,11 @@ namespace
 
 		System->RequestCompile(false);
 
+		// Bounded wait using public compile APIs only.
 		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:449]
-		// PollForCompilationComplete is public; it drives compile completion per tick
-		// (QueryCompileComplete is private — NiagaraSystem.h:918).
+		// PollForCompilationComplete pumps completion each tick.
+		// [VERIFIED: NiagaraSystem.h:452] WaitForCompilationComplete is public but blocks
+		// without envelope timeout control; QueryCompileComplete is private at :918.
 		const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
 		while (FPlatformTime::Seconds() < Deadline)
 		{
@@ -184,7 +186,11 @@ namespace
 				break;
 			}
 
-			System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
+			if (System->PollForCompilationComplete(/*bFlushRequestCompile=*/false))
+			{
+				break;
+			}
+
 			FPlatformProcess::Sleep(0.01f);
 		}
 
