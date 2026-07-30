@@ -130,8 +130,7 @@ idempotency root under `Saved/UEREMCP/`.
 
 ## Open questions
 
-- Exact JSON schema for `options.allow_destructive` (WS-01 schema bump when
-  WS-12 wires the gate).
+- ~~Exact JSON schema for `options.allow_destructive`~~ ? resolved in `schemas/envelope/request.schema.json` (2026-07-30).
 - Best-effort non-loopback bind detection API surface (RB-13 residual).
 
 ## Verification

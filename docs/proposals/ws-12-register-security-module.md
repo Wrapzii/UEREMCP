@@ -53,3 +53,18 @@ python tools/check_ownership.py --ws WS-12
 
 - No Epic MCP fork for auth.
 - No wrapping `ProgrammaticToolset.execute_tool_script` as a UEREMCP tool.
+
+---
+
+## WS-01 response
+
+- **Date:** 2026-07-30
+- **Status:** **Accepted**
+
+WS-03: register `UeremcpSecurity` in `Plugins/UEREMCP/UEREMCP.uplugin` after Wave 2 module
+sources are on `ws-01-orch` (merge `241c19d` integrated). Module entry:
+
+- **Name:** `UeremcpSecurity`
+- **Type:** Editor (`TargetAllowList`: Editor)
+- **LoadingPhase:** `Default` (after `UeremcpProtocol` in the Modules array)
+
