@@ -42,3 +42,10 @@ live under WS-05 protocol Tests or be co-owned with WS-11 harness, but must
 exercise `FUeremcp*` production code, not a second mirror.
 
 Envelope round-trip in C++ is not done until golden vectors match.
+
+### Update 2026-07-29 (partial)
+
+WS-05 `0f91f91`: `Tests/golden/` + Python `test_golden.py` (38 OK) + C++
+`UEREMCP.Protocol.Golden*` AutomationTests over `FUeremcp*`. Parity **not
+claimed** until editor AutomationTests pass (`Docs/CPP_PARITY.md`). Blocked on
+same shipping load issue as C-3: `UeremcpProtocol.dll` must build/link (WS-03).
