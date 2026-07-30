@@ -3,7 +3,7 @@
 #include "UeremcpMaterialAssetLoad.h"
 
 #include "Editor.h"
-#include "Engine/Texture.h"
+#include "Engine/Texture2D.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Subsystems/EditorAssetSubsystem.h"
@@ -81,12 +81,12 @@ UMaterialInstanceConstant* UeremcpMaterialAssetLoad::TryLoadMaterialInstance(con
 	return FindInProcessObject<UMaterialInstanceConstant>(PackagePath);
 }
 
-UTexture* UeremcpMaterialAssetLoad::TryLoadTexture(const FString& PackagePath)
+UTexture2D* UeremcpMaterialAssetLoad::TryLoadTexture(const FString& PackagePath)
 {
-	if (UTexture* Registered = Cast<UTexture>(TryLoadRegisteredAsset(PackagePath)))
+	if (UTexture2D* Registered = Cast<UTexture2D>(TryLoadRegisteredAsset(PackagePath)))
 	{
 		return Registered;
 	}
 
-	return FindInProcessObject<UTexture>(PackagePath);
+	return FindInProcessObject<UTexture2D>(PackagePath);
 }

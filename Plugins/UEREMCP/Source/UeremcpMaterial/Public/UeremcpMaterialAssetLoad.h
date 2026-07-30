@@ -12,7 +12,7 @@ class UEditorAssetSubsystem;
 class UMaterial;
 class UMaterialInstanceConstant;
 class UObject;
-class UTexture;
+class UTexture2D;
 
 namespace UeremcpMaterialAssetLoad
 {
@@ -23,5 +23,5 @@ namespace UeremcpMaterialAssetLoad
 
 	UEREMCPMATERIAL_API UMaterialInstanceConstant* TryLoadMaterialInstance(const FString& PackagePath);
 
-	UEREMCPMATERIAL_API UTexture* TryLoadTexture(const FString& PackagePath);
+	UEREMCPMATERIAL_API UTexture2D* TryLoadTexture(const FString& PackagePath);
 }

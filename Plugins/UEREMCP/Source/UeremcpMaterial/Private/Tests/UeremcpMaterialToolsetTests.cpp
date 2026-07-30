@@ -387,7 +387,7 @@ bool FUeremcpMaterialCreateProceduralTextureFlipbookAtlasTest::RunTest(const FSt
 	if (Subsystem)
 	{
 		TestTrue(TEXT("flipbook atlas texture exists"), Subsystem->DoesAssetExist(Target));
-		if (UTexture2D* Texture = Cast<UTexture2D>(UeremcpMaterialAssetLoad::TryLoadTexture(Target)))
+		if (UTexture2D* Texture = UeremcpMaterialAssetLoad::TryLoadTexture(Target))
 		{
 			TestEqual(TEXT("atlas width"), UeremcpMaterialTests::ReadTextureDimensionX(Texture), 256);
 			TestEqual(TEXT("atlas height"), UeremcpMaterialTests::ReadTextureDimensionY(Texture), 256);

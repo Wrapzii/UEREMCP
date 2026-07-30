@@ -424,7 +424,7 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 		return Result;
 	}
 
-	UTexture2D* Reloaded = Cast<UTexture2D>(UeremcpMaterialAssetLoad::TryLoadTexture(Request.TargetAssetPath));
+	UTexture2D* Reloaded = UeremcpMaterialAssetLoad::TryLoadTexture(Request.TargetAssetPath);
 	const UTexture2D* DimensionProbe = Reloaded ? Reloaded : Texture;
 	if (!DimensionProbe)
 	{
