@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `163b272` (WS-07 B8 Restart.Create/Verify filters)
+- **Orch tip at writing:** `3b39dd3` (WS-11 expanded fireball B-gate assertions)
 - **Date:** 2026-07-30
-- **Status:** WS-07 B8 restart filters are on orch as `163b272` (`5c6422f`) and Niagara builds successfully. **WS-11 must run `run_poc_acceptance.ps1 -Scenario B8` (Create → restart → Verify); no B8 / overall POC-B claim.** CRT remains partial: A1/A2/A10 PASS, A5/A9 FAIL; no overall POC-A claim.
+- **Status:** B8 Restart.Create/Verify filters remain at `163b272`; expanded fireball gate assertions landed as `3b39dd3` (`0474e4e`). **WS-11 next:** run `run_poc_acceptance.ps1 -Scenario B8` (Create → restart → Verify). **Ribbon_trail regression under diagnosis** — prior B2/B4 PASS on `a6ca454` is not a current freshness claim. No B8 / overall POC-B claim. CRT remains A1/A2/A10 PASS, A5/A9 FAIL; no overall POC-A claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -120,6 +120,7 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | FlowMap defaults + all-requested B4 honesty | `13412dd` (`799fc94`) | Injects trail FlowMap and requires every requested role; B2/B4 editor gate PASS on `a6ca454` |
 | B1 / B8-save / B9 / `emitter_added` gate scaffolding | `0e79641` (`501aff6`) | Surfaces gates + B8 restart handoff; **not** overall POC-B; WS-11 must assert/restart |
 | B8 Restart.Create/Verify filters | `163b272` (`5c6422f`) | Filters + handoff fixture landed; scenario orchestration/restart proof still required |
+| Expanded fireball B-gate assertions | `3b39dd3` (`0474e4e`) | Filter asserts B1/B3/B5/B6/B9 fields; runtime proof pending; ribbon_trail regression under diagnosis |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
@@ -137,14 +138,14 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **Gate scaffolding landed** at `0e79641`; editor single-create path only until MCP proof | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS editor gate on `a6ca454`** — all six roles, including ribbon trail | WS-08 + WS-07 |
-| B3 | Niagara system exists with all six requested emitters | **Gate present; WS-11 must assert** from create response | WS-07 + WS-11 |
-| B4 | Renderers configured and bound to valid materials | **PASS editor gate on `a6ca454`** — all six requested roles verified | WS-07 + WS-08 |
-| B5 | User params for colour, scale, intensity | **Gate present; WS-11 must assert** | WS-07 + WS-11 |
-| B6 | System compiles; compile genuinely awaited | **Gate present; WS-11 must assert** | WS-07 + WS-11 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | Prior editor PASS on `a6ca454`; **ribbon_trail regression under diagnosis** — not current freshness | WS-08 + WS-07 |
+| B3 | Niagara system exists with all six requested emitters | **Assertions expanded** at `3b39dd3`; WS-11 must re-run fireball / B8 create | WS-07 + WS-11 |
+| B4 | Renderers configured and bound to valid materials | Prior editor PASS on `a6ca454`; **ribbon_trail regression under diagnosis** | WS-07 + WS-08 |
+| B5 | User params for colour, scale, intensity | **Assertions expanded** at `3b39dd3`; runtime pending | WS-07 + WS-11 |
+| B6 | System compiles; compile genuinely awaited | **Assertions expanded** at `3b39dd3`; runtime pending | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
 | B8 | Assets saved and survive editor restart | **Filters landed, not proven** — `Restart.Create/Verify` at `163b272`; WS-11 must run two-process restart scenario | WS-11 |
-| B9 | One structured response with complete change manifest | **Gate + `emitter_added` scaffolding landed**; WS-11 must assert | WS-07 + WS-11 |
+| B9 | One structured response with complete change manifest | **Assertions expanded** at `3b39dd3`; runtime pending | WS-07 + WS-11 |
 | B10 | Visibly renders as fireball when placed — screenshot supplementary only | **Not required as validation**; optional after B1–B9 | WS-07 / WS-11 |
 
 Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc/`; metrics reported numerically; success with only `validate:false` does **not** count (`docs/POC_ACCEPTANCE.md`).
@@ -156,8 +157,9 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | Fix Epic `BlueprintTools` discovery and re-run CRT after selector correction `eccc282` | WS-06 + WS-11 | A1/A2/A10 PASS; A5/A9 FAIL; refuse overall POC-A |
-| P0 | Assert B3/B5/B6/B9 (+ B1 editor gate) from fireball create after `0e79641` | WS-11 | Gate scaffolding landed; refuse overall POC-B |
+| P0 | Re-run fireball with expanded assertions `3b39dd3` after ribbon_trail diagnosis | WS-11 | Assertions landed; refuse overall POC-B |
 | P0 | Run `run_poc_acceptance.ps1 -Scenario B8` (Create → restart → Verify) after `163b272` | WS-11 | Filters ready; refuse B8/POC-B until PASS |
+| P0 | Diagnose ribbon_trail regression vs prior B2/B4 PASS on `a6ca454` | WS-07 + WS-08 + WS-11 | Expanded assertions at `3b39dd3`; refuse current B2/B4 freshness |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after A6 + POC B |

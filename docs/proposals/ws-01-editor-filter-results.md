@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `163b272` (WS-07 B8 Restart.Create/Verify filters)
+- **Current orchestration tip:** `3b39dd3` (WS-11 expanded fireball B-gate assertions)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** B8 `Restart.Create/Verify` filters landed as `163b272` (`5c6422f`) and Niagara is green. WS-11 must run the Create → restart → Verify scenario; no B8/POC-B claim. CRT remains A1/A2/A10 PASS, A5/A9 FAIL; no overall POC-A claim.
+- **Status:** Expanded fireball B-gate assertions landed as `3b39dd3` (`0474e4e`). B8 Create→restart→Verify is next for WS-11. Ribbon_trail regression is under diagnosis. No B8 / overall POC-B claim. CRT remains partial; no overall POC-A claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: CRT has A1/A2/A10 PASS and A5/A9 FAIL; overall POC A unclaimed. B2/B4 editor gate is green. B8 filters are ready but restart proof is unrun; WS-11 also must assert B3/B5/B6/B9. Overall POC-B unclaimed.
+Residuals: B8 filters ready — WS-11 runs Create→restart→Verify next. Expanded fireball gate assertions at `3b39dd3`. Ribbon_trail regression under diagnosis (prior B2/B4 PASS on `a6ca454` is not current freshness). CRT A1/A2/A10 PASS, A5/A9 FAIL. No overall POC-A/POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -84,7 +84,7 @@ WS-11 parsing fix is integrated as `674c439`. The ordered co-location stack is `
 |---|---|---|
 | Fireball inline materials | **PASS** | `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_055332.log`: all six B4 roles verified; `UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_b2_b4`; exit 0. |
 
-This proves the B2/B4 editor gate only. Remaining overall POC-B criteria: B1 (MCP proof), B3/B5/B6/B9 (assert after `0e79641`), B8 restart survival. B7 has separate scaffold proof; B8-save is gated but restart is open; B10 is optional.
+This proves the B2/B4 editor gate only **on that tip**. Remaining overall POC-B criteria: B1 (MCP proof), B3/B5/B6/B9 (assertions expanded at `3b39dd3`), B8 Create→restart→Verify. **Ribbon_trail regression is under diagnosis** and may invalidate current B2/B4 freshness. B7 has separate scaffold proof; B10 is optional.
 
 ## Blueprint CompleteRoundTrip current result
 
@@ -102,7 +102,7 @@ Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`. 
 
 ## B8 restart current result
 
-**FILTERS LANDED, PROOF OPEN:** `UEREMCP.Niagara.POCB.Restart.Create` and `.Verify` are on orch as `163b272` (`5c6422f`). WS-11 must run `run_poc_acceptance.ps1 -Scenario B8` across Create → editor restart → Verify. No B8 claim until PASS.
+**FILTERS LANDED, PROOF OPEN:** `UEREMCP.Niagara.POCB.Restart.Create` and `.Verify` are on orch as `163b272` (`5c6422f`). Expanded fireball gate assertions landed as `3b39dd3` (`0474e4e`). **WS-11 next:** `run_poc_acceptance.ps1 -Scenario B8` (Create → restart → Verify). Ribbon_trail regression under diagnosis. No B8 claim until PASS.
 
 ## Templates editor result and handoff
 
@@ -310,10 +310,10 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Resolve Epic `BlueprintTools` discovery for changed submit; CRT A5/A9 fail while A1/A2/A10 pass. |
-| WS-07 | B8 Restart.Create/Verify landed as `163b272`; B1/B8-save/B9 gates at `0e79641`; B2/B4 editor PASS. |
-| WS-08 | Trail graph + honest MI-absent fixes are proven by the B2/B4 editor gate PASS. |
+| WS-07 | B8 Restart.Create/Verify at `163b272`; diagnose ribbon_trail regression with WS-08. |
+| WS-08 | Assist ribbon_trail regression diagnosis vs prior B2/B4 PASS on `a6ca454`. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Run `-Scenario B8` Create → restart → Verify; re-run CRT after BlueprintTools fix; assert B3/B5/B6/B9. Keep overall POC-A/POC-B unclaimed. |
+| WS-11 | Run `-Scenario B8` Create → restart → Verify; re-run fireball with expanded gates `3b39dd3`; CRT after BlueprintTools fix. Keep overall POC-A/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-POC A remains partial: A1/A2/A10 pass, A5/A9 fail. B2/B4 editor gate passes; B8 filters are ready but unrun; B1/B3/B5/B6/B8/B9 remain open. No overall POC-A / overall POC-B claim. No junction retarget.
+POC A remains partial: A1/A2/A10 pass, A5/A9 fail. B8 filters and expanded fireball assertions are ready but unproven; ribbon_trail regression under diagnosis. No overall POC-A / overall POC-B claim. No junction retarget.
