@@ -108,6 +108,59 @@ class NiagaraSpecificationTests(unittest.TestCase):
         with self.assertRaises(jsonschema.ValidationError):
             validator.validate({"name": "NoType"})
 
+    def test_primitive_baseline_removes_all_template_emitters(self) -> None:
+        fixture_path = NIAGARA_DIR / "fixtures" / "poc_b_primitive_baseline.py"
+        namespace = {}
+        source = fixture_path.read_text(encoding="utf-8")
+        exec(compile(source, str(fixture_path), "exec"), namespace)
+
+        system = {"refPath": "/Game/Test.NS_Test"}
+        calls = []
+
+        def fake_value(tool_name, arguments):
+            self.assertEqual(
+                tool_name,
+                "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            )
+            self.assertEqual(arguments, {"system": system})
+            return {
+                "emitters": [
+                    {"emitterName": "Minimal"},
+                    {"emitterName": "Fountain"},
+                ]
+            }
+
+        def fake_call(tool_name, arguments):
+            calls.append((tool_name, arguments))
+
+        namespace["value"] = fake_value
+        namespace["call"] = fake_call
+
+        removed = namespace["remove_template_emitters"](system)
+
+        self.assertEqual(removed, ["Minimal", "Fountain"])
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+                    {
+                        "emitterToRemove": namespace["stack_ref"](
+                            system, "Minimal"
+                        )
+                    },
+                ),
+                (
+                    "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+                    {
+                        "emitterToRemove": namespace["stack_ref"](
+                            system, "Fountain"
+                        )
+                    },
+                ),
+            ],
+        )
+
     def test_readme_lossy_areas_documented(self) -> None:
         readme = (NIAGARA_DIR / "README.md").read_text(encoding="utf-8")
         for area in EXPECTED_LOSSY_AREAS:

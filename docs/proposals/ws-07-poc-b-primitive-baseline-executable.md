@@ -15,6 +15,13 @@ executable inputs. The fixture now fixes each item:
 - Six concrete emitter template object refs and semantic names match the role mapping
   used by the POC-B implementation. [VERIFIED:
   `Plugins/UEREMCP/Source/UeremcpNiagara/Private/UeremcpNiagaraRoleNames.cpp:23-38`]
+- Immediately after cloning the system template, the fixture reads its system summary
+  and removes every inherited emitter before adding the six role emitters. This
+  self-corrects for `Minimal`, `Fountain`, or other residual template topology rather
+  than assuming a particular template emitter name. `RemoveEmitter` takes a complete
+  emitter stack-item reference and removes its associated scripts, modules, and
+  renderers. [VERIFIED:
+  `$UE_ROOT/Engine/Plugins/Experimental/Toolsets/NiagaraToolsets/Source/NiagaraToolsets/Private/NiagaraToolset_System.h:465-472`]
 - The four `FNiagaraExt_UserVariable` wire payloads were re-read from the validated
   `/Game/__UeremcpPoc/NS_POCB_Fireball` asset. [VERIFIED-RUNTIME:
   `NiagaraToolsets.NiagaraToolset_System.GetUserVariables` on 2026-07-30]
@@ -42,7 +49,9 @@ executable inputs. The fixture now fixes each item:
 
 The script records every inner `execute_tool` call, including failures, in
 `primitive_trace`; `primitive_ops_executed` is `len(primitive_trace)`. It does not
-contain a planned or fabricated count.
+contain a planned or fabricated count. Template cleanup contributes one
+`GetSystemSummary` operation plus one `RemoveEmitter` operation per inherited emitter,
+so consumers must use the returned count rather than expecting the failed run's 36.
 
 ## Fixed semantic inputs
 
@@ -103,6 +112,7 @@ status == "created_and_validated"
 completed == true
 primitive_ops_executed == len(primitive_trace)
 all primitive_trace[*].ok == true
+removed_template_emitters contains every inherited template emitter
 len(emitters) == 6
 len(user_variables) == 4
 len(renderer_bindings_verified) >= 6

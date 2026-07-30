@@ -56,6 +56,22 @@ def stack_ref(system, emitter_name, renderer_index=-1):
     }
 
 
+def remove_template_emitters(system):
+    summary = value(
+        "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+        {"system": system},
+    )
+    removed = []
+    for emitter in summary["emitters"]:
+        emitter_name = emitter["emitterName"]
+        call(
+            "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+            {"emitterToRemove": stack_ref(system, emitter_name)},
+        )
+        removed.append(emitter_name)
+    return removed
+
+
 def binding_path(property_values, renderer_class):
     if "SpriteRenderer" in renderer_class or "RibbonRenderer" in renderer_class:
         material = property_values["Material"]
@@ -185,6 +201,8 @@ def run():
             },
         )
         created.append(system_package)
+
+        removed_template_emitters = remove_template_emitters(system)
 
         for role in roles:
             role["topology"] = value(
@@ -392,6 +410,7 @@ def run():
             "completed": True,
             "system": system["refPath"],
             "created_outputs": output_packages,
+            "removed_template_emitters": removed_template_emitters,
             "emitters": actual_emitters,
             "user_variables": actual_variables,
             "renderer_bindings_verified": verified_bindings,
