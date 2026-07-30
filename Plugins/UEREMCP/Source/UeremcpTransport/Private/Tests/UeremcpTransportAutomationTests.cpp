@@ -3,8 +3,12 @@
 #include "UeremcpJobConstraints.h"
 #include "UeremcpTransportProbe.h"
 #include "UeremcpEnvelope.h"
+#include "UeremcpJobRegistry.h"
 
+#include "Async/Async.h"
 #include "Dom/JsonObject.h"
+#include "HAL/Event.h"
+#include "HAL/PooledSyncEvent.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/FileHelper.h"
 #include "Serialization/JsonReader.h"
@@ -14,15 +18,19 @@
 
 namespace UeremcpTransportTest
 {
-	static void SkipMissingApi(
-		FAutomationTestBase& Test,
-		const TCHAR* MissingApi,
-		const TCHAR* AdrSection)
+	static FUeremcpResponse MakeTerminalResponse(
+		const FString& RequestId,
+		const FString& Summary,
+		const int32 InternalOperations)
 	{
-		Test.AddInfo(FString::Printf(
-			TEXT("SKIP: %s not implemented — %s deferred until registry lands (WS-03/WS-05)."),
-			MissingApi,
-			AdrSection));
+		FUeremcpResponse Response;
+		Response.ProtocolVersion = FUeremcpEnvelope::ProtocolVersion();
+		Response.RequestId = RequestId;
+		Response.Status = TEXT("created_and_validated");
+		Response.Summary = Summary;
+		Response.Metrics.McpRoundTrips = 1;
+		Response.Metrics.InternalOperations = InternalOperations;
+		return Response;
 	}
 }
 
@@ -224,30 +232,181 @@ bool FUeremcpTransportProbeEpicMcpTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FUeremcpTransportJobRegistryPollSkipTest,
+	FUeremcpTransportJobRegistryPollTest,
 	"UEREMCP.Transport.JobRegistry.Poll",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FUeremcpTransportJobRegistryPollSkipTest::RunTest(const FString& Parameters)
+bool FUeremcpTransportJobRegistryPollTest::RunTest(const FString& Parameters)
 {
-	UeremcpTransportTest::SkipMissingApi(
-		*this,
-		TEXT("FUeremcpJobRegistry / get_job_result tool"),
-		TEXT("ADR-0009 integration: poll until terminal + metrics.mcp_round_trips"));
+	FUeremcpJobRegistry Registry;
+	FString Error;
+	FString JobId;
+	const FString RequestId = FString::Printf(TEXT("transport-poll-%s"), *FGuid::NewGuid().ToString());
+	int32 FixtureExecutions = 0;
+
+	TestTrue(
+		TEXT("deterministic poll fixture registers"),
+		Registry.CreateJob(RequestId, false, TEXT("Queued for transport test"), JobId, Error));
+	TestFalse(TEXT("registry assigns a stable job id"), JobId.IsEmpty());
+
+	FUeremcpResponse Poll;
+	TestTrue(TEXT("queued result is pollable"), Registry.GetJobResult(JobId, Poll, Error));
+	TestEqual(TEXT("queued poll is partial"), Poll.Status, FString(TEXT("partially_completed")));
+	TestEqual(TEXT("queued state is non-terminal"), Poll.Job.State, FString(TEXT("queued")));
+	TestEqual(TEXT("queued poll preserves job id"), Poll.Job.JobId, JobId);
+	TestEqual(TEXT("first poll counts originating call"), Poll.Metrics.McpRoundTrips, 2);
+
+	TestTrue(TEXT("fixture enters running state"), Registry.StartJob(JobId, Error));
+	FPooledSyncEvent WorkerBlocked(true);
+	FPooledSyncEvent ReleaseWorker(true);
+	bool bWorkerCompleted = false;
+	FString WorkerError;
+	TFuture<void> Worker = Async(EAsyncExecution::ThreadPool, [&]()
+	{
+		WorkerBlocked->Trigger();
+		ReleaseWorker->Wait();
+		++FixtureExecutions;
+		bWorkerCompleted = Registry.CompleteJob(
+			JobId,
+			UeremcpTransportTest::MakeTerminalResponse(
+				RequestId,
+				TEXT("Transport poll fixture completed exactly once."),
+				4),
+			WorkerError);
+	});
+
+	const bool bWorkerReachedBarrier = WorkerBlocked->Wait(5000);
+	TestTrue(TEXT("worker reaches deterministic barrier"), bWorkerReachedBarrier);
+	if (!bWorkerReachedBarrier)
+	{
+		ReleaseWorker->Trigger();
+		Worker.Wait();
+		return false;
+	}
+
+	TestTrue(TEXT("running result polls before release"), Registry.GetJobResult(JobId, Poll, Error));
+	TestEqual(TEXT("running state remains non-terminal"), Poll.Job.State, FString(TEXT("running")));
+	TestEqual(TEXT("running poll preserves job id"), Poll.Job.JobId, JobId);
+	TestEqual(TEXT("second poll is counted"), Poll.Metrics.McpRoundTrips, 3);
+
+	ReleaseWorker->Trigger();
+	Worker.Wait();
+	TestTrue(TEXT("released worker stores terminal response"), bWorkerCompleted);
+	if (!WorkerError.IsEmpty())
+	{
+		AddError(WorkerError);
+	}
+
+	TestTrue(TEXT("terminal result remains pollable"), Registry.GetJobResult(JobId, Poll, Error));
+	TestEqual(TEXT("terminal status retained"), Poll.Status, FString(TEXT("created_and_validated")));
+	TestEqual(TEXT("terminal state completed"), Poll.Job.State, FString(TEXT("completed")));
+	TestEqual(TEXT("terminal poll preserves job id"), Poll.Job.JobId, JobId);
+	TestEqual(TEXT("third poll is counted"), Poll.Metrics.McpRoundTrips, 4);
+	TestEqual(TEXT("terminal operations retained"), Poll.Metrics.InternalOperations, 4);
+	TestEqual(TEXT("fixture executed once"), FixtureExecutions, 1);
+
+	TestTrue(TEXT("terminal result can be retrieved again"), Registry.GetJobResult(JobId, Poll, Error));
+	TestEqual(TEXT("repeat retrieval does not re-execute fixture"), FixtureExecutions, 1);
+	TestEqual(TEXT("repeat terminal poll is counted"), Poll.Metrics.McpRoundTrips, 5);
+
+	const int32 NumBeforeInvalidPolls = Registry.Num();
+	TestFalse(TEXT("empty job id is rejected"), Registry.GetJobResult(FString(), Poll, Error));
+	TestFalse(
+		TEXT("unknown job id is rejected"),
+		Registry.GetJobResult(TEXT("00000000-0000-0000-0000-000000000000"), Poll, Error));
+	TestEqual(TEXT("invalid polls do not mutate registry"), Registry.Num(), NumBeforeInvalidPolls);
+
+	AddInfo(TEXT(
+		"SKIP residual: Core has not registered the agent-facing get_job_result action; "
+		"this test validates the landed registry API directly."));
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FUeremcpTransportJobRegistryCancelSkipTest,
+	FUeremcpTransportJobRegistryCancelTest,
 	"UEREMCP.Transport.JobRegistry.Cancel",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FUeremcpTransportJobRegistryCancelSkipTest::RunTest(const FString& Parameters)
+bool FUeremcpTransportJobRegistryCancelTest::RunTest(const FString& Parameters)
 {
-	UeremcpTransportTest::SkipMissingApi(
-		*this,
-		TEXT("Cooperative cancel wiring (MCP notifications/cancelled -> job.state cancelled)"),
-		TEXT("ADR-0009 cancel verification"));
+	FUeremcpJobRegistry Registry;
+	FString Error;
+
+	FString NonCancellableId;
+	TestTrue(
+		TEXT("non-cancellable fixture registers"),
+		Registry.CreateJob(
+			TEXT("transport-cancel-disabled"),
+			false,
+			TEXT("Cannot cancel"),
+			NonCancellableId,
+			Error));
+	FUeremcpResponse NonCancellable;
+	TestTrue(
+		TEXT("non-cancellable fixture is inspectable"),
+		Registry.GetTimeoutResponse(NonCancellableId, NonCancellable, Error));
+	TestFalse(TEXT("missing callback is never advertised cancellable"), NonCancellable.Job.bCancellable);
+	TestEqual(
+		TEXT("non-cancellable request is rejected"),
+		Registry.CancelJob(NonCancellableId, Error),
+		EUeremcpCancelResult::NotCancellable);
+
+	FString JobId;
+	int32 CancellationCheckpoints = 0;
+	TestTrue(
+		TEXT("cancellable fixture registers"),
+		Registry.CreateJob(
+			TEXT("transport-cancel-enabled"),
+			true,
+			TEXT("Waiting at cooperative checkpoint"),
+			JobId,
+			Error,
+			[&CancellationCheckpoints]()
+			{
+				++CancellationCheckpoints;
+				return true;
+			}));
+	TestTrue(TEXT("cancellable fixture starts"), Registry.StartJob(JobId, Error));
+	TestEqual(
+		TEXT("cooperative cancellation is accepted"),
+		Registry.CancelJob(JobId, Error),
+		EUeremcpCancelResult::Cancelled);
+	TestEqual(TEXT("domain checkpoint observes cancellation once"), CancellationCheckpoints, 1);
+
+	FUeremcpResponse Cancelled;
+	TestTrue(TEXT("cancelled job remains pollable"), Registry.GetJobResult(JobId, Cancelled, Error));
+	TestEqual(TEXT("cancelled job reaches terminal state"), Cancelled.Job.State, FString(TEXT("cancelled")));
+	TestFalse(TEXT("cancelled job stops advertising cancellation"), Cancelled.Job.bCancellable);
+	TestEqual(
+		TEXT("cancel does not claim validated completion"),
+		Cancelled.Status,
+		FString(TEXT("partially_completed")));
+
+	TestEqual(
+		TEXT("repeat cancellation has explicit terminal result"),
+		Registry.CancelJob(JobId, Error),
+		EUeremcpCancelResult::AlreadyTerminal);
+	TestEqual(TEXT("repeat cancellation does not invoke checkpoint"), CancellationCheckpoints, 1);
+
+	const FUeremcpResponse InvalidCompletion = UeremcpTransportTest::MakeTerminalResponse(
+		TEXT("transport-cancel-enabled"),
+		TEXT("Must not replace cancellation."),
+		1);
+	TestFalse(
+		TEXT("cancelled work cannot later transition to completed"),
+		Registry.CompleteJob(JobId, InvalidCompletion, Error));
+	FUeremcpJobSnapshot Snapshot;
+	TestTrue(TEXT("cancelled snapshot remains available"), Registry.GetSnapshot(JobId, Snapshot));
+	TestEqual(TEXT("cancelled state is stable"), Snapshot.Job.State, FString(TEXT("cancelled")));
+
+	TestEqual(
+		TEXT("unknown cancellation has explicit not-found result"),
+		Registry.CancelJob(TEXT("00000000-0000-0000-0000-000000000000"), Error),
+		EUeremcpCancelResult::NotFound);
+
+	AddInfo(TEXT(
+		"SKIP residual: Core cancel action and MCP notifications/cancelled mapping are "
+		"not registered; this test validates cooperative registry cancellation directly."));
 	return true;
 }
 
@@ -258,70 +417,104 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FUeremcpTransportTimeoutPartialResponseTest::RunTest(const FString& Parameters)
 {
-	const FString ResponseJson = FUeremcpEnvelope::MakeJobTimeoutResponse(
-		TEXT("request-timeout-1"),
-		TEXT("job-timeout-1"),
-		TEXT("Compiling assets"),
-		0);
-
-	TSharedPtr<FJsonObject> Response;
-	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
-	TestTrue(
-		TEXT("timeout response is parseable JSON"),
-		FJsonSerializer::Deserialize(Reader, Response) && Response.IsValid());
-	if (!Response.IsValid())
+	int32 InlineExecutions = 0;
+	const auto ExecuteInline = [&InlineExecutions]()
 	{
+		++InlineExecutions;
+		return UeremcpTransportTest::MakeTerminalResponse(
+			TEXT("transport-timeout-inline"),
+			TEXT("Inline fixture completed before returning."),
+			1);
+	};
+
+	TestEqual(
+		TEXT("timeout_ms zero selects inline execution"),
+		UeremcpTransport::ResolveDispatchModel(0),
+		EUeremcpJobDispatchModel::InlineComplete);
+	const FUeremcpResponse Inline = ExecuteInline();
+	TestEqual(TEXT("inline fixture executes once"), InlineExecutions, 1);
+	TestEqual(TEXT("inline fixture returns terminal status"), Inline.Status, FString(TEXT("created_and_validated")));
+	TestFalse(TEXT("inline fixture has no timeout job handle"), Inline.bHasJob);
+
+	FUeremcpJobRegistry Registry;
+	FString Error;
+	FString JobId;
+	const FString RequestId = TEXT("transport-timeout-positive");
+	TestTrue(
+		TEXT("positive-timeout fixture registers"),
+		Registry.CreateJob(RequestId, false, TEXT("Blocked beyond timeout"), JobId, Error));
+	TestTrue(TEXT("positive-timeout fixture starts"), Registry.StartJob(JobId, Error));
+	TestEqual(
+		TEXT("positive timeout selects poll-after-timeout"),
+		UeremcpTransport::ResolveDispatchModel(1),
+		EUeremcpJobDispatchModel::PollAfterTimeout);
+
+	FPooledSyncEvent WorkerBlocked(true);
+	FPooledSyncEvent ReleaseWorker(true);
+	bool bWorkerCompleted = false;
+	int32 WorkerExecutions = 0;
+	FString WorkerError;
+	TFuture<void> Worker = Async(EAsyncExecution::ThreadPool, [&]()
+	{
+		WorkerBlocked->Trigger();
+		ReleaseWorker->Wait();
+		++WorkerExecutions;
+		bWorkerCompleted = Registry.CompleteJob(
+			JobId,
+			UeremcpTransportTest::MakeTerminalResponse(
+				RequestId,
+				TEXT("Blocked fixture completed after release."),
+				3),
+			WorkerError);
+	});
+
+	const bool bWorkerReachedBarrier = WorkerBlocked->Wait(5000);
+	TestTrue(TEXT("positive-timeout worker reaches barrier"), bWorkerReachedBarrier);
+	if (!bWorkerReachedBarrier)
+	{
+		ReleaseWorker->Trigger();
+		Worker.Wait();
 		return false;
 	}
 
-	TestEqual(
-		TEXT("timeout response status is honest"),
-		Response->GetStringField(TEXT("status")),
-		FString(TEXT("partially_completed")));
-	TestEqual(
-		TEXT("timeout response preserves request id"),
-		Response->GetStringField(TEXT("request_id")),
-		FString(TEXT("request-timeout-1")));
-
-	const TSharedPtr<FJsonObject>* Job = nullptr;
+	FUeremcpResponse Timeout;
 	TestTrue(
-		TEXT("timeout response carries job handle"),
-		Response->TryGetObjectField(TEXT("job"), Job) && Job && (*Job).IsValid());
-	if (Job && (*Job).IsValid())
-	{
-		TestEqual(
-			TEXT("job id is stable for polling"),
-			(*Job)->GetStringField(TEXT("job_id")),
-			FString(TEXT("job-timeout-1")));
-		TestEqual(
-			TEXT("in-flight job state is running"),
-			(*Job)->GetStringField(TEXT("state")),
-			FString(TEXT("running")));
-		TestEqual(
-			TEXT("poll action matches transport handoff"),
-			(*Job)->GetStringField(TEXT("poll_action")),
-			FString(FUeremcpJobModelDefaults::PollActionName));
-		TestFalse(
-			TEXT("job does not advertise unwired cancellation"),
-			(*Job)->GetBoolField(TEXT("cancellable")));
-	}
+		TEXT("blocked fixture returns timeout response"),
+		Registry.GetTimeoutResponse(JobId, Timeout, Error));
+	TestEqual(TEXT("timeout response is partial"), Timeout.Status, FString(TEXT("partially_completed")));
+	TestEqual(TEXT("timeout response state is running"), Timeout.Job.State, FString(TEXT("running")));
+	TestEqual(TEXT("timeout response preserves job id"), Timeout.Job.JobId, JobId);
+	TestEqual(
+		TEXT("timeout response advertises poll action"),
+		Timeout.Job.PollAction,
+		FString(FUeremcpJobModelDefaults::PollActionName));
+	TestEqual(TEXT("timeout response counts initial call"), Timeout.Metrics.McpRoundTrips, 1);
+	TestFalse(TEXT("early response is not terminal success"), UeremcpTransport::IsTerminalJobState(Timeout.Job.State));
 
-	const TSharedPtr<FJsonObject>* Metrics = nullptr;
-	TestTrue(
-		TEXT("timeout response carries metrics"),
-		Response->TryGetObjectField(TEXT("metrics"), Metrics) && Metrics && (*Metrics).IsValid());
-	if (Metrics && (*Metrics).IsValid())
-	{
-		TestEqual(
-			TEXT("mcp_round_trips is clamped to at least one"),
-			static_cast<int32>((*Metrics)->GetNumberField(TEXT("mcp_round_trips"))),
-			1);
-		TestEqual(
-			TEXT("timeout response performs no extra editor operations"),
-			static_cast<int32>((*Metrics)->GetNumberField(TEXT("internal_operations"))),
-			0);
-	}
+	FUeremcpResponse RunningPoll;
+	TestTrue(TEXT("blocked fixture can be polled"), Registry.GetJobResult(JobId, RunningPoll, Error));
+	TestEqual(TEXT("running poll preserves job id"), RunningPoll.Job.JobId, JobId);
+	TestEqual(TEXT("running poll counts initial call plus poll"), RunningPoll.Metrics.McpRoundTrips, 2);
 
+	ReleaseWorker->Trigger();
+	Worker.Wait();
+	TestTrue(TEXT("released timeout worker completes"), bWorkerCompleted);
+	if (!WorkerError.IsEmpty())
+	{
+		AddError(WorkerError);
+	}
+	TestEqual(TEXT("released fixture executes once"), WorkerExecutions, 1);
+
+	FUeremcpResponse TerminalPoll;
+	TestTrue(TEXT("released fixture reaches terminal poll"), Registry.GetJobResult(JobId, TerminalPoll, Error));
+	TestEqual(TEXT("terminal poll returns validated result"), TerminalPoll.Status, FString(TEXT("created_and_validated")));
+	TestEqual(TEXT("terminal poll reports completed state"), TerminalPoll.Job.State, FString(TEXT("completed")));
+	TestEqual(TEXT("terminal poll preserves stable job id"), TerminalPoll.Job.JobId, JobId);
+	TestEqual(TEXT("terminal poll counts initial call plus polls"), TerminalPoll.Metrics.McpRoundTrips, 3);
+
+	AddInfo(TEXT(
+		"SKIP residual: no production timeout scheduler currently invokes this registry "
+		"lifecycle or closes the MCP SSE stream; deterministic registry lifecycle is covered."));
 	return true;
 }
 

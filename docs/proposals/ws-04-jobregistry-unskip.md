@@ -2,40 +2,33 @@
 
 **Owner requested:** WS-05 (registry) and WS-03 (agent-facing actions).
 **Consumer:** WS-04 Transport automation.
-**Status:** blocked — implementation exists only as uncommitted WS-05 working-tree
-files as of 2026-07-30; no registry symbols are present on `ws-01-orch` at
-`8c5a325`.
+**Status:** registry gate landed at `de51038` and consumed by WS-04; Core
+agent-facing actions and production timeout dispatch remain blocked.
 
 ## Evidence and current gate
 
-- `ws-01-orch` contains no `FUeremcpJobRegistry` definition and still marks
-  `get_job_result` as planned in `docs/CAPABILITY_CATALOG.md`.
-- The `ws-05-protocol` working tree contains untracked
-  `Public/UeremcpJobRegistry.h`, `Private/UeremcpJobRegistry.cpp`, and
-  `Private/Tests/UeremcpJobRegistryTests.cpp`; therefore these are not a landed
-  dependency and WS-04 must not copy or consume them yet.
-- The draft registry exposes process-local creation, polling, timeout-envelope,
+- WS-05 committed the registry as `de51038`; WS-04 consumed that commit after
+  syncing the latest orchestration branch.
+- The landed registry exposes process-local creation, polling, timeout-envelope,
   completion, and cooperative-cancel operations
-  `[VERIFIED: ws-05-protocol working tree,
+  `[VERIFIED: de51038,
   Plugins/UEREMCP/Source/UeremcpProtocol/Public/UeremcpJobRegistry.h:63-120]`.
-- The draft tests exercise poll accounting, terminal retention, cooperative
+- The landed Protocol tests exercise poll accounting, terminal retention, cooperative
   cancellation, and timeout-envelope fields
-  `[VERIFIED: ws-05-protocol working tree,
+  `[VERIFIED: de51038,
   Plugins/UEREMCP/Source/UeremcpProtocol/Private/Tests/UeremcpJobRegistryTests.cpp:11-132,242-267]`.
-- No agent-facing `get_job_result` or cancel action is present in that draft. The
+- No agent-facing `get_job_result` or cancel action is present in Core. The
   WS-05 integration proposal delegates those registrations to Core/WS-03
-  `[VERIFIED: ws-05-protocol working tree,
+  `[VERIFIED: de51038,
   docs/proposals/ws-05-job-registry-integration.md:31-63]`.
 
-`JobRegistry.Poll` and `JobRegistry.Cancel` therefore remain explicit SKIPs.
-`Timeout.PartiallyCompleted` is already an active response-shape test on WS-04 at
-`e776a5f`, but the registry-dependent blocked-work, release, and terminal-poll
-assertions remain gated. Treating untracked files from another worktree as a callable
-dependency would violate ownership and would not survive a clean checkout.
+The three Transport paths now execute registry lifecycle assertions directly.
+Each records a precise residual SKIP for the missing Core action or production
+timeout dispatcher rather than claiming end-to-end MCP coverage.
 
-## Required landed production surface
+## Landed production surface
 
-Land an exported Protocol header and implementation with equivalent behavior to:
+The exported Protocol header landed with this surface:
 
 ```cpp
 class UEREMCPPROTOCOL_API FUeremcpJobRegistry
@@ -54,7 +47,7 @@ public:
 };
 ```
 
-Names may change before landing, but the callable behavior may not omit:
+The callable behavior includes:
 
 1. stable, non-empty UEREMCP job IDs scoped to the editor process;
 2. queued/running/terminal state and legal transition enforcement;
@@ -67,11 +60,11 @@ Names may change before landing, but the callable behavior may not omit:
 8. structured not-found/error results without registry mutation.
 
 WS-03 must separately register the public `get_job_result` and cancel actions before
-UEREMCP can claim agent-facing poll/cancel support. Direct registry tests can unskip
-once the Protocol symbols land; `UeremcpTransport.Build.cs` already depends on
-`UeremcpProtocol`. Action-level integration remains a distinct gate.
+UEREMCP can claim agent-facing poll/cancel support. The direct registry tests are now
+active, and `UeremcpTransport.Build.cs` already depends on `UeremcpProtocol`.
+Action-level integration remains a distinct gate.
 
-## WS-04 assertions after landing
+## Active WS-04 assertions
 
 ### `UEREMCP.Transport.JobRegistry.Poll`
 
@@ -106,12 +99,11 @@ once the Protocol symbols land; `UeremcpTransport.Build.cs` already depends on
 
 ## Ownership-safe next step
 
-WS-05 should commit and land the registry implementation with its Protocol tests.
-WS-03 should land the action registrations. WS-04 already has the Protocol module
-dependency; after the registry lands it will replace the two remaining SKIP bodies
-and extend the active timeout test with lifecycle assertions, followed by the
-existing `UEREMCP.Transport` editor filter.
+WS-03 should land the public `get_job_result` and cancel action registrations plus
+the production timeout dispatcher. WS-04 can then replace the three residual
+integration SKIP notes with action/SSE assertions and run the existing
+`UEREMCP.Transport` editor filter without retargeting the RE junction.
 
 The last recorded runtime evidence remains **5 PASS + 3 SKIP**. Current source has
-**two explicit SKIPs plus one active timeout response-contract test**, but that is
-static inspection, not a claim of a new editor run.
+three active registry lifecycle tests with three narrower residual integration SKIP
+notes, but that is static inspection, not a claim of a new editor run.
