@@ -1,6 +1,7 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `eff241c` (`[WS-07] Stop probe DI release before post-create inspect`)
+- **Current orchestration tip:** `98dcfce` (`[WS-01] Record persistent Niagara B7 assertion failure`)
+- **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `eff241c`
 - **Latest Material re-run tip:** `c881742`
@@ -18,6 +19,16 @@ pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter
 ```
 
 The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
+## Blueprint triage re-proof on tip `35b4cab`
+
+`35b4cab` contains integrated fixes `26ce2d6` (hash alignment; original `fc51ad2`) and `2d2f7ef` (SubmitGraph DSL write-intent; original `443c298`). The `UeremcpBlueprint.Toolset` filter was rebuilt and returned PASS 4/4. No Blueprint source changed between `35b4cab` and current tip `98dcfce`.
+
+| Item | Result | Exact editor evidence |
+|---|---:|---|
+| SubmitGraphValidation | **PASS** | `UeremcpBlueprint.Toolset.SubmitGraphValidation`, `tests/integration/_logs/editor_UeremcpBlueprint_Toolset_20260730_022304.log`: `Test Completed. Result={Success}` at line 3019. |
+| Revision-hash mismatch / hash alignment | **PASS** | `UeremcpBlueprint.Toolset.ReadGraphRoundTrip`, same log: `Test Completed. Result={Success}` at line 2999. The test asserts graph `content_hash == revision` and summary revision equals complete revision. |
+
+No current-tip rerun was needed because the exact proof tip is an ancestor of `98dcfce` and the Blueprint module/test sources are unchanged since that proof.
 
 ## Update on tip `eff241c` (WS-11 Niagara B7 re-run)
 
