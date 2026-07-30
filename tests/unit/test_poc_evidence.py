@@ -215,7 +215,73 @@ class PocBBundleTest(unittest.TestCase):
             errors,
         )
 
-    def test_bundle_rejects_missing_criterion_and_overall_claim(self):
+    def test_complete_canonical_overall_claim_passes(self):
+        bundle = {
+            "schema_version": 1,
+            "scenario": "poc_b",
+            "tested_tip_sha": poc_evidence.POC_B_CLAIM_SHA,
+            "generated_at_utc": "2026-07-30T14:50:00Z",
+            "overall_poc_b_claimed": True,
+            "claim": {
+                "decision_document": poc_evidence.POC_B_CLAIM_DOCUMENT,
+                "decision_sha": poc_evidence.POC_B_CLAIM_SHA,
+                "scope": "poc_b_only",
+            },
+            "lineage": {
+                "criterion_bundle_path": poc_evidence.POC_B_CRITERION_BUNDLE,
+                "criterion_bundle_sha": poc_evidence.POC_B_CRITERION_BUNDLE_SHA,
+                "metrics_sha": poc_evidence.POC_B_CLAIM_SHA,
+            },
+            "transport": {
+                "status": "pass",
+                "response_status": "partially_completed",
+            },
+            "criteria": {
+                f"B{index}": {
+                    "status": "pass",
+                    "scope": "MCP transport" if index == 1 else "editor evidence",
+                    "evidence": [
+                        {
+                            "path": (
+                                poc_evidence.POC_B_B1_LIVE_MCP_ARTIFACT
+                                if index == 1
+                                else f"tests/evidence/b{index}.log"
+                            ),
+                            "result": "pass",
+                        }
+                    ],
+                }
+                for index in range(1, 11)
+            },
+            "metrics": {
+                "mcp_round_trips": 1,
+                "internal_operations": 46,
+                "primitive_call_equivalent": 63,
+                "primitive_trials_attempted": 3,
+                "primitive_trials_usable": 3,
+                "primitive_mean_wall_clock_seconds": 6.2771547,
+                "response_status": "partially_completed",
+                "tokens_total": None,
+                "tokens_status": (
+                    "unavailable: Cursor MCP caller exposes no per-call agent usage"
+                ),
+            },
+            "other_poc_claims": {
+                "poc_c": False,
+                "poc_d": False,
+                "poc_e": False,
+            },
+        }
+        self.assertEqual(poc_evidence.validate_poc_b_bundle(bundle), [])
+
+        bundle["metrics"]["tokens_total"] = 0
+        errors = poc_evidence.validate_poc_b_bundle(bundle)
+        self.assertIn(
+            "claimed POC B requires metrics.tokens_total=None",
+            errors,
+        )
+
+    def test_bundle_rejects_unsupported_incomplete_overall_claim(self):
         bundle = {
             "schema_version": 1,
             "scenario": "poc_b",
@@ -225,7 +291,7 @@ class PocBBundleTest(unittest.TestCase):
             "criteria": {},
         }
         errors = poc_evidence.validate_poc_b_bundle(bundle)
-        self.assertIn("overall_poc_b_claimed must be false", errors)
+        self.assertIn("claimed POC B requires claim object", errors)
         self.assertIn("B10 object is required", errors)
 
 

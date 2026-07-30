@@ -28,6 +28,12 @@ POC_B_CRITERIA = tuple(f"B{index}" for index in range(1, 11))
 POC_B_B1_LIVE_MCP_ARTIFACT = (
     "docs/reviews/metrics/artifacts/poc_b_b1_live_mcp_20260730.json"
 )
+POC_B_CLAIM_DOCUMENT = "docs/proposals/ws-01-poc-b-acceptance-claim.md"
+POC_B_CLAIM_SHA = "2aab525f3496465c9a4f62dd290ce5a31dd755d6"
+POC_B_CRITERION_BUNDLE = (
+    "tests/integration/_logs/poc_b_current_lineage_e85da3e.json"
+)
+POC_B_CRITERION_BUNDLE_SHA = "e85da3ea36c92dd8f2f61c6d29591f53094f9c63"
 
 
 def extract_last_evidence(log_text: str) -> dict[str, Any] | None:
@@ -140,8 +146,9 @@ def validate_poc_b_bundle(bundle: Any) -> list[str]:
         errors.append("schema_version must be 1")
     if bundle.get("scenario") != "poc_b":
         errors.append("scenario must be 'poc_b'")
-    if bundle.get("overall_poc_b_claimed") is not False:
-        errors.append("overall_poc_b_claimed must be false")
+    overall_claimed = bundle.get("overall_poc_b_claimed")
+    if not isinstance(overall_claimed, bool):
+        errors.append("overall_poc_b_claimed must be boolean")
     tested_tip = bundle.get("tested_tip_sha")
     if not isinstance(tested_tip, str) or not re.fullmatch(r"[0-9a-f]{40}", tested_tip):
         errors.append("tested_tip_sha must be a full lowercase Git SHA")
@@ -195,6 +202,65 @@ def validate_poc_b_bundle(bundle: Any) -> list[str]:
             errors.append(
                 "B1 PASS transport.response_status must preserve partially_completed"
             )
+
+    if overall_claimed:
+        for name in POC_B_CRITERIA:
+            if not _criterion_passed(criteria, name):
+                errors.append(f"claimed POC B requires {name}.status=pass")
+
+        claim = bundle.get("claim")
+        if not isinstance(claim, dict):
+            errors.append("claimed POC B requires claim object")
+        else:
+            if claim.get("decision_document") != POC_B_CLAIM_DOCUMENT:
+                errors.append("claimed POC B requires the canonical decision document")
+            if claim.get("decision_sha") != POC_B_CLAIM_SHA:
+                errors.append("claimed POC B requires the canonical decision SHA")
+            if claim.get("scope") != "poc_b_only":
+                errors.append("claimed POC B scope must be poc_b_only")
+
+        lineage = bundle.get("lineage")
+        if not isinstance(lineage, dict):
+            errors.append("claimed POC B requires lineage object")
+        else:
+            if lineage.get("criterion_bundle_path") != POC_B_CRITERION_BUNDLE:
+                errors.append("claimed POC B requires the canonical criterion bundle")
+            if lineage.get("criterion_bundle_sha") != POC_B_CRITERION_BUNDLE_SHA:
+                errors.append("claimed POC B requires the criterion bundle SHA")
+            if lineage.get("metrics_sha") != POC_B_CLAIM_SHA:
+                errors.append("claimed POC B requires metrics SHA 2aab525")
+
+        metrics = bundle.get("metrics")
+        if not isinstance(metrics, dict):
+            errors.append("claimed POC B requires metrics object")
+        else:
+            expected_metrics = {
+                "mcp_round_trips": 1,
+                "internal_operations": 46,
+                "primitive_call_equivalent": 63,
+                "primitive_trials_attempted": 3,
+                "primitive_trials_usable": 3,
+                "response_status": "partially_completed",
+                "tokens_total": None,
+            }
+            for field, expected in expected_metrics.items():
+                if metrics.get(field) != expected:
+                    errors.append(
+                        f"claimed POC B requires metrics.{field}={expected!r}"
+                    )
+            if metrics.get("primitive_mean_wall_clock_seconds") != 6.2771547:
+                errors.append(
+                    "claimed POC B requires primitive mean wall clock 6.2771547"
+                )
+            tokens_status = metrics.get("tokens_status")
+            if not isinstance(tokens_status, str) or not tokens_status.startswith(
+                "unavailable:"
+            ):
+                errors.append("claimed POC B must preserve unavailable token status")
+
+        other_claims = bundle.get("other_poc_claims")
+        if other_claims != {"poc_c": False, "poc_d": False, "poc_e": False}:
+            errors.append("claimed POC B must explicitly leave POC C/D/E unclaimed")
     return errors
 
 
