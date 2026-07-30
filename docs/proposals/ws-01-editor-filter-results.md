@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current integration tip:** `e249841` (`[WS-14] Close POC-B metrics evidence honestly`)
+- **Current integration tip:** `4b3d32f` (`[WS-11] Assemble current-lineage POC-B evidence`)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `268a102` (fresh fireball create **PASS**; production B10 **PASS**, 30,454 warm / 41,231 changed / 412 live / 705 spawned)
@@ -10,8 +10,26 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. Production B10 remains **PASS** with 30,454 warm changed pixels. POC-B metrics are recorded in [`docs/reviews/poc-metrics.md`](../reviews/poc-metrics.md) via `e249841`: `mcp_round_trips=1`, `internal_operations=46`, and editor-equivalent `wall_clock=31.370670s` after live MCP refused the connection. Tokens are unavailable from Cursor, and the primitive baseline is unavailable because the WS-07 sequence lacks executable inputs (planned known minimum 17 only). Overall POC-B still requires a complete current-lineage B1–B10 evidence bundle and an executable primitive baseline fixture. **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. The current-lineage POC-B criterion bundle is closed on `4b3d32f` with honest transport scope: B1 is **SKIP** because live MCP refused the connection (the editor single-call equivalent **PASS** is recorded separately), and B2–B10 are **PASS**. Metrics are recorded via `e249841`: editor-equivalent wall clock was measured at `31.370670s`; tokens are unavailable from Cursor; and no executable/measured primitive baseline is available. Overall POC-B still requires live MCP B1 proof and an executable, measured primitive baseline. **No overall POC-B claim.**
 - **Junction:** Not changed.
+
+## Current-lineage POC-B bundle (`4b3d32f`)
+
+[`tests/integration/_logs/poc_b_current_lineage_e249841.json`](../../tests/integration/_logs/poc_b_current_lineage_e249841.json)
+records `bundle_status=criterion_evidence_complete_with_transport_skip` and
+`overall_poc_b_claimed=false`.
+
+- B1: **SKIP** for live MCP transport because the endpoint refused the
+  connection before dispatch; the editor single-call equivalent **PASS** is not
+  represented as transport proof.
+- B2–B10: **PASS** on the assembled current lineage.
+- Metrics (`e249841`): editor-equivalent wall clock measured; tokens unavailable;
+  primitive baseline unavailable because the supplied outline lacks fixed
+  executable inputs.
+
+The lineage evidence bundle is closed with that scope. Remaining for an overall
+POC-B claim are live MCP B1 proof and an executable, measured equivalent
+primitive baseline. **No overall POC-B claim.**
 
 ## WS-08 warm-material integration (`268a102`): production B10 PASS
 
@@ -46,8 +64,10 @@ PNG evidence:
 No canary rerun was needed; the production path itself passed with
 `warm_changed_pixels > 0`.
 
-This closes B10 only. POC-B metrics are now recorded, but the executable primitive
-baseline and complete current-lineage evidence bundle remain open.
+At `268a102`, this closed B10 only. POC-B metrics were recorded next; the
+current-lineage evidence bundle was subsequently assembled and closed honestly on
+`4b3d32f` with B1 transport **SKIP** and B2–B10 **PASS**. The executable,
+measured primitive baseline remains open.
 **No overall POC-B claim.**
 
 ## POC-B metrics record (`e249841`)
@@ -69,8 +89,9 @@ Raw metrics artifacts:
 - [`poc_b_primitive_baseline_attempt_20260730.json`](../reviews/metrics/artifacts/poc_b_primitive_baseline_attempt_20260730.json)
 - [`poc_b_ueremcp_prepared.json`](../reviews/metrics/artifacts/poc_b_ueremcp_prepared.json)
 
-Overall POC-B remains unclaimed pending a complete current-lineage B1–B10 evidence
-bundle and an executable primitive baseline fixture.
+The later `4b3d32f` bundle closes current-lineage criterion evidence with B1
+transport **SKIP** and B2–B10 **PASS**. Overall POC-B remains unclaimed pending
+live MCP B1 proof and an executable, measured primitive baseline.
 
 ## WS-07 warm-color re-run (`a9977cf`)
 
@@ -630,7 +651,12 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-11 | B10 harness observation is closed. Production still FAILS with 0 warm pixels. After the WS-08 material fix: rerun B10, MCP `timing_ms`, and the primitive baseline with WS-14 metrics capture. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS as structural proofs. On `a9977cf`, harness observation and emission are closed: fresh fireball create PASSES, while production B10 still FAILS with 0 warm pixels, approximately 412 live particles, and 715 spawned. WS-08 owns the visually black generated-material residual. Complete metrics/baseline and the current-lineage evidence bundle remain open. No overall POC-B claim. No junction retarget.
+**Current status supersedes this historical handoff:** overall POC A is claimed on
+CRT `3756244`; the `4b3d32f` current-lineage POC-B bundle is closed with B1
+transport **SKIP** and B2–B10 **PASS**. Metrics record measured editor-equivalent
+wall clock, unavailable tokens, and no executable/measured primitive baseline.
+Live MCP B1 proof and the executable, measured primitive baseline remain open.
+**No overall POC-B claim.** No junction retarget.
 
 ---
 
