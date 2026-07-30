@@ -29,6 +29,23 @@ class PocB10VisibleRenderHarnessTest(unittest.TestCase):
             "PNGCompressImageArray",
             "MinimumChangedPixels",
             "MinimumWarmChangedPixels",
+            "MinimumWarmupFrames",
+            "WarmupSeconds",
+            "UeremcpPocB10System=",
+            "IAutomationLatentCommand",
+            "FUeremcpPocB10BaselineCommand",
+            "FUeremcpPocB10WarmupCommand",
+            "FUeremcpPocB10FinalizeCommand",
+            "ADD_LATENT_AUTOMATION_COMMAND",
+            "LEVELTICK_ViewportsOnly",
+            "EngineShowFlags.SetParticles(true)",
+            "EngineShowFlags.SetNiagara(true)",
+            "CreateDarkBackdrop",
+            "/Engine/BasicShapes/Plane.Plane",
+            "CountActiveParticles",
+            "system_emits_no_particles",
+            "viewport_unavailable",
+            "visible_fire_signature_not_observed",
             "programmatic_pixel_validation",
             "UEREMCP_POC_B10_EVIDENCE",
             "UEREMCP_POC_B10_OUTCOME=PASS",
@@ -37,6 +54,8 @@ class PocB10VisibleRenderHarnessTest(unittest.TestCase):
             "RemoveRealtimeOverride",
         ):
             self.assertIn(token, source)
+        self.assertNotIn("ProcessThreadUntilIdle(", source)
+        self.assertNotIn("AdvanceSimulation(/*TickCount=*/", source)
 
     def test_runner_enables_rendering_and_requires_pass_artifact(self):
         runner = (
@@ -47,6 +66,8 @@ class PocB10VisibleRenderHarnessTest(unittest.TestCase):
             "-WithRendering",
             "UEREMCP.Niagara.POCB.VisibleRender",
             "UeremcpPocB10Output",
+            "UeremcpPocB10System",
+            "[string]$SystemPath",
             "UEREMCP_POC_B10_OUTCOME",
             "UEREMCP_POC_B10_RUNNER",
             "Test-Path $artifact",

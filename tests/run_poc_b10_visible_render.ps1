@@ -6,7 +6,8 @@
 
 param(
     [string]$Editor = "$UE_ROOT\Engine\Binaries\Win64\UnrealEditor.exe",
-    [string]$ArtifactDir = ""
+    [string]$ArtifactDir = "",
+    [string]$SystemPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +22,15 @@ if ($activeEditor) {
     throw "Close the running Unreal Editor before the B10 automation run (PID $($activeEditor.Id -join ','))."
 }
 
-$artifact = Join-Path $ArtifactDir "poc_b10_fireball.png"
+$artifactName = if ($SystemPath) { "poc_b10_canary.png" } else { "poc_b10_fireball.png" }
+$artifact = Join-Path $ArtifactDir $artifactName
+$extraArgs = @(
+    "-DisablePlugins=VoxelFree",
+    "-UeremcpPocB10Output=`"$artifact`""
+)
+if ($SystemPath) {
+    $extraArgs += "-UeremcpPocB10System=`"$SystemPath`""
+}
 $runner = Join-Path $PSScriptRoot "run_editor_tests.ps1"
 $output = & $runner `
     -EngineCmd $Editor `
@@ -29,10 +38,7 @@ $output = & $runner `
     -KeepUeremcp `
     -NoProbe `
     -WithRendering `
-    -ExtraArgs @(
-        "-DisablePlugins=VoxelFree",
-        "-UeremcpPocB10Output=`"$artifact`""
-    ) 2>&1
+    -ExtraArgs $extraArgs 2>&1
 $output | ForEach-Object { Write-Output $_ }
 
 $marker = $output |
