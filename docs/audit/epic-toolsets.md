@@ -82,7 +82,7 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 
 | Plugin | Toolset class(es) | Tools | Altitude mix | Disposition | Superseded by (UEREMCP) | Limitations | Tag |
 |---|---|---|---|---|---|---|---|
-| EditorToolset | `BlueprintTools` | 52 | primitive + DSL composite | preserve / supersede surface | `blueprints.submit_graph`, `blueprints.read_graph` (planned) | UObject pin refs; no envelope; DSL not JSON graph schema | [VERIFIED: source scan] |
+| EditorToolset | `BlueprintTools` | 52 | primitive + DSL composite | preserve / supersede surface | `blueprints.submit_graph`, `blueprints.read_graph` (planned) | UObject pin refs; no envelope; DSL not JSON graph schema | [VERIFIED: source scan; WS-06 proposal] — detail: Blueprint WS-06 disposition |
 | EditorToolset | `ProgrammaticToolset` | 2 | composite (batch) | preserve | compose in `execute_plan` | Async only; script sandbox; no arbitrary imports | [VERIFIED: programmatic.py] |
 | EditorToolset | `MaterialTools` | 22 | primitive | internalise | compose in `create_vfx_material`, `retrieve/replace_material_graph` (WS-08) | Per-expression ops; UObject refs; no ADR-0004 graph JSON | [VERIFIED: material.py, source scan] |
 | EditorToolset | `MaterialInstanceTools` | 13 | primitive | preserve / improve via envelope | `create_vfx_material` batches MI params (WS-08) | Scalar/vector/texture/switch overrides; static switch recompile cost | [VERIFIED: material_instance.py, source scan] |
