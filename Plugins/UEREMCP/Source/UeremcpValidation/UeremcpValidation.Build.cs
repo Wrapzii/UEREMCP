@@ -40,6 +40,10 @@ public class UeremcpValidation : ModuleRules
 			// ADR-0006 protocol primitives (idempotency store, content_hash, envelope).
 			"UeremcpProtocol",
 
+			// Blueprint dispatch regression consumes FUeremcpMutatingDispatch via
+			// UeremcpBlueprintMutatingGate's public header.
+			"UeremcpCore",
+
 			// WS-07 POC B editor gate calls the goal-level create tool directly.
 			"UeremcpNiagara",
 
