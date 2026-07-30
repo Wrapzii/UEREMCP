@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
 
 /** Loaded template metadata + raw JSON document. */
 struct UEREMCPTEMPLATES_API FUeremcpTemplateRecord

@@ -8,6 +8,8 @@
 #include "UeremcpTemplateService.h"
 #include "UeremcpTemplateStore.h"
 
+class FUeremcpTemplatesModule;
+
 namespace
 {
 	FUeremcpTemplatesModule* GTemplatesModule = nullptr;

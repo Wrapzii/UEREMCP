@@ -47,7 +47,11 @@ namespace
 		if (Source->Type == EJson::Object)
 		{
 			const TSharedPtr<FJsonObject> ClonedObject = CloneJsonObject(Source->AsObject());
-			return ClonedObject.IsValid() ? MakeShared<FJsonValueObject>(ClonedObject) : nullptr;
+			if (!ClonedObject.IsValid())
+			{
+				return nullptr;
+			}
+			return MakeShared<FJsonValueObject>(ClonedObject);
 		}
 
 		if (Source->Type == EJson::Array)
@@ -306,10 +310,10 @@ TSharedPtr<FJsonValue> FUeremcpTemplateService::ApplyInputsToJsonValue(
 			const FString Key = StringValue.Mid(9, StringValue.Len() - 11);
 			if (Inputs.IsValid())
 			{
-				const TSharedPtr<FJsonValue>* InputValue = nullptr;
-				if (Inputs->TryGetField(Key, InputValue) && InputValue && InputValue->IsValid())
+				const TSharedPtr<FJsonValue> InputValue = Inputs->TryGetField(Key);
+				if (InputValue.IsValid())
 				{
-					return CloneJsonValue(*InputValue);
+					return CloneJsonValue(InputValue);
 				}
 			}
 			return MakeShared<FJsonValueNull>();
@@ -321,9 +325,9 @@ TSharedPtr<FJsonValue> FUeremcpTemplateService::ApplyInputsToJsonValue(
 	{
 		const TSharedPtr<FJsonObject> SourceObject = Value->AsObject();
 		const TSharedPtr<FJsonObject> OutObject = MakeShared<FJsonObject>();
-		for (const TPair<FString, TSharedPtr<FJsonValue>>& Field : SourceObject->Values)
+		for (const auto& Field : SourceObject->Values)
 		{
-			OutObject->SetField(Field.Key, ApplyInputsToJsonValue(Field.Value, Inputs));
+			OutObject->SetField(FString(Field.Key), ApplyInputsToJsonValue(Field.Value, Inputs));
 		}
 		return MakeShared<FJsonValueObject>(OutObject);
 	}

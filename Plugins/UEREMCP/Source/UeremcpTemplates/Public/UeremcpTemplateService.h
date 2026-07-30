@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
 #include "UeremcpTemplateStore.h"
 #include "UeremcpTemplateTypes.h"
 
