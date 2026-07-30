@@ -50,4 +50,24 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
 	static FString Echo(const FString& RequestJson);
+
+	/**
+	 * Poll a long-running job by id (action=get_job_result).
+	 * Delegates to FUeremcpJobActions — no additional parsing.
+	 *
+	 * @param RequestJson Request envelope JSON with specification.job_id.
+	 * @return Response envelope JSON for the current job snapshot.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
+	static FString GetJobResult(const FString& RequestJson);
+
+	/**
+	 * Cooperatively cancel a running job (action=cancel_job).
+	 * Delegates to FUeremcpJobActions — no additional parsing.
+	 *
+	 * @param RequestJson Request envelope JSON with specification.job_id.
+	 * @return Response envelope JSON reflecting cancellation outcome.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
+	static FString CancelJob(const FString& RequestJson);
 };

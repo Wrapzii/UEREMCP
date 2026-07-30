@@ -23,6 +23,7 @@
 #include "ToolsetRegistry/UToolsetRegistry.h"
 
 #include "UeremcpEnvelope.h"
+#include "UeremcpJobRegistry.h"
 #include "UeremcpReferenceToolset.h"
 
 
@@ -390,6 +391,242 @@ bool FUeremcpReferenceToolsetRegisterAndSchemaTest::RunTest(const FString& Param
 	}
 
 	TestTrue(TEXT("found Echo requestJson property schema"), bFoundEchoParam);
+
+	return true;
+
+}
+
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+
+	FUeremcpReferenceToolsetGetJobResultTest,
+
+	"UeremcpCore.ReferenceToolset.GetJobResult",
+
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+
+
+bool FUeremcpReferenceToolsetGetJobResultTest::RunTest(const FString& Parameters)
+
+{
+
+	FUeremcpJobRegistry& Registry = FUeremcpJobRegistry::Get();
+
+	Registry.Clear();
+
+	FString Error;
+
+	FString JobId;
+
+	TestTrue(
+
+		TEXT("shared-registry job created"),
+
+		Registry.CreateJob(TEXT("origin-request"), false, TEXT("Working"), JobId, Error));
+
+	TestTrue(TEXT("shared-registry job starts"), Registry.StartJob(JobId, Error));
+
+
+
+	const FString PollRequest = FString::Printf(
+
+		TEXT("{\"protocol_version\":\"1.0\",\"request_id\":\"poll-request\","
+
+			"\"action\":\"get_job_result\",\"specification\":{\"job_id\":\"%s\"}}"),
+
+		*JobId);
+
+	const FString PollJson = UUeremcpReferenceToolset::GetJobResult(PollRequest);
+
+
+
+	TSharedPtr<FJsonObject> PollRoot;
+
+	const TSharedRef<TJsonReader<>> PollReader = TJsonReaderFactory<>::Create(PollJson);
+
+	TestTrue(TEXT("GetJobResult returns parseable JSON"),
+
+		FJsonSerializer::Deserialize(PollReader, PollRoot) && PollRoot.IsValid());
+
+	if (!PollRoot.IsValid())
+
+	{
+
+		Registry.Clear();
+
+		return false;
+
+	}
+
+
+
+	FString PollRequestId;
+
+	FString PollStatus;
+
+	PollRoot->TryGetStringField(TEXT("request_id"), PollRequestId);
+
+	PollRoot->TryGetStringField(TEXT("status"), PollStatus);
+
+	TestEqual(TEXT("poll response uses current request id"), PollRequestId, FString(TEXT("poll-request")));
+
+	TestEqual(TEXT("running poll is partial"), PollStatus, FString(TEXT("partially_completed")));
+
+
+
+	const TSharedPtr<FJsonObject>* JobObj = nullptr;
+
+	TestTrue(TEXT("job object present"), PollRoot->TryGetObjectField(TEXT("job"), JobObj) && JobObj && JobObj->IsValid());
+
+	if (JobObj && JobObj->IsValid())
+
+	{
+
+		FString ReturnedJobId;
+
+		(*JobObj)->TryGetStringField(TEXT("job_id"), ReturnedJobId);
+
+		TestEqual(TEXT("running poll preserves job id"), ReturnedJobId, JobId);
+
+	}
+
+
+
+	const TSharedPtr<FJsonObject>* Metrics = nullptr;
+
+	TestTrue(TEXT("metrics present"), PollRoot->TryGetObjectField(TEXT("metrics"), Metrics) && Metrics && Metrics->IsValid());
+
+	if (Metrics && Metrics->IsValid())
+
+	{
+
+		TestEqual(
+
+			TEXT("action poll increments cumulative round trips"),
+
+			static_cast<int32>((*Metrics)->GetNumberField(TEXT("mcp_round_trips"))),
+
+			2);
+
+	}
+
+
+
+	Registry.Clear();
+
+	return true;
+
+}
+
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+
+	FUeremcpReferenceToolsetCancelJobTest,
+
+	"UeremcpCore.ReferenceToolset.CancelJob",
+
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+
+
+bool FUeremcpReferenceToolsetCancelJobTest::RunTest(const FString& Parameters)
+
+{
+
+	FUeremcpJobRegistry& Registry = FUeremcpJobRegistry::Get();
+
+	Registry.Clear();
+
+	FString Error;
+
+	FString JobId;
+
+	bool bCancelCalled = false;
+
+	TestTrue(
+
+		TEXT("cancellable job created"),
+
+		Registry.CreateJob(
+
+			TEXT("origin-request"),
+
+			true,
+
+			TEXT("Working"),
+
+			JobId,
+
+			Error,
+
+			[&bCancelCalled]() { bCancelCalled = true; return true; }));
+
+	TestTrue(TEXT("cancellable job starts"), Registry.StartJob(JobId, Error));
+
+
+
+	const FString CancelRequest = FString::Printf(
+
+		TEXT("{\"protocol_version\":\"1.0\",\"request_id\":\"cancel-request\","
+
+			"\"action\":\"cancel_job\",\"specification\":{\"job_id\":\"%s\"}}"),
+
+		*JobId);
+
+	const FString CancelJson = UUeremcpReferenceToolset::CancelJob(CancelRequest);
+
+
+
+	TSharedPtr<FJsonObject> CancelRoot;
+
+	const TSharedRef<TJsonReader<>> CancelReader = TJsonReaderFactory<>::Create(CancelJson);
+
+	TestTrue(TEXT("CancelJob returns parseable JSON"),
+
+		FJsonSerializer::Deserialize(CancelReader, CancelRoot) && CancelRoot.IsValid());
+
+	if (!CancelRoot.IsValid())
+
+	{
+
+		Registry.Clear();
+
+		return false;
+
+	}
+
+
+
+	FString CancelRequestId;
+
+	CancelRoot->TryGetStringField(TEXT("request_id"), CancelRequestId);
+
+	TestEqual(TEXT("cancel response uses current request id"), CancelRequestId, FString(TEXT("cancel-request")));
+
+	TestTrue(TEXT("cooperative callback invoked"), bCancelCalled);
+
+
+
+	const TSharedPtr<FJsonObject>* JobObj = nullptr;
+
+	if (CancelRoot->TryGetObjectField(TEXT("job"), JobObj) && JobObj && JobObj->IsValid())
+
+	{
+
+		FString JobState;
+
+		(*JobObj)->TryGetStringField(TEXT("state"), JobState);
+
+		TestEqual(TEXT("cancelled state returned"), JobState, FString(TEXT("cancelled")));
+
+	}
+
+
+
+	Registry.Clear();
 
 	return true;
 

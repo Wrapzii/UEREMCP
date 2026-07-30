@@ -1,6 +1,7 @@
 #include "UeremcpReferenceToolset.h"
 
 #include "UeremcpEnvelope.h"
+#include "UeremcpJobActions.h"
 
 FString UUeremcpReferenceToolset::Ping()
 {
@@ -49,4 +50,14 @@ FString UUeremcpReferenceToolset::Echo(const FString& RequestJson)
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = 0;
 	return FUeremcpEnvelope::SerializeResponse(Response);
+}
+
+FString UUeremcpReferenceToolset::GetJobResult(const FString& RequestJson)
+{
+	return FUeremcpJobActions::GetJobResult(RequestJson);
+}
+
+FString UUeremcpReferenceToolset::CancelJob(const FString& RequestJson)
+{
+	return FUeremcpJobActions::CancelJob(RequestJson);
 }
