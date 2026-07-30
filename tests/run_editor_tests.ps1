@@ -1,8 +1,8 @@
 # UEREMCP editor integration test runner (WS-11 / RB-14).
 #
 # Launches UnrealEditor-Cmd against the RE project, runs a named automation
-# filter, then quits. Does NOT destroy user content: tests must use
-# /Game/__UeremcpTests/ only.
+# filter, then quits. Does NOT destroy user content: tests must use the
+# designated /Game/__UeremcpTests/ or /Game/__UeremcpPoc/ scratch roots.
 #
 # Prerequisites (shipping path — C-3):
 #   - UeremcpValidation registered in UEREMCP.uplugin (WS-03 proposal) AND
@@ -34,7 +34,8 @@ param(
     [string]$PocBMaterials = "",
     [string[]]$ExtraArgs = @(),
     [switch]$KeepUeremcp,
-    [switch]$NoProbe
+    [switch]$NoProbe,
+    [switch]$WithRendering
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,7 +61,9 @@ $argList.Add("`"$Project`"")
 $argList.Add("-unattended")
 $argList.Add("-nop4")
 $argList.Add("-nosplash")
-$argList.Add("-NullRHI")
+if (-not $WithRendering) {
+    $argList.Add("-NullRHI")
+}
 $argList.Add("-nosound")
 $argList.Add("-log")
 $argList.Add("-AbsLog=`"$LogFile`"")
@@ -98,7 +101,7 @@ Write-Host "Exit code: $($proc.ExitCode)"
 # Surface automation summary lines for agents that cannot open the full log.
 if (Test-Path $LogFile) {
     Write-Host "---- automation result lines ----"
-    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|SKIP:|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|UEREMCP\.Transport|UEREMCP\.Niagara\.Inspect|UeremcpMaterial\.Toolset|created_and_validated|Sandbox\.Library|Automation Test Queue|UEREMCP_POC_B_GATE_OUTCOME|UEREMCP_POC_B_FIREBALL_OUTCOME" |
+    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|SKIP:|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|UEREMCP\.Transport|UEREMCP\.Niagara\.Inspect|UeremcpMaterial\.Toolset|created_and_validated|Sandbox\.Library|Automation Test Queue|UEREMCP_POC_B_GATE_OUTCOME|UEREMCP_POC_B_FIREBALL_OUTCOME|UEREMCP_POC_B10_(EVIDENCE|OUTCOME)" |
         Select-Object -Last 80 |
         ForEach-Object { $_.Line }
 }

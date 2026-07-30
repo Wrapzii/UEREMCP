@@ -47,6 +47,7 @@ public class UeremcpValidation : ModuleRules
 
 			// WS-07 POC B editor gate calls the goal-level create tool directly.
 			"UeremcpNiagara",
+			"Niagara",
 
 			// WS-06 MutatingDispatch adapter regression (skips until handoff header lands).
 			"UeremcpBlueprint",

@@ -1,8 +1,32 @@
 # WS-11 handoff: POC B transport, visible render, and metrics
 
-**Status:** Blocked on domain fixes/evidence  
-**Observed orch tip:** `29b4b06`  
-**Owners requested:** WS-07 (B1/B10), WS-14 (metrics record)
+**Status:** B1/B6 closed; B10 harness pending orch build; metrics incomplete  
+**Observed orch tips:** `29b4b06`, `d07f8f1`  
+**Owners requested:** WS-14 (metrics record)
+
+## Update after `d07f8f1`
+
+The canonical one-call MCP fireball now returns without crashing:
+
+- `metrics.mcp_round_trips`: `1`
+- `metrics.internal_operations`: `46`
+- `poc_b_gates.B1_single_request_complete`: `true`
+- `poc_b_gates.B6_compile_awaited`: `true`
+- six material assets present in `result.reused_assets`
+
+B1 and B6 are closed. The response remains `partially_completed` because B10 and
+other non-B1 validation slices remain explicitly skipped.
+
+WS-11 added `UEREMCP.Niagara.POCB.VisibleRender`, which places the canonical
+fireball in the active editor viewport, saves a supplementary PNG, and requires
+both a minimum pixel delta and a warm-colour fire signature. It restores the
+viewport and destroys the transient actor. Runtime status remains **unproven**
+until orch lands, rebuilds Validation, and runs the filter with rendering enabled.
+
+Metrics remain incomplete: the response provides MCP round trips and internal
+operations, but not total tokens or wall-clock time, and the equivalent primitive
+workflow/count has not been measured. WS-14 still owns
+`docs/reviews/poc-metrics.md`.
 
 ## B1 transport result
 
