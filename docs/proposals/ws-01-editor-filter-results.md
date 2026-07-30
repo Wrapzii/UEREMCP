@@ -1,11 +1,12 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `d64aa6d` (`[WS-10] Initialize transient montage test state`)
+- **Current orchestration tip:** `b5b07e1` (`[WS-07] Drain Niagara compiles via WaitForCompilationComplete in AwaitCompile`)
+- **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `e7f9ae5`
 - **Latest Material re-run tip:** `c881742`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Material Toolset green; Niagara Inspect/B7 still incomplete. No A6 / POC-B completion claims.
+- **Status:** Material and Animation Toolsets green; Niagara Inspect/B7 still incomplete pending re-run of the deeper fix. No A6 / POC-B completion claims.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -17,6 +18,12 @@ pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter
 ```
 
 The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
+
+## Update on tip `5ea9277` (WS-10 Animation re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UEREMCP.Animation` | **PASS, 10/10** | WS-10 | Skeleton-safe transient fixture and notify-state duration tolerance fixes landed; offline suite also reported 17/17. |
 
 ## Update on tip `e7f9ae5` (WS-11 Niagara re-run)
 
@@ -53,12 +60,12 @@ Standing by for WS-07 AwaitCompile stall revise before Inspect/B7 re-run.
 | `UEREMCP.Niagara.Inspect` | 1/4 then stalled | WS-07 | Stalled after `NS_WS07_Probe` compile. Not a PASS. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | stalled | WS-07 | Stalled after creating/compiling `NS_POCB_FireballProbe`. Not a B7 or POC-B completion claim. |
 
-### FAIL (as of `c234606`; Material superseded by `c881742`)
+### FAIL (as of `c234606`; Material and Animation superseded by later PASS results)
 
 | Filter | Result | Owner | Evidence |
 |---|---:|---|---|
 | `UeremcpMaterial.Toolset` | 5/10 (superseded: now PASS on `c881742`) | WS-08 | VFX tests returned `failed_validation` (missing generated master/MI) where expected status was `partially_completed`. |
-| `UEREMCP.Animation` | 8/10 | WS-10 | `InspectMontage.NotifyOrdering`: invalid track name did not degrade to empty. `InspectMontage.StructuredState`: transient asset had no Movie Scene; notify duration assert failed. |
+| `UEREMCP.Animation` | 8/10 (superseded: now PASS on `5ea9277`) | WS-10 | `InspectMontage.NotifyOrdering`: invalid track name did not degrade to empty. `InspectMontage.StructuredState`: transient asset had no Movie Scene; notify duration assert failed. |
 
 ### Not claimed by this re-run
 
