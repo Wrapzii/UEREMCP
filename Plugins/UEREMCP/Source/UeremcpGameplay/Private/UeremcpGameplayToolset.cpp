@@ -1,13 +1,9 @@
 #include "UeremcpGameplayToolset.h"
 
 #include "Dom/JsonValue.h"
-#include "Misc/Paths.h"
-#include "Misc/ScopeExit.h"
-#include "UeremcpAuditLog.h"
 #include "UeremcpEnvelope.h"
-#include "UeremcpMutatorQueue.h"
+#include "UeremcpMutatingDispatch.h"
 #include "UeremcpPathPolicy.h"
-#include "UeremcpPermissionPolicy.h"
 #include "UeremcpSpellPlanner.h"
 
 namespace
@@ -132,91 +128,19 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 			FString::Printf(TEXT("Invalid ability-table write plan: %s"), *PlanError));
 	}
 
-	EUeremcpPermissionTier RequiredTier = EUeremcpPermissionTier::Write;
-	FString ProjectKey;
-	bool bOwnsMutator = false;
-	ON_SCOPE_EXIT
-	{
-		if (bOwnsMutator)
-		{
-			FUeremcpMutatorQueue::Release(ProjectKey, Request.RequestId);
-		}
-	};
-
+	FUeremcpMutatingDispatch MutatingDispatch;
 	if (!Request.bDryRun)
 	{
-		if (Request.ProjectPath.IsEmpty())
+		FString BlockingResponse;
+		if (!MutatingDispatch.TryBegin(
+			RequestJson,
+			false,
+			0,
+			false,
+			BlockingResponse))
 		{
-			return FUeremcpEnvelope::MakeRejection(
-				Request.RequestId,
-				TEXT("Non-dry create_spell requires project.path for per-project mutator ownership."));
+			return BlockingResponse;
 		}
-		const FUeremcpPathValidationResult ProjectPathResult =
-			FUeremcpPathPolicy::ValidateProjectPathMatch(
-				Request.ProjectPath,
-				FPaths::GetProjectFilePath());
-		if (!ProjectPathResult.bAllowed)
-		{
-			return FUeremcpEnvelope::MakeRejection(
-				Request.RequestId,
-				FString::Printf(TEXT("Project path rejected: %s"), *ProjectPathResult.Reason));
-		}
-
-		FUeremcpPermissionOptions PermissionOptions;
-		PermissionOptions.bDryRun = false;
-		// ParseRequest does not retain option presence; Core must supply it before
-		// Gameplay supports destructive modes.
-		// [VERIFIED: 1fd0eef:docs/proposals/ws-12-core-security-dispatcher-gate.md]
-		PermissionOptions.bDryRunWasExplicit = false;
-		const FUeremcpPermissionVerdict PermissionVerdict =
-			FUeremcpPermissionPolicy::Evaluate(
-				Request.Action,
-				Request.Mode,
-				PermissionOptions,
-				false);
-		if (!PermissionVerdict.bAllowed)
-		{
-			return FUeremcpEnvelope::MakeRejection(
-				Request.RequestId,
-				FString::Printf(TEXT("Permission denied: %s"), *PermissionVerdict.DenialReason));
-		}
-		RequiredTier = PermissionVerdict.RequiredTier;
-		ProjectKey = Request.ProjectPath;
-
-		if (!FUeremcpMutatorQueue::IsImplemented())
-		{
-			return FUeremcpEnvelope::MakeRejection(
-				Request.RequestId,
-				TEXT("Shared mutator queue is unavailable; create_spell fails closed without writing."));
-		}
-
-		const FUeremcpMutatorQueue::FAcquireResult Acquire =
-			FUeremcpMutatorQueue::TryAcquire(
-				ProjectKey,
-				Request.RequestId,
-				RequiredTier);
-		if (!Acquire.bAcquired)
-		{
-			if (Acquire.bQueued)
-			{
-				// Core/Transport does not yet own this domain waiter's ADR-0009
-				// lifecycle. Cancel before a terminal response so it cannot become
-				// an abandoned FIFO head.
-				// [VERIFIED: 1fd0eef:docs/proposals/ws-12-core-security-dispatcher-gate.md]
-				FUeremcpMutatorQueue::CancelQueued(ProjectKey, Request.RequestId);
-			}
-			return FUeremcpEnvelope::MakeRejection(
-				Request.RequestId,
-				FString::Printf(
-					TEXT("Mutator slot not acquired; no write occurred. %s%s"),
-					*Acquire.Reason,
-					Acquire.JobId.IsEmpty()
-						? TEXT("")
-						: *FString::Printf(
-							TEXT(" Queue job %s was cancelled because Core polling is not wired."),
-							*Acquire.JobId)));
-		}
-		bOwnsMutator = true;
 	}
 
 	FUeremcpResponse Response;
@@ -228,7 +152,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 			*Plan.RowName,
 			*Request.TargetAssetPath)
 		: FString::Printf(
-			TEXT("Acquired the shared mutator for RE spell row '%s', but performed no DataTable mutation because the Core dispatcher gate is not integrated."),
+			TEXT("Core mutating dispatch admitted RE spell row '%s'; DataTable mutation remains unimplemented, so no asset was changed."),
 			*Plan.RowName);
 	Response.UnderstoodAction = Request.Action;
 	Response.UnderstoodTarget = Request.TargetAssetPath;
@@ -268,48 +192,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	Response.CapabilityNotes.Add(
 		Request.bDryRun
 			? TEXT("dry_run intentionally did not acquire the mutator queue or write assets.")
-			: TEXT("Mutator ownership was held through terminal audit; DataTable write/save/re-read remain withheld pending the shared Core dispatcher."));
-
-	bool bAuditAppended = false;
-	FString AuditError;
-	bool bMutatorReleased = !bOwnsMutator;
-	if (bOwnsMutator)
-	{
-		FUeremcpAuditRecord AuditRecord;
-		AuditRecord.RequestId = Request.RequestId;
-		AuditRecord.IdempotencyKey = Request.IdempotencyKey;
-		AuditRecord.Action = Request.Action;
-		AuditRecord.Mode = Request.Mode;
-		AuditRecord.Status = Response.Status;
-		AuditRecord.TargetAssetPath = Request.TargetAssetPath;
-		AuditRecord.bDryRun = false;
-		AuditRecord.bAtomic = Request.bAtomic;
-		AuditRecord.RequiredTier = RequiredTier;
-		AuditRecord.ProjectPath = Request.ProjectPath;
-		bAuditAppended = FUeremcpAuditLog::Append(
-			AuditRecord,
-			FUeremcpPathPolicy::RootsFromProject(),
-			AuditError);
-		++Response.Metrics.InternalOperations;
-		if (!bAuditAppended)
-		{
-			Response.CapabilityNotes.Add(
-				FString::Printf(TEXT("Terminal audit append failed: %s"), *AuditError));
-		}
-
-		bMutatorReleased =
-			FUeremcpMutatorQueue::Release(ProjectKey, Request.RequestId);
-		bOwnsMutator = !bMutatorReleased;
-		++Response.Metrics.InternalOperations;
-		if (!bMutatorReleased)
-		{
-			Response.Status = TEXT("failed_validation");
-			Response.Summary =
-				TEXT("No DataTable mutation occurred, but mutator ownership could not be released cleanly.");
-			Response.CapabilityNotes.Add(
-				TEXT("Mutator release failed; the request cannot report a clean terminal preflight."));
-		}
-	}
+			: TEXT("FUeremcpMutatingDispatch owns permission, path, queue, audit, and release; no domain mutation success is claimed."));
 
 	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
 	Validation->SetNullField(TEXT("compiled"));
@@ -323,15 +206,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	ChecksPerformed.Add(TEXT("deterministic_datatable_write_plan_prepared"));
 	if (!Request.bDryRun)
 	{
-		ChecksPerformed.Add(TEXT("mutator_queue_acquired"));
-		ChecksPerformed.Add(
-			bAuditAppended
-				? TEXT("terminal_audit_appended")
-				: TEXT("terminal_audit_append_failed"));
-		ChecksPerformed.Add(
-			bMutatorReleased
-				? TEXT("mutator_queue_released")
-				: TEXT("mutator_queue_release_failed"));
+		ChecksPerformed.Add(TEXT("core_mutating_dispatch_admitted"));
 	}
 	Validation->SetArrayField(TEXT("checks_performed"), StringValues(ChecksPerformed));
 	TArray<FString> ChecksSkipped = {
@@ -343,7 +218,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	ChecksSkipped.Insert(
 		Request.bDryRun
 			? TEXT("datatable_upsert: dry_run planning path does not mutate")
-			: TEXT("datatable_upsert: shared Core dispatcher gate is not integrated"),
+			: TEXT("datatable_upsert: gameplay DataTable executor is not implemented"),
 		0);
 	Validation->SetArrayField(TEXT("checks_skipped"), StringValues(ChecksSkipped));
 
@@ -355,7 +230,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		TEXT("detail"),
 		Request.bDryRun
 			? TEXT("Dry-run preflight performed no mutation; nothing required discard.")
-			: TEXT("Queue-gated preflight performed no mutation; rollback was not entered."));
+			: TEXT("Dispatcher-gated preflight performed no mutation; rollback was not entered."));
 
 	TSharedPtr<FJsonObject> TraceStep = MakeShared<FJsonObject>();
 	TraceStep->SetStringField(TEXT("step"), TEXT("plan_create_spell"));
@@ -380,5 +255,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	Response.ExtraFields->SetObjectField(TEXT("rollback"), Rollback);
 	Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
 
-	return FUeremcpEnvelope::SerializeResponse(Response);
+	return Request.bDryRun
+		? FUeremcpEnvelope::SerializeResponse(Response)
+		: MutatingDispatch.Complete(Response);
 }

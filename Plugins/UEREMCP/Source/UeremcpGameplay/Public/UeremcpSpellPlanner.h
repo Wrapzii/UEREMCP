@@ -71,7 +71,7 @@ public:
 		FString& OutError);
 
 	/**
-	 * Prepare the exact DataTable write intent behind the shared Core dispatcher gate.
+	 * Prepare the exact DataTable write intent consumed after Core dispatcher admission.
 	 * Package-to-object naming uses FPackageName::GetLongPackageAssetName
 	 * [VERIFIED: PackageName.h:178-184]. This method performs no editor reads or writes.
 	 */

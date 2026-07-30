@@ -22,6 +22,7 @@ public class UeremcpGameplay : ModuleRules
 
 			"UeremcpProtocol",
 			"UeremcpSecurity",
+			"UeremcpCore",
 
 			// Agent-facing declaration only.
 			// [VERIFIED: ToolsetDefinition.h:142-158 in docs/GROUNDED_FACTS.md §2.1]

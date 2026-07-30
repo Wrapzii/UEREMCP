@@ -573,9 +573,7 @@ bool FUeremcpSpellPlanner::BuildTableWritePlan(
 	OutWritePlan.IdempotencyKey = Options.IdempotencyKey;
 	OutWritePlan.bCanClaimValidatedMutation =
 		!Options.bDryRun && Options.bSave && Options.bValidate;
-	OutWritePlan.RequiredRuntimeGates = {
-		TEXT("UeremcpCore.mutating_dispatcher"),
-	};
+	OutWritePlan.RequiredRuntimeGates.Reset();
 	OutWritePlan.OrderedSteps = {
 		TEXT("acquire_shared_mutator"),
 		TEXT("reject_foreign_active_sandbox"),

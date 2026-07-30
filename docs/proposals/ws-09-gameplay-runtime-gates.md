@@ -1,7 +1,7 @@
 # Proposal: unblock guarded Gameplay mutation
 
 - **From:** WS-09
-- **To:** WS-03 (Core dispatcher), WS-01/WS-05 (shared example)
+- **To:** WS-01/WS-05 (shared example)
 - **Date:** 2026-07-30
 - **Status:** partially resolved
 - **Blocks:** executable `create_spell` DataTable upsert and runtime tests
@@ -22,8 +22,8 @@ WS-09 now owns an independently testable `create_spell` preflight:
 
 The planner maps only fields read from the RE row definition
 `[VERIFIED: REAbilityTypes.h:85-247]`. The tool returns
-`partially_completed` and does not mutate assets while the Core dispatcher gate
-below is open.
+`partially_completed` and does not mutate assets while the owned DataTable executor
+remains incomplete.
 Dry-run preflight explicitly returns empty `changes`, null write-validation fields,
 rollback unavailable/not performed, and a planning execution trace. It never emits
 `created_and_validated` or `modified_and_validated`.
@@ -42,35 +42,38 @@ job IDs, cancellation, and append-only audit on commit `1fd0eef`
 `[VERIFIED: 1fd0eef:Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpMutatorQueue.h;
 1fd0eef:Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpAuditLog.h]`.
 
-WS-09 now routes every non-dry request through permission evaluation, exact project
-path validation, `TryAcquire(ProjectPath, RequestId, Tier)`, terminal audit append,
-and owner release. Acquisition failure is fail-closed. Because Core does not yet map
-the stable waiter ID to ADR-0009 polling, WS-09 cancels the waiter before returning a
-terminal busy rejection; no abandoned FIFO head remains. `dry_run` does not acquire
-and does not mutate.
+WS-09 consumes this queue only through `FUeremcpMutatingDispatch`; it does not fork
+acquisition, waiter polling, audit, or release policy. Acquisition failure is
+fail-closed, and queued requests return Core's stable ADR-0009 job response.
+`dry_run` does not mutate.
 
-## Remaining runtime gate — WS-03 Core dispatcher
+## Resolved — WS-03 Core dispatcher
 
-The shared mutating dispatcher requested by WS-12 is still open. Core must preserve
-explicit destructive-dry-run intent, apply the shared permission/path gate before
-domain work, own queue-job polling/cancellation, and keep queue ownership across
-sandbox resolution, domain mutation, verification, response construction, and audit
-`[VERIFIED: 1fd0eef:docs/proposals/ws-12-core-security-dispatcher-gate.md]`.
+WS-03 landed `FUeremcpMutatingDispatch` on orchestration commit `5b728ef`. It
+preserves explicit destructive-dry-run intent, applies permission and path policy,
+returns queued ADR-0009 job responses, holds the mutator through terminal audit, and
+releases by RAII/`Complete`
+`[VERIFIED: 5b728ef:Plugins/UEREMCP/Source/UeremcpCore/Public/UeremcpMutatingDispatch.h;
+5b728ef:Plugins/UEREMCP/Source/UeremcpCore/Private/UeremcpMutatingDispatch.cpp]`.
 
-Until that shared lifecycle exists, WS-09 deliberately stops after queue-gated
-planning and terminal audit. It does not enter FileSandbox or touch a DataTable.
-After Core integration, the remaining owned executor steps are:
+WS-09 non-dry `create_spell` now calls `TryBegin` before domain mutation and returns
+the blocking response unchanged when permission, path, or queue admission fails.
+Every admitted terminal response is returned through `Complete`; Gameplay no longer
+forks queue or audit logic. Dry-run remains a no-mutation planning path.
 
-1. acquire write slot;
-2. enter the proven Content/ FileSandbox path;
-3. create/load the test DataTable with row struct `/Script/RE.REAbilityDef`;
-4. row-upsert only (never whole-table delete/recreate);
-5. save;
-6. re-read and compare every normalized row field;
-7. persist or full-discard;
-8. append terminal audit while still owning the queue;
-9. release the queue;
-10. return `*_validated` only after successful re-read.
+## Remaining owned implementation residual
+
+No upstream runtime gate remains. The following WS-09-owned DataTable executor work
+is still required before non-dry requests may report mutation:
+
+1. enter the proven Content/ FileSandbox path while the dispatcher holds the slot;
+2. create/load the test DataTable with row struct `/Script/RE.REAbilityDef`;
+3. row-upsert only (never whole-table delete/recreate);
+4. save;
+5. re-read and compare every normalized row field;
+6. persist or full-discard;
+7. populate the terminal response and call dispatcher `Complete`;
+8. return `*_validated` only after successful re-read.
 
 The prepared plan captures `request_id` for queue ownership, mode, `dry_run`,
 atomicity, save, validation, rollback, queue timeout, revision-conflict policy,
@@ -106,8 +109,8 @@ WS-09 will not edit the shared example. Acceptance is validating the embedded
 
 ## Integration/compile residual outside WS-09
 
-The WS-09 branch intentionally does not copy WS-12-owned files; compilation of the
-new explicit project-key overload therefore requires integration of `1fd0eef`.
+The WS-09 branch intentionally does not copy WS-12/WS-03-owned files; compilation of
+the dispatcher path therefore requires integration of `1fd0eef` and `5b728ef`.
 An earlier integrated build also stopped before compiling Gameplay because
 `UeremcpMaterial.Build.cs` referenced an unresolved `Editor` module
 `[VERIFIED-RUNTIME: Build.bat reported "Could not find definition for module

@@ -151,9 +151,8 @@ bool FUeremcpSpellPlannerValidTest::RunTest(const FString& Parameters)
 			&& WritePlan.bAtomic
 			&& WritePlan.bRollbackOnFailure);
 	TestTrue(
-		TEXT("only remaining runtime gate is shared Core dispatcher"),
-		WritePlan.RequiredRuntimeGates.Num() == 1
-			&& WritePlan.RequiredRuntimeGates[0] == TEXT("UeremcpCore.mutating_dispatcher"));
+		TEXT("no upstream runtime gate remains in write plan"),
+		WritePlan.RequiredRuntimeGates.IsEmpty());
 	return true;
 }
 
@@ -459,14 +458,8 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 					CheckNames.Add(Check->AsString());
 				}
 				TestTrue(
-					TEXT("queue acquisition recorded"),
-					CheckNames.Contains(TEXT("mutator_queue_acquired")));
-				TestTrue(
-					TEXT("terminal audit recorded"),
-					CheckNames.Contains(TEXT("terminal_audit_appended")));
-				TestTrue(
-					TEXT("queue release recorded"),
-					CheckNames.Contains(TEXT("mutator_queue_released")));
+					TEXT("Core dispatcher admission recorded"),
+					CheckNames.Contains(TEXT("core_mutating_dispatch_admitted")));
 			}
 		}
 	}
@@ -487,14 +480,23 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 	TestTrue(TEXT("contended response parses"), ContendedResponse.IsValid());
 	if (ContendedResponse.IsValid())
 	{
+		TestEqual(
+			TEXT("contended request returns queued partial"),
+			ContendedResponse->GetStringField(TEXT("status")),
+			FString(TEXT("partially_completed")));
 		TestTrue(
-			TEXT("contended request fails closed"),
-			ContendedResponse->GetStringField(TEXT("summary")).Contains(TEXT("no write occurred")));
+			TEXT("queued response includes poll job"),
+			ContendedResponse->HasTypedField<EJson::Object>(TEXT("job")));
 	}
 	TestEqual(
-		TEXT("terminal rejection cancels abandoned waiter"),
+		TEXT("dispatcher retains waiter for polling"),
 		FUeremcpMutatorQueue::PendingCount(FPaths::GetProjectFilePath()),
-		0);
+		1);
+	TestTrue(
+		TEXT("test cancels retained waiter"),
+		FUeremcpMutatorQueue::CancelQueued(
+			FPaths::GetProjectFilePath(),
+			TEXT("ws09-queued-cancel")));
 	TestTrue(
 		TEXT("test blocker releases queue"),
 		FUeremcpMutatorQueue::Release(
