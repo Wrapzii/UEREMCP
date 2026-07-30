@@ -381,15 +381,23 @@ namespace
 			if (Has(TEXT("panning_textures")) && UvChain && FlowSpeed && MainTextureSample)
 			{
 				UMaterialExpressionPanner* PannerExpr = AddExpression<UMaterialExpressionPanner>(-350, 660);
-				if (!PannerExpr)
+				UMaterialExpressionConstant* PannerSpeedY =
+					AddExpression<UMaterialExpressionConstant>(-500, 720);
+				UMaterialExpressionAppendVector* PannerSpeed =
+					AddExpression<UMaterialExpressionAppendVector>(-420, 690);
+				if (!PannerExpr || !PannerSpeedY || !PannerSpeed)
 				{
 					Result.Error = TEXT("Failed to create panner node.");
 					return false;
 				}
 				PannerExpr->SpeedX = 0.5f;
 				PannerExpr->SpeedY = 0.0f;
+				PannerSpeedY->R = 0.0f;
+				// Panner Speed is float2; FlowSpeed is scalar [VERIFIED: MaterialExpressionPanner.h:23-24].
 				if (!Connect(UvChain, TEXT(""), PannerExpr, TEXT("Coordinate")) ||
-					!Connect(FlowSpeed, TEXT(""), PannerExpr, TEXT("Speed")))
+					!ConnectToInputWithFallback(FlowSpeed, TEXT(""), PannerSpeed, {TEXT("A"), TEXT("Input1"), TEXT("")}) ||
+					!ConnectToInputWithFallback(PannerSpeedY, TEXT(""), PannerSpeed, {TEXT("B"), TEXT("Input2"), TEXT("")}) ||
+					!ConnectToInputWithFallback(PannerSpeed, TEXT(""), PannerExpr, {TEXT("Speed"), TEXT("")}))
 				{
 					Result.Error = TEXT("Failed to wire panning_textures.");
 					return false;
@@ -418,15 +426,22 @@ namespace
 			if (Has(TEXT("flow_maps")) && TexCoord && FlowSpeed && FlowMapSample)
 			{
 				UMaterialExpressionPanner* FlowPanner = AddExpression<UMaterialExpressionPanner>(-350, 780);
-				if (!FlowPanner)
+				UMaterialExpressionConstant* FlowPannerSpeedY =
+					AddExpression<UMaterialExpressionConstant>(-500, 840);
+				UMaterialExpressionAppendVector* FlowPannerSpeed =
+					AddExpression<UMaterialExpressionAppendVector>(-420, 810);
+				if (!FlowPanner || !FlowPannerSpeedY || !FlowPannerSpeed)
 				{
 					Result.Error = TEXT("Failed to create flow_maps panner node.");
 					return false;
 				}
 				FlowPanner->SpeedX = 0.35f;
 				FlowPanner->SpeedY = 0.35f;
+				FlowPannerSpeedY->R = 0.35f;
 				if (!Connect(TexCoord, TEXT(""), FlowPanner, TEXT("Coordinate")) ||
-					!Connect(FlowSpeed, TEXT(""), FlowPanner, TEXT("Speed")) ||
+					!ConnectToInputWithFallback(FlowSpeed, TEXT(""), FlowPannerSpeed, {TEXT("A"), TEXT("Input1"), TEXT("")}) ||
+					!ConnectToInputWithFallback(FlowPannerSpeedY, TEXT(""), FlowPannerSpeed, {TEXT("B"), TEXT("Input2"), TEXT("")}) ||
+					!ConnectToInputWithFallback(FlowPannerSpeed, TEXT(""), FlowPanner, {TEXT("Speed"), TEXT("")}) ||
 					!Connect(FlowPanner, TEXT(""), FlowMapSample, TEXT("Coordinates")))
 				{
 					Result.Error = TEXT("Failed to wire flow_maps.");
@@ -485,7 +500,7 @@ namespace
 					Result.Error = TEXT("Failed to create erosion one-minus.");
 					return false;
 				}
-				if (!Connect(DissolveAmount, TEXT(""), OneMinus, TEXT("Input")))
+				if (!ConnectToInputWithFallback(DissolveAmount, TEXT(""), OneMinus, {TEXT("Input"), TEXT("")}))
 				{
 					Result.Error = TEXT("Failed to wire DissolveAmount to erosion.");
 					return false;
@@ -511,8 +526,18 @@ namespace
 					return false;
 				}
 				DepthFadeExpr->OpacityDefault = 1.0f;
-				if (!Connect(OpacityChain, TEXT(""), DepthFadeExpr, TEXT("InOpacity")) ||
-					!Connect(DepthFadeParam, TEXT(""), DepthFadeExpr, TEXT("FadeDistance")))
+				// DepthFade input pin is "Opacity" via GetInputName(0), not the UPROPERTY name InOpacity
+				// [VERIFIED: MaterialExpressionDepthFade.h:39-44; MaterialEditingLibrary.cpp:68-72].
+				if (!ConnectToInputWithFallback(
+						OpacityChain,
+						TEXT(""),
+						DepthFadeExpr,
+						{TEXT("Opacity"), TEXT("InOpacity"), TEXT("")})
+					|| !ConnectToInputWithFallback(
+						DepthFadeParam,
+						TEXT(""),
+						DepthFadeExpr,
+						{TEXT("FadeDistance"), TEXT("")}))
 				{
 					Result.Error = TEXT("Failed to wire depth_fade.");
 					return false;

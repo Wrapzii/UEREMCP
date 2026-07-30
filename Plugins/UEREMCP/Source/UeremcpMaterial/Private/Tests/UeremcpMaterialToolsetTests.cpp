@@ -463,6 +463,87 @@ bool FUeremcpMaterialCreateVfxProjectileCoreTest::RunTest(const FString& Paramet
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialFireballRibbonTrailPocTest,
+	"UeremcpMaterial.Toolset.CreateVfxMaterial.FireballRibbonTrailPoc",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialFireballRibbonTrailPocTest::RunTest(const FString& Parameters)
+{
+	const FString ExpectedMi =
+		TEXT("/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_ribbon_trail");
+	UeremcpMaterialTests::DeleteIfExists(ExpectedMi);
+
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	if (Subsystem)
+	{
+		const TArray<FString> PocMasters = Subsystem->ListAssets(
+			UeremcpMaterialPaths::MastersFolderForContentRoot(UeremcpMaterialPaths::PocContentRoot));
+		for (const FString& AssetPath : PocMasters)
+		{
+			if (FPaths::GetBaseFilename(AssetPath).StartsWith(TEXT("M_Ueremcp_ProjTrail")))
+			{
+				Subsystem->DeleteAsset(AssetPath);
+			}
+		}
+	}
+
+	const TSharedPtr<FJsonObject> CreateSpec = MakeShared<FJsonObject>();
+	CreateSpec->SetStringField(TEXT("purpose"), TEXT("elemental_projectile_trail"));
+	CreateSpec->SetStringField(TEXT("element"), TEXT("fire"));
+	TArray<TSharedPtr<FJsonValue>> Features;
+	Features.Add(MakeShared<FJsonValueString>(TEXT("panning_textures")));
+	Features.Add(MakeShared<FJsonValueString>(TEXT("erosion")));
+	Features.Add(MakeShared<FJsonValueString>(TEXT("depth_fade")));
+	Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_color")));
+	CreateSpec->SetArrayField(TEXT("features"), Features);
+
+	const FUeremcpMaterialCreateResult Result =
+		UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraSystem(
+			TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball"),
+			TEXT("ribbon_trail"),
+			CreateSpec,
+			true,
+			true,
+			true);
+
+	TestTrue(TEXT("service bSuccess"), Result.bSuccess);
+	TestEqual(TEXT("PrimaryAsset path"), Result.PrimaryAsset, ExpectedMi);
+	TestFalse(
+		TEXT("trail master graph completes"),
+		Result.Summary.Contains(TEXT("Master material setup incomplete")));
+	UeremcpMaterialTests::ExpectHonestValidatedCreateStatus(
+		this,
+		FString::Printf(TEXT("{\"status\":\"%s\"}"), *Result.Status),
+		Result.Status);
+
+	FString VerifyError;
+	TestTrue(
+		TEXT("PrimaryAsset loads as UMaterialInterface"),
+		UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(Result.PrimaryAsset, VerifyError));
+
+	if (Subsystem)
+	{
+		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, ExpectedMi, Result.Status);
+	}
+
+	UeremcpMaterialTests::DeleteIfExists(ExpectedMi);
+	if (Subsystem)
+	{
+		const TArray<FString> PocMasters = Subsystem->ListAssets(
+			UeremcpMaterialPaths::MastersFolderForContentRoot(UeremcpMaterialPaths::PocContentRoot));
+		for (const FString& AssetPath : PocMasters)
+		{
+			if (FPaths::GetBaseFilename(AssetPath).StartsWith(TEXT("M_Ueremcp_ProjTrail")))
+			{
+				Subsystem->DeleteAsset(AssetPath);
+			}
+		}
+	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpMaterialCreateVfxProjectileTrailTest,
 	"UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileTrail",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
@@ -491,17 +572,26 @@ bool FUeremcpMaterialCreateVfxProjectileTrailTest::RunTest(const FString& Parame
 	FString Status;
 	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
 	UeremcpMaterialTests::ExpectHonestValidatedCreateStatus(this, Json, Status);
+	TestFalse(
+		TEXT("trail master graph completes"),
+		Json.Contains(TEXT("Master material setup incomplete")));
+
+	if (Status == TEXT("created_and_validated") || Status == TEXT("modified_and_validated"))
+	{
+		const FString FlowMapPath =
+			TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map");
+		UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+		TestNotNull(TEXT("EditorAssetSubsystem"), Subsystem);
+		if (Subsystem)
+		{
+			TestTrue(TEXT("generated FlowMap texture exists"), Subsystem->DoesAssetExist(FlowMapPath));
+		}
+	}
 
 	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
 	if (Subsystem)
 	{
 		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Target, Status);
-		if (Status == TEXT("created_and_validated") || Status == TEXT("modified_and_validated"))
-		{
-			const FString FlowMapPath =
-				TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map");
-			TestTrue(TEXT("generated FlowMap texture exists"), Subsystem->DoesAssetExist(FlowMapPath));
-		}
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
