@@ -328,8 +328,23 @@ bool FUeremcpNiagaraPocBFireballMaterials::RunTest(const FString& Parameters)
 
 	bool bReportedCreated = false;
 	bool bReportedReused = false;
+	bool bB1Gate = false;
+	bool bB3Gate = false;
 	bool bB4Gate = false;
+	bool bB5Gate = false;
+	bool bB6Gate = false;
+	bool bB8AssetsSavedGate = false;
+	bool bB9ManifestPresentGate = false;
+	bool bB9ManifestCompleteGate = false;
 	bool bBindingsVerified = false;
+	TestTrue(
+		TEXT("B1 single-request gate is true"),
+		(*Gates)->TryGetBoolField(TEXT("B1_single_request_complete"), bB1Gate)
+			&& bB1Gate);
+	TestTrue(
+		TEXT("B3 six-emitter gate is true"),
+		(*Gates)->TryGetBoolField(TEXT("B3_six_emitters_present"), bB3Gate)
+			&& bB3Gate);
 	TestTrue(
 		TEXT("B2 created-assets verdict present"),
 		(*Gates)->TryGetBoolField(TEXT("B2_created_assets_reported"), bReportedCreated));
@@ -344,6 +359,26 @@ bool FUeremcpNiagaraPocBFireballMaterials::RunTest(const FString& Parameters)
 		(*Gates)->TryGetBoolField(TEXT("B4_material_bindings_verified"), bB4Gate)
 			&& bB4Gate);
 	TestTrue(
+		TEXT("B5 user-parameters gate is true"),
+		(*Gates)->TryGetBoolField(TEXT("B5_user_parameters_present"), bB5Gate)
+			&& bB5Gate);
+	TestTrue(
+		TEXT("B6 compile-awaited gate is true"),
+		(*Gates)->TryGetBoolField(TEXT("B6_compile_awaited"), bB6Gate)
+			&& bB6Gate);
+	TestTrue(
+		TEXT("B8 assets-saved gate is true"),
+		(*Gates)->TryGetBoolField(TEXT("B8_assets_saved"), bB8AssetsSavedGate)
+			&& bB8AssetsSavedGate);
+	TestTrue(
+		TEXT("B9 change-manifest-present gate is true"),
+		(*Gates)->TryGetBoolField(TEXT("B9_change_manifest_present"), bB9ManifestPresentGate)
+			&& bB9ManifestPresentGate);
+	TestTrue(
+		TEXT("B9 change-manifest-complete gate is true"),
+		(*Gates)->TryGetBoolField(TEXT("B9_change_manifest_complete"), bB9ManifestCompleteGate)
+			&& bB9ManifestCompleteGate);
+	TestTrue(
 		TEXT("validation material binding re-read is true"),
 		(*Validation)->TryGetBoolField(TEXT("material_bindings_verified"), bBindingsVerified)
 			&& bBindingsVerified);
@@ -355,8 +390,17 @@ bool FUeremcpNiagaraPocBFireballMaterials::RunTest(const FString& Parameters)
 	}
 
 	const bool bPass = !HasAnyErrors();
+	AddInfo(*FString::Printf(
+		TEXT("UEREMCP_POC_B_FIREBALL_GATES B1=%s B3=%s B5=%s B6=%s B8_assets_saved=%s B9_present=%s B9_complete=%s"),
+		bB1Gate ? TEXT("PASS") : TEXT("FAIL"),
+		bB3Gate ? TEXT("PASS") : TEXT("FAIL"),
+		bB5Gate ? TEXT("PASS") : TEXT("FAIL"),
+		bB6Gate ? TEXT("PASS") : TEXT("FAIL"),
+		bB8AssetsSavedGate ? TEXT("PASS") : TEXT("FAIL"),
+		bB9ManifestPresentGate ? TEXT("PASS") : TEXT("FAIL"),
+		bB9ManifestCompleteGate ? TEXT("PASS") : TEXT("FAIL")));
 	AddInfo(bPass
-		? TEXT("UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_b2_b4")
+		? TEXT("UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_expanded_gates")
 		: TEXT("UEREMCP_POC_B_FIREBALL_OUTCOME=FAIL reason=assertion_failure"));
 	return bPass;
 }
