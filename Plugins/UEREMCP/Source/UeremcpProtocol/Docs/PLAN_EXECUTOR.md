@@ -42,6 +42,17 @@ Required failure follows `on_failure`; atomic plans roll back when
 `rollback_on_failure` is true or `on_failure` is `rollback_all`. Optional
 failures do not stop independent work, but their dependents are skipped.
 
+## Domain registration
+
+See `HANDLER_REGISTRATION.md` for the exact `RegisterAction` / shutdown pattern
+and the minimum action list for current templates.
+
+## Offline mirror
+
+Python `Tests/py/ueremcp_protocol/plan_executor.py` mirrors this interpreter for
+outside-editor regression. Run via `Tests/py/run_tests.py`
+(`test_plan_executor.py`). Python green is not C++ Automation parity.
+
 ## Deliberate limitations
 
 - No recursive `execute_plan` action registration.
@@ -50,3 +61,5 @@ failures do not stop independent work, but their dependents are skipped.
   forced inline so `$ref` never reads an unfinished result.
 - Template `validation_rules` remain a separate post-step contract owned by
   WS-15/WS-11.
+- Production `timeout_ms` dispatcher for long single operations is Core/Transport
+  (`docs/proposals/ws-05-timeout-dispatcher.md`), not this interpreter.

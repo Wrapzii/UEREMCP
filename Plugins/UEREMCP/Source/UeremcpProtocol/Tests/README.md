@@ -54,3 +54,6 @@ ADR-0008 interpreter tests live in
 `UEREMCP.Protocol.PlanExecutor`. They cover fail-closed preflight, stable
 dependency dispatch, response `$ref` substitution, consolidated metrics/change
 results, one-call accounting, and confirmed cross-operation rollback.
+
+Offline Python mirror: `Tests/py/test_plan_executor.py` (same semantics;
+includes continue_independent, optional failures, cycles, and atomic preflight).
