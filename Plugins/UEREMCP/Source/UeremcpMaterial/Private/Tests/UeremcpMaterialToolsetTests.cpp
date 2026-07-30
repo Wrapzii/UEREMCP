@@ -259,6 +259,11 @@ namespace UeremcpMaterialTests
 		UeremcpMaterialFeatures::FFeatureGraphVerifyResult Verify;
 		const bool bGraphOk = UeremcpMaterialFeatures::VerifyFeatureGraph(Material, Features, Verify);
 		Test->TestTrue(TEXT("VerifyFeatureGraph succeeds"), bGraphOk);
+		Test->TestTrue(TEXT("master emissive connected"), Verify.bEmissiveConnected);
+		Test->TestTrue(TEXT("master opacity connected"), Verify.bOpacityConnected);
+		Test->TestTrue(TEXT("master consumes Niagara Particle Color"), Verify.bParticleColorConsumed);
+		Test->TestTrue(TEXT("master uses additive blend"), Verify.bAdditiveBlend);
+		Test->TestTrue(TEXT("master uses unlit shading"), Verify.bUnlit);
 
 		const bool* bWired = Verify.FeatureWired.Find(FeatureToken);
 		Test->TestTrue(
@@ -634,6 +639,21 @@ bool FUeremcpMaterialCreateVfxProjectileCoreTest::RunTest(const FString& Paramet
 		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Target, Status);
 	}
 
+	const FString MasterPath =
+		UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
+	TestFalse(TEXT("core master dependency reported"), MasterPath.IsEmpty());
+	UeremcpMaterialTests::VerifyMasterFeatureWired(
+		this,
+		MasterPath,
+		{
+			TEXT("radial_falloff"),
+			TEXT("animated_noise"),
+			TEXT("fresnel"),
+			TEXT("dynamic_color"),
+			TEXT("dynamic_intensity"),
+		},
+		TEXT("dynamic_color"));
+
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
 	return true;
 }
@@ -711,6 +731,22 @@ bool FUeremcpMaterialFireballRibbonTrailPocTest::RunTest(const FString& Paramete
 	{
 		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, ExpectedMi, Result.Status);
 	}
+
+	const TArray<FString> TrailFeatures = {
+		TEXT("panning_textures"),
+		TEXT("erosion"),
+		TEXT("depth_fade"),
+		TEXT("dynamic_color"),
+	};
+	const FString TrailMasterPath = UeremcpMaterialFeatures::ResolveMasterPackagePath(
+		TEXT("elemental_projectile_trail"),
+		TrailFeatures,
+		UeremcpMaterialPaths::PocContentRoot);
+	UeremcpMaterialTests::VerifyMasterFeatureWired(
+		this,
+		TrailMasterPath,
+		TrailFeatures,
+		TEXT("panning_textures"));
 
 	UeremcpMaterialTests::DeleteIfExists(ExpectedMi);
 	if (Subsystem)

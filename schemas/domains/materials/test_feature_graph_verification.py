@@ -64,6 +64,31 @@ class FeatureGraphVerificationTests(unittest.TestCase):
         self.assertIn('TEXT("flipbook_subuv")', self.features_cpp)
         self.assertIn("SubUvSamples.Num() > 0", self.features_cpp)
 
+    def test_vfx_master_consumes_particle_color_in_both_outputs(self) -> None:
+        self.assertIn("UMaterialExpressionParticleColor", self.graph_cpp)
+        self.assertIn('NiagaraParticleColor, TEXT("RGB")', self.graph_cpp)
+        self.assertIn('NiagaraParticleColor, TEXT("A")', self.graph_cpp)
+        self.assertIn("MP_EmissiveColor", self.graph_cpp)
+        self.assertIn("MP_Opacity", self.graph_cpp)
+        self.assertIn(
+            "ExpressionTreeContains<UMaterialExpressionParticleColor>(EmissiveRoot",
+            self.features_cpp,
+        )
+        self.assertIn(
+            "ExpressionTreeContains<UMaterialExpressionParticleColor>(OpacityRoot",
+            self.features_cpp,
+        )
+
+    def test_vfx_master_requires_additive_unlit_graph(self) -> None:
+        self.assertIn("Material->BlendMode = BLEND_Additive", self.graph_cpp)
+        self.assertIn("Material->SetShadingModel(MSM_Unlit)", self.graph_cpp)
+        self.assertIn("Material->BlendMode == BLEND_Additive", self.features_cpp)
+        self.assertIn("HasShadingModel(MSM_Unlit)", self.features_cpp)
+
+    def test_fireball_modulators_preserve_nonzero_emissive_floor(self) -> None:
+        for name in ("NoiseFloor", "FresnelFloor", "TextureFloor"):
+            self.assertIn(f"{name}->R = 0.35f", self.graph_cpp)
+
     def test_distortion_graph_wires_bump_offset_and_strength(self) -> None:
         self.assertIn('Has(TEXT("distortion"))', self.graph_cpp)
         self.assertIn("UMaterialExpressionBumpOffset", self.graph_cpp)

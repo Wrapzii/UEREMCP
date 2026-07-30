@@ -11,6 +11,7 @@
 #include "Materials/MaterialExpressionTextureSampleParameterSubUV.h"
 #include "Materials/MaterialExpressionOneMinus.h"
 #include "Materials/MaterialExpressionPanner.h"
+#include "Materials/MaterialExpressionParticleColor.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionSphereMask.h"
 #include "Misc/Crc.h"
@@ -22,6 +23,32 @@ namespace
 	static bool FeatureSetContains(const TSet<FString>& Set, const FString& Token)
 	{
 		return Set.Contains(Token);
+	}
+
+	template<typename TExpression>
+	static bool ExpressionTreeContains(
+		const UMaterialExpression* Expression,
+		TSet<const UMaterialExpression*>& Visited)
+	{
+		if (!Expression || Visited.Contains(Expression))
+		{
+			return false;
+		}
+		Visited.Add(Expression);
+		if (Expression->IsA<TExpression>())
+		{
+			return true;
+		}
+
+		for (int32 InputIndex = 0; InputIndex < Expression->CountInputs(); ++InputIndex)
+		{
+			const FExpressionInput* Input = Expression->GetInput(InputIndex);
+			if (Input && ExpressionTreeContains<TExpression>(Input->Expression, Visited))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 }
 
@@ -170,10 +197,14 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 		return false;
 	}
 
-	OutResult.bEmissiveConnected =
-		UMaterialEditingLibrary::GetMaterialPropertyInputNode(Material, MP_EmissiveColor) != nullptr;
-	OutResult.bOpacityConnected =
-		UMaterialEditingLibrary::GetMaterialPropertyInputNode(Material, MP_Opacity) != nullptr;
+	const UMaterialExpression* EmissiveRoot =
+		UMaterialEditingLibrary::GetMaterialPropertyInputNode(Material, MP_EmissiveColor);
+	const UMaterialExpression* OpacityRoot =
+		UMaterialEditingLibrary::GetMaterialPropertyInputNode(Material, MP_Opacity);
+	OutResult.bEmissiveConnected = EmissiveRoot != nullptr;
+	OutResult.bOpacityConnected = OpacityRoot != nullptr;
+	OutResult.bAdditiveBlend = Material->BlendMode == BLEND_Additive;
+	OutResult.bUnlit = Material->GetShadingModels().HasShadingModel(MSM_Unlit);
 
 	TArray<const UMaterialExpressionSphereMask*> SphereMasks;
 	Material->GetAllExpressionsOfType(SphereMasks);
@@ -194,6 +225,14 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 	Material->GetAllExpressionsOfType(SubUvSamples);
 	TArray<const UMaterialExpressionBumpOffset*> BumpOffsets;
 	Material->GetAllExpressionsOfType(BumpOffsets);
+	TArray<const UMaterialExpressionParticleColor*> ParticleColors;
+	Material->GetAllExpressionsOfType(ParticleColors);
+	TSet<const UMaterialExpression*> EmissiveVisited;
+	TSet<const UMaterialExpression*> OpacityVisited;
+	OutResult.bParticleColorConsumed =
+		ParticleColors.Num() > 0 &&
+		ExpressionTreeContains<UMaterialExpressionParticleColor>(EmissiveRoot, EmissiveVisited) &&
+		ExpressionTreeContains<UMaterialExpressionParticleColor>(OpacityRoot, OpacityVisited);
 
 	const TSet<FString> FeatureSet(Features);
 	OutResult.FeatureWired.Add(TEXT("radial_falloff"), FeatureSetContains(FeatureSet, TEXT("radial_falloff")) ? SphereMasks.Num() > 0 : true);
@@ -208,7 +247,11 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 	OutResult.FeatureWired.Add(TEXT("dynamic_color"), true);
 	OutResult.FeatureWired.Add(TEXT("dynamic_intensity"), true);
 
-	if (!OutResult.bEmissiveConnected)
+	if (!OutResult.bEmissiveConnected ||
+		!OutResult.bOpacityConnected ||
+		!OutResult.bParticleColorConsumed ||
+		!OutResult.bAdditiveBlend ||
+		!OutResult.bUnlit)
 	{
 		return false;
 	}

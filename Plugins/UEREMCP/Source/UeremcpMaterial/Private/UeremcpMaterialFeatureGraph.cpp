@@ -13,6 +13,7 @@
 #include "Materials/MaterialExpressionNoise.h"
 #include "Materials/MaterialExpressionOneMinus.h"
 #include "Materials/MaterialExpressionPanner.h"
+#include "Materials/MaterialExpressionParticleColor.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionSphereMask.h"
 #include "Materials/MaterialExpressionBumpOffset.h"
@@ -118,6 +119,14 @@ namespace
 			}
 			ParticleColor->ParameterName = FName(TEXT("ParticleColor"));
 
+			UMaterialExpressionParticleColor* NiagaraParticleColor =
+				AddExpression<UMaterialExpressionParticleColor>(-800, -120);
+			if (!NiagaraParticleColor)
+			{
+				Result.Error = TEXT("Failed to create Niagara Particle Color expression.");
+				return false;
+			}
+
 			UMaterialExpressionVectorParameter* ColorSecondary =
 				AddExpression<UMaterialExpressionVectorParameter>(-800, 120);
 			if (!ColorSecondary)
@@ -185,7 +194,7 @@ namespace
 				DistortionStrength->DefaultValue = 0.05f;
 			}
 
-			UMaterialExpression* ColorChain = ParticleColor;
+			UMaterialExpression* ElementTintChain = ParticleColor;
 			if (Has(TEXT("dynamic_color")))
 			{
 				UMaterialExpressionLinearInterpolate* Lerp =
@@ -205,9 +214,21 @@ namespace
 					Result.Error = TEXT("Failed to wire dynamic_color lerp.");
 					return false;
 				}
-				ColorChain = Lerp;
+				ElementTintChain = Lerp;
 				Result.WiredFeatures.Add(TEXT("dynamic_color"));
 			}
+
+			// UMaterialExpressionParticleColor compiles the renderer-provided ParticleColor value
+			// [VERIFIED: MaterialExpressions.cpp:10069-10088; HLSLMaterialTranslator.cpp:6027-6031].
+			// Keep the MI ParticleColor parameter as an element tint while consuming Particles.Color.
+			UMaterialExpressionMultiply* RendererTint =
+				Multiply(ElementTintChain, TEXT(""), NiagaraParticleColor, TEXT("RGB"), -300, 60);
+			if (!RendererTint)
+			{
+				Result.Error = TEXT("Failed to multiply element tint by Niagara Particle Color.");
+				return false;
+			}
+			UMaterialExpression* ColorChain = RendererTint;
 
 			UMaterialExpressionTextureCoordinate* TexCoord =
 				AddExpression<UMaterialExpressionTextureCoordinate>(-500, 300);
@@ -265,6 +286,8 @@ namespace
 				}
 				NoiseExpr->Scale = 4.0f;
 				NoiseExpr->Quality = 2;
+				NoiseExpr->OutputMin = 0.0f;
+				NoiseExpr->OutputMax = 1.0f;
 				NoisePanner->SpeedX = 0.25f;
 				NoisePanner->SpeedY = 0.25f;
 				NoisePositionZ->R = 0.0f;
@@ -283,7 +306,28 @@ namespace
 					Result.Error = TEXT("Failed to wire animated_noise.");
 					return false;
 				}
-				UMaterialExpressionMultiply* NoiseMod = Multiply(EmissiveChain, TEXT(""), NoiseExpr, TEXT(""), -120, 200);
+				UMaterialExpressionConstant* NoiseFloor =
+					AddExpression<UMaterialExpressionConstant>(-250, 200);
+				UMaterialExpressionConstant* NoiseCeiling =
+					AddExpression<UMaterialExpressionConstant>(-250, 240);
+				UMaterialExpressionLinearInterpolate* NonZeroNoise =
+					AddExpression<UMaterialExpressionLinearInterpolate>(-120, 240);
+				if (!NoiseFloor || !NoiseCeiling || !NonZeroNoise)
+				{
+					Result.Error = TEXT("Failed to create non-zero animated_noise modulation.");
+					return false;
+				}
+				NoiseFloor->R = 0.35f;
+				NoiseCeiling->R = 1.0f;
+				if (!Connect(NoiseFloor, TEXT(""), NonZeroNoise, TEXT("A")) ||
+					!Connect(NoiseCeiling, TEXT(""), NonZeroNoise, TEXT("B")) ||
+					!Connect(NoiseExpr, TEXT(""), NonZeroNoise, TEXT("Alpha")))
+				{
+					Result.Error = TEXT("Failed to wire non-zero animated_noise modulation.");
+					return false;
+				}
+				UMaterialExpressionMultiply* NoiseMod =
+					Multiply(EmissiveChain, TEXT(""), NonZeroNoise, TEXT(""), 40, 240);
 				if (!NoiseMod)
 				{
 					Result.Error = TEXT("Failed to multiply emissive by noise.");
@@ -302,7 +346,28 @@ namespace
 					return false;
 				}
 				FresnelExpr->Exponent = 3.0f;
-				UMaterialExpressionMultiply* FresnelMod = Multiply(EmissiveChain, TEXT(""), FresnelExpr, TEXT(""), -120, 320);
+				UMaterialExpressionConstant* FresnelFloor =
+					AddExpression<UMaterialExpressionConstant>(-250, 320);
+				UMaterialExpressionConstant* FresnelCeiling =
+					AddExpression<UMaterialExpressionConstant>(-250, 360);
+				UMaterialExpressionLinearInterpolate* NonZeroFresnel =
+					AddExpression<UMaterialExpressionLinearInterpolate>(-120, 360);
+				if (!FresnelFloor || !FresnelCeiling || !NonZeroFresnel)
+				{
+					Result.Error = TEXT("Failed to create non-zero fresnel modulation.");
+					return false;
+				}
+				FresnelFloor->R = 0.35f;
+				FresnelCeiling->R = 1.0f;
+				if (!Connect(FresnelFloor, TEXT(""), NonZeroFresnel, TEXT("A")) ||
+					!Connect(FresnelCeiling, TEXT(""), NonZeroFresnel, TEXT("B")) ||
+					!Connect(FresnelExpr, TEXT(""), NonZeroFresnel, TEXT("Alpha")))
+				{
+					Result.Error = TEXT("Failed to wire non-zero fresnel modulation.");
+					return false;
+				}
+				UMaterialExpressionMultiply* FresnelMod =
+					Multiply(EmissiveChain, TEXT(""), NonZeroFresnel, TEXT(""), 40, 360);
 				if (!FresnelMod)
 				{
 					Result.Error = TEXT("Failed to wire fresnel.");
@@ -419,8 +484,28 @@ namespace
 					Result.Error = TEXT("Failed to connect UV chain to MainTexture.");
 					return false;
 				}
+				UMaterialExpressionConstant* TextureFloor =
+					AddExpression<UMaterialExpressionConstant>(-250, 440);
+				UMaterialExpressionConstant* TextureCeiling =
+					AddExpression<UMaterialExpressionConstant>(-250, 480);
+				UMaterialExpressionLinearInterpolate* NonZeroTexture =
+					AddExpression<UMaterialExpressionLinearInterpolate>(-120, 480);
+				if (!TextureFloor || !TextureCeiling || !NonZeroTexture)
+				{
+					Result.Error = TEXT("Failed to create non-zero MainTexture modulation.");
+					return false;
+				}
+				TextureFloor->R = 0.35f;
+				TextureCeiling->R = 1.0f;
+				if (!Connect(TextureFloor, TEXT(""), NonZeroTexture, TEXT("A")) ||
+					!Connect(TextureCeiling, TEXT(""), NonZeroTexture, TEXT("B")) ||
+					!Connect(MainTextureSample, TEXT("RGB"), NonZeroTexture, TEXT("Alpha")))
+				{
+					Result.Error = TEXT("Failed to wire non-zero MainTexture modulation.");
+					return false;
+				}
 				UMaterialExpressionMultiply* MainTexMod =
-					Multiply(EmissiveChain, TEXT(""), MainTextureSample, TEXT("RGB"), -120, 440);
+					Multiply(EmissiveChain, TEXT(""), NonZeroTexture, TEXT(""), 40, 480);
 				if (!MainTexMod)
 				{
 					Result.Error = TEXT("Failed to multiply emissive by MainTexture.");
@@ -501,6 +586,15 @@ namespace
 				OpacityChain = FullOpacity;
 			}
 
+			UMaterialExpressionMultiply* ParticleAlphaMod =
+				Multiply(OpacityChain, TEXT(""), NiagaraParticleColor, TEXT("A"), -120, 720);
+			if (!ParticleAlphaMod)
+			{
+				Result.Error = TEXT("Failed to multiply opacity by Niagara Particle Color alpha.");
+				return false;
+			}
+			OpacityChain = ParticleAlphaMod;
+
 			if (Has(TEXT("erosion")) && DissolveAmount)
 			{
 				UMaterialExpressionOneMinus* OneMinus =
@@ -556,7 +650,8 @@ namespace
 				Result.WiredFeatures.Add(TEXT("depth_fade"));
 			}
 
-			if (Has(TEXT("depth_fade")) || Has(TEXT("erosion")) || Has(TEXT("panning_textures")))
+			// Additive VFX masters consume renderer alpha through MP_Opacity for every purpose.
+			// Particle Color exposes a named A output [VERIFIED: MaterialExpressions.cpp:10073-10079].
 			{
 				if (!UMaterialEditingLibrary::ConnectMaterialProperty(OpacityChain, TEXT(""), MP_Opacity))
 				{

@@ -46,6 +46,9 @@ namespace UeremcpMaterialFeatures
 	{
 		bool bEmissiveConnected = false;
 		bool bOpacityConnected = false;
+		bool bParticleColorConsumed = false;
+		bool bAdditiveBlend = false;
+		bool bUnlit = false;
 		TMap<FString, bool> FeatureWired;
 	};
 
