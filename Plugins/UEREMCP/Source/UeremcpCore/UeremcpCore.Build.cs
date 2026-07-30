@@ -25,6 +25,9 @@ public class UeremcpCore : ModuleRules
 			// ADR-0003 envelope parse/serialize (WS-05). Reference Ping/Echo route here.
 			"UeremcpProtocol",
 
+			// ADR-0010 permission/path/mutator/audit gate (WS-12 substrate, WS-03 dispatch).
+			"UeremcpSecurity",
+
 			// Epic's tool-declaration layer. ADR-0002.
 			// [VERIFIED: $TR/ToolsetRegistry.uplugin — Editor module]
 			"ToolsetRegistry",
