@@ -6,33 +6,29 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Factories/MaterialFactoryNew.h"
+#include "FileHelpers.h"
 #include "IAssetTools.h"
 #include "Materials/Material.h"
-#include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialFeatureGraph.h"
 #include "UeremcpMaterialPaths.h"
 
 namespace
 {
-	static UEditorAssetSubsystem* GetEditorAssetSubsystem()
-	{
-		return GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
-	}
-
 	static UMaterial* LoadMaterialAtPath(const FString& PackagePath)
 	{
 		return UeremcpMaterialAssetLoad::ResolveMaterial(PackagePath);
 	}
 
-	static bool SavePackagePath(const FString& PackagePath, int32& InOutOps)
+	static bool SaveLoadedMaterial(UMaterial* Material, int32& InOutOps)
 	{
-		UEditorAssetSubsystem* AssetSubsystem = GetEditorAssetSubsystem();
-		if (!AssetSubsystem)
+		if (!Material)
 		{
 			return false;
 		}
-		const bool bSaved = AssetSubsystem->SaveAsset(PackagePath, false);
+
+		const TArray<UPackage*> PackagesToSave = { Material->GetPackage() };
+		const bool bSaved = UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
 		if (bSaved)
 		{
 			++InOutOps;
@@ -122,7 +118,7 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 		return Result;
 	}
 
-	if (!SavePackagePath(Request.MasterPackagePath, Result.InternalOperations))
+	if (!SaveLoadedMaterial(Material, Result.InternalOperations))
 	{
 		Result.bSuccess = true;
 		Result.CapabilityNotes.Add(

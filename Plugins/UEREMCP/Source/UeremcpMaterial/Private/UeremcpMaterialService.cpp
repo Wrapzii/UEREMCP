@@ -6,6 +6,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "FileHelpers.h"
 #include "IAssetTools.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
@@ -28,6 +29,17 @@ namespace
 	static UEditorAssetSubsystem* GetEditorAssetSubsystem()
 	{
 		return GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
+	}
+
+	static bool SaveLoadedAssetPackage(UObject* Asset)
+	{
+		if (!Asset)
+		{
+			return false;
+		}
+
+		const TArray<UPackage*> PackagesToSave = { Asset->GetPackage() };
+		return UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
 	}
 
 	static bool ColorsApproximatelyEqual(const FLinearColor& A, const FLinearColor& B, float Tolerance = 0.02f)
@@ -754,7 +766,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	if (Request.bSave)
 	{
-		if (!AssetSubsystem->SaveAsset(Request.TargetAssetPath, false))
+		if (!SaveLoadedAssetPackage(Instance))
 		{
 			Result.Status = TEXT("partially_completed");
 			Result.Summary = FString::Printf(
@@ -767,8 +779,10 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		++Result.InternalOperations;
 		if (MasterResult.bCreated)
 		{
-			AssetSubsystem->SaveAsset(MasterPath, false);
-			++Result.InternalOperations;
+			if (SaveLoadedAssetPackage(MasterMaterial))
+			{
+				++Result.InternalOperations;
+			}
 		}
 	}
 

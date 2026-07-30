@@ -5,6 +5,7 @@
 #include "Editor.h"
 #include "Engine/Texture2D.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/PackageName.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Subsystems/EditorAssetSubsystem.h"
@@ -570,6 +571,16 @@ bool FUeremcpMaterialCreateVfxValidateFalseTest::RunTest(const FString& Paramete
 	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
 	TestEqual(TEXT("partially_completed when validate false"), Status, FString(TEXT("partially_completed")));
 	TestFalse(TEXT("summary must not claim re-read verified"), Json.Contains(TEXT("re-read verified")));
+	TestFalse(TEXT("fresh MI save must not fail registry lookup"), Json.Contains(TEXT("save failed")));
+	TestTrue(TEXT("fresh MI package saved to disk"), FPackageName::DoesPackageExist(Target));
+
+	const FString MasterPath =
+		UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
+	TestFalse(TEXT("master dependency reported"), MasterPath.IsEmpty());
+	if (!MasterPath.IsEmpty())
+	{
+		TestTrue(TEXT("fresh master package saved to disk"), FPackageName::DoesPackageExist(MasterPath));
+	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
 	return true;
