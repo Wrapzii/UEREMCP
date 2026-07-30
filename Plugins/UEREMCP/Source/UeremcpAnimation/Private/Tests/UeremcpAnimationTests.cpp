@@ -1,5 +1,9 @@
 #include "CoreMinimal.h"
+#include "Dom/JsonObject.h"
 #include "Misc/AutomationTest.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "UObject/Package.h"
 
 #include "Animation/AnimCompositeBase.h"
 #include "Animation/AnimMontage.h"
@@ -189,6 +193,111 @@ bool FUeremcpAnimationInspectMontageRevisionTest::RunTest(const FString& Paramet
 	FUeremcpMontageInspection Restored;
 	TestTrue(TEXT("restored inspection succeeds"), Inspect(Restored));
 	TestEqual(TEXT("restoring semantic state restores revision"), Restored.ContentHash, First.ContentHash);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpAnimationInspectMontageEditorScratchTest,
+	"UEREMCP.Animation.InspectMontage.EditorScratchAsset",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpAnimationInspectMontageEditorScratchTest::RunTest(const FString& Parameters)
+{
+	const FString AssetName = FString::Printf(
+		TEXT("AM_WS10_Editor_%s"),
+		*FGuid::NewGuid().ToString(EGuidFormats::Digits));
+	const FString PackagePath = FString::Printf(
+		TEXT("/Game/__UeremcpTests/Animation/%s"),
+		*AssetName);
+
+	UPackage* Package = CreatePackage(*PackagePath);
+	TestNotNull(TEXT("scratch package created"), Package);
+	if (!Package)
+	{
+		return false;
+	}
+
+	UAnimMontage* Montage = NewObject<UAnimMontage>(
+		Package,
+		*AssetName,
+		RF_Public | RF_Standalone | RF_Transactional);
+	TestNotNull(TEXT("scratch montage created"), Montage);
+	if (!Montage)
+	{
+		Package->MarkAsGarbage();
+		return false;
+	}
+
+	Montage->SlotAnimTracks.Reset();
+	Montage->AddSlot(TEXT("UpperBody"));
+#if WITH_EDITORONLY_DATA
+	Montage->AnimNotifyTracks.Reset();
+	Montage->AnimNotifyTracks.Add(FAnimNotifyTrack(TEXT("Gameplay"), FLinearColor::White));
+#endif
+
+	FAnimNotifyEvent Event;
+	Event.NotifyName = TEXT("Impact");
+	Event.SetTime(0.25f);
+	Event.TrackIndex = 0;
+	Event.Notify = NewObject<UAnimNotify_ResetDynamics>(Montage);
+	Montage->Notifies.Add(Event);
+
+	const FString Request = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-editor-scratch","action":"inspect_montage","target":{"asset_path":"%s"},"options":{"response_detail":"complete"}})"),
+		*PackagePath);
+	const FString ResponseJson = UUeremcpAnimationToolset::InspectMontage(Request);
+
+	TSharedPtr<FJsonObject> Response;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
+	TestTrue(
+		TEXT("tool response is parseable JSON"),
+		FJsonSerializer::Deserialize(Reader, Response) && Response.IsValid());
+	if (Response.IsValid())
+	{
+		TestEqual(
+			TEXT("response remains honest before asset_state amendment"),
+			Response->GetStringField(TEXT("status")),
+			FString(TEXT("partially_completed")));
+		TestTrue(
+			TEXT("summary reports real notify enumeration"),
+			Response->GetStringField(TEXT("summary")).Contains(TEXT("1 real notify events")));
+		TestTrue(
+			TEXT("revision returned"),
+			Response->GetStringField(TEXT("revision")).StartsWith(TEXT("sha256:")));
+
+		const TSharedPtr<FJsonObject>* Result = nullptr;
+		TestTrue(
+			TEXT("result returned"),
+			Response->TryGetObjectField(TEXT("result"), Result) && Result && Result->IsValid());
+		if (Result && Result->IsValid())
+		{
+			TestEqual(
+				TEXT("primary asset keeps package path contract"),
+				(*Result)->GetStringField(TEXT("primary_asset")),
+				PackagePath);
+		}
+
+		const TSharedPtr<FJsonObject>* Validation = nullptr;
+		TestTrue(
+			TEXT("validation returned"),
+			Response->TryGetObjectField(TEXT("validation"), Validation)
+				&& Validation
+				&& Validation->IsValid());
+		if (Validation && Validation->IsValid())
+		{
+			TestTrue(
+				TEXT("scratch montage structurally inspected"),
+				(*Validation)->GetBoolField(TEXT("structurally_valid")));
+		}
+	}
+
+	// The fixture is unique, in-memory only, and never saved to user content.
+	Montage->ClearFlags(RF_Public | RF_Standalone);
+	Montage->MarkAsGarbage();
+	Package->SetDirtyFlag(false);
+	Package->MarkAsGarbage();
 	return true;
 }
 

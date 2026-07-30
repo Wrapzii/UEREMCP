@@ -1,11 +1,28 @@
 #include "UeremcpAnimationToolset.h"
 
 #include "Animation/AnimMontage.h"
+#include "Misc/PackageName.h"
 #include "UeremcpAnimationService.h"
 #include "UeremcpEnvelope.h"
 
 namespace
 {
+	FString ResolveObjectPath(const FString& AssetPath)
+	{
+		if (FPackageName::IsValidObjectPath(AssetPath))
+		{
+			return AssetPath;
+		}
+		if (FPackageName::IsValidLongPackageName(AssetPath))
+		{
+			return FString::Printf(
+				TEXT("%s.%s"),
+				*AssetPath,
+				*FPackageName::GetLongPackageAssetName(AssetPath));
+		}
+		return AssetPath;
+	}
+
 	const TArray<FString>& AnimationCapabilityNotes()
 	{
 		static const TArray<FString> Notes = {
@@ -53,8 +70,10 @@ FString UUeremcpAnimationToolset::InspectMontage(const FString& RequestJson)
 	}
 
 	// Public UObject load path used only for the explicitly supplied target.
-	// [VERIFIED: Runtime/CoreUObject/Public/UObject/UObjectGlobals.h]
-	const UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *Request.TargetAssetPath);
+	// Package-name normalization uses public FPackageName helpers.
+	// [VERIFIED: Runtime/CoreUObject/Public/Misc/PackageName.h:184,224-254]
+	const FString ObjectPath = ResolveObjectPath(Request.TargetAssetPath);
+	const UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *ObjectPath);
 	if (!Montage)
 	{
 		return FUeremcpEnvelope::MakeRejection(

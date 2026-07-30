@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/animation/inspect_montage.asset-state.schema.json",
+  "title": "inspect_montage asset state",
+  "description": "Complete non-graph state emitted by the WS-10 montage inspector. Ready for the proposed result.asset_state two-pass validator; does not amend the frozen response envelope.",
+  "type": "object",
+  "required": [
+    "asset_path",
+    "asset_class",
+    "length_seconds",
+    "auto_blend_out",
+    "sync_group",
+    "skeleton",
+    "slots",
+    "sections",
+    "notifies",
+    "content_hash",
+    "revision"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "asset_path": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+    "asset_class": { "type": "string", "minLength": 1 },
+    "length_seconds": { "type": "number", "minimum": 0 },
+    "auto_blend_out": { "type": "boolean" },
+    "sync_group": { "type": "string" },
+    "skeleton": {
+      "oneOf": [
+        { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        { "type": "null" }
+      ]
+    },
+    "slots": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/slot" }
+    },
+    "sections": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "notifies": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/notify" }
+    },
+    "content_hash": { "$ref": "../../common/defs.schema.json#/$defs/contentHash" },
+    "revision": { "$ref": "../../common/defs.schema.json#/$defs/revision" }
+  },
+  "$defs": {
+    "slot": {
+      "type": "object",
+      "required": ["name", "segments"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "segments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/segment" }
+        }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "required": [
+        "animation",
+        "start_time",
+        "animation_start_time",
+        "animation_end_time",
+        "play_rate",
+        "loop_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "animation": {
+          "oneOf": [
+            { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+            { "type": "null" }
+          ]
+        },
+        "start_time": { "type": "number", "minimum": 0 },
+        "animation_start_time": { "type": "number", "minimum": 0 },
+        "animation_end_time": { "type": "number", "minimum": 0 },
+        "play_rate": { "type": "number" },
+        "loop_count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["name", "start_time"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "start_time": { "type": "number", "minimum": 0 },
+        "next_section": { "type": "string" }
+      }
+    },
+    "notify": {
+      "type": "object",
+      "required": [
+        "name",
+        "time",
+        "duration",
+        "track",
+        "trigger_chance",
+        "trigger_on_dedicated_server",
+        "is_state",
+        "class"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "time": { "type": "number", "minimum": 0 },
+        "duration": { "type": "number", "minimum": 0 },
+        "track": { "type": "string" },
+        "trigger_chance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "trigger_on_dedicated_server": { "type": "boolean" },
+        "is_state": { "type": "boolean" },
+        "class": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "examples": [
+    {
+      "asset_path": "/Game/__UeremcpTests/Animation/AM_WS10_Inspect",
+      "asset_class": "/Script/Engine.AnimMontage",
+      "length_seconds": 1.0,
+      "auto_blend_out": true,
+      "sync_group": "",
+      "skeleton": "/Game/Characters/SK_Test",
+      "slots": [
+        {
+          "name": "UpperBody",
+          "segments": [
+            {
+              "animation": "/Game/Characters/A_Attack",
+              "start_time": 0.0,
+              "animation_start_time": 0.0,
+              "animation_end_time": 1.0,
+              "play_rate": 1.0,
+              "loop_count": 1
+            }
+          ]
+        }
+      ],
+      "sections": [{ "name": "Attack", "start_time": 0.0 }],
+      "notifies": [
+        {
+          "name": "Impact",
+          "time": 0.5,
+          "duration": 0.0,
+          "track": "Gameplay",
+          "trigger_chance": 1.0,
+          "trigger_on_dedicated_server": true,
+          "is_state": false,
+          "class": "/Script/Engine.AnimNotify_ResetDynamics"
+        }
+      ],
+      "content_hash": "sha256:9f2c1ab4",
+      "revision": "sha256:9f2c1ab4"
+    }
+  ]
+}

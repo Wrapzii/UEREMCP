@@ -8,6 +8,9 @@ import sys
 import unittest
 from pathlib import Path
 
+from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
+
 
 MODULE = Path(__file__).resolve().parents[1]
 REPO = MODULE.parents[3]
@@ -15,6 +18,21 @@ PROTOCOL_TESTS = REPO / "Plugins/UEREMCP/Source/UeremcpProtocol/Tests/py"
 sys.path.insert(0, str(PROTOCOL_TESTS))
 
 from ueremcp_protocol.content_hash import content_hash  # noqa: E402
+
+
+def asset_state_validator() -> tuple[Draft202012Validator, dict]:
+    schema_path = (
+        REPO
+        / "schemas/domains/animation/inspect_montage.asset-state.schema.json"
+    )
+    common_path = REPO / "schemas/common/defs.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    common = json.loads(common_path.read_text(encoding="utf-8"))
+    registry = Registry().with_resource(
+        common["$id"],
+        Resource.from_contents(common),
+    )
+    return Draft202012Validator(schema, registry=registry), schema
 
 
 def montage_state() -> dict:
@@ -90,6 +108,20 @@ class AnimationContractTests(unittest.TestCase):
         self.assertIn('Response.Status = TEXT("partially_completed")', source)
         self.assertIn("frozen response envelope", source)
         self.assertNotIn('SetObjectField(TEXT("asset_state")', source)
+        for diagnostic in (
+            "Inspection.SlotCount",
+            "Inspection.SegmentCount",
+            "Inspection.SectionCount",
+            "Inspection.NotifyCount",
+            "Response.Dependencies",
+            "Response.Revision",
+            "Response.CapabilityNotes",
+            "animation.montage.loaded",
+            "animation.montage.slots_enumerated",
+            "animation.montage.real_notifies_enumerated",
+            "animation.montage.content_hash_computed",
+        ):
+            self.assertIn(diagnostic, source)
 
     def test_montage_revision_stable_across_envelope_and_guid_churn(self) -> None:
         first = montage_state()
@@ -120,6 +152,28 @@ class AnimationContractTests(unittest.TestCase):
             "restoring semantic state restores revision",
         ):
             self.assertIn(expected, source)
+
+    def test_asset_state_schema_accepts_emitted_shape(self) -> None:
+        validator, schema = asset_state_validator()
+        self.assertEqual(list(validator.iter_errors(schema["examples"][0])), [])
+
+    def test_asset_state_schema_rejects_missing_and_unknown_fields(self) -> None:
+        validator, schema = asset_state_validator()
+        malformed = copy.deepcopy(schema["examples"][0])
+        malformed.pop("notifies")
+        malformed["raw_unreal_dump"] = {}
+        errors = list(validator.iter_errors(malformed))
+        self.assertGreaterEqual(len(errors), 2)
+
+    def test_editor_fixture_is_scratch_only_and_unsaved(self) -> None:
+        source = (
+            MODULE / "Private/Tests/UeremcpAnimationTests.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("/Game/__UeremcpTests/Animation/", source)
+        self.assertIn("EditorScratchAsset", source)
+        self.assertIn("response remains honest before asset_state amendment", source)
+        self.assertNotIn("SavePackage(", source)
+        self.assertNotIn("SaveAsset(", source)
 
 
 if __name__ == "__main__":

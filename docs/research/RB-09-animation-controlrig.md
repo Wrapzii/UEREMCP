@@ -394,10 +394,24 @@ metadata-only notify plan.
 
 The tool boundary remains honestly `partially_completed`: the frozen response schema
 has no structured field for complete non-graph asset state
-`[VERIFIED: schemas/envelope/response.schema.json:33-71,109-140]`, and the plugin
-descriptor does not yet list the WS-10 module
-`[VERIFIED: Plugins/UEREMCP/UEREMCP.uplugin:14-62]`. Exact integration requests are
-in `docs/proposals/ws-10-animation-integration-blockers.md`.
+`[VERIFIED: schemas/envelope/response.schema.json:33-71,109-140]`. The original
+integration requests are recorded in
+`docs/proposals/ws-10-animation-integration-blockers.md`.
+
+Follow-up after orchestration integration: `UeremcpAnimation` is now listed in the
+plugin descriptor `[VERIFIED: Plugins/UEREMCP/UEREMCP.uplugin:40-44]`. WS-10 authored
+`UEREMCP.Animation.InspectMontage.EditorScratchAsset`, which creates a GUID-unique,
+in-memory montage package under `/Game/__UeremcpTests/Animation/`, calls the real
+tool boundary with the package path, asserts the honest partial response and
+validation evidence, and never saves the fixture
+`[VERIFIED: UeremcpAnimationTests.cpp]`. This test is **authored, not runtime-passed**;
+the separate editor lane must execute it before any runtime claim.
+
+WS-01 selected a future typed `result.asset_state` amendment but left the frozen
+envelope unchanged `[VERIFIED: docs/proposals/ws-01-non-graph-asset-state.md:9-67]`.
+The action-owned emitted-state contract now exists at
+`schemas/domains/animation/inspect_montage.asset-state.schema.json`; the tool remains
+`partially_completed` until the protocol amendment and two-pass validator land.
 
 Mutation (`ensure_montage`) remains blocked behind shared mutator-queue / sandbox
 orchestration: `FUeremcpMutatorQueue::IsImplemented()` returns false
@@ -409,6 +423,7 @@ Implementing an unsandboxed montage write would contradict ADR-0005 and ADR-0010
 - [x] Capability ceiling table
 - [x] ADR-0004 fit verdict for AnimBlueprintGraph / AnimStateMachine / ControlRigGraph
 - [x] `schemas/domains/animation/inspect_montage.schema.json`
+- [x] `schemas/domains/animation/inspect_montage.asset-state.schema.json`
 - [ ] Remaining animation schemas — deferred until their implementations start
 - [x] Animation↔ability contract drafted for WS-09 (`docs/proposals/ws-10-ability-anim-contract.md`)
 - [x] `capability_notes` text
