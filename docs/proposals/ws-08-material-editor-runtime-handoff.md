@@ -22,8 +22,9 @@ Expected green:
 | `UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileCore` | `elemental_projectile_core` + fire + `boost_impact` → `created_and_validated` |
 | `UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileTrail` | `elemental_projectile_trail` + ice + modifiers + `textures.FlowMap.generate` → `created_and_validated` |
 | `UeremcpMaterial.Toolset.CreateProceduralTexture.Noise` | Standalone `create_procedural_texture` noise 128×128 → `created_and_validated` |
+| `UeremcpMaterial.Service.NiagaraExport.CoreMaterial` | Direct C++ `ExecuteCreateVfxMaterialForNiagaraRole` + `VerifyPrimaryAssetIsMaterialInterface` |
 
-Scratch assets (auto-deleted by tests): `/Game/__UeremcpTests/Materials/MI_WS08_*`, masters under `/Game/__UeremcpTests/Materials/Masters/`, and `/Game/__UeremcpTests/Textures/T_*`.
+Scratch assets (auto-deleted by tests): `/Game/__UeremcpTests/Materials/MI_WS08_*`, `/Game/__UeremcpTests/Materials/MI_NS_WS08_ExportProbe_core`, masters under `/Game/__UeremcpTests/Materials/Masters/`, and `/Game/__UeremcpTests/Textures/T_*`.
 
 ## APIs exercised (verification tags)
 

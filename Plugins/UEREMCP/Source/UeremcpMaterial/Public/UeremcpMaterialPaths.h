@@ -9,6 +9,7 @@
 namespace UeremcpMaterialPaths
 {
 	inline const TCHAR* TestsContentRoot = TEXT("/Game/__UeremcpTests");
+	inline const TCHAR* MaterialsFolder = TEXT("/Game/__UeremcpTests/Materials");
 	inline const TCHAR* MastersFolder = TEXT("/Game/__UeremcpTests/Materials/Masters");
 	inline const TCHAR* TexturesFolder = TEXT("/Game/__UeremcpTests/Textures");
 

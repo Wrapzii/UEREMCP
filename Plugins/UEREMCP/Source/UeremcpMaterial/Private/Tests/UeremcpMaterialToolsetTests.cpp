@@ -9,6 +9,7 @@
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "Misc/Paths.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpMaterialNiagaraExport.h"
 #include "UeremcpMaterialPaths.h"
 #include "UeremcpMaterialToolset.h"
 
@@ -34,6 +35,7 @@ namespace UeremcpMaterialTests
 	{
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileCore_Fire"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileTrail_Ice"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_NS_WS08_ExportProbe_core"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map"));
 
 		UEditorAssetSubsystem* Subsystem = GetAssetSubsystem();
@@ -215,6 +217,47 @@ bool FUeremcpMaterialCreateProceduralTextureTest::RunTest(const FString& Paramet
 	}
 
 	UeremcpMaterialTests::DeleteIfExists(Target);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialNiagaraExportServiceTest,
+	"UeremcpMaterial.Service.NiagaraExport.CoreMaterial",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialNiagaraExportServiceTest::RunTest(const FString& Parameters)
+{
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+
+	const TSharedPtr<FJsonObject> CreateSpec = MakeShared<FJsonObject>();
+	CreateSpec->SetStringField(TEXT("element"), TEXT("fire"));
+	CreateSpec->SetStringField(TEXT("purpose"), TEXT("elemental_projectile_core"));
+
+	const FUeremcpMaterialCreateResult Result =
+		UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraRole(
+			TEXT("NS_WS08_ExportProbe"),
+			TEXT("core"),
+			CreateSpec,
+			true,
+			true,
+			true);
+
+	TestTrue(TEXT("service bSuccess"), Result.bSuccess);
+	TestEqual(TEXT("status"), Result.Status, FString(TEXT("created_and_validated")));
+	TestFalse(TEXT("PrimaryAsset set"), Result.PrimaryAsset.IsEmpty());
+
+	FString VerifyError;
+	TestTrue(
+		TEXT("PrimaryAsset loads as UMaterialInterface"),
+		UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(Result.PrimaryAsset, VerifyError));
+
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	if (Subsystem)
+	{
+		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Result.PrimaryAsset));
+	}
+
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
 	return true;
 }
 

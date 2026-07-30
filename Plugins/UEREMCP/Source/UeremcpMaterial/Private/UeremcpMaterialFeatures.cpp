@@ -7,6 +7,7 @@
 #include "Materials/MaterialExpressionDepthFade.h"
 #include "Materials/MaterialExpressionFresnel.h"
 #include "Materials/MaterialExpressionNoise.h"
+#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionOneMinus.h"
 #include "Materials/MaterialExpressionPanner.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
@@ -126,6 +127,7 @@ bool UeremcpMaterialFeatures::IsImplementedFeature(const FString& Feature)
 		TEXT("dynamic_color"),
 		TEXT("dynamic_intensity"),
 		TEXT("panning_textures"),
+		TEXT("flow_maps"),
 		TEXT("erosion"),
 		TEXT("depth_fade"),
 	};
@@ -173,11 +175,15 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 	TArray<const UMaterialExpressionOneMinus*> OneMinusNodes;
 	Material->GetAllExpressionsOfType(OneMinusNodes);
 
+	TArray<const UMaterialExpressionTextureSampleParameter2D*> TextureSamples;
+	Material->GetAllExpressionsOfType(TextureSamples);
+
 	const TSet<FString> FeatureSet(Features);
 	OutResult.FeatureWired.Add(TEXT("radial_falloff"), FeatureSetContains(FeatureSet, TEXT("radial_falloff")) ? SphereMasks.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("animated_noise"), FeatureSetContains(FeatureSet, TEXT("animated_noise")) ? Noises.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("fresnel"), FeatureSetContains(FeatureSet, TEXT("fresnel")) ? Fresnels.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("panning_textures"), FeatureSetContains(FeatureSet, TEXT("panning_textures")) ? Panners.Num() > 0 : true);
+	OutResult.FeatureWired.Add(TEXT("flow_maps"), FeatureSetContains(FeatureSet, TEXT("flow_maps")) ? TextureSamples.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("depth_fade"), FeatureSetContains(FeatureSet, TEXT("depth_fade")) ? DepthFades.Num() > 0 && OutResult.bOpacityConnected : true);
 	OutResult.FeatureWired.Add(TEXT("erosion"), FeatureSetContains(FeatureSet, TEXT("erosion")) ? OneMinusNodes.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("dynamic_color"), true);

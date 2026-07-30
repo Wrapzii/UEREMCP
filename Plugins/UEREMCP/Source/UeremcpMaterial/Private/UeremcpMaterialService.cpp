@@ -15,7 +15,10 @@
 #include "UeremcpMaterialElementPresets.h"
 #include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialMasterBuilder.h"
+#include "UeremcpMaterialNiagaraExport.h"
 #include "UeremcpMaterialPaths.h"
+#include "Engine/Texture.h"
+#include "UeremcpProceduralTextureService.h"
 
 namespace
 {
@@ -434,6 +437,22 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	}
 
 	Result.PrimaryAsset = Request.TargetAssetPath;
+
+	FString PrimaryLoadError;
+	if (Request.bValidate &&
+		!UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(Result.PrimaryAsset, PrimaryLoadError))
+	{
+		Result.bSuccess = false;
+		Result.Status = TEXT("failed_validation");
+		Result.Summary = PrimaryLoadError;
+		return Result;
+	}
+	if (Request.bValidate)
+	{
+		Result.InterpretationNotes.Add(
+			TEXT("PrimaryAsset re-load verified as UMaterialInterface (FSoftObjectPath-compatible package path)."));
+	}
+
 	Result.bSuccess = true;
 	Result.Status = bCreatedInstance ? TEXT("created_and_validated") : TEXT("modified_and_validated");
 	if (UnimplementedFeatures.Num() > 0)

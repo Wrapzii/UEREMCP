@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "UeremcpEnvelope.h"
 
-struct FUeremcpMaterialCreateResult
+struct UEREMCPMATERIAL_API FUeremcpMaterialCreateResult
 {
 	bool bSuccess = false;
 	FString Status;
@@ -22,5 +22,5 @@ struct FUeremcpMaterialCreateResult
 namespace UeremcpMaterialService
 {
 	/** Execute create_vfx_material against the editor (MaterialEditingLibrary substrate). */
-	FUeremcpMaterialCreateResult ExecuteCreateVfxMaterial(const FUeremcpRequest& Request);
+	UEREMCPMATERIAL_API FUeremcpMaterialCreateResult ExecuteCreateVfxMaterial(const FUeremcpRequest& Request);
 }

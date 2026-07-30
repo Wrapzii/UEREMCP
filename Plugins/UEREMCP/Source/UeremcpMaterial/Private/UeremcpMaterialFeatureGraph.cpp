@@ -318,6 +318,34 @@ namespace
 				Result.WiredFeatures.Add(TEXT("panning_textures"));
 			}
 
+			if (Has(TEXT("flow_maps")) && TexCoord && FlowSpeed && FlowMapSample)
+			{
+				UMaterialExpressionPanner* FlowPanner = AddExpression<UMaterialExpressionPanner>(-350, 780);
+				if (!FlowPanner)
+				{
+					Result.Error = TEXT("Failed to create flow_maps panner node.");
+					return false;
+				}
+				FlowPanner->SpeedX = 0.35f;
+				FlowPanner->SpeedY = 0.35f;
+				if (!Connect(TexCoord, TEXT(""), FlowPanner, TEXT("Coordinate")) ||
+					!Connect(FlowSpeed, TEXT(""), FlowPanner, TEXT("Speed")) ||
+					!Connect(FlowPanner, TEXT(""), FlowMapSample, TEXT("Coordinates")))
+				{
+					Result.Error = TEXT("Failed to wire flow_maps.");
+					return false;
+				}
+				UMaterialExpressionMultiply* FlowMod =
+					Multiply(EmissiveChain, TEXT(""), FlowMapSample, TEXT("RGB"), -120, 560);
+				if (!FlowMod)
+				{
+					Result.Error = TEXT("Failed to multiply emissive by FlowMap.");
+					return false;
+				}
+				EmissiveChain = FlowMod;
+				Result.WiredFeatures.Add(TEXT("flow_maps"));
+			}
+
 			if (Has(TEXT("dynamic_intensity")))
 			{
 				UMaterialExpressionMultiply* IntensityMod =

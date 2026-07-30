@@ -78,6 +78,7 @@ class MaterialFeaturesTests(unittest.TestCase):
             "animated_noise",
             "fresnel",
             "panning_textures",
+            "flow_maps",
             "depth_fade",
             "erosion",
         ):

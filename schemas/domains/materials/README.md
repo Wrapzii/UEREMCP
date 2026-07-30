@@ -59,11 +59,12 @@ Elemental VFX materials use **one tooling surface** (`create_vfx_material`) with
 | `panning_textures` | Panner(`FlowSpeed`) × `MainTexture` sample → emissive | `[VERIFIED: MaterialExpressionPanner.h]`, `[VERIFIED: MaterialExpressionTextureSampleParameter2D.h]` |
 | `depth_fade` | `DepthFade`(`DepthFade` param) → `MP_Opacity` | `[VERIFIED: MaterialExpressionDepthFade.h]` |
 | `erosion` | `OneMinus`(`DissolveAmount`) × opacity | `[VERIFIED: MaterialExpressionOneMinus.h]` |
+| `flow_maps` | Panner(`FlowSpeed`) × `FlowMap` sample → emissive | `[VERIFIED: MaterialExpressionPanner.h]`, `[VERIFIED: MaterialExpressionTextureSampleParameter2D.h]` |
 
 Masters are named `{M_Ueremcp_ProjCore|ProjTrail}_{FeatureSignature}` so graph variants do not collide.
 Purpose defaults live in `element_presets.v1.json` → `purpose_default_features` (mirrored in C++).
 
-Not yet wired: `distortion`, `flow_maps`, `flipbook_subuv`, engine MaterialFunctions.
+Not yet wired: `distortion`, `flipbook_subuv`, engine MaterialFunctions.
 
 `textures.generate` slots (`noise`, `gradient`, `voronoi`, `ring_mask`, `flow_map`) execute via `create_procedural_texture` and bind to MI texture parameters (`MainTexture`, `NoiseTexture`, `FlowMap`, `MaskTexture`).
 
@@ -110,6 +111,7 @@ python schemas/domains/materials/test_specifications.py
 python schemas/domains/materials/test_element_presets.py
 python schemas/domains/materials/test_features.py
 python schemas/domains/materials/test_procedural_texture.py
+python schemas/domains/materials/test_niagara_export.py
 python tools/check_ownership.py --ws WS-08
 ```
 
