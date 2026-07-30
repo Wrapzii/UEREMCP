@@ -1,0 +1,163 @@
+#include "UeremcpAnimationService.h"
+
+#include "AnimationBlueprintLibrary.h"
+#include "Animation/AnimCompositeBase.h"
+#include "Animation/AnimMontage.h"
+#include "Animation/AnimSequenceBase.h"
+#include "Animation/AnimTypes.h"
+#include "Animation/Skeleton.h"
+#include "UeremcpContentHash.h"
+
+namespace
+{
+	TSharedPtr<FJsonValue> JsonObjectValue(const TSharedPtr<FJsonObject>& Object)
+	{
+		return MakeShared<FJsonValueObject>(Object);
+	}
+
+	FString ObjectPath(const UObject* Object)
+	{
+		return Object ? Object->GetPathName() : FString();
+	}
+
+	FName NotifyTrackName(const UAnimMontage& Montage, const FAnimNotifyEvent& Event)
+	{
+#if WITH_EDITORONLY_DATA
+		if (Montage.AnimNotifyTracks.IsValidIndex(Event.TrackIndex))
+		{
+			return Montage.AnimNotifyTracks[Event.TrackIndex].TrackName;
+		}
+#endif
+		return NAME_None;
+	}
+}
+
+bool FUeremcpAnimationService::InspectMontage(
+	const UAnimMontage* Montage,
+	const FString& AssetPath,
+	FUeremcpMontageInspection& OutInspection,
+	FString& OutError)
+{
+	OutInspection = FUeremcpMontageInspection();
+	OutError.Reset();
+
+	if (!Montage)
+	{
+		OutError = TEXT("Montage is null.");
+		return false;
+	}
+
+	TSharedPtr<FJsonObject> State = MakeShared<FJsonObject>();
+	State->SetStringField(TEXT("asset_path"), AssetPath);
+	State->SetStringField(TEXT("asset_class"), Montage->GetClass()->GetPathName());
+	State->SetNumberField(TEXT("length_seconds"), Montage->GetPlayLength());
+	State->SetBoolField(TEXT("auto_blend_out"), Montage->bEnableAutoBlendOut);
+	State->SetStringField(TEXT("sync_group"), Montage->SyncGroup.ToString());
+
+	if (const USkeleton* Skeleton = Montage->GetSkeleton())
+	{
+		const FString SkeletonPath = Skeleton->GetPathName();
+		State->SetStringField(TEXT("skeleton"), SkeletonPath);
+		OutInspection.DependencyPaths.AddUnique(SkeletonPath);
+	}
+	else
+	{
+		State->SetField(TEXT("skeleton"), MakeShared<FJsonValueNull>());
+	}
+
+	TArray<TSharedPtr<FJsonValue>> Slots;
+	for (const FSlotAnimationTrack& Slot : Montage->SlotAnimTracks)
+	{
+		TSharedPtr<FJsonObject> SlotObject = MakeShared<FJsonObject>();
+		SlotObject->SetStringField(TEXT("name"), Slot.SlotName.ToString());
+
+		TArray<TSharedPtr<FJsonValue>> Segments;
+		for (const FAnimSegment& Segment : Slot.AnimTrack.AnimSegments)
+		{
+			TSharedPtr<FJsonObject> SegmentObject = MakeShared<FJsonObject>();
+			const UAnimSequenceBase* Animation = Segment.GetAnimReference();
+			const FString AnimationPath = ObjectPath(Animation);
+			if (!AnimationPath.IsEmpty())
+			{
+				SegmentObject->SetStringField(TEXT("animation"), AnimationPath);
+				OutInspection.DependencyPaths.AddUnique(AnimationPath);
+			}
+			else
+			{
+				SegmentObject->SetField(TEXT("animation"), MakeShared<FJsonValueNull>());
+			}
+			SegmentObject->SetNumberField(TEXT("start_time"), Segment.StartPos);
+			SegmentObject->SetNumberField(TEXT("animation_start_time"), Segment.AnimStartTime);
+			SegmentObject->SetNumberField(TEXT("animation_end_time"), Segment.AnimEndTime);
+			SegmentObject->SetNumberField(TEXT("play_rate"), Segment.AnimPlayRate);
+			SegmentObject->SetNumberField(TEXT("loop_count"), Segment.LoopingCount);
+			Segments.Add(JsonObjectValue(SegmentObject));
+			++OutInspection.SegmentCount;
+		}
+
+		SlotObject->SetArrayField(TEXT("segments"), Segments);
+		Slots.Add(JsonObjectValue(SlotObject));
+	}
+	State->SetArrayField(TEXT("slots"), Slots);
+	OutInspection.SlotCount = Slots.Num();
+
+	TArray<TSharedPtr<FJsonValue>> Sections;
+	for (const FCompositeSection& Section : Montage->CompositeSections)
+	{
+		TSharedPtr<FJsonObject> SectionObject = MakeShared<FJsonObject>();
+		SectionObject->SetStringField(TEXT("name"), Section.SectionName.ToString());
+		SectionObject->SetNumberField(TEXT("start_time"), Section.GetTime());
+		if (!Section.NextSectionName.IsNone())
+		{
+			SectionObject->SetStringField(TEXT("next_section"), Section.NextSectionName.ToString());
+		}
+		Sections.Add(JsonObjectValue(SectionObject));
+	}
+	State->SetArrayField(TEXT("sections"), Sections);
+	OutInspection.SectionCount = Sections.Num();
+
+	TArray<FAnimNotifyEvent> NotifyEvents;
+	// Public read API; avoids treating REAgentTools notify-plan metadata as real notifies.
+	// [VERIFIED: AnimationBlueprintLibrary.h:230-232]
+	UAnimationBlueprintLibrary::GetAnimationNotifyEvents(Montage, NotifyEvents);
+
+	TArray<TSharedPtr<FJsonValue>> Notifies;
+	for (const FAnimNotifyEvent& Event : NotifyEvents)
+	{
+		TSharedPtr<FJsonObject> NotifyObject = MakeShared<FJsonObject>();
+		NotifyObject->SetStringField(TEXT("name"), Event.NotifyName.ToString());
+		NotifyObject->SetNumberField(TEXT("time"), Event.GetTriggerTime());
+		NotifyObject->SetNumberField(TEXT("duration"), Event.GetDuration());
+		NotifyObject->SetStringField(TEXT("track"), NotifyTrackName(*Montage, Event).ToString());
+		NotifyObject->SetNumberField(TEXT("trigger_chance"), Event.NotifyTriggerChance);
+		NotifyObject->SetBoolField(TEXT("trigger_on_dedicated_server"), Event.bTriggerOnDedicatedServer);
+
+		const UObject* NotifyInstance = Event.Notify
+			? static_cast<const UObject*>(Event.Notify.Get())
+			: static_cast<const UObject*>(Event.NotifyStateClass.Get());
+		NotifyObject->SetBoolField(TEXT("is_state"), Event.NotifyStateClass != nullptr);
+		if (NotifyInstance)
+		{
+			NotifyObject->SetStringField(TEXT("class"), NotifyInstance->GetClass()->GetPathName());
+		}
+		else
+		{
+			NotifyObject->SetField(TEXT("class"), MakeShared<FJsonValueNull>());
+		}
+
+		Notifies.Add(JsonObjectValue(NotifyObject));
+	}
+	State->SetArrayField(TEXT("notifies"), Notifies);
+	OutInspection.NotifyCount = Notifies.Num();
+
+	OutInspection.ContentHash = FUeremcpContentHash::HashJsonObject(State, &OutError);
+	if (OutInspection.ContentHash.IsEmpty())
+	{
+		return false;
+	}
+
+	State->SetStringField(TEXT("content_hash"), OutInspection.ContentHash);
+	State->SetStringField(TEXT("revision"), OutInspection.ContentHash);
+	OutInspection.State = MoveTemp(State);
+	return true;
+}

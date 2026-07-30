@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/animation/inspect_montage.schema.json",
+  "title": "inspect_montage specification",
+  "description": "One-call structured AnimMontage inspection. The target montage is request.target.asset_path. Returns adjacent skeleton, slot, segment, section, real notify-object and dependency context; owned by WS-10.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {},
+  "examples": [{}]
+}

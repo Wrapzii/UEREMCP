@@ -382,11 +382,34 @@ are false until retrieve→replace→retrieve passes per family.
 5. Whether `SequencerAnimMixerToolset` adds anything AnimationAssistant lacks
    (enabled in RE.uproject; not deeply audited here).
 
+## Wave 2 implementation update (2026-07-30)
+
+WS-10 implemented the largest independent read-only slice, `inspect_montage`, under
+`Plugins/UEREMCP/Source/UeremcpAnimation/`. One domain-service call returns skeleton,
+slots, segments, sections, real notify/state objects, dependencies, and a deterministic
+content hash `[VERIFIED: UeremcpAnimationService.cpp]`. It reads real notify events
+through `UAnimationBlueprintLibrary::GetAnimationNotifyEvents`
+`[VERIFIED: AnimationBlueprintLibrary.h:230-232]`; it does not use REAgentTools'
+metadata-only notify plan.
+
+The tool boundary remains honestly `partially_completed`: the frozen response schema
+has no structured field for complete non-graph asset state
+`[VERIFIED: schemas/envelope/response.schema.json:33-71,109-140]`, and the plugin
+descriptor does not yet list the WS-10 module
+`[VERIFIED: Plugins/UEREMCP/UEREMCP.uplugin:14-62]`. Exact integration requests are
+in `docs/proposals/ws-10-animation-integration-blockers.md`.
+
+Mutation (`ensure_montage`) remains blocked behind shared mutator-queue / sandbox
+orchestration: `FUeremcpMutatorQueue::IsImplemented()` returns false
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp:3-18]`.
+Implementing an unsandboxed montage write would contradict ADR-0005 and ADR-0010.
+
 ## Deliverables checklist
 
 - [x] Capability ceiling table
 - [x] ADR-0004 fit verdict for AnimBlueprintGraph / AnimStateMachine / ControlRigGraph
-- [ ] `schemas/domains/animation/` — **deferred** (implementation not authorized; shapes in proposal)
+- [x] `schemas/domains/animation/inspect_montage.schema.json`
+- [ ] Remaining animation schemas — deferred until their implementations start
 - [x] Animation↔ability contract drafted for WS-09 (`docs/proposals/ws-10-ability-anim-contract.md`)
 - [x] `capability_notes` text
 - [x] Runtime probes confined to `/Game/__UeremcpTests/`
