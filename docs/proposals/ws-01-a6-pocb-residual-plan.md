@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `73b930e` (script-state await `d07f8f1` rebuilt; residual commit follows)
+- **Orch tip at writing:** `01b257e` (WS-11 B10 proof landed; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11. Post-UV editor fireball B2–B9 and B8 restart PASS. Post-`d07f8f1` MCP fireball now proves **B1** and **B6** (`mcp_round_trips=1`, compile awaited, six materials). Honest `partially_completed` because B10 is skipped. Remaining for overall POC B: **B10 visible-render** and **complete metrics/baseline** (wall time, tokens, equivalent primitive-call count). **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11. Post-UV editor fireball B2–B9 and B8 restart PASS. Post-`d07f8f1` MCP fireball proves **B1** and **B6**. WS-11 B10 proof `01b257e` landed, but Validation does not compile on UE 5.8 (`FLevelEditorViewportClient*` assigned to unrelated `FEditorViewportClient*`; `GetViewport` absent there) `[VERIFIED-RUNTIME: UeremcpValidation build on 2026-07-30]`, so no B10 runtime proof exists. Complete metrics/baseline also remain open. **No overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -262,7 +262,8 @@ Niagara DLL and ran the canonical fireball fixture:
 B1–B9 are now covered by the combined editor + MCP + restart evidence trail.
 Remaining blockers for an **overall** claim:
 
-1. **B10** — required numbered criterion; still unproven (explains `partially_completed`)
+1. **B10** — proof filter landed as `01b257e`, but Validation build fails before
+   runtime; B10 remains unproven
 2. **Global POC metrics** — wall-clock, total tokens, and equivalent primitive-call
    baseline not fully recorded (round trips and internal ops alone are insufficient)
 
@@ -282,7 +283,7 @@ remainders pass.
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS** — B7 scaffold + editor fireball structural gates | WS-07 |
 | B8 | Assets saved and survive editor restart | **PASS on `8a8c75d`** — Create→restart→Verify | WS-11 |
 | B9 | One structured response with complete change manifest | **PASS** — editor fireball + MCP structured response | WS-07 + WS-11 |
-| B10 | Visibly renders as fireball when placed — screenshot supplementary only | **OPEN and required** — still skipped; blocks overall claim | WS-07 / WS-11 |
+| B10 | Visibly renders as fireball when placed — screenshot supplementary only | **BLOCKED** — filter landed at `01b257e`, but Validation compile fails in `NiagaraPocBVisibleRender.spec.cpp:131-132`; no runtime PASS | WS-11 |
 
 Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc/`; metrics reported numerically; success with only `validate:false` does **not** count (`docs/POC_ACCEPTANCE.md`).
 
@@ -292,7 +293,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | B10 required; screenshot may supplement only |
+| P0 | Fix B10 filter's UE 5.8 viewport-client compile errors; rebuild and run | WS-11 | Harness unit tests PASS 3/3; runtime filter unavailable until Validation compiles |
 | P0 | Complete POC-B metrics: wall time, tokens, equivalent primitive-call baseline | WS-11 / WS-14 | Round trips + internal ops recorded; remainder required by global POC rules |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; POC-B entry still open |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |

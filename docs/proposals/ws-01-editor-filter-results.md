@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `5ec7e02` (trail UV + proposal closed; residual commit follows)
+- **Current orchestration tip:** `01b257e` (B10 filter landed; Validation build blocked)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. Post-`d07f8f1` MCP proves B1 and B6 in one round trip. Remaining for overall POC B: B10 visible-render and complete metrics/baseline — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. Post-`d07f8f1` MCP proves B1 and B6 in one round trip. B10 filter `01b257e` landed but Validation fails to compile, so B10 runtime remains unproven; complete metrics/baseline also remain open — **no overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -185,6 +185,17 @@ cleanly (DLL 07:19:11).
 
 B1–B9 are covered by editor + MCP + restart evidence. Remaining for overall
 POC B: **B10** and **complete metrics/baseline**. No overall POC-B claim.
+
+## B10 filter landing on orch `01b257e`
+
+| Proof | Result | Evidence / residual |
+|---|---|---|
+| Harness unit tests | **PASS 3/3** | `python -m unittest tests.unit.test_poc_b10_visible_render_harness` |
+| `UeremcpValidation` rebuild | **FAIL** | `NiagaraPocBVisibleRender.spec.cpp:131-132`: viewport-client type mismatch and missing `GetViewport` member `[VERIFIED-RUNTIME: UeremcpValidation build on 2026-07-30]` |
+| B10 runtime filter | **NOT RUN** | New DLL was not produced; WS-11 fix/rebuild required |
+
+B10 remains unproven. Metrics remain partial: MCP round trips=1 and internal
+operations=46; wall time, tokens, and equivalent primitive-call baseline are open.
 
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
@@ -414,7 +425,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Prove B10 visible-render and complete POC-B metrics/baseline (wall, tokens, primitive-call equivalent). |
+| WS-11 | Fix the B10 UE 5.8 compile errors, rebuild Validation, run the filter, then complete metrics/baseline. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1/B6 PASS on `73b930e`. Remaining: B10 and complete metrics/baseline. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS. B10 filter is build-blocked; complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
