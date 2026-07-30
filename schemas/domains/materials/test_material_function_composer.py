@@ -17,7 +17,9 @@ COMPOSER_H = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Public/UeremcpM
 COMPOSER_CPP = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialFunctionComposer.cpp"
 GRAPH_CPP = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialFeatureGraph.cpp"
 COMPOSITION_JSON = REPO_ROOT / "schemas/domains/materials/feature_composition.v1.json"
-SERVICE_CPP = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialService.cpp"
+MASTER_BUILDER_CPP = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialMasterBuilder.cpp"
+MATERIAL_SERVICE = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialService.cpp"
+FLIPBOOK_PROPOSAL = REPO_ROOT / "docs/proposals/ws-08-flipbook-external-sheet-import.md"
 
 
 class MaterialFunctionComposerStubTests(unittest.TestCase):
@@ -26,7 +28,9 @@ class MaterialFunctionComposerStubTests(unittest.TestCase):
         cls.composer_h = COMPOSER_H.read_text(encoding="utf-8")
         cls.composer_cpp = COMPOSER_CPP.read_text(encoding="utf-8")
         cls.graph_cpp = GRAPH_CPP.read_text(encoding="utf-8")
-        cls.service_cpp = SERVICE_CPP.read_text(encoding="utf-8")
+        cls.service_cpp = MATERIAL_SERVICE.read_text(encoding="utf-8")
+        cls.master_builder_cpp = MASTER_BUILDER_CPP.read_text(encoding="utf-8")
+        cls.material_service = MATERIAL_SERVICE.read_text(encoding="utf-8")
         cls.composition = json.loads(COMPOSITION_JSON.read_text(encoding="utf-8"))
 
     def test_composer_header_exports_probe_and_try(self) -> None:
@@ -59,6 +63,24 @@ class MaterialFunctionComposerStubTests(unittest.TestCase):
     def test_stub_does_not_claim_set_material_function(self) -> None:
         self.assertIn("not invoked", self.composer_cpp.lower())
         self.assertNotIn("SetMaterialFunction(", self.composer_cpp)
+
+    def test_master_builder_propagates_graph_composition_notes(self) -> None:
+        self.assertIn("GraphResult.InterpretationNotes", self.master_builder_cpp)
+        self.assertIn("GraphResult.CapabilityNotes", self.master_builder_cpp)
+
+    def test_composition_partially_completed_does_not_override_envelope_validated(self) -> None:
+        self.assertIn("ResolveMaterialSuccessStatus", self.material_service)
+        self.assertNotIn("CompositionStatus", self.material_service)
+        self.assertRegex(
+            self.material_service,
+            r"ResolveMaterialSuccessStatus\([\s\S]*bValidate",
+        )
+
+    def test_flipbook_external_import_proposal_exists(self) -> None:
+        self.assertTrue(FLIPBOOK_PROPOSAL.is_file())
+        proposal = FLIPBOOK_PROPOSAL.read_text(encoding="utf-8")
+        self.assertIn("ImportBufferAsTexture2D", proposal)
+        self.assertIn("not implemented", proposal.lower())
 
 
 if __name__ == "__main__":

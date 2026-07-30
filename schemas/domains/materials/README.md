@@ -97,7 +97,7 @@ These keys match `UeremcpMaterialCapabilityNotes.h` and `create_vfx_material` `c
 | MaterialTools omits blend/shading/domain | Mitigated | Set on `UMaterial` before recompile in feature graph builder |
 | Feature tokens not wired | Mitigated (projectile slice) | See feature table above; unimplemented tokens → `created_with_warnings` |
 | Procedural texture generation | Mitigated | `create_procedural_texture` + `textures.generate` slots (CPU FImageUtils path) |
-| Element presets at runtime | Mitigated | `element_presets.v1.json` via `UeremcpMaterialElementPresetsLoader` with C++ fallback |
+| Element presets at runtime | Mitigated | `element_presets.v1.json` via `UeremcpMaterialElementPresetsLoader` — dev: `schemas/` first; packaged: `Plugins/UEREMCP/Resources/Materials/` (WS-08 `bb04bb9`) |
 | Substrate shading overrides | Medium | Per-material runtime check in RE project |
 | Graph round-trip unproven | Medium | WS-11 harness under `/Game/__UeremcpTests/` |
 
@@ -112,6 +112,7 @@ python tools/validate_schemas.py
 python schemas/domains/materials/test_specifications.py
 python schemas/domains/materials/test_element_presets.py
 python schemas/domains/materials/test_element_presets_loader.py
+python schemas/domains/materials/test_resources_materials.py
 python schemas/domains/materials/test_features.py
 python schemas/domains/materials/test_procedural_texture.py
 python schemas/domains/materials/test_niagara_export.py

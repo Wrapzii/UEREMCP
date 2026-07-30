@@ -1,5 +1,5 @@
 {
-  "$comment": "Staged copy for packaged deployments. Source of truth: schemas/domains/materials/element_presets.v1.json (WS-08). Sync manually or via CI until automation lands. Loaded by UeremcpMaterialElementPresetsLoader at Resources/Materials/element_presets.v1.json.",
+  "$comment": "WS-08 packaged copy — keep in sync with schemas/domains/materials/element_presets.v1.json (authoritative in dev). Loaded when repo schemas path is absent. Owner: WS-08 (Plugins/UEREMCP/Resources/Materials/** per bb04bb9).",
   "version": 2,
   "elements": {
     "fire": {

@@ -1,7 +1,11 @@
 // UEREMCP — runtime loader for element_presets.v1.json (WS-08).
 //
+// Resolution order (WS-08 owns Plugins/UEREMCP/Resources/Materials/** per bb04bb9):
+//   1. Repo-relative schemas/domains/materials/element_presets.v1.json (dev authoritative)
+//   2. Plugins/UEREMCP/Resources/Materials/element_presets.v1.json (packaged fallback)
+//   3. C++ hard-coded fallback when neither file exists
+//
 // Substrate: FFileHelper::LoadFileToString [VERIFIED: FileHelper.h]
-// Path resolution pattern mirrors UeremcpTemplates::ResolveTemplatesDirectory.
 
 #include "UeremcpMaterialElementPresetsLoader.h"
 

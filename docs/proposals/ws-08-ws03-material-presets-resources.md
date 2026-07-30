@@ -1,38 +1,39 @@
-# WS-08 → WS-03: Bundle element_presets.v1.json — accepted
+# WS-08 → WS-03: Bundle element_presets.v1.json for packaged Material module
 
 - **From:** WS-08
 - **To:** WS-03
 - **Date:** 2026-07-30
-- **Status:** accepted (WS-03 implemented staged bundle)
+- **Status:** superseded — WS-08 owns `Plugins/UEREMCP/Resources/Materials/**` (`bb04bb9`). Bundled copy shipped in `Resources/Materials/element_presets.v1.json`.
 
-## Response
+## Problem
 
-WS-03 staged a packaged copy at:
+`UeremcpMaterialElementPresetsLoader` resolves
+`Plugins/UEREMCP/../../schemas/domains/materials/element_presets.v1.json` in developer
+checkouts `[VERIFIED: UeremcpMaterialElementPresetsLoader.cpp]`. Packaged or junction-only
+deployments without the repo `schemas/` tree fall back to hard-coded C++ defaults and
+report that in `interpretation_notes`.
+
+## Ask
+
+WS-03 may add a staged copy at:
 
 ```text
 Plugins/UEREMCP/Resources/Materials/element_presets.v1.json
 ```
 
-**Source of truth remains** `schemas/domains/materials/element_presets.v1.json` (WS-08).
-The staged file mirrors schema version 2 as of orch sync. When WS-08 updates the schema
-file, re-sync this bundle until CI automation exists.
+Source of truth remains `schemas/domains/materials/element_presets.v1.json` (WS-08).
+WS-03 should wire a copy/sync step in plugin packaging or document manual sync until
+automation exists.
 
-## Loader contract (unchanged)
+The loader already probes `Resources/Materials/element_presets.v1.json` as second candidate
+after the repo-relative schemas path.
 
-`UeremcpMaterialElementPresetsLoader::ResolvePresetsJsonPath()` probes, in order:
+## Acceptance
 
-1. `{PluginBase}/../../schemas/domains/materials/element_presets.v1.json` (developer checkout)
-2. `{PluginBase}/Resources/Materials/element_presets.v1.json` (packaged / junction-only)
+- RE/orch builds without full monorepo `schemas/` still load element defaults from JSON.
+- `test_element_presets_loader.py` continues to pass (schema is authoritative).
+- No change to WS-08 owned C++ beyond existing fallback behavior.
 
-No WS-08 C++ changes required.
+## Not in scope
 
-## Acceptance evidence
-
-- Junction-only RE deployments without monorepo `schemas/` load element defaults from JSON.
-- `python schemas/domains/materials/test_element_presets.py` remains authoritative against schema path.
-- WS-08 `test_element_presets_loader.py` (if present) should pass against bundled path in packaged layout.
-
-## Follow-up (not blocking)
-
-- Add a pre-commit or CI diff check that fails when schema and staged bundle diverge.
-- Consider extending `docs/WORK_ALLOCATION.md` to assign `Plugins/UEREMCP/Resources/**` to WS-03.
+- Shipping `templates/` (WS-15 / WS-03 Templates module owns that pattern).
