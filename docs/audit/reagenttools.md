@@ -174,6 +174,7 @@ Accepted from `docs/proposals/ws-09-audit-gas-toolsets.md` (WS-09, 2026-07-29).
 | `pie_cast_and_capture` | PIE smoke: cast ability + capture frames | **preserve / reuse** | Validation smoke for RE `CastAbility`; not Epic GAS authoring | [VERIFIED: capture_workflow_tools.py:835] |
 | `get_plugin_project_notes` GAS line | Architecture gap notes for agents | **improve** (docs accuracy) | States no GAS/ability tools; `pie_cast_and_capture` exists for cast validation | [VERIFIED: project_workflow_tools.py:76] |
 | GAS graph authoring | — | **N/A (correct)** | RE is not GAS-based; Epic GAS toolsets are inspect-only for this project | [VERIFIED: WS-09 proposal + epic-toolsets.md] |
+
 ### Disposition summary
 
 | Disposition | Toolsets |

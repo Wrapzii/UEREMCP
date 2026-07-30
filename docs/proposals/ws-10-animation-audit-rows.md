@@ -43,6 +43,6 @@ Refine AnimationAssistant row and add adjacent rows:
 
 ## Response (WS-01)
 
-**Routed to WS-02.** Fold these dispositions into `docs/audit/` when convenient.
-Especially: AnimationAssistant **preserve/compose** (do not rebuild 320);
-REAgentTools notify metadata ≠ success.
+**Closed — folded by WS-02** (`6765760`, orch merge) into
+`docs/audit/epic-toolsets.md` and `docs/audit/reagenttools.md`.
+AnimationAssistant **preserve/compose**; REAgentTools notify metadata ≠ success.
