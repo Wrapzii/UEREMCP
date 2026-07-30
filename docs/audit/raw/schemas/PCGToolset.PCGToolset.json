@@ -1,0 +1,1991 @@
+{
+  "name": "PCGToolset.PCGToolset",
+  "version": "1.0",
+  "description": "Toolset for building and modifying PCG graphs",
+  "tools": [
+    {
+      "description": "Updates a node by changing its params and/or title.",
+      "name": "PCGToolset.PCGToolset.UpdateNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The node to modify.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "jsonParams": {
+            "type": "string",
+            "description": "The Json string representing a dictionary of the params to override. Optional. Default is empty. Only non-default params need be included"
+          },
+          "nodeTitle": {
+            "type": "string",
+            "description": "The Display Title of the node. Optional. Default is empty. Empty will keep the old title"
+          }
+        },
+        "required": [
+          "node",
+          "jsonParams",
+          "nodeTitle"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Updates an existing comment box with new nodes and value.\n Note: If the bounding box of the nodes include other nodes, they will be included in the comment.",
+      "name": "PCGToolset.PCGToolset.UpdateCommentBox",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to add comment to.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "commentId": {
+            "type": "string",
+            "description": "The unique id of the comment to update."
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/PCG.PCGNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "The list of nodes to include in the comment box. If empty, the box will keep its current dimensions."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The new comment to put on the comment box. If empty, will keep the same text as it was. Default is empty.",
+            "default": "/**\n\t * Updates an existing comment box with new nodes and value. \n\t *  Note: If the bounding box of the nodes include other nodes, they will be included in the comment.\n\t *\n\t * @param Graph - Graph to add comment to.\n\t * @param CommentId - The unique id of the comment to update.\n\t * @param Nodes - The list of nodes to include in the comment box. If empty, the box will keep its current dimensions.\n\t * @param Comment - The new comment to put on the comment box. If empty, will keep the same text as it was. Default is empty.\n\t * @param Color - The color of the comment box. Defaults to White\n\t * @return boolean representing success/failed\n\t */"
+          },
+          "color": {
+            "type": "object",
+            "title": "LinearColor",
+            "properties": {
+              "r": {
+                "type": "number",
+                "minimum": 0
+              },
+              "g": {
+                "type": "number",
+                "minimum": 0
+              },
+              "b": {
+                "type": "number",
+                "minimum": 0
+              },
+              "a": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ],
+            "description": "The color of the comment box. Defaults to White",
+            "default": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        },
+        "required": [
+          "graph",
+          "commentId",
+          "nodes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Spawns a PCG Volume with associated Graph Instance into the scene, optionally with Graph Param overrides.",
+      "name": "PCGToolset.PCGToolset.SpawnGraphInstance",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "The PCG graph to spawn an instance of",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the PCGVolume actor to spawn in the scene."
+          },
+          "transform": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "The transform to use for the new PCGVolume actor. Place at the origin unless there is a reason not to and use default scale3D of {\"x\": 25,\"y\": 25,\"z\": 10}",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          },
+          "jsonParams": {
+            "type": "string",
+            "description": "(Optional) JSON string representing JsonObject for the params to set. MUST be in format: {{\"property_1_name\": \"property_1_value\"}, ...} The default values for the graph params will be used if not set."
+          }
+        },
+        "required": [
+          "graph",
+          "name",
+          "transform",
+          "jsonParams"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PCGGraphInstanceInfo",
+            "description": "UStruct with information of the created actor and the corresponding graph instance",
+            "type": "object",
+            "properties": {
+              "actor": {
+                "type": "object",
+                "title": "/Script/PCG.PCGVolume",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "graph": {
+                "type": "object",
+                "title": "/Script/PCG.PCGGraph",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "actor",
+              "graph"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Change the comment on the specified node.",
+      "name": "PCGToolset.PCGToolset.SetNodeComment",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The node to set the comment on.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "nodeComment": {
+            "type": "string",
+            "description": "The comment attached to the node."
+          }
+        },
+        "required": [
+          "node",
+          "nodeComment"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds one or more graph user parameters to a specific PCG graph, such that they will be overridable in per graph instance.",
+      "name": "PCGToolset.PCGToolset.SetGraphParams",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to add graph parameter to",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "title": "PCGParamDefinition",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "title": "EPCGMetadataTypes",
+                  "enum": [
+                    "Float",
+                    "Double",
+                    "Integer32",
+                    "Integer64",
+                    "Vector2",
+                    "Vector",
+                    "Vector4",
+                    "Quaternion",
+                    "Transform",
+                    "String",
+                    "Boolean",
+                    "Rotator",
+                    "Name",
+                    "SoftObjectPath",
+                    "SoftClassPath",
+                    "EndLegacyTypes",
+                    "Byte",
+                    "Text",
+                    "Enum",
+                    "Struct",
+                    "Object",
+                    "SoftObject",
+                    "Class",
+                    "SoftClass",
+                    "Count",
+                    "Unknown"
+                  ]
+                },
+                "description": {
+                  "type": "string"
+                },
+                "containerType": {
+                  "type": "string",
+                  "title": "EPropertyBagContainerType",
+                  "enum": [
+                    "None",
+                    "Array",
+                    "Set",
+                    "Map",
+                    "Count"
+                  ]
+                },
+                "defaultValueJson": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "type",
+                "description",
+                "containerType",
+                "defaultValueJson"
+              ]
+            },
+            "description": "TArray<FPCGParamDefinition> An array of UStruct for Name, Type, Description, ContainerType (optional) and DefaultValueJson (optional). If user explicitly want special default values the DefaultValueJson MUST be set, otherwise OMIT DefaultValueJson for standard UE default values!"
+          }
+        },
+        "required": [
+          "graph",
+          "params"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Sets the graph instance params of a specific actor, actor MUST have a graph instance",
+      "name": "PCGToolset.PCGToolset.SetGraphInstanceParams",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pCGVolume": {
+            "type": "object",
+            "title": "/Script/PCG.PCGVolume",
+            "description": "The actor to set graph instance params for",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "jsonParams": {
+            "type": "string",
+            "description": "JSON string representing JsonObject for the params to set. MUST be in format: {{\"property_1_name\": \"property_1_value\"}, ...}"
+          }
+        },
+        "required": [
+          "pCGVolume",
+          "jsonParams"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set the description of a PCGGraph",
+      "name": "PCGToolset.PCGToolset.SetGraphDescription",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to set description of.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "New description of graph"
+          }
+        },
+        "required": [
+          "graph",
+          "description"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Resets the given graph instance params back to the graph's default values. Actor MUST have a graph instance.",
+      "name": "PCGToolset.PCGToolset.ResetGraphInstanceParams",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pCGVolume": {
+            "type": "object",
+            "title": "/Script/PCG.PCGVolume",
+            "description": "The actor to reset graph instance params for.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "paramNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the parameters to reset."
+          }
+        },
+        "required": [
+          "pCGVolume",
+          "paramNames"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Change the position of node.",
+      "name": "PCGToolset.PCGToolset.RepositionNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The node to modify the position.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "xPositionIdx": {
+            "type": "integer",
+            "description": "The X coordinate of the position of the node in the editor."
+          },
+          "yPositionIdx": {
+            "type": "integer",
+            "description": "The Y coordinate of the position of the node in the editor."
+          }
+        },
+        "required": [
+          "node",
+          "xPositionIdx",
+          "yPositionIdx"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes the node from the graph, will also remove edges connected to the node.",
+      "name": "PCGToolset.PCGToolset.RemoveNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "The graph to remove the node from.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The node to remove.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph",
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes graph parameters to a specific PCG graph, such that they are not overridable anymore.",
+      "name": "PCGToolset.PCGToolset.RemoveGraphParams",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to remove graph parameter(s) from",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "paramNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "An array of existing param names that will be removed."
+          }
+        },
+        "required": [
+          "graph",
+          "paramNames"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes a comment box from the graph. Does not affect the nodes it contains.",
+      "name": "PCGToolset.PCGToolset.RemoveCommentBox",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to remove the comment from.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "commentId": {
+            "type": "string",
+            "description": "The unique id of the comment to remove."
+          }
+        },
+        "required": [
+          "graph",
+          "commentId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a list of available native PCG node type names.",
+      "name": "PCGToolset.PCGToolset.ListNativeNodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bCommonOnly": {
+            "type": "boolean",
+            "description": "Whether to only return the commonly used Native nodes. Only use bCommonOnly = false if the user specifically asks for it.",
+            "default": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of native node type names"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets all actors with a PCG graph instance in the scene.",
+      "name": "PCGToolset.PCGToolset.ListGraphInstances",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "PCGGraphInstanceInfo",
+              "type": "object",
+              "properties": {
+                "actor": {
+                  "type": "object",
+                  "title": "/Script/PCG.PCGVolume",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "graph": {
+                  "type": "object",
+                  "title": "/Script/PCG.PCGGraph",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "actor",
+                "graph"
+              ]
+            },
+            "description": "Array of FPCGGraphInstanceInfo for all actors with a graph instance"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists the PCG graphs that can be used with the Subgraph native node. Only these graphs should be used with\nthe Subgraph native node.",
+      "name": "PCGToolset.PCGToolset.ListAvailableSubgraphs",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of graph asset paths that can be used with the Subgraph native node"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns node details including name, position, and all parameter values.",
+      "name": "PCGToolset.PCGToolset.GetNodeInfo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The node to get info from.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PCGNodeInfo",
+            "description": "FPCGNodeInfo with node details including name, position, type, and parameter overrides",
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "position": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "bEnabled": {
+                "type": "boolean"
+              },
+              "comment": {
+                "type": "string"
+              },
+              "nodeType": {
+                "type": "string"
+              },
+              "paramOverrides": {
+                "type": "object",
+                "title": "FInstancedPropertyBag"
+              }
+            },
+            "required": [
+              "name",
+              "path",
+              "position",
+              "title",
+              "bEnabled",
+              "comment",
+              "nodeType",
+              "paramOverrides"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a JSON Data View of a specific node's output data from the last graph execution.\nOn first call, enables inspection so future ExecuteGraphInstance calls store per-node data.\nIf no inspection data exists, returns an error prompting re-execution.\n\nIMPORTANT: Inspection state is shared at the graph asset level. If multiple actors use the\nsame graph, you MUST call this tool (and ExecuteGraphInstance) on only one actor at a time.\nWait for each call to fully complete before calling on the next actor. Concurrent calls on\nactors sharing the same graph will cause a freeze.",
+      "name": "PCGToolset.PCGToolset.GetNodeDataView",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pCGVolume": {
+            "type": "object",
+            "title": "/Script/PCG.PCGVolume",
+            "description": "The PCG Volume whose graph was executed.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The node whose output to inspect.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "pinLabel": {
+            "type": "string",
+            "description": "Output pin label to read. Defaults to \"Out\".",
+            "default": "Out"
+          },
+          "attributeName": {
+            "type": "string",
+            "description": "Filter to a single attribute/property (e.g. \"$Position\", \"$Density\", \"MyCustomAttr\"). Empty = all attributes."
+          },
+          "startIndex": {
+            "type": "integer",
+            "description": "Element range start, inclusive, 0-based. Default 0.",
+            "default": 0
+          },
+          "endIndex": {
+            "type": "integer",
+            "description": "Element range end, exclusive. -1 means all elements (Python slice convention). Default -1.",
+            "default": -1
+          }
+        },
+        "required": [
+          "pCGVolume",
+          "node",
+          "attributeName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON string with the data view contents"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the schema for a PCG node type including input/output pins,\nparameters, and their types.",
+      "name": "PCGToolset.PCGToolset.GetNativeNodeSchema",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeName": {
+            "type": "string",
+            "description": "Node name"
+          }
+        },
+        "required": [
+          "nodeName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PCGNativeNodeSchema",
+            "description": "FPCGNativeNodeSchema with node name, description, properties schema (JSON), input/output pins",
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "propertiesSchema": {
+                "type": "string"
+              },
+              "inputPins": {
+                "type": "array",
+                "items": {
+                  "title": "PCGPinInfo",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type",
+                    "description"
+                  ]
+                }
+              },
+              "outputPins": {
+                "type": "array",
+                "items": {
+                  "title": "PCGPinInfo",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type",
+                    "description"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "propertiesSchema",
+              "inputPins",
+              "outputPins"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the complete structure of a PCG graph including all nodes,\nconnections, exposed parameters, and comment boxes.",
+      "name": "PCGToolset.PCGToolset.GetGraphStructure",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to inspect",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PCGGraphStructure",
+            "description": "FPCGGraphStructure with graph name, description, nodes, and edges",
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "title": "PCGNodeInfo",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "position": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "bEnabled": {
+                      "type": "boolean"
+                    },
+                    "comment": {
+                      "type": "string"
+                    },
+                    "nodeType": {
+                      "type": "string"
+                    },
+                    "paramOverrides": {
+                      "type": "object",
+                      "title": "FInstancedPropertyBag"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "path",
+                    "position",
+                    "title",
+                    "bEnabled",
+                    "comment",
+                    "nodeType",
+                    "paramOverrides"
+                  ]
+                }
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "title": "PCGEdgeInfo",
+                  "type": "object",
+                  "properties": {
+                    "srcNode": {
+                      "type": "string"
+                    },
+                    "srcPin": {
+                      "type": "string"
+                    },
+                    "destNode": {
+                      "type": "string"
+                    },
+                    "destPin": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "srcNode",
+                    "srcPin",
+                    "destNode",
+                    "destPin"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "nodes",
+              "edges"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the schema for a PCG Graph's graph parameters",
+      "name": "PCGToolset.PCGToolset.GetGraphSchema",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to get the graph parameters of.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PCGGraphSchema",
+            "description": "FPCGGraphSchema with graph name, params schema (JSON), input/output pins",
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "graphParamsSchema": {
+                "type": "string"
+              },
+              "inputPins": {
+                "type": "array",
+                "items": {
+                  "title": "PCGPinInfo",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type",
+                    "description"
+                  ]
+                }
+              },
+              "outputPins": {
+                "type": "array",
+                "items": {
+                  "title": "PCGPinInfo",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type",
+                    "description"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "name",
+              "graphParamsSchema",
+              "inputPins",
+              "outputPins"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the graph instance params of a specific actor, actor MUST have a graph instance",
+      "name": "PCGToolset.PCGToolset.GetGraphInstanceParams",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pCGVolume": {
+            "type": "object",
+            "title": "/Script/PCG.PCGVolume",
+            "description": "The actor to get graph instance params from",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "pCGVolume"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "FInstancedPropertyBag",
+            "description": "FInstancedPropertyBag containing the filtered graph instance parameters"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the description of a PCG graph.",
+      "name": "PCGToolset.PCGToolset.GetGraphDescription",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to get the description of.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The graph's description text, or empty string if the graph has no description set."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Executes the graph instance and returns any issues encountered during execution.",
+      "name": "PCGToolset.PCGToolset.ExecuteGraphInstance",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pCGVolume": {
+            "type": "object",
+            "title": "/Script/PCG.PCGVolume",
+            "description": "The PCG Volume whose graph instance to execute.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "pCGVolume"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "PCGNodeExecutionMessage",
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "reporterNode": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message",
+                "severity",
+                "reporterNode"
+              ]
+            },
+            "description": "Array of messages emitted while executing the graph instance (empty on success with no issues)"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Triggers the user to draw a spline in the viewport to be used later in the world building. Waits for the user to be done.",
+      "name": "PCGToolset.PCGToolset.DrawSpline",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actorLabel": {
+            "type": "string",
+            "description": "The label of the actor created or if bRedraw, the label of the actor to redraw the spline"
+          },
+          "actorTag": {
+            "type": "string",
+            "description": "Tag assigned to the actor"
+          },
+          "bRedraw": {
+            "type": "boolean",
+            "description": "false: creates a new actor with the spline. true: find an actor with the label, and replaces its spline."
+          },
+          "bClosedSpline": {
+            "type": "boolean",
+            "description": "true: closed spline (region) false: path."
+          }
+        },
+        "required": [
+          "actorLabel",
+          "actorTag",
+          "bRedraw",
+          "bClosedSpline"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "description": "Always null",
+            "type": "null"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes the edge between two nodes connected to the specified pins.",
+      "name": "PCGToolset.PCGToolset.DisconnectNodePins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromNode": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The source node of the edge to add.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "fromPinLabel": {
+            "type": "string",
+            "description": "The label of the source pin of the source node."
+          },
+          "toNode": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The destination node of the edge to add.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "toPinLabel": {
+            "type": "string",
+            "description": "The label of the destination pin of the destination node."
+          }
+        },
+        "required": [
+          "fromNode",
+          "fromPinLabel",
+          "toNode",
+          "toPinLabel"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "boolean representing success/failed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new saved PCG graph asset.",
+      "name": "PCGToolset.PCGToolset.CreateGraph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name for the new PCG graph asset (e.g., \"PCG_ForestScatter\")"
+          },
+          "path": {
+            "type": "string",
+            "description": "Content folder path where the asset should be created. Defaults to \"/Game/PCG\"",
+            "default": "/Game/PCG"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "The created PCG graph",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add an edge between two nodes connected to the specified pins.",
+      "name": "PCGToolset.PCGToolset.ConnectNodePins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromNode": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The source node of the edge to add.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "fromPinLabel": {
+            "type": "string",
+            "description": "The label of the source pin of the source node."
+          },
+          "toNode": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The destination node of the edge to add.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "toPinLabel": {
+            "type": "string",
+            "description": "The label of the destination pin of the destination node."
+          }
+        },
+        "required": [
+          "fromNode",
+          "fromPinLabel",
+          "toNode",
+          "toPinLabel"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/PCG.PCGNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "The list of nodes (conversions and/or filters) that were added to allow the connection to work."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a subgraph node to the graph.",
+      "name": "PCGToolset.PCGToolset.AddSubgraphNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to modify.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "subGraphForNode": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "The subgraph to use in the added node.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "The name of the added node. (Must be unique identifier in the graph)"
+          },
+          "jsonParams": {
+            "type": "string",
+            "description": "The Json string representing a dictionary of the params to override on the graph. Optional. Default is empty. Only non-default params need be included"
+          },
+          "nodeTitle": {
+            "type": "string",
+            "description": "The Display Title of the node. Optional. Default is empty."
+          },
+          "nodeComment": {
+            "type": "string",
+            "description": "The comment attached to the node, if needed. Default is empty and will clear the comment."
+          },
+          "xPositionIdx": {
+            "type": "integer",
+            "description": "The X coordinate of the position of the node in the editor. Optional. Default is 0. Typical node size X is 200",
+            "default": 0
+          },
+          "yPositionIdx": {
+            "type": "integer",
+            "description": "The Y coordinate of the position of the node in the editor. Optional. Default is 0. Typical node size Y is 100",
+            "default": 0
+          }
+        },
+        "required": [
+          "graph",
+          "subGraphForNode",
+          "nodeName",
+          "jsonParams",
+          "nodeTitle",
+          "nodeComment"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The Added Node object",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a native node to the graph.",
+      "name": "PCGToolset.PCGToolset.AddNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to modify.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "nativeNodeType": {
+            "type": "string",
+            "description": "The native type of the added node."
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "The name of the added node. (Must be unique identifier in the graph)"
+          },
+          "jsonParams": {
+            "type": "string",
+            "description": "The Json string representing a dictionary of the params to set on the node. Optional. Default is empty. Only non-default params need be included."
+          },
+          "nodeTitle": {
+            "type": "string",
+            "description": "The Display Title of the node. Optional. Default is empty."
+          },
+          "nodeComment": {
+            "type": "string",
+            "description": "The comment attached to the node, if needed. Default is empty."
+          },
+          "xPositionIdx": {
+            "type": "integer",
+            "description": "The X coordinate of the position of the node in the editor. Optional. Default is 0. Typical node size X is 200",
+            "default": 0
+          },
+          "yPositionIdx": {
+            "type": "integer",
+            "description": "The Y coordinate of the position of the node in the editor. Optional. Default is 0. Typical node size Y is 100",
+            "default": 0
+          }
+        },
+        "required": [
+          "graph",
+          "nativeNodeType",
+          "nodeName",
+          "jsonParams",
+          "nodeTitle",
+          "nodeComment"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/PCG.PCGNode",
+            "description": "The Added Node object",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a comment box around the given nodes.\n Note: If the bounding box of the nodes include other nodes, they will be included in the comment.",
+      "name": "PCGToolset.PCGToolset.AddCommentBox",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "Graph to add comment to.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/PCG.PCGNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "The list of nodes to include in the comment box."
+          },
+          "comment": {
+            "type": "string",
+            "description": "The comment to put on the comment box.",
+            "default": "/**\n\t * Adds a comment box around the given nodes. \n\t *  Note: If the bounding box of the nodes include other nodes, they will be included in the comment.\n\t *\n\t * @param Graph - Graph to add comment to.\n\t * @param Nodes - The list of nodes to include in the comment box.\n\t * @param Comment - The comment to put on the comment box.\n\t * @param Color - The color of the comment box. Defaults to White\n\t * @return The unique id of the comment node. (Can be used to edit/remove the comment)\n\t */"
+          },
+          "color": {
+            "type": "object",
+            "title": "LinearColor",
+            "properties": {
+              "r": {
+                "type": "number",
+                "minimum": 0
+              },
+              "g": {
+                "type": "number",
+                "minimum": 0
+              },
+              "b": {
+                "type": "number",
+                "minimum": 0
+              },
+              "a": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ],
+            "description": "The color of the comment box. Defaults to White",
+            "default": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        },
+        "required": [
+          "graph",
+          "nodes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The unique id of the comment node. (Can be used to edit/remove the comment)"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

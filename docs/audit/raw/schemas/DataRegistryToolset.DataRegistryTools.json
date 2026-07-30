@@ -1,0 +1,433 @@
+{
+  "name": "DataRegistryToolset.DataRegistryTools",
+  "version": "1.0",
+  "description": "Provides tools for querying and inspecting Data Registries.",
+  "tools": [
+    {
+      "description": "Returns the runtime sources for a Data Registry.\nThis is the expanded list including transient child sources generated from meta sources.\nWill equal ListDataSources when the registry has no meta sources.",
+      "name": "DataRegistryToolset.DataRegistryTools.ListRuntimeSources",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "registryName": {
+            "type": "string",
+            "description": "The registry name."
+          }
+        },
+        "required": [
+          "registryName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "DataRegistrySourceSummary",
+              "type": "object",
+              "properties": {
+                "sourceClass": {
+                  "type": "object",
+                  "title": "Class@/Script/CoreUObject.Object",
+                  "description": "Class of the source.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "debugString": {
+                  "type": "string",
+                  "description": "Human-readable description of the source."
+                },
+                "sourceAssetPath": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Path to the underlying asset, if any.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "availability": {
+                  "type": "string",
+                  "title": "EDataRegistryAvailability",
+                  "enum": [
+                    "DoesNotExist",
+                    "Unknown",
+                    "Remote",
+                    "OnDisk",
+                    "LocalAsset",
+                    "PreCached"
+                  ],
+                  "description": "Availability of this source."
+                },
+                "bIsInitialized": {
+                  "type": "boolean",
+                  "description": "Whether the source is initialized."
+                },
+                "bIsTransient": {
+                  "type": "boolean",
+                  "description": "Whether this is a runtime-only (transient) source."
+                },
+                "parentSourceDebugString": {
+                  "type": "string",
+                  "description": "Debug string of the parent (original) source, if this is a transient child. Empty otherwise."
+                }
+              },
+              "required": [
+                "sourceClass",
+                "debugString",
+                "sourceAssetPath",
+                "availability",
+                "bIsInitialized",
+                "bIsTransient",
+                "parentSourceDebugString"
+              ]
+            },
+            "description": "A list of source summaries, in runtime order."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the names of all registered Data Registries.",
+      "name": "DataRegistryToolset.DataRegistryTools.ListRegistries",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "structFilter": {
+            "type": "object",
+            "title": "/Script/CoreUObject.ScriptStruct",
+            "description": "If non-null, only registries whose item struct inherits from this struct are returned.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ],
+            "default": null
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A list of registry names."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all item names in a Data Registry.",
+      "name": "DataRegistryToolset.DataRegistryTools.ListItems",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "registryName": {
+            "type": "string",
+            "description": "The registry name."
+          }
+        },
+        "required": [
+          "registryName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "All item names defined on the registry, in registry order."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the editor-defined sources configured on a Data Registry.\nThese are the sources as authored on the registry asset, before any runtime expansion\nof meta sources.",
+      "name": "DataRegistryToolset.DataRegistryTools.ListDataSources",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "registryName": {
+            "type": "string",
+            "description": "The registry name."
+          }
+        },
+        "required": [
+          "registryName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "DataRegistrySourceSummary",
+              "type": "object",
+              "properties": {
+                "sourceClass": {
+                  "type": "object",
+                  "title": "Class@/Script/CoreUObject.Object",
+                  "description": "Class of the source.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "debugString": {
+                  "type": "string",
+                  "description": "Human-readable description of the source."
+                },
+                "sourceAssetPath": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Path to the underlying asset, if any.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "availability": {
+                  "type": "string",
+                  "title": "EDataRegistryAvailability",
+                  "enum": [
+                    "DoesNotExist",
+                    "Unknown",
+                    "Remote",
+                    "OnDisk",
+                    "LocalAsset",
+                    "PreCached"
+                  ],
+                  "description": "Availability of this source."
+                },
+                "bIsInitialized": {
+                  "type": "boolean",
+                  "description": "Whether the source is initialized."
+                },
+                "bIsTransient": {
+                  "type": "boolean",
+                  "description": "Whether this is a runtime-only (transient) source."
+                },
+                "parentSourceDebugString": {
+                  "type": "string",
+                  "description": "Debug string of the parent (original) source, if this is a transient child. Empty otherwise."
+                }
+              },
+              "required": [
+                "sourceClass",
+                "debugString",
+                "sourceAssetPath",
+                "availability",
+                "bIsInitialized",
+                "bIsTransient",
+                "parentSourceDebugString"
+              ]
+            },
+            "description": "A list of source summaries, in definition order."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the item struct schema as JSON.",
+      "name": "DataRegistryToolset.DataRegistryTools.GetSchema",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "registryName": {
+            "type": "string",
+            "description": "The registry name."
+          }
+        },
+        "required": [
+          "registryName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "A JSON string describing the struct's fields and types."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns detailed information about a specific registry.",
+      "name": "DataRegistryToolset.DataRegistryTools.GetRegistryInfo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "registryName": {
+            "type": "string",
+            "description": "The registry name."
+          }
+        },
+        "required": [
+          "registryName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "DataRegistryInfo",
+            "description": "Detailed info including description and id format.",
+            "type": "object",
+            "properties": {
+              "registryName": {
+                "type": "string",
+                "description": "The registry name."
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description."
+              },
+              "itemStruct": {
+                "type": "object",
+                "title": "/Script/CoreUObject.ScriptStruct",
+                "description": "The UScriptStruct used for items in this registry. May be null.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "itemCount": {
+                "type": "integer",
+                "description": "Number of item IDs known to this registry."
+              },
+              "availability": {
+                "type": "string",
+                "title": "EDataRegistryAvailability",
+                "enum": [
+                  "DoesNotExist",
+                  "Unknown",
+                  "Remote",
+                  "OnDisk",
+                  "LocalAsset",
+                  "PreCached"
+                ],
+                "description": "Lowest availability across all sources on this registry. DoesNotExist indicates the\nregistry has not been initialized."
+              },
+              "idFormat": {
+                "type": "string",
+                "description": "Base GameplayTag of the ID format, if any."
+              }
+            },
+            "required": [
+              "registryName",
+              "description",
+              "itemStruct",
+              "itemCount",
+              "availability",
+              "idFormat"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns cached item data.\nItems must be loaded in the registry cache to be returned.",
+      "name": "DataRegistryToolset.DataRegistryTools.GetItems",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "registryName": {
+            "type": "string",
+            "description": "The registry name."
+          },
+          "itemNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Item names to retrieve."
+          }
+        },
+        "required": [
+          "registryName",
+          "itemNames"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "title": "FInstancedStruct",
+              "properties": {
+                "_structType": {
+                  "type": "string",
+                  "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                }
+              }
+            },
+            "description": "A map from item name to its struct data. Names that were not found in the cache are simply omitted from the result."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

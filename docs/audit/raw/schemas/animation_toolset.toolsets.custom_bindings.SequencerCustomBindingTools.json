@@ -1,0 +1,528 @@
+{
+  "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools",
+  "version": "1.0",
+  "description": "Tools for converting and managing custom binding types in Sequencer. Use\n    when converting between possessable, spawnable, and custom/replaceable\n    bindings, querying what custom binding type a binding uses, accessing\n    custom binding objects for property inspection, or changing the actor\n    template class on spawnables/replaceables.",
+  "tools": [
+    {
+      "description": "Save the current state of a spawnable as its default.\n\n        Args:\n            binding: The spawnable binding to save defaults for.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.save_default_spawnable_state",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "binding"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set the actor class for a spawnable or replaceable template.\n\n        Args:\n            binding: The spawnable/replaceable binding to modify.\n            actor_class: Full class path of the new actor class.\n\n        Returns:\n            True if the class was changed successfully.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.change_actor_template_class",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          },
+          "actor_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "binding",
+          "actor_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Find all bindings of a given custom type in the current sequence.\n\n        Args:\n            binding_type_class: Full class path of the custom binding type.\n\n        Returns:\n            List of matching SequencerBindingProxy objects.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.get_custom_bindings_of_type",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding_type_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "binding_type_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "MovieSceneBindingProxy",
+              "type": "object",
+              "properties": {
+                "bindingId": {
+                  "type": "string",
+                  "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "sequence": {
+                  "type": "object",
+                  "title": "/Script/MovieScene.MovieSceneSequence",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "bindingId",
+                "sequence"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the custom binding instances for a binding.\n\n        Args:\n            binding: The binding to query.\n\n        Returns:\n            List of UMovieSceneCustomBinding objects.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.get_custom_binding_objects",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "binding"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/MovieScene.MovieSceneCustomBinding",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the custom binding class for a binding.\n\n        Returns the class path of the custom binding type, or an empty\n        string for standard possessable bindings.\n\n        Args:\n            binding: The binding to query.\n\n        Returns:\n            Class path string, or empty string.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.get_custom_binding_type",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "binding"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Convert a binding to a custom binding type.\n\n        Args:\n            binding: The binding to convert.\n            binding_type_class: Full class path of the custom binding type.\n\n        Returns:\n            The converted SequencerBindingProxy.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.convert_to_custom_binding",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          },
+          "binding_type_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "binding",
+          "binding_type_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Convert a spawnable binding to a possessable.\n\n        Args:\n            binding: The spawnable binding to convert.\n\n        Returns:\n            The new possessable SequencerBindingProxy.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.convert_to_possessable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "binding"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Convert a possessable binding to a spawnable.\n\n        Args:\n            binding: The possessable binding to convert.\n\n        Returns:\n            List of new spawnable SequencerBindingProxy objects.",
+      "name": "animation_toolset.toolsets.custom_bindings.SequencerCustomBindingTools.convert_to_spawnable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "binding"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "MovieSceneBindingProxy",
+              "type": "object",
+              "properties": {
+                "bindingId": {
+                  "type": "string",
+                  "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "sequence": {
+                  "type": "object",
+                  "title": "/Script/MovieScene.MovieSceneSequence",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "bindingId",
+                "sequence"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "name": "re_agent_tools.toolsets.material_workflow_tools.REMaterialWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite material workflows: MI create/configure/assign.",
+  "tools": [
+    {
+      "description": "Create MI, configure, assign to actor mesh slot.",
+      "name": "re_agent_tools.toolsets.material_workflow_tools.REMaterialWorkflowTools.create_assign_material_instance",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "asset_name": {
+            "type": "string"
+          },
+          "parent_material_path": {
+            "type": "string"
+          },
+          "parameters_json": {
+            "type": "string"
+          },
+          "actor_label": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "integer",
+            "default": 0
+          },
+          "component_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_path",
+          "asset_name",
+          "parent_material_path",
+          "parameters_json",
+          "actor_label",
+          "component_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Assign materials: JSON list of {actor_label, component_name?, slot, material_path}.",
+      "name": "re_agent_tools.toolsets.material_workflow_tools.REMaterialWorkflowTools.assign_materials_to_mesh_components",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assignments_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "assignments_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Update MI scalar/vector/texture parameters.",
+      "name": "re_agent_tools.toolsets.material_workflow_tools.REMaterialWorkflowTools.update_material_instance_parameters",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "material_instance_path": {
+            "type": "string"
+          },
+          "parameters_json": {
+            "type": "string"
+          },
+          "save": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "material_instance_path",
+          "parameters_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create MI, set parameters, save.",
+      "name": "re_agent_tools.toolsets.material_workflow_tools.REMaterialWorkflowTools.create_material_instance_configure_save",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "asset_name": {
+            "type": "string"
+          },
+          "parent_material_path": {
+            "type": "string"
+          },
+          "parameters_json": {
+            "type": "string",
+            "default": "{}"
+          }
+        },
+        "required": [
+          "folder_path",
+          "asset_name",
+          "parent_material_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

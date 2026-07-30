@@ -1,0 +1,200 @@
+{
+  "name": "GameFeaturesToolset.GameFeaturesToolset",
+  "version": "1.0",
+  "description": "Provides tools for listing, activating, and deactivating Game Feature Plugins.",
+  "tools": [
+    {
+      "description": "Requests deactivation of a Game Feature Plugin.\nReturns true if the deactivation request was submitted successfully. The actual deactivation\nhappens asynchronously -- poll GetGameFeatureState() to confirm completion.\nRaises an error if the subsystem is unavailable or the plugin is not found.",
+      "name": "GameFeaturesToolset.GameFeaturesToolset.RequestDeactivateGameFeature",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "Name of the GFP."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the request was submitted."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Requests activation of a Game Feature Plugin.\nReturns true if the activation request was submitted successfully. The actual activation\nhappens asynchronously -- poll GetGameFeatureState() or IsGameFeatureActive()\nto confirm completion. Raises an error if the subsystem is unavailable\nor the plugin is not found.",
+      "name": "GameFeaturesToolset.GameFeaturesToolset.RequestActivateGameFeature",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "Name of the GFP."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the request was submitted."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists all enabled Game Feature Plugins  sorted by name. Enabled plugins are the only plugins\nknown by the Game Features system beyond identifying if a plugin is a Game Feature Plugin.\nUse the Plugins toolset to do general plugin enable/disable tasks.",
+      "name": "GameFeaturesToolset.GameFeaturesToolset.ListEnabledGameFeaturePlugins",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted names of all enabled Game Feature Plugins."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists all discovered Game Feature Plugins sorted by name. This includes enabled and disabled\nplugins. Only enabled plugins are known by the Game Features system beyond identifying if a\nplugin is a Game Feature Plugin.\nUse the Plugins toolset to do general plugin enable/disable tasks.",
+      "name": "GameFeaturesToolset.GameFeaturesToolset.ListDiscoveredGameFeaturePlugins",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted names of all discovered Game Feature Plugins."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Return whether or not a plugin is a Game Feature Plugin. Will error if no plugin of this\nname can be found by the Plugin Manager.",
+      "name": "GameFeaturesToolset.GameFeaturesToolset.IsGameFeaturePlugin",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "Name of the plugin"
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the plugin is a Game Feature Plugin"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Checks whether a Game Feature Plugin is active. Raises an error if the subsystem is unavailable\nor the plugin is not found.\nUse GetGameFeatureState if you need the current state when the plugin is not active.",
+      "name": "GameFeaturesToolset.GameFeaturesToolset.IsGameFeatureActive",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "Name of the Game Feature Plugin."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the Game Feature Plugin is active."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the current state of a Game Feature Plugin.",
+      "name": "GameFeaturesToolset.GameFeaturesToolset.GetGameFeatureState",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "Name of the Game Feature Plugin."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "title": "EPluginToolsetGFPState",
+            "enum": [
+              "Uninitialized",
+              "Installed",
+              "Registered",
+              "Loaded",
+              "Active",
+              "Unknown"
+            ],
+            "description": "Simplified state enum. Raises an error if the subsystem is unavailable or the plugin is not found."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

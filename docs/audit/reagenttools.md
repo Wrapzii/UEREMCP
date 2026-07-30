@@ -1,7 +1,7 @@
 # Capability Matrix — REAgentTools
 
 - **Owner:** WS-02
-- **Status:** **runtime_partial** — source disposition complete; all 15 RE toolsets confirmed in live `list_toolsets`; schema dumps and cutover still open
+- **Status:** **runtime_complete** — all 15 RE workflow toolsets have `describe_toolset` dumps (60 tools at runtime; source scan 62 — see capture_workflow gap)
 - **Source:** repository inspection of `$RAT` on 2026-07-29, plus the project's own
   `Docs/CAPABILITY_MATRIX.md` (**self-reported — treat as claims to verify**).
 - **Brief:** [RB-15](../research/RB-15-reagenttools-migration.md)
@@ -112,32 +112,34 @@ programmatic.py:906-953]`.
 
 ---
 
-## Toolset disposition matrix (15 toolsets, 62 tools)
+## Toolset disposition matrix (15 toolsets, 60 tools at runtime)
 
 Source scan: `$RAT/Content/Python/re_agent_tools/toolsets/*_tools.py`
 `[VERIFIED: grep @tool_call 2026-07-29]`. Inventory:
-`docs/audit/raw/reagenttools-tool-inventory.json`.
+`docs/audit/raw/reagenttools-tool-inventory.json` (62 tools in source; 60 registered at runtime).
+Runtime schemas: `docs/audit/raw/schemas/re_agent_tools.*.json`
+`[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`.
 
-One row per **toolset** (not per tool). Runtime registry confirmed 2026-07-30; per-toolset
-`describe_toolset` schemas not yet dumped (see `docs/proposals/ws-02-r06-runtime-status.md`).
+**Runtime vs source gap:** `RECaptureWorkflowTools` registers 5 tools at runtime; source
+scan lists 7 (`capture_viewport_gif`, `make_gif_from_frames` not in MCP registry).
 
 | Toolset | Class | Tools (n) | Purpose | Limitations | Altitude | Disposition | Superseded by | Tag |
 |---|---|---|---|---|---|---|---|---|
-| `actor_workflow` | `REActorWorkflowTools` | 8 | Spawn/configure/verify actors, batch transforms, delete, organize | Wraps editor subsystems; no graph authoring | composite | supersede | `gameplay.*` actor goal ops | [VERIFIED: actor_workflow_tools.py] |
-| nim_workflow | REAnimWorkflowTools | 6 | Control Rig pose → AnimSequence → Montage pipeline | **Notify plan is metadata-only** — not validated success; heavy sequencer/rig deps | goal (RE) | **become internal primitive** / replace with goal op | nimation.* compose (WS-10); bake pattern preserved | [VERIFIED: anim_workflow_tools.py; WS-10 proposal] |
-| `asset_workflow` | `REAssetWorkflowTools` | 3 | Compact find, bulk property edit, save | Overlaps Epic `AssetTools`; SEARCH/MUTATE limits | composite | internalise / supersede | Epic AssetTools + envelope batch | [VERIFIED: asset_workflow_tools.py] |
-| `batch_workflow` | `REBatchWorkflowTools` | 1 | Allowlisted ops + `$ref` chaining | 8 actions; BATCH_LIMIT 20; resolve_actor ignores dry_run | composite | supersede surface; preserve grammar | `execute_plan` | [VERIFIED: batch_workflow_tools.py] |
-| `blueprint_workflow` | `REBlueprintWorkflowTools` | 5 | Inspect, create BP, class defaults, compile | **No graph authoring** — defaults/compile only; defers graphs to Epic `BlueprintTools` | composite | supersede | `blueprints.*` (WS-06) | [VERIFIED: blueprint_workflow_tools.py] |
-| `capture_workflow` | `RECaptureWorkflowTools` | 7 | Viewport/material/PIE capture to disk; compact logs; GIF | Disk paths not base64; some log APIs build-dependent | composite | preserve ideas → WS-11 | test harness + validation capture | [VERIFIED: capture_workflow_tools.py] |
-| `character_workflow` | `RECharacterWorkflowTools` | 4 | Character mesh, combat montages, socket inspect | Montage wiring composes with ability rows (WS-09) | goal (RE) | project-layer or compose | ability contract with WS-09 | [VERIFIED: character_workflow_tools.py; WS-10 proposal] |
-| `context` | `REContextTools` | 4 | Capabilities, editor context, target resolution | Pre-envelope discovery pattern | composite | supersede | envelope context + capability_notes (WS-05) | [VERIFIED: context_tools.py] |
-| `dress_workflow` | `REDressWorkflowTools` | 4 | Place/scatter static meshes, snap to floor | Cave/hub dressing for RE levels | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED: dress_workflow_tools.py] |
-| `level_workflow` | `RELevelWorkflowTools` | 3 | Open/create level, place actors, map check | `run_map_check` may fail on some builds `[UNVERIFIED: CAPABILITY_MATRIX.md]` | composite | partial supersede | level goal ops + WS-11 validation | [VERIFIED: level_workflow_tools.py] |
-| `lighting_workflow` | `RELightingWorkflowTools` | 4 | Mood presets, light inventory, set+verify | RE mood preset content | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED: lighting_workflow_tools.py] |
-| `material_workflow` | `REMaterialWorkflowTools` | 4 | MI create/configure/assign | **No master material graph** — defers to Epic `MaterialTools` | composite | improve (envelope) | `create_vfx_material`, graph JSON (WS-08) | [VERIFIED: material_workflow_tools.py; WS-08 proposal] |
-| `niagara_workflow` | `RENiagaraWorkflowTools` | 4 | Place system, assign, user params, compact inspect | **No system/emitter authoring** — docstring directs to Epic + `execute_tool_script` | composite | supersede placement; compose authoring | `niagara.*` + Epic batch (WS-07) | [VERIFIED: niagara_workflow_tools.py:78-81] |
-| `project_workflow` | `REProjectWorkflowTools` | 2 | Reload modules, architecture gap notes | Dev/diagnostic; not agent-facing production | primitive | retire | — | [VERIFIED: project_workflow_tools.py] |
-| `validation_workflow` | `REValidationWorkflowTools` | 3 | Compile/save/validate bundle; compact errors | `get_recent_errors_compact` build-dependent `[UNVERIFIED: CAPABILITY_MATRIX.md]` | composite | preserve ideas → WS-11 | validation harness + envelope status | [VERIFIED: validation_workflow_tools.py] |
+| `actor_workflow` | `REActorWorkflowTools` | 8 | Spawn/configure/verify actors, batch transforms, delete, organize | Wraps editor subsystems; no graph authoring | composite | supersede | `gameplay.*` actor goal ops | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `anim_workflow` | `REAnimWorkflowTools` | 6 | Control Rig pose → AnimSequence → Montage pipeline | **Notify plan is metadata-only** — not validated success; heavy sequencer/rig deps | goal (RE) | **become internal primitive** / replace with goal op | `animation.*` compose (WS-10); bake pattern preserved | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `asset_workflow` | `REAssetWorkflowTools` | 3 | Compact find, bulk property edit, save | Overlaps Epic `AssetTools`; SEARCH/MUTATE limits | composite | internalise / supersede | Epic AssetTools + envelope batch | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `batch_workflow` | `REBatchWorkflowTools` | 1 | Allowlisted ops + `$ref` chaining | 8 actions; BATCH_LIMIT 20; resolve_actor ignores dry_run | composite | supersede surface; preserve grammar | `execute_plan` | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `blueprint_workflow` | `REBlueprintWorkflowTools` | 5 | Inspect, create BP, class defaults, compile | **No graph authoring** — defaults/compile only; defers graphs to Epic `BlueprintTools` | composite | supersede | `blueprints.*` (WS-06) | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `capture_workflow` | `RECaptureWorkflowTools` | 5 (7 source) | Viewport/material/PIE capture to disk; compact logs; GIF tools absent at runtime | Disk paths not base64; GIF helpers in source but not registered | composite | preserve ideas → WS-11 | test harness + validation capture | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `character_workflow` | `RECharacterWorkflowTools` | 4 | Character mesh, combat montages, socket inspect | Montage wiring composes with ability rows (WS-09) | goal (RE) | project-layer or compose | ability contract with WS-09 | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `context` | `REContextTools` | 4 | Capabilities, editor context, target resolution | Pre-envelope discovery pattern | composite | supersede | envelope context + capability_notes (WS-05) | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `dress_workflow` | `REDressWorkflowTools` | 4 | Place/scatter static meshes, snap to floor | Cave/hub dressing for RE levels | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `level_workflow` | `RELevelWorkflowTools` | 3 | Open/create level, place actors, map check | `run_map_check` may fail on some builds `[UNVERIFIED: CAPABILITY_MATRIX.md]` | composite | partial supersede | level goal ops + WS-11 validation | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `lighting_workflow` | `RELightingWorkflowTools` | 4 | Mood presets, light inventory, set+verify | RE mood preset content | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `material_workflow` | `REMaterialWorkflowTools` | 4 | MI create/configure/assign | **No master material graph** — defers to Epic `MaterialTools` | composite | improve (envelope) | `create_vfx_material`, graph JSON (WS-08) | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `niagara_workflow` | `RENiagaraWorkflowTools` | 4 | Place system, assign, user params, compact inspect | **No system/emitter authoring** — docstring directs to Epic + `execute_tool_script` | composite | supersede placement; compose authoring | `niagara.*` + Epic batch (WS-07) | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `project_workflow` | `REProjectWorkflowTools` | 2 | Reload modules, architecture gap notes | Dev/diagnostic; not agent-facing production | primitive | retire | — | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
+| `validation_workflow` | `REValidationWorkflowTools` | 3 | Compile/save/validate bundle; compact errors | `get_recent_errors_compact` build-dependent `[UNVERIFIED: CAPABILITY_MATRIX.md]` | composite | preserve ideas → WS-11 | validation harness + envelope status | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
 
 ### `material_workflow` — per-tool disposition (WS-08 accepted)
 
@@ -187,12 +189,16 @@ Accepted from `docs/proposals/ws-09-audit-gas-toolsets.md` (WS-09, 2026-07-29).
 | **retire** | project |
 | **internalise** | asset (overlap with Epic AssetTools during migration) |
 
-### Still open (not runtime_complete)
+### Runtime schema matrix (closed)
 
-- Coexistence: simultaneous registry with UEREMCP without name collisions — **no collisions observed** in 73-toolset `list_toolsets` dump `[VERIFIED-RUNTIME: 2026-07-30]`
+- [x] Coexistence: simultaneous registry with UEREMCP without name collisions — **no collisions** in 73-toolset dump `[VERIFIED-RUNTIME: list_toolsets 2026-07-30]`
+- [x] Runtime `describe_toolset` for all 15 RE workflow toolsets — `docs/audit/raw/schemas/re_agent_tools.*.json` `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`
+- [x] `execute_editor_batch` schema cross-checked against live dump — matches `q-reagenttools-execute-editor-batch.json` grammar `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`
+
+### Still open (cutover / calibration)
+
 - Cutover bar: what must work before REAgentTools disabled (RB-15 q16)
-- Runtime `describe_toolset` for all 15 RE workflow toolsets (names only confirmed via `list_toolsets`)
-- Cross-check `execute_editor_batch` schema against live dump vs `q-reagenttools-execute-editor-batch.json`
+- `RECaptureWorkflowTools` GIF helpers (`capture_viewport_gif`, `make_gif_from_frames`) in source but not registered at runtime — negative finding for cutover docs
 
 ---
 

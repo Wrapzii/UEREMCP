@@ -1,0 +1,91 @@
+{
+  "name": "re_agent_tools.toolsets.validation_workflow_tools.REValidationWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite validation: compile/save/validate bundles.",
+  "tools": [
+    {
+      "description": "Run compile + optional map check + optional save dirty.",
+      "name": "re_agent_tools.toolsets.validation_workflow_tools.REValidationWorkflowTools.run_validation_bundle",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint_paths_json": {
+            "type": "string",
+            "default": "[]"
+          },
+          "run_map_check_flag": {
+            "type": "boolean",
+            "default": true
+          },
+          "save_dirty": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Best-effort recent errors — honest unsupported without log API.",
+      "name": "re_agent_tools.toolsets.validation_workflow_tools.REValidationWorkflowTools.get_recent_errors_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "max_lines": {
+            "type": "integer",
+            "default": 25
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Compile Blueprints, optionally save all dirty packages.",
+      "name": "re_agent_tools.toolsets.validation_workflow_tools.REValidationWorkflowTools.compile_save_validate",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint_paths_json": {
+            "type": "string",
+            "default": "[]"
+          },
+          "save_all_dirty": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

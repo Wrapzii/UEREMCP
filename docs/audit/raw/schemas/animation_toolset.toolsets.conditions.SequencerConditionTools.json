@@ -1,0 +1,364 @@
+{
+  "name": "animation_toolset.toolsets.conditions.SequencerConditionTools",
+  "version": "1.0",
+  "description": "Tools for managing runtime conditions on Sequencer tracks, sections, and\n    track rows. Use when setting up dynamic conditions that control whether\n    tracks or sections evaluate at runtime based on platform, gameplay state,\n    or custom logic. Supports MovieScenePlatformCondition,\n    MovieSceneDirectorBlueprintCondition, and MovieSceneGroupCondition types.",
+  "tools": [
+    {
+      "description": "Remove the condition from a specific track row.\n\n        Args:\n            track: The track to modify.\n            row_index: The row index (0-based).",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.clear_track_row_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "row_index": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "row_index"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set a condition on a specific track row.\n\n        Args:\n            track: The track to modify.\n            row_index: The row index (0-based).\n            condition_class: Full class path of the condition type.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.set_track_row_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "row_index": {
+            "type": "integer"
+          },
+          "condition_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "row_index",
+          "condition_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the condition on a specific track row.\n\n        Args:\n            track: The track to query.\n            row_index: The row index (0-based).\n\n        Returns:\n            Class path of the condition, or empty string.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.get_track_row_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "row_index": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "row_index"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Remove the condition from a track.\n\n        Args:\n            track: The track to clear the condition from.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.clear_track_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set a condition on a track.\n\n        Args:\n            track: The track to modify.\n            condition_class: Full class path of the condition type.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.set_track_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "condition_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "track",
+          "condition_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the track-level condition.\n\n        Args:\n            track: The track to query.\n\n        Returns:\n            Class path of the condition, or empty string.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.get_track_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Remove the condition from a section.\n\n        Args:\n            section: The section to clear the condition from.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.clear_section_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "section"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set a condition on a section.\n\n        Common condition classes:\n        - /Script/MovieSceneTracks.MovieScenePlatformCondition\n        - /Script/MovieSceneTracks.MovieSceneDirectorBlueprintCondition\n        - /Script/MovieScene.MovieSceneGroupCondition\n\n        Args:\n            section: The section to modify.\n            condition_class: Full class path of the condition type.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.set_section_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "condition_class": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "condition_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the condition on a section.\n\n        Returns the class path of the condition, or an empty string if\n        no condition is set.\n\n        Args:\n            section: The section to query.\n\n        Returns:\n            Class path of the condition, or empty string.",
+      "name": "animation_toolset.toolsets.conditions.SequencerConditionTools.get_section_condition",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "section"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

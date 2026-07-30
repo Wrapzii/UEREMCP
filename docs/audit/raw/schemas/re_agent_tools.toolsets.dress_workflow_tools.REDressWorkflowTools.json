@@ -1,0 +1,183 @@
+{
+  "name": "re_agent_tools.toolsets.dress_workflow_tools.REDressWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite dress: place/scatter static meshes for caves/hubs with verify.",
+  "tools": [
+    {
+      "description": "Line-trace snap actors down onto geometry (dress anti-float).",
+      "name": "re_agent_tools.toolsets.dress_workflow_tools.REDressWorkflowTools.snap_actors_to_floor",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_labels_json": {
+            "type": "string"
+          },
+          "trace_up_cm": {
+            "type": "number",
+            "default": 500
+          },
+          "trace_down_cm": {
+            "type": "number",
+            "default": 5000
+          }
+        },
+        "required": [
+          "actor_labels_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Scatter N copies of a mesh on a ring (cave rubble / perimeter dress).",
+      "name": "re_agent_tools.toolsets.dress_workflow_tools.REDressWorkflowTools.scatter_static_meshes_ring",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mesh_path": {
+            "type": "string"
+          },
+          "label_prefix": {
+            "type": "string"
+          },
+          "center_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "radius_cm": {
+            "type": "number",
+            "default": 400
+          },
+          "count": {
+            "type": "integer",
+            "default": 8
+          },
+          "scale_json": {
+            "type": "string",
+            "default": "[1,1,1]"
+          },
+          "random_yaw": {
+            "type": "boolean",
+            "default": true
+          },
+          "seed": {
+            "type": "integer",
+            "default": 42
+          },
+          "folder_path": {
+            "type": "string",
+            "default": "RE/Dress/Scatter"
+          },
+          "tag": {
+            "type": "string",
+            "default": "RE_DressScatter"
+          }
+        },
+        "required": [
+          "mesh_path",
+          "label_prefix"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Batch place meshes: [{mesh_path, label, location, rotation?, scale?, tags?}].",
+      "name": "re_agent_tools.toolsets.dress_workflow_tools.REDressWorkflowTools.batch_place_static_meshes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "placements_json": {
+            "type": "string"
+          },
+          "folder_path": {
+            "type": "string",
+            "default": "RE/Dress"
+          }
+        },
+        "required": [
+          "placements_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Place one StaticMeshActor from asset path; return bounds for scale gate.",
+      "name": "re_agent_tools.toolsets.dress_workflow_tools.REDressWorkflowTools.place_static_mesh_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mesh_path": {
+            "type": "string"
+          },
+          "actor_label": {
+            "type": "string"
+          },
+          "location_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "rotation_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "scale_json": {
+            "type": "string",
+            "default": "[1,1,1]"
+          },
+          "folder_path": {
+            "type": "string",
+            "default": "RE/Dress"
+          },
+          "tags_json": {
+            "type": "string",
+            "default": "[]"
+          }
+        },
+        "required": [
+          "mesh_path",
+          "actor_label"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

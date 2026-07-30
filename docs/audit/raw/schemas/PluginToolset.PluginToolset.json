@@ -1,0 +1,763 @@
+{
+  "name": "PluginToolset.PluginToolset",
+  "version": "1.0",
+  "description": "Tools for creating, editing, enabling, and querying Unreal plugins",
+  "tools": [
+    {
+      "description": "Validates that PluginName and RelativePluginLocation are acceptable for a new plugin.",
+      "name": "PluginToolset.PluginToolset.ValidateNewPluginNameAndLocation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The proposed plugin name."
+          },
+          "relativePluginLocation": {
+            "type": "string",
+            "description": "Parent directory for the new plugin relative to template's default location. This should be empty unless you wish to specify a subdirectory."
+          },
+          "bPlaceInEngine": {
+            "type": "boolean",
+            "description": "Use Engine Plugins directory rather than Game Plugins directory location. Only some Templates allow placing in Engine. See the TemplateInfo's bCanBePlacedInEngine. This should be false unless explicitly requested by the user."
+          },
+          "templateInfo": {
+            "title": "PluginTemplateDescriptionToolsetInfo",
+            "description": "The plugin template to potentially create from.",
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of this template in the GUI"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of this template in the GUI"
+              },
+              "onDiskPath": {
+                "type": "string",
+                "description": "Path to the directory containing template files."
+              },
+              "defaultTemplateName": {
+                "type": "string",
+                "description": "Default plugin name. Typically a prefix."
+              },
+              "bCanBePlacedInEngine": {
+                "type": "boolean",
+                "description": "Whether or not this template can be used for Engine plugins"
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "onDiskPath",
+              "defaultTemplateName",
+              "bCanBePlacedInEngine"
+            ]
+          }
+        },
+        "required": [
+          "pluginName",
+          "relativePluginLocation",
+          "bPlaceInEngine",
+          "templateInfo"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the name and location are valid."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Updates a plugin's descriptor fields and writes them to its .uplugin file.\nChecks out the file via source control if source control is enabled.\nNo-ops if the serialized descriptor is unchanged (file is not touched).",
+      "name": "PluginToolset.PluginToolset.UpdatePluginDescriptor",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin to update."
+          },
+          "newDescriptor": {
+            "title": "PluginDescriptorToolsetInfo",
+            "description": "The new descriptor field values to apply.",
+            "type": "object",
+            "properties": {
+              "friendlyName": {
+                "type": "string",
+                "description": "Friendly name of the plugin."
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the plugin."
+              },
+              "category": {
+                "type": "string",
+                "description": "The name of the category this plugin belongs to."
+              },
+              "versionName": {
+                "type": "string",
+                "description": "Name of the version for this plugin. This is the front-facing part of the version number. It doesn't need to\nmatch the version number numerically, but should be updated when the version number is increased accordingly."
+              },
+              "version": {
+                "type": "integer",
+                "description": "Version number for the plugin. The version number must increase with every version of the plugin, so that the\nsystem can determine whether one version of a plugin is newer than another, or to enforce other requirements.\nThis version number is not displayed in front-facing UI. Use the VersionName for that."
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "The company or individual who created this plugin. This is an optional field that may be displayed in the user interface."
+              },
+              "createdByURL": {
+                "type": "string",
+                "description": "Hyperlink URL string for the company or individual who created this plugin. This is optional."
+              },
+              "docsURL": {
+                "type": "string",
+                "description": "Documentation URL string."
+              },
+              "marketplaceURL": {
+                "type": "string",
+                "description": "Marketplace URL for this plugin. This URL will be embedded into projects that enable this plugin, so we can redirect to the marketplace if a user doesn't have it installed."
+              },
+              "supportURL": {
+                "type": "string",
+                "description": "Support URL/email for this plugin."
+              },
+              "bCanContainContent": {
+                "type": "boolean",
+                "description": "Can this plugin contain content?"
+              },
+              "bIsBetaVersion": {
+                "type": "boolean",
+                "description": "Marks the plugin as beta in the UI."
+              },
+              "bIsExperimentalVersion": {
+                "type": "boolean",
+                "description": "Marks the plugin as experimental in the UI."
+              },
+              "bIsSealed": {
+                "type": "boolean",
+                "description": "Prevents other plugins from depending on this plugin."
+              }
+            },
+            "required": [
+              "friendlyName",
+              "description",
+              "category",
+              "versionName",
+              "version",
+              "createdBy",
+              "createdByURL",
+              "docsURL",
+              "marketplaceURL",
+              "supportURL",
+              "bCanContainContent",
+              "bIsBetaVersion",
+              "bIsExperimentalVersion",
+              "bIsSealed"
+            ]
+          }
+        },
+        "required": [
+          "pluginName",
+          "newDescriptor"
+        ]
+      }
+    },
+    {
+      "description": "Enables or disables a plugin in the project config. The change takes effect on the next editor restart.",
+      "name": "PluginToolset.PluginToolset.SetPluginEnabled",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin."
+          },
+          "bEnabled": {
+            "type": "boolean",
+            "description": "True to enable, false to disable."
+          }
+        },
+        "required": [
+          "pluginName",
+          "bEnabled"
+        ]
+      }
+    },
+    {
+      "description": "Removes a dependency entry from a plugin's Plugins array in its .uplugin file.",
+      "name": "PluginToolset.PluginToolset.RemovePluginDependency",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin to modify."
+          },
+          "dependencyName": {
+            "type": "string",
+            "description": "The name of the dependency to remove."
+          }
+        },
+        "required": [
+          "pluginName",
+          "dependencyName"
+        ]
+      }
+    },
+    {
+      "description": "Lists the names of all enabled plugins, sorted alphabetically.",
+      "name": "PluginToolset.PluginToolset.ListEnabledPlugins",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted array of enabled plugin names."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists the names of all discovered plugins (enabled and disabled), sorted alphabetically.",
+      "name": "PluginToolset.PluginToolset.ListDiscoveredPlugins",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted array of discovered plugin names."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Checks whether the editor settings permit modifying plugins from the plugin browser.",
+      "name": "PluginToolset.PluginToolset.IsPluginModificationAllowed",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if plugin modification is allowed, false if it is disabled in Editor Settings."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Checks whether the editor settings permit plugin creation from the plugin browser.",
+      "name": "PluginToolset.PluginToolset.IsPluginCreationAllowed",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if plugin creation is allowed, false if it is disabled in Editor Settings."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Checks whether a discovered plugin is currently enabled.",
+      "name": "PluginToolset.PluginToolset.IsEnabled",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the plugin is enabled, false if it is disabled."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the list of available plugin templates. Pass one of the results to CreatePlugin\nto create a new plugin from that template.",
+      "name": "PluginToolset.PluginToolset.GetPluginTemplateDescriptions",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "PluginTemplateDescriptionToolsetInfo",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of this template in the GUI"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of this template in the GUI"
+                },
+                "onDiskPath": {
+                  "type": "string",
+                  "description": "Path to the directory containing template files."
+                },
+                "defaultTemplateName": {
+                  "type": "string",
+                  "description": "Default plugin name. Typically a prefix."
+                },
+                "bCanBePlacedInEngine": {
+                  "type": "boolean",
+                  "description": "Whether or not this template can be used for Engine plugins"
+                }
+              },
+              "required": [
+                "name",
+                "description",
+                "onDiskPath",
+                "defaultTemplateName",
+                "bCanBePlacedInEngine"
+              ]
+            },
+            "description": "Array of available plugin template descriptors."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets metadata for a discovered plugin, including description, version, base directory,\ncontent directory, descriptor path, and mounted asset path.",
+      "name": "PluginToolset.PluginToolset.GetPluginInfo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PluginToolsetInfo",
+            "description": "Metadata for the plugin.",
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer"
+              },
+              "versionName": {
+                "type": "string"
+              },
+              "baseDir": {
+                "type": "string"
+              },
+              "contentDir": {
+                "type": "string"
+              },
+              "descriptorPath": {
+                "type": "string"
+              },
+              "mountedAssetPath": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "description",
+              "version",
+              "versionName",
+              "baseDir",
+              "contentDir",
+              "descriptorPath",
+              "mountedAssetPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the name of the enabled plugin whose content mount point contains the given asset path.\nAccepts full asset paths or mount point prefixes (e.g. /PluginName/ or /Game/Path/To/Asset).",
+      "name": "PluginToolset.PluginToolset.GetPluginForAsset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetPath": {
+            "type": "string",
+            "description": "The asset or mount point path to look up."
+          }
+        },
+        "required": [
+          "assetPath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The name of the plugin that owns the asset."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the editable descriptor fields for a discovered plugin.",
+      "name": "PluginToolset.PluginToolset.GetPluginDescriptor",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PluginDescriptorToolsetInfo",
+            "description": "The plugin's current editable descriptor fields.",
+            "type": "object",
+            "properties": {
+              "friendlyName": {
+                "type": "string",
+                "description": "Friendly name of the plugin."
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the plugin."
+              },
+              "category": {
+                "type": "string",
+                "description": "The name of the category this plugin belongs to."
+              },
+              "versionName": {
+                "type": "string",
+                "description": "Name of the version for this plugin. This is the front-facing part of the version number. It doesn't need to\nmatch the version number numerically, but should be updated when the version number is increased accordingly."
+              },
+              "version": {
+                "type": "integer",
+                "description": "Version number for the plugin. The version number must increase with every version of the plugin, so that the\nsystem can determine whether one version of a plugin is newer than another, or to enforce other requirements.\nThis version number is not displayed in front-facing UI. Use the VersionName for that."
+              },
+              "createdBy": {
+                "type": "string",
+                "description": "The company or individual who created this plugin. This is an optional field that may be displayed in the user interface."
+              },
+              "createdByURL": {
+                "type": "string",
+                "description": "Hyperlink URL string for the company or individual who created this plugin. This is optional."
+              },
+              "docsURL": {
+                "type": "string",
+                "description": "Documentation URL string."
+              },
+              "marketplaceURL": {
+                "type": "string",
+                "description": "Marketplace URL for this plugin. This URL will be embedded into projects that enable this plugin, so we can redirect to the marketplace if a user doesn't have it installed."
+              },
+              "supportURL": {
+                "type": "string",
+                "description": "Support URL/email for this plugin."
+              },
+              "bCanContainContent": {
+                "type": "boolean",
+                "description": "Can this plugin contain content?"
+              },
+              "bIsBetaVersion": {
+                "type": "boolean",
+                "description": "Marks the plugin as beta in the UI."
+              },
+              "bIsExperimentalVersion": {
+                "type": "boolean",
+                "description": "Marks the plugin as experimental in the UI."
+              },
+              "bIsSealed": {
+                "type": "boolean",
+                "description": "Prevents other plugins from depending on this plugin."
+              }
+            },
+            "required": [
+              "friendlyName",
+              "description",
+              "category",
+              "versionName",
+              "version",
+              "createdBy",
+              "createdByURL",
+              "docsURL",
+              "marketplaceURL",
+              "supportURL",
+              "bCanContainContent",
+              "bIsBetaVersion",
+              "bIsExperimentalVersion",
+              "bIsSealed"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the names of all discovered plugins that declare a dependency on the given plugin.",
+      "name": "PluginToolset.PluginToolset.GetPluginDependents",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin to search for as a dependency target."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted array of plugin names that list the given plugin in their Plugins array."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the dependency entries from a plugin's Plugins array in its .uplugin file.",
+      "name": "PluginToolset.PluginToolset.GetPluginDependencies",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin."
+          }
+        },
+        "required": [
+          "pluginName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "PluginDependencyToolsetInfo",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Name of the dependency plugin."
+                },
+                "bOptional": {
+                  "type": "boolean",
+                  "description": "Whether the dependency is optional."
+                },
+                "bEnabled": {
+                  "type": "boolean",
+                  "description": "Whether the dependency should be enabled."
+                }
+              },
+              "required": [
+                "name",
+                "bOptional",
+                "bEnabled"
+              ]
+            },
+            "description": "Array of dependency entries declared in the plugin's .uplugin file."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new plugin from a template and loads it into the editor.\nUse GetPluginTemplateDescriptions to obtain a valid TemplateInfo.",
+      "name": "PluginToolset.PluginToolset.CreatePlugin",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "Name for the new plugin."
+          },
+          "relativePluginLocation": {
+            "type": "string",
+            "description": "Parent directory for the new plugin relative to template's default location. This should be empty unless you wish to specify a subdirectory."
+          },
+          "bPlaceInEngine": {
+            "type": "boolean",
+            "description": "Use Engine Plugins directory rather than Game Plugins directory location. Only some Templates allow placing in Engine. See the TemplateInfo's bCanBePlacedInEngine. This should be false unless explicitly requested by the user."
+          },
+          "templateInfo": {
+            "title": "PluginTemplateDescriptionToolsetInfo",
+            "description": "The plugin template to create from.",
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of this template in the GUI"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of this template in the GUI"
+              },
+              "onDiskPath": {
+                "type": "string",
+                "description": "Path to the directory containing template files."
+              },
+              "defaultTemplateName": {
+                "type": "string",
+                "description": "Default plugin name. Typically a prefix."
+              },
+              "bCanBePlacedInEngine": {
+                "type": "boolean",
+                "description": "Whether or not this template can be used for Engine plugins"
+              }
+            },
+            "required": [
+              "name",
+              "description",
+              "onDiskPath",
+              "defaultTemplateName",
+              "bCanBePlacedInEngine"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "A description for the new plugin."
+          }
+        },
+        "required": [
+          "pluginName",
+          "relativePluginLocation",
+          "bPlaceInEngine",
+          "templateInfo",
+          "description"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Created plugin's descriptor filename. Empty on failure."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a dependency entry to a plugin's Plugins array in its .uplugin file.\nNo-ops if a dependency with that name already exists with matching settings.\nThe dependency plugin does not need to be currently discovered.",
+      "name": "PluginToolset.PluginToolset.AddPluginDependency",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pluginName": {
+            "type": "string",
+            "description": "The name of the plugin to modify."
+          },
+          "dependencyName": {
+            "type": "string",
+            "description": "The name of the plugin to add as a dependency."
+          },
+          "bOptional": {
+            "type": "boolean",
+            "description": "Whether the dependency is optional."
+          },
+          "bEnabled": {
+            "type": "boolean",
+            "description": "Whether the dependency should be enabled."
+          }
+        },
+        "required": [
+          "pluginName",
+          "dependencyName",
+          "bOptional",
+          "bEnabled"
+        ]
+      }
+    }
+  ]
+}

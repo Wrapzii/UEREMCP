@@ -1,0 +1,667 @@
+{
+  "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools",
+  "version": "1.0",
+  "description": "Tools for inspecting and managing the Sequencer outliner tree. Use when\n    getting a snapshot of the outliner hierarchy, querying node children,\n    managing outliner selection, expanding or collapsing nodes, or toggling\n    node states like mute, solo, deactivate, lock, and pin. Also useful for\n    test verification of Sequencer UI state.",
+  "tools": [
+    {
+      "description": "Get sections associated with the given outliner nodes.\n\n        Args:\n            nodes: The outliner nodes to query.\n\n        Returns:\n            List of MovieSceneSection objects associated with the nodes.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_sections_for_nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "nodes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/MovieScene.MovieSceneSection",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the currently pinned outliner nodes.\n\n        Returns:\n            List of pinned nodes.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_pinned_nodes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Pin or unpin outliner nodes.\n\n        Args:\n            nodes: List of outliner nodes to modify.\n            pinned: True to pin, False to unpin.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.set_node_pinned",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "pinned"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the currently locked outliner nodes.\n\n        Returns:\n            List of locked nodes.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_locked_nodes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lock or unlock outliner nodes for editing.\n\n        Args:\n            nodes: List of outliner nodes to modify.\n            locked: True to lock, False to unlock.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.set_node_locked",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          },
+          "locked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "locked"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the currently deactivated outliner nodes.\n\n        Returns:\n            List of deactivated nodes.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_deactivated_nodes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Deactivate or reactivate outliner nodes.\n\n        Args:\n            nodes: List of outliner nodes to modify.\n            deactivated: True to deactivate, False to reactivate.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.set_node_deactivated",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          },
+          "deactivated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "deactivated"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the currently soloed outliner nodes.\n\n        Returns:\n            List of soloed nodes.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_soloed_nodes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the currently muted outliner nodes.\n\n        Returns:\n            List of muted nodes.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_muted_nodes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Solo or unsolo outliner nodes.\n\n        Args:\n            nodes: The nodes to solo or unsolo.\n            soloed: True to solo, False to unsolo.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.set_node_solo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          },
+          "soloed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "soloed"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Mute or unmute outliner nodes.\n\n        Args:\n            nodes: The nodes to mute or unmute.\n            muted: True to mute, False to unmute.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.set_node_muted",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          },
+          "muted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "muted"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Check whether an outliner node is expanded.\n\n        Args:\n            node: The outliner node to query.\n\n        Returns:\n            True if expanded, False if collapsed.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.is_node_expanded",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "title": "SequencerViewModelScriptingStruct",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Expand or collapse outliner nodes.\n\n        Args:\n            nodes: The nodes to expand or collapse.\n            expanded: True to expand, False to collapse.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.set_node_expanded",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          },
+          "expanded": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes",
+          "expanded"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the display label of an outliner node.\n\n        Args:\n            node: The outliner node to query.\n\n        Returns:\n            The node's display label text.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_node_label",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "title": "SequencerViewModelScriptingStruct",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set the outliner selection.\n\n        Args:\n            nodes: The nodes to select.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.set_outliner_selection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "nodes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the currently selected nodes in the outliner.\n\n        Returns:\n            List of selected SequencerViewModelScriptingStruct objects.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_outliner_selection",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get child nodes of an outliner node.\n\n        Args:\n            node: The parent outliner node.\n            type_filter: Optional node type name to filter by (e.g. \"Track\").\n\n        Returns:\n            List of child SequencerViewModelScriptingStruct objects.",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_outliner_children",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "title": "SequencerViewModelScriptingStruct",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "type_filter": {
+            "default": null,
+            "type": "string"
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerViewModelScriptingStruct",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get a full snapshot of the Sequencer outliner tree.\n\n        Builds a recursive tree structure from the outliner root nodes.\n        Useful for testing and UI verification.\n\n        Returns:\n            JSON string encoding a list of objects, each with 'label',\n            'type', and 'children' (a recursive list of the same structure).",
+      "name": "animation_toolset.toolsets.outliner.SequencerOutlinerTools.get_outliner_tree",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

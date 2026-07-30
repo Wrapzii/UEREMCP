@@ -1,0 +1,43 @@
+{
+  "name": "re_agent_tools.toolsets.project_workflow_tools.REProjectWorkflowTools",
+  "version": "1.0",
+  "description": "RE project architecture notes — honest gaps for missing game systems.",
+  "tools": [
+    {
+      "description": "Return RE project architecture notes and unsupported domains.",
+      "name": "re_agent_tools.toolsets.project_workflow_tools.REProjectWorkflowTools.get_plugin_project_notes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Hot-reload REAgentTools Python modules + re-register toolsets (editor stay open).",
+      "name": "re_agent_tools.toolsets.project_workflow_tools.REProjectWorkflowTools.reload_workflow_modules",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

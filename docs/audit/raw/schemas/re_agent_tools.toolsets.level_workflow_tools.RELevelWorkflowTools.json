@@ -1,0 +1,85 @@
+{
+  "name": "re_agent_tools.toolsets.level_workflow_tools.RELevelWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite level workflows: open/create, place actors, map check.",
+  "tools": [
+    {
+      "description": "Run editor map check if API available.",
+      "name": "re_agent_tools.toolsets.level_workflow_tools.RELevelWorkflowTools.run_map_check",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Place actors from JSON list, configure, optional save.",
+      "name": "re_agent_tools.toolsets.level_workflow_tools.RELevelWorkflowTools.place_configure_save_actors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "placements_json": {
+            "type": "string"
+          },
+          "save_level": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "placements_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Open level; optionally create new level asset if missing.",
+      "name": "re_agent_tools.toolsets.level_workflow_tools.RELevelWorkflowTools.open_or_create_level",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "level_path": {
+            "type": "string"
+          },
+          "create_if_missing": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "level_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

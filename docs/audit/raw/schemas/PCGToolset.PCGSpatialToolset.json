@@ -1,0 +1,73 @@
+{
+  "name": "PCGToolset.PCGSpatialToolset",
+  "version": "1.0",
+  "description": "PCGSpatial Toolset",
+  "tools": [
+    {
+      "description": "Runs an instant PCG graph with the specified parameters in fire-and-forget mode\n(Should be called directly: Not callable in a python context execution context)",
+      "name": "PCGToolset.PCGSpatialToolset.RunPCGInstantGraph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/PCG.PCGGraph",
+            "description": "The PCG graph to execute",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Key-value parameters to pass to the graph"
+          }
+        },
+        "required": [
+          "graph",
+          "params"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "PCGNodeExecutionMessage",
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "severity": {
+                  "type": "string"
+                },
+                "reporterNode": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message",
+                "severity",
+                "reporterNode"
+              ]
+            },
+            "description": "Array of per-node execution messages emitted while running the graph (empty on success with no issues)."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,299 @@
+{
+  "name": "ConfigSettingsToolset.ConfigSettingsToolset",
+  "version": "1.0",
+  "description": "Tools for listing, inspecting, and editing Config Settings sections",
+  "tools": [
+    {
+      "description": "Sets one or more properties on a settings section from a JSON object and saves.\nPropertiesJson must be a JSON object mapping property names to new values,\nin the same format returned by GetSectionPropertyValues.\nRaises an error if the section does not exist, cannot be edited, has no settings\nobject, the default config file is not writable, or any property cannot be set.",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.SetSectionProperties",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "The name of the container (e.g. \"Project\")."
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "The name of the category (e.g. \"Engine\")."
+          },
+          "sectionName": {
+            "type": "string",
+            "description": "The name of the section (e.g. \"General\")."
+          },
+          "propertiesJson": {
+            "type": "string",
+            "description": "JSON object with property name to new value pairs."
+          }
+        },
+        "required": [
+          "containerName",
+          "categoryName",
+          "sectionName",
+          "propertiesJson"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if all properties successfully set."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Saves the settings in a section.\nRaises an error if the section does not exist or saving is not supported.",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.SaveSection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "The name of the container (e.g. \"Project\")."
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "The name of the category (e.g. \"Engine\")."
+          },
+          "sectionName": {
+            "type": "string",
+            "description": "The name of the section (e.g. \"General\")."
+          }
+        },
+        "required": [
+          "containerName",
+          "categoryName",
+          "sectionName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True on success."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Resets the settings in a section to their default values.\nRaises an error if the section does not exist or reset is not supported.",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.ResetSectionToDefaults",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "The name of the container (e.g. \"Project\")."
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "The name of the category (e.g. \"Engine\")."
+          },
+          "sectionName": {
+            "type": "string",
+            "description": "The name of the section (e.g. \"General\")."
+          }
+        },
+        "required": [
+          "containerName",
+          "categoryName",
+          "sectionName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True on success."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists the names of all sections within a settings category, sorted alphabetically.\nRaises an error if the container or category does not exist.",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.ListSections",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "The name of the container (e.g. \"Project\")."
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "The name of the category (e.g. \"Engine\")."
+          }
+        },
+        "required": [
+          "containerName",
+          "categoryName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted array of section names."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists the names of all known settings containers, sorted alphabetically.\nCommon containers are \"Editor\" and \"Project\".",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.ListContainers",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted array of container names."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists the names of all categories within a settings container, sorted alphabetically.\nRaises an error if the container does not exist.",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.ListCategories",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "The name of the container (e.g. \"Project\")."
+          }
+        },
+        "required": [
+          "containerName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted array of category names."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a JSON Schema describing the user-visible properties of a settings section.\nThe schema maps each property name to its type, description, and constraints.\nRaises an error if the section does not exist or has no backing settings object\n(e.g. uses a custom widget instead).",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.GetSectionSchema",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "The name of the container (e.g. \"Project\")."
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "The name of the category (e.g. \"Engine\")."
+          },
+          "sectionName": {
+            "type": "string",
+            "description": "The name of the section (e.g. \"General\")."
+          }
+        },
+        "required": [
+          "containerName",
+          "categoryName",
+          "sectionName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON Schema string describing the section's properties, or empty string on failure."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the current values of the specified properties as a JSON object.\nRaises an error if the section does not exist, has no settings object, or any\nrequested property cannot be read.",
+      "name": "ConfigSettingsToolset.ConfigSettingsToolset.GetSectionPropertyValues",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "containerName": {
+            "type": "string",
+            "description": "The name of the container (e.g. \"Project\")."
+          },
+          "categoryName": {
+            "type": "string",
+            "description": "The name of the category (e.g. \"Engine\")."
+          },
+          "sectionName": {
+            "type": "string",
+            "description": "The name of the section (e.g. \"General\")."
+          },
+          "propertyNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The names of the properties to read."
+          }
+        },
+        "required": [
+          "containerName",
+          "categoryName",
+          "sectionName",
+          "propertyNames"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON object mapping property names to their current values, or empty string on failure."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,259 @@
+{
+  "name": "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite animation workflows: Control Rig poses → AnimSequence → Montage.",
+  "tools": [
+    {
+      "description": "One-shot: pose timeline → LevelSequence → AnimSequence → Montage.\n\n        clip_stem example: Sword_Light_01\n          → LS_RE_Sword_Light_01_Authoring, A_RE_Sword_Light_01, AM_RE_Sword_Light_01",
+      "name": "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools.author_clip_from_pose_timeline",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "clip_stem": {
+            "type": "string"
+          },
+          "poses_json": {
+            "type": "string"
+          },
+          "notifies_json": {
+            "type": "string",
+            "default": "{}"
+          },
+          "end_frame": {
+            "type": "integer",
+            "default": -1
+          },
+          "fps": {
+            "type": "integer",
+            "default": 30
+          },
+          "save": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "folder_path",
+          "clip_stem",
+          "poses_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create or refresh an AnimMontage from an existing AnimSequence.",
+      "name": "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools.create_montage_from_anim",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anim_sequence_path": {
+            "type": "string"
+          },
+          "montage_folder": {
+            "type": "string"
+          },
+          "montage_name": {
+            "type": "string"
+          },
+          "skeleton_path": {
+            "type": "string"
+          },
+          "notifies_json": {
+            "type": "string",
+            "default": "{}"
+          },
+          "save": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "anim_sequence_path",
+          "montage_folder",
+          "montage_name",
+          "skeleton_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Bake a Control Rig LevelSequence binding to AnimSequence + Montage.",
+      "name": "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools.export_sequence_to_anim_and_montage",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "level_sequence_path": {
+            "type": "string"
+          },
+          "anim_folder": {
+            "type": "string"
+          },
+          "anim_name": {
+            "type": "string"
+          },
+          "montage_name": {
+            "type": "string"
+          },
+          "binding_label": {
+            "type": "string"
+          },
+          "skeleton_path": {
+            "type": "string"
+          },
+          "start_frame": {
+            "type": "integer",
+            "default": 0
+          },
+          "end_frame": {
+            "type": "integer",
+            "default": -1
+          },
+          "fps": {
+            "type": "integer",
+            "default": 30
+          },
+          "notifies_json": {
+            "type": "string",
+            "default": "{}"
+          },
+          "save": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "level_sequence_path",
+          "anim_folder",
+          "anim_name",
+          "montage_name",
+          "binding_label",
+          "skeleton_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Author Control Rig keys from a pose timeline JSON (presets and/or bone transforms).\n\n        poses_json examples:\n          [{\"frame\":0,\"preset\":\"guard_r\"},{\"frame\":9,\"preset\":\"slash_contact\"}]\n          {\"0\":{\"preset\":\"guard_r\"},\"9\":{\"bones\":{\"hand_r_fk_ctrl\":[0,0,0,10,-20,35]}}}",
+      "name": "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools.author_controlrig_pose_timeline",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "sequence_name": {
+            "type": "string"
+          },
+          "poses_json": {
+            "type": "string"
+          },
+          "binding_label": {
+            "type": "string"
+          },
+          "control_rig_path": {
+            "type": "string"
+          },
+          "character_class_path": {
+            "type": "string"
+          },
+          "end_frame": {
+            "type": "integer",
+            "default": -1
+          },
+          "save": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "folder_path",
+          "sequence_name",
+          "poses_json",
+          "binding_label",
+          "control_rig_path",
+          "character_class_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Compact notes: UE authoring path + Comfy skeletal motion research pointers.",
+      "name": "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools.get_animation_pipeline_notes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "List named mannequin Control Rig pose presets (guard/coil/slash/etc.).",
+      "name": "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools.list_pose_presets",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

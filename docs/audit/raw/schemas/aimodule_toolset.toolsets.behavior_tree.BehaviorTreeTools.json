@@ -1,0 +1,334 @@
+{
+  "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools",
+  "version": "1.0",
+  "description": "Inspect BehaviorTree (BT) assets.",
+  "tools": [
+    {
+      "description": "Returns the sub-BT asset referenced by a RunBehavior task.\n\n        Args:\n            node: Any BTNode. Only RunBehavior tasks have a subtree.\n        Returns:\n            The referenced BehaviorTree asset.\n        Raises:\n            ValueError: If the node does not reference a subtree.",
+      "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools.get_subtree",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/AIModule.BTNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/AIModule.BehaviorTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns direct child nodes of a composite node.\n\n        Args:\n            composite: A BTCompositeNode (Selector, Sequence, etc.).\n        Returns:\n            A list of child BTNode UObjects.",
+      "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools.get_children",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "composite": {
+            "type": "object",
+            "title": "/Script/AIModule.BTCompositeNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "composite"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/AIModule.BTNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns tree depths for all nodes, matching list_nodes order.\n\n        Args:\n            behavior_tree: The BehaviorTree asset.\n        Returns:\n            A list of depth integers.",
+      "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools.get_node_depths",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "behavior_tree": {
+            "type": "object",
+            "title": "/Script/AIModule.BehaviorTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "behavior_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the tree depth of a node by its list_nodes index.\n\n        Args:\n            behavior_tree: The BehaviorTree asset.\n            node_index: Zero-based index into list_nodes output.\n        Returns:\n            The tree depth (0 = root level).",
+      "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools.get_node_depth",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "behavior_tree": {
+            "type": "object",
+            "title": "/Script/AIModule.BehaviorTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node_index": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "behavior_tree",
+          "node_index"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a flat list of all node UObjects in tree order.\n\n        Order: root decorators, then DFS (composite, services,\n        per-child decorators, child node).\n\n        Args:\n            behavior_tree: The BehaviorTree asset to inspect.\n        Returns:\n            A list of BTNode UObjects.",
+      "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools.list_nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "behavior_tree": {
+            "type": "object",
+            "title": "/Script/AIModule.BehaviorTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "behavior_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/AIModule.BTNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns root-level decorators on this tree.\n\n        Args:\n            behavior_tree: The BehaviorTree asset to query.\n        Returns:\n            A list of BTDecorator UObjects.",
+      "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools.get_root_decorators",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "behavior_tree": {
+            "type": "object",
+            "title": "/Script/AIModule.BehaviorTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "behavior_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/AIModule.BTDecorator",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the blackboard asset for this behavior tree.\n\n        Args:\n            behavior_tree: The BehaviorTree asset to query.\n        Returns:\n            The BlackboardData asset.",
+      "name": "aimodule_toolset.toolsets.behavior_tree.BehaviorTreeTools.get_blackboard",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "behavior_tree": {
+            "type": "object",
+            "title": "/Script/AIModule.BehaviorTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "behavior_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/AIModule.BlackboardData",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

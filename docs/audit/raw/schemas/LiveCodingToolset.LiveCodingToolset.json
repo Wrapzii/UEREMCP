@@ -1,0 +1,26 @@
+{
+  "name": "LiveCodingToolset.LiveCodingToolset",
+  "version": "1.0",
+  "description": "Live Coding compile toolset.\n\nExposes an MCP tool that triggers a Live Coding compile from the running\neditor and waits for the result, returning the compile status together with\nany captured LogLiveCoding output and UBT compiler diagnostics.",
+  "tools": [
+    {
+      "description": "Triggers a Live Coding compile and waits for the result.\nLive Coding must be enabled in Editor Preferences.",
+      "name": "LiveCodingToolset.LiveCodingToolset.CompileLiveCoding",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The compile result status followed by any compiler output (errors, warnings, etc)."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}
