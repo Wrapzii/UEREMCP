@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `c87b1db` (WS-06 A6 fix + residual readiness note)
+- **Orch tip at writing:** `72241c2` (WS-07 direct sprite/ribbon B4 binding fix)
 - **Date:** 2026-07-30
-- **Status:** `PocA6Reread` **PASS** on `c87b1db`, proving the A6 runtime criterion; overall POC A remains open until A1–A11 are evidenced. Fireball re-run on the same tip created six MIs under `/Game/__UeremcpPoc/Materials/` and passed the B2 manifest checks, but **B4 remains false**: only `flame_shell` binding re-read verified. No overall POC A / B4 / overall POC-B claim.
+- **Status:** `PocA6Reread` **PASS** on `c87b1db`, proving the A6 runtime criterion; overall POC A remains open until A1–A11 are evidenced. WS-07 direct sprite/ribbon bind + UObject re-read fix is now on orch as `72241c2` (`4e82c68`), ready for fireball re-run. **B4 / POC-B remain unproven**; template `MaterialUserParamBinding` may still block roles.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -80,6 +80,7 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Fireball proof parsing fix | `674c439` (`656ffe0`) | Harness/log parsing fix only; no acceptance claim |
 | Material system-path API | `58036dd` (`81b56e2`) | Provides `ExecuteCreateVfxMaterialForNiagaraSystem` before Niagara call sites |
 | Inline Niagara material co-location fix | `dc4f118` (`60cb3a4`) | Uses system-path resolve/execute APIs; **B4 not yet re-proven** |
+| Direct sprite/ribbon B4 binding fix | `72241c2` (`4e82c68`) | Replaces mismatched `SetRendererData` JSON path with direct bind + UObject re-read; **not yet re-proven** |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
@@ -95,7 +96,7 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 | B1 | One MCP request produces the complete effect — no follow-ups | **Still open** — filter is one direct editor tool call, not MCP; live fireball MCP missing | WS-07 + WS-11 |
 | B2 | Materials created or reused; reuse in `result.reused_assets` | **Filter manifest/path slice PASS on `c87b1db`** — six MIs under POC root; not an overall POC-B claim | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **Partial scaffolding** — needs fireball acceptance run | WS-07 |
-| B4 | Renderers configured and bound to valid materials | **FAIL on `c87b1db`** — only `flame_shell` verified; five role bindings failed re-read | WS-07 |
+| B4 | Renderers configured and bound to valid materials | **Fix landed, not proven** — direct sprite/ribbon bind at `72241c2`; template `MaterialUserParamBinding` may still block roles | WS-07 |
 | B5 | User params for colour, scale, intensity | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B6 | System compiles; compile genuinely awaited | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -113,7 +114,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 |---|---|---|---|
 | P0 | POC A scenario including explicit A6 programmatic re-read | WS-06 | Track; do not claim until WS-11 editor/MCP evidence lands |
 | P0 | Complete remaining POC A A1–A11 evidence | WS-06 + WS-11 | A6 runtime criterion PASS; no overall POC-A claim |
-| P0 | Fix five failed fireball renderer binding re-reads, then re-run | WS-07 + WS-11 | B2 path/manifest progress green; B4 FAIL |
+| P0 | Re-run fireball after direct binding fix `72241c2`; diagnose any remaining template user-param binding blockers | WS-07 + WS-11 | B2 path/manifest progress green; B4 unclaimed |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |

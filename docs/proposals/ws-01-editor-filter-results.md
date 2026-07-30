@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `c87b1db`
+- **Current orchestration tip:** `72241c2` (WS-07 direct sprite/ribbon B4 binding fix)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** A6 runtime proof is **PASS** on `c87b1db`; this is not an overall POC-A claim. Fireball still **FAILS B4** on the same tip, although six POC-root MIs and B2 manifest assertions are now green. Material remains **PASS 14/14**. No overall POC A / B4 / overall POC-B completion claim.
+- **Status:** A6 runtime proof is **PASS** on `c87b1db`; this is not an overall POC-A claim. WS-07 direct sprite/ribbon bind + UObject re-read fix is now on orch as `72241c2` (`4e82c68`), but B4 needs a WS-11 re-run and template `MaterialUserParamBinding` may still block roles. No overall POC A / B4 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: A6 runtime criterion **PASS** on `c87b1db`; full POC A A1–A11 evidence remains open. Fireball created six MIs under `/Game/__UeremcpPoc/Materials/` and passed B2 manifest assertions, but B4 is false: only `flame_shell` binding verified and five roles failed re-read. WS-07 owns the binding fix. Material **PASS 14/14**.
+Residuals: A6 runtime criterion **PASS** on `c87b1db`; full POC A A1–A11 evidence remains open. Fireball B2 path/manifest progress is green. B4 direct-binding fix `72241c2` is landed but unproven pending re-run; template `MaterialUserParamBinding` remains a possible blocker. Material **PASS 14/14**.
 
 ## Acceptance runtime follow-up on tip `d691316` (WS-11)
 
@@ -260,10 +260,10 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 |---|---|
 | WS-06 | A6 dedicated runtime proof is PASS; complete remaining POC A A1–A11 evidence with WS-11. |
 | WS-06 | A6 runtime filter PASS on `c87b1db`; full POC A A1–A11 remains open. |
-| WS-07 | Fix B4 binding re-read for `core`, `sparks`, `smoke`, `ribbon_trail`, and `impact_burst`; only `flame_shell` verifies. |
+| WS-07 | Direct sprite/ribbon B4 bind + UObject re-read fix landed as `72241c2`; stand by for re-run and any template `MaterialUserParamBinding` residual. |
 | WS-08 | Material API landed as `58036dd`; Material remains **PASS 14/14**. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run fireball after the WS-07 B4 binding fix. Retain A6 proof; keep overall POC-A/B4/POC-B unclaimed. |
+| WS-11 | Re-run fireball after `72241c2`. Retain A6 proof; keep overall POC-A/B4/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Material is green at 14/14 and A6 runtime proof passes. Fireball B2 path/manifest progress is green, but B4 fails. No overall POC-A / B4 / overall POC-B claims. No junction retarget.
+Material is green at 14/14 and A6 runtime proof passes. Fireball B2 path/manifest progress is green; B4 fix is landed but awaits re-proof. No overall POC-A / B4 / overall POC-B claims. No junction retarget.
