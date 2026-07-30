@@ -1,9 +1,9 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `1b228b7` (`[WS-07] Fix B7 gate scaffold create rejection`)
-- **Runtime result tip:** `fcdf2e5` (`[WS-15] Execute template modifiers and validation rules`)
+- **Current orchestration tip:** `c234606` (`[WS-10] Validate animation rejection responses structurally`)
+- **Latest re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Mixed. Compile success did not imply runtime gate success.
+- **Status:** Mixed after triage fixes. No A6 / POC-B completion claims.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -14,56 +14,63 @@ Each suite used the established runner:
 pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter "<filter>"
 ```
 
-The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`. Foreign-platform SDK setup warnings remained visible but were nonfatal; automation discovery and execution started.
+The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
 
-## Failing suites
+## Re-run on tip `c234606` (WS-11)
 
-| Filter | Passed | Failed | First failing test | First failure evidence |
-|---|---:|---:|---|---|
-| `UEREMCP.Niagara.Inspect` | 3 | 1 | `UEREMCP.Niagara.Inspect.NS_WS07_Probe` | Expected status `partially_completed`, but received `rejected`; diagnostics were also absent. |
-| `UEREMCP.Niagara.Create` | 8 | 2 | `UEREMCP.Niagara.Create.MaterialBindingOffline` | Expected unresolved `create_spec` count `0`, but received `1`. |
-| `UeremcpMaterial.Toolset` | 3 | 7 | `UeremcpMaterial.Toolset.CreateProceduralTexture.FlipbookAtlas` | Expected `created_and_validated`, but received `failed_validation` (reported atlas width/height were `0`, expected `256`). |
-| `UeremcpBlueprint.Toolset` | 2 | 2 | `UeremcpBlueprint.Toolset.ReadGraphRoundTrip` | Summary and complete revisions differed: expected `sha256:213b9f3f...`, received `sha256:9d7480e2...`. |
-| `UEREMCP.Animation` | 5 | 5 | `UEREMCP.Animation.InspectMontage.EnvelopeRejections` | The malformed-request rejection assertion was false (wrong-action and missing-target rejection assertions also failed). |
+### PASS
 
-### Additional failed tests
+| Filter | Result | Owner |
+|---|---:|---|
+| `UeremcpBlueprint.Toolset` | PASS, 4/4 | WS-06 |
+| `UEREMCP.Niagara.Create` | PASS, 10/10 | WS-07 |
 
-- `UEREMCP.Niagara.Create.ReplaceDryRun`
-- `UeremcpMaterial.Toolset.CreateProceduralTexture.Noise`
-- `UeremcpMaterial.Toolset.CreateVfxMaterial.Distortion`
-- `UeremcpMaterial.Toolset.CreateVfxMaterial.FlipbookSubuv`
-- `UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileCore`
-- `UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileTrail`
-- `UeremcpMaterial.Toolset.CreateVfxMaterial.ValidateFalse`
-- `UeremcpBlueprint.Toolset.SubmitGraphValidation`
-- `UEREMCP.Animation.InspectMontage.NotifyOrdering`
-- `UEREMCP.Animation.InspectMontage.StructuredState`
-- `UEREMCP.Animation.ReadAnimBp.EditorScratchAsset`
-- `UEREMCP.Animation.ReadAnimBp.EnvelopeRejections`
+### INCOMPLETE (stalled; no completion marker)
 
-## Passing suites
+| Filter | Progress | Owner | Notes |
+|---|---|---|---|
+| `UEREMCP.Niagara.Inspect` | 1/4 then stalled | WS-07 | Stalled after `NS_WS07_Probe` compile. Not a PASS. |
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | stalled | WS-07 | Stalled after creating/compiling `NS_POCB_FireballProbe`. Not a B7 or POC-B completion claim. |
+
+### FAIL
+
+| Filter | Result | Owner | Evidence |
+|---|---:|---|---|
+| `UeremcpMaterial.Toolset` | 5/10 | WS-08 | VFX tests returned `failed_validation` (missing generated master/MI) where expected status was `partially_completed`. |
+| `UEREMCP.Animation` | 8/10 | WS-10 | `InspectMontage.NotifyOrdering`: invalid track name did not degrade to empty. `InspectMontage.StructuredState`: transient asset had no Movie Scene; notify duration assert failed. |
+
+### Not claimed by this re-run
+
+- No A6 claim from Blueprint MutatingDispatch adapter gate.
+- No POC-B / B7 completion claim from the stalled Niagara B7 gate.
+- Templates automation filter registration remains out of scope for this note unless separately reported.
+
+## Prior baseline on tip `fcdf2e5` (superseded for triage)
+
+Recorded for history. Do not treat as current truth after `c234606`.
 
 | Filter | Result |
 |---|---:|
+| `UEREMCP.Niagara.Inspect` | FAIL, 3/4 (`NS_WS07_Probe` rejected) |
+| `UEREMCP.Niagara.Create` | FAIL, 8/10 |
+| `UeremcpMaterial.Toolset` | FAIL, 3/10 |
+| `UeremcpBlueprint.Toolset` | FAIL, 2/4 |
+| `UEREMCP.Animation` | FAIL, 5/10 |
 | `UEREMCP.Niagara.PlanHandlers` | PASS, 3/3 |
 | `UEREMCP.Material.PlanHandlers` | PASS, 3/3 |
 | `UEREMCP.Transport.Handoff` | PASS, 1/1 |
 | `UEREMCP.Protocol.PlanExecutor` | PASS, 7/7 |
+| Templates | SKIP / unavailable |
 
-`UEREMCP.Templates` was not run: no Templates automation filter registration was present in the source search at the result tip. This is recorded as **SKIP / unavailable**, not PASS.
+Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_20260730_021*.log`.
 
-## Evidence logs
+## Ownership handoff
 
-- `tests/integration/_logs/editor_UEREMCP_Niagara_Inspect_20260730_021342.log`
-- `tests/integration/_logs/editor_UEREMCP_Niagara_Create_20260730_021408.log`
-- `tests/integration/_logs/editor_UeremcpMaterial_Toolset_20260730_021434.log`
-- `tests/integration/_logs/editor_UeremcpBlueprint_Toolset_20260730_021501.log`
-- `tests/integration/_logs/editor_UEREMCP_Niagara_PlanHandlers_20260730_021524.log`
-- `tests/integration/_logs/editor_UEREMCP_Material_PlanHandlers_20260730_021546.log`
-- `tests/integration/_logs/editor_UEREMCP_Transport_Handoff_20260730_021216.log`
-- `tests/integration/_logs/editor_UEREMCP_Animation_20260730_021236.log`
-- `tests/integration/_logs/editor_UEREMCP_Protocol_PlanExecutor_20260730_021259.log`
+| Owner | Next work |
+|---|---|
+| WS-07 | Diagnose Niagara Inspect / B7 stalls after probe compile; re-run after fix. |
+| WS-08 | Align NullRHI / missing-master VFX status ladder to honest `partially_completed` (or generate assets) for Material Toolset failures. |
+| WS-10 | Fix NotifyOrdering empty-track degrade and StructuredState Movie Scene / notify duration asserts. |
+| WS-11 | Re-run affected filters after domain fixes; keep A6 / POC-B claims gated to their own criteria. |
 
-## Handoff note
-
-These results predate the current `1b228b7` B7 fix. Do not treat the Niagara failure rows as verification of that fix; WS-11 owns the B7 re-run. No editor retake was performed while that re-run held priority.
+Standing by on orch for domain fix commits. No junction retarget.
