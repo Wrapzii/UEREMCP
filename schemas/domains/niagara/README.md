@@ -7,7 +7,7 @@
 | Action | Specification schema | Status |
 |---|---|---|
 | `inspect_system` | `inspect_system.schema.json` | topology read via UNiagaraExternalEditUtilities |
-| `create_niagara_effect` | `create_niagara_effect.schema.json` | specification only |
+| `create_niagara_effect` | `create_niagara_effect.schema.json` | POC B probe compose (template + emitters + User.*) |
 
 Register `inspect_system` in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 when the
 tool leaves scaffold status.

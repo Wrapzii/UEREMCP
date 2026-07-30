@@ -27,6 +27,17 @@ namespace UeremcpNiagaraCapability
 		};
 	}
 
+	inline TArray<FString> DefaultCreateCapabilityNotes()
+	{
+		return {
+			TEXT("create_niagara_effect is a POC B probe slice: duplicate template, add role emitters, optional User.* params, compile await, save."),
+			TEXT("material_bindings: WS-08 materials are not created or assigned; renderer materials may remain template defaults."),
+			TEXT("POC B emitters non-empty / renderer-bound checks are not yet implemented — status stays partially_completed, never *_validated."),
+			TEXT("No post-create inspect round-trip or content_hash stability check in this slice."),
+			TEXT("module_reorder_without_readd and event_handler_stacks fidelity gaps apply to created systems too."),
+		};
+	}
+
 	inline TArray<FString> DefaultFidelityLossyAreas()
 	{
 		return {

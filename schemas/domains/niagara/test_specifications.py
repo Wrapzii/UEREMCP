@@ -34,6 +34,12 @@ EXPECTED_LOSSY_AREAS = frozenset({
     "script_graph_internals",
 })
 
+EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
+    "material_bindings",
+    "partially_completed",
+    "POC B",
+)
+
 
 def load_registry() -> Registry:
     resources = []
@@ -90,6 +96,24 @@ class NiagaraSpecificationTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         for area in EXPECTED_LOSSY_AREAS:
             self.assertIn(area, header, f"Capability header must define {area}")
+
+    def test_capability_header_create_notes(self) -> None:
+        header = (
+            REPO_ROOT
+            / "Plugins/UEREMCP/Source/UeremcpNiagara/Public/UeremcpNiagaraCapabilityNotes.h"
+        ).read_text(encoding="utf-8")
+        self.assertIn("DefaultCreateCapabilityNotes", header)
+        for snippet in EXPECTED_CREATE_CAPABILITY_SNIPPETS:
+            self.assertIn(snippet, header, f"Create capability notes must mention {snippet}")
+
+    def test_probe_path_convention_documented(self) -> None:
+        readme = (NIAGARA_DIR / "README.md").read_text(encoding="utf-8")
+        self.assertIn("/Game/__UeremcpTests/", readme)
+        paths_header = (
+            REPO_ROOT
+            / "Plugins/UEREMCP/Source/UeremcpNiagara/Public/UeremcpNiagaraPaths.h"
+        ).read_text(encoding="utf-8")
+        self.assertIn("TestsContentRoot", paths_header)
 
 
 if __name__ == "__main__":

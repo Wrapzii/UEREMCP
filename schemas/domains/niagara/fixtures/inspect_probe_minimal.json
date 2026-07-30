@@ -1,0 +1,41 @@
+{
+  "$comment": "Offline fixture: minimal graph.schema.json shapes expected from inspect_system on NS_WS07_Probe. Not a runtime golden — documents mapping contract for WS-07 tests.",
+  "system_graph": {
+    "graph_type": "NiagaraSystemGraph",
+    "graph_id": "/Game/__UeremcpTests/NS_WS07_Probe::System",
+    "fidelity": {
+      "round_trip_supported": false,
+      "lossy_areas": [
+        "event_handler_stacks",
+        "module_reorder_without_readd",
+        "script_graph_internals"
+      ]
+    },
+    "extensions": {
+      "niagara": {
+        "system_name": "NS_WS07_Probe",
+        "user_parameters": [
+          { "name": "User.Color" },
+          { "name": "User.Intensity" },
+          { "name": "User.Scale" }
+        ]
+      }
+    }
+  },
+  "module_stack_example": {
+    "graph_type": "NiagaraModuleStack",
+    "graph_id": "/Game/__UeremcpTests/NS_WS07_Probe::ProbeBurst::ParticleUpdateScript",
+    "extensions": {
+      "niagara": {
+        "script_usage": "ParticleUpdateScript",
+        "emitter_name": "ProbeBurst"
+      }
+    },
+    "nodes": [
+      {
+        "semantic_type": "niagara_module",
+        "semantic_id": "ProbeBurst/ParticleUpdateScript/ParticleState"
+      }
+    ]
+  }
+}

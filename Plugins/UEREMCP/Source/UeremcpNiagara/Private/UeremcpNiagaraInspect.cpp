@@ -3,6 +3,7 @@
 #include "UeremcpNiagaraInspect.h"
 
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraPaths.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraSystem.h"
@@ -13,7 +14,6 @@
 namespace
 {
 	const TCHAR* GGraphSchemaVersion = TEXT("1.0");
-	const TCHAR* GTestsRoot = TEXT("/Game/__UeremcpTests");
 
 	FString SimTargetToString(ENiagaraSimTarget SimTarget)
 	{
@@ -368,7 +368,7 @@ bool FUeremcpNiagaraInspect::ParseSpecification(
 
 bool FUeremcpNiagaraInspect::IsAllowedProbePath(const FString& AssetPath)
 {
-	return AssetPath.StartsWith(GTestsRoot);
+	return UeremcpNiagaraPaths::IsAllowedProbePath(AssetPath);
 }
 
 bool FUeremcpNiagaraInspect::Run(
@@ -382,7 +382,7 @@ bool FUeremcpNiagaraInspect::Run(
 	{
 		OutResult.Error = FString::Printf(
 			TEXT("inspect_system probes only assets under %s (got '%s')."),
-			GTestsRoot,
+			UeremcpNiagaraPaths::TestsContentRoot,
 			*Request.TargetAssetPath);
 		return false;
 	}

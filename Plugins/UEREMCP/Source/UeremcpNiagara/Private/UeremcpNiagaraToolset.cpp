@@ -4,6 +4,7 @@
 
 #include "UeremcpEnvelope.h"
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraCreate.h"
 #include "UeremcpNiagaraInspect.h"
 
 FString UUeremcpNiagaraToolset::Echo(const FString& RequestJson)
@@ -158,6 +159,139 @@ FString UUeremcpNiagaraToolset::InspectSystem(const FString& RequestJson)
 		Validation->SetField(TEXT("compiled"), MakeShared<FJsonValueNull>());
 	}
 	Extra->SetObjectField(TEXT("validation"), Validation);
+
+	Response.ExtraFields = Extra;
+	return FUeremcpEnvelope::SerializeResponse(Response);
+}
+
+FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
+				*Request.ProtocolVersion,
+				*FUeremcpEnvelope::ProtocolVersion()));
+	}
+
+	if (!Request.Action.Equals(TEXT("create_niagara_effect"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("CreateNiagaraEffect received action '%s'. Use action 'create_niagara_effect'."),
+				*Request.Action));
+	}
+
+	if (Request.TargetAssetPath.IsEmpty())
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("create_niagara_effect requires target.asset_path under /Game/__UeremcpTests/."));
+	}
+
+	if (!FUeremcpNiagaraInspect::IsAllowedProbePath(Request.TargetAssetPath))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("create_niagara_effect probes only assets under /Game/__UeremcpTests/."));
+	}
+
+	FUeremcpNiagaraCreateSpec Spec;
+	FString SpecError;
+	if (!FUeremcpNiagaraCreate::ParseSpecification(Request, Spec, SpecError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(TEXT("Invalid create_niagara_effect specification: %s"), *SpecError));
+	}
+
+	FUeremcpNiagaraCreateResult CreateResult;
+	if (!FUeremcpNiagaraCreate::Run(Request, Spec, CreateResult))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			CreateResult.Error.IsEmpty() ? TEXT("create_niagara_effect failed.") : CreateResult.Error);
+	}
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = CreateResult.CreatedAssetPath;
+	Response.CapabilityNotes = UeremcpNiagaraCapability::DefaultCreateCapabilityNotes();
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
+
+	if (Request.bDryRun)
+	{
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = CreateResult.Summary;
+	}
+	else
+	{
+		Response.Status = TEXT("partially_completed");
+		Response.Summary = CreateResult.Summary;
+	}
+
+	TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+
+	TArray<TSharedPtr<FJsonValue>> ChecksPerformed;
+	for (const FString& Check : CreateResult.ChecksPerformed)
+	{
+		ChecksPerformed.Add(MakeShared<FJsonValueString>(Check));
+	}
+	Validation->SetArrayField(TEXT("checks_performed"), ChecksPerformed);
+
+	TArray<TSharedPtr<FJsonValue>> ChecksSkipped;
+	for (const FString& Check : CreateResult.ChecksSkipped)
+	{
+		ChecksSkipped.Add(MakeShared<FJsonValueString>(Check));
+	}
+	Validation->SetArrayField(TEXT("checks_skipped"), ChecksSkipped);
+
+	if (CreateResult.bCompiled.IsSet())
+	{
+		Validation->SetBoolField(TEXT("compiled"), CreateResult.bCompiled.GetValue());
+	}
+	else
+	{
+		Validation->SetField(TEXT("compiled"), MakeShared<FJsonValueNull>());
+	}
+
+	if (CreateResult.bSaved.IsSet())
+	{
+		Validation->SetBoolField(TEXT("saved"), CreateResult.bSaved.GetValue());
+	}
+	else
+	{
+		Validation->SetField(TEXT("saved"), MakeShared<FJsonValueNull>());
+	}
+
+	Validation->SetField(TEXT("structurally_valid"), MakeShared<FJsonValueNull>());
+	Validation->SetField(TEXT("runtime_smoke_test"), MakeShared<FJsonValueNull>());
+
+	Extra->SetObjectField(TEXT("validation"), Validation);
+
+	if (!Request.bDryRun && CreateResult.EmittersAdded.Num() > 0)
+	{
+		TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+		Result->SetStringField(TEXT("primary_asset"), CreateResult.CreatedAssetPath);
+		Extra->SetObjectField(TEXT("result"), Result);
+	}
 
 	Response.ExtraFields = Extra;
 	return FUeremcpEnvelope::SerializeResponse(Response);
