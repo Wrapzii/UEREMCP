@@ -30,6 +30,7 @@ public class UeremcpMaterial : ModuleRules
 			"Projects",
 
 			"UeremcpCore",
+			"UeremcpSecurity",
 			"ToolsetRegistry",
 			"UeremcpProtocol",
 

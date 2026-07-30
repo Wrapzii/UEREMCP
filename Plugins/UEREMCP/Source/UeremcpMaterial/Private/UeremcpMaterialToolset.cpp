@@ -3,8 +3,30 @@
 #include "UeremcpMaterialToolset.h"
 
 #include "UeremcpEnvelope.h"
+#include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialService.h"
+#include "UeremcpMutatingDispatch.h"
 #include "UeremcpProceduralTextureService.h"
+#include "UeremcpSecurityDomainAdoption.h"
+
+namespace
+{
+	bool IsDestructiveMode(const FString& Mode)
+	{
+		return Mode.Equals(TEXT("replace"), ESearchCase::IgnoreCase)
+			|| Mode.Equals(TEXT("rebuild_from_specification"), ESearchCase::IgnoreCase)
+			|| Mode.Equals(TEXT("delete"), ESearchCase::IgnoreCase);
+	}
+
+	int32 PredictedDeletedForTarget(const FUeremcpRequest& Request, bool& bOutTargetExists)
+	{
+		bOutTargetExists =
+			UeremcpMaterialAssetLoad::TryLoadRegisteredAsset(Request.TargetAssetPath) != nullptr;
+		return FUeremcpSecurityDomainAdoption::PredictedDeletedForDestructiveReplace(
+			bOutTargetExists,
+			IsDestructiveMode(Request.Mode));
+	}
+}
 
 FString UUeremcpMaterialToolset::Echo(const FString& RequestJson)
 {
@@ -80,6 +102,25 @@ FString UUeremcpMaterialToolset::CreateVfxMaterial(const FString& RequestJson)
 			TEXT("create_vfx_material requires target.asset_path (material instance under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/)."));
 	}
 
+	bool bTargetExists = false;
+	const int32 PredictedDeleted = PredictedDeletedForTarget(Request, bTargetExists);
+	FUeremcpMutatingDispatch MutatingDispatch;
+	const bool bDispatchStarted = !Request.bDryRun;
+	if (bDispatchStarted)
+	{
+		FString BlockingResponse;
+		if (!MutatingDispatch.TryBegin(
+			RequestJson,
+			bTargetExists,
+			PredictedDeleted,
+			false,
+			BlockingResponse))
+		{
+			return BlockingResponse;
+		}
+		Request.bDryRun = MutatingDispatch.IsEffectiveDryRun();
+	}
+
 	const FUeremcpMaterialCreateResult CreateResult = UeremcpMaterialService::ExecuteCreateVfxMaterial(Request);
 
 	FUeremcpResponse Response;
@@ -100,7 +141,9 @@ FString UUeremcpMaterialToolset::CreateVfxMaterial(const FString& RequestJson)
 	Response.Metrics.AssetsAffected =
 		CreateResult.CreatedAssets.Num() + CreateResult.ModifiedAssets.Num();
 
-	return FUeremcpEnvelope::SerializeResponse(Response);
+	return bDispatchStarted
+		? MutatingDispatch.Complete(Response)
+		: FUeremcpEnvelope::SerializeResponse(Response);
 }
 
 FString UUeremcpMaterialToolset::CreateProceduralTexture(const FString& RequestJson)
@@ -141,6 +184,25 @@ FString UUeremcpMaterialToolset::CreateProceduralTexture(const FString& RequestJ
 			TEXT("create_procedural_texture requires target.asset_path (Texture2D under /Game/__UeremcpTests/Textures/ or /Game/__UeremcpPoc/Textures/)."));
 	}
 
+	bool bTargetExists = false;
+	const int32 PredictedDeleted = PredictedDeletedForTarget(Request, bTargetExists);
+	FUeremcpMutatingDispatch MutatingDispatch;
+	const bool bDispatchStarted = !Request.bDryRun;
+	if (bDispatchStarted)
+	{
+		FString BlockingResponse;
+		if (!MutatingDispatch.TryBegin(
+			RequestJson,
+			bTargetExists,
+			PredictedDeleted,
+			false,
+			BlockingResponse))
+		{
+			return BlockingResponse;
+		}
+		Request.bDryRun = MutatingDispatch.IsEffectiveDryRun();
+	}
+
 	const FUeremcpProceduralTextureResult CreateResult =
 		UeremcpProceduralTextureService::ExecuteFromEnvelope(Request);
 
@@ -159,5 +221,7 @@ FString UUeremcpMaterialToolset::CreateProceduralTexture(const FString& RequestJ
 	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
 	Response.Metrics.AssetsAffected = CreateResult.CreatedAssets.Num();
 
-	return FUeremcpEnvelope::SerializeResponse(Response);
+	return bDispatchStarted
+		? MutatingDispatch.Complete(Response)
+		: FUeremcpEnvelope::SerializeResponse(Response);
 }

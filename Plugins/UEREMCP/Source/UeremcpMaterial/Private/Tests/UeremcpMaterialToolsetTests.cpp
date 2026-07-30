@@ -18,6 +18,8 @@
 #include "UeremcpMaterialNiagaraExport.h"
 #include "UeremcpMaterialPaths.h"
 #include "UeremcpMaterialToolset.h"
+#include "UeremcpMutatingDispatch.h"
+#include "UeremcpMutatorQueue.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -386,6 +388,176 @@ bool FUeremcpMaterialPocPathPolicyTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("bad root parseable"), UeremcpMaterialTests::ParseStatus(BadJson, BadStatus));
 	TestEqual(TEXT("bad root rejected"), BadStatus, FString(TEXT("rejected")));
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialMutatingDispatchPathPolicyTest,
+	"UeremcpMaterial.Toolset.Security.MutatingDispatchPathPolicy",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialMutatingDispatchPathPolicyTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+
+	const FString EngineRequest = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-security-engine-root",
+		"action":"create_vfx_material",
+		"mode":"create",
+		"target":{"asset_path":"/Engine/__UeremcpTests/MI_MustNotCreate"},
+		"specification":{"purpose":"fireball_core","element":"fire"}
+	})");
+	const FString EngineJson = UUeremcpMaterialToolset::CreateVfxMaterial(EngineRequest);
+	FString EngineStatus;
+	TestTrue(TEXT("engine-root response parseable"), UeremcpMaterialTests::ParseStatus(EngineJson, EngineStatus));
+	TestEqual(TEXT("engine-root write rejected"), EngineStatus, FString(TEXT("rejected")));
+	TestTrue(
+		TEXT("shared dispatch rejected before Material service"),
+		EngineJson.Contains(TEXT("/Engine/ writes are forbidden")));
+
+	const FString TraversalRequest = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-security-traversal",
+		"action":"create_procedural_texture",
+		"mode":"create",
+		"target":{"asset_path":"/Game/../Secret/T_MustNotCreate"},
+		"specification":{"generate":"noise","dimensions":[32,32]}
+	})");
+	const FString TraversalJson =
+		UUeremcpMaterialToolset::CreateProceduralTexture(TraversalRequest);
+	FString TraversalStatus;
+	TestTrue(TEXT("traversal response parseable"), UeremcpMaterialTests::ParseStatus(TraversalJson, TraversalStatus));
+	TestEqual(TEXT("traversal write rejected"), TraversalStatus, FString(TEXT("rejected")));
+	TestTrue(
+		TEXT("shared dispatch reports traversal"),
+		TraversalJson.Contains(TEXT("soft path contains '..' traversal")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialMutatingDispatchForcedDryRunTest,
+	"UeremcpMaterial.Toolset.Security.DestructiveReplaceForcesDryRun",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialMutatingDispatchForcedDryRunTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+
+	const FString Target =
+		TEXT("/Game/__UeremcpTests/Materials/MI_WS08_SecurityReplaceDryRun");
+	UeremcpMaterialTests::DeleteIfExists(Target);
+
+	const FString CreateRequest = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-security-replace-setup",
+		"action":"create_vfx_material",
+		"mode":"create",
+		"target":{"asset_path":"%s"},
+		"specification":{
+			"purpose":"elemental_projectile_core",
+			"element":"fire",
+			"features":["radial_falloff","animated_noise","fresnel","dynamic_color","dynamic_intensity"]
+		},
+		"options":{"compile":true,"validate":false,"save":true}
+	})"), *Target);
+	const FString CreateJson = UUeremcpMaterialToolset::CreateVfxMaterial(CreateRequest);
+	FString CreateStatus;
+	TestTrue(TEXT("setup response parseable"), UeremcpMaterialTests::ParseStatus(CreateJson, CreateStatus));
+
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	if (!TestNotNull(TEXT("asset subsystem"), Subsystem)
+		|| !TestTrue(TEXT("replace target exists"), Subsystem->DoesAssetExist(Target)))
+	{
+		UeremcpMaterialTests::DeleteIfExists(Target);
+		return false;
+	}
+
+	const FString ReplaceRequest = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-security-replace-default-dry-run",
+		"action":"create_vfx_material",
+		"mode":"replace",
+		"target":{"asset_path":"%s"},
+		"specification":{
+			"purpose":"elemental_projectile_core",
+			"element":"ice",
+			"features":["radial_falloff","animated_noise","fresnel","dynamic_color","dynamic_intensity"]
+		}
+	})"), *Target);
+	const FString ReplaceJson = UUeremcpMaterialToolset::CreateVfxMaterial(ReplaceRequest);
+	FString ReplaceStatus;
+	TestTrue(TEXT("replace response parseable"), UeremcpMaterialTests::ParseStatus(ReplaceJson, ReplaceStatus));
+	TestEqual(
+		TEXT("destructive replace without explicit dry_run is planning-only"),
+		ReplaceStatus,
+		FString(TEXT("no_change_required")));
+	TestTrue(
+		TEXT("Material service receives policy-forced effective dry_run"),
+		ReplaceJson.Contains(TEXT("dry_run: would create/update MI")));
+	TestTrue(TEXT("forced dry_run preserves existing target"), Subsystem->DoesAssetExist(Target));
+
+	UeremcpMaterialTests::DeleteIfExists(Target);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialMutatingDispatchQueueTest,
+	"UeremcpMaterial.Toolset.Security.ConcurrentCreateQueues",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialMutatingDispatchQueueTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+
+	const FString HolderRequest = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-security-queue-holder",
+		"action":"create_vfx_material",
+		"mode":"create",
+		"target":{"asset_path":"/Game/__UeremcpTests/Materials/MI_QueueHolder"}
+	})");
+	FUeremcpMutatingDispatch Holder;
+	FString HolderBlock;
+	TestTrue(
+		TEXT("first Material dispatch owns mutator"),
+		Holder.TryBegin(HolderRequest, false, 0, false, HolderBlock));
+
+	const FString QueuedTarget =
+		TEXT("/Game/__UeremcpTests/Textures/T_WS08_SecurityQueued");
+	UeremcpMaterialTests::DeleteIfExists(QueuedTarget);
+	const FString QueuedRequest = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-security-queue-waiter",
+		"action":"create_procedural_texture",
+		"mode":"create",
+		"target":{"asset_path":"%s"},
+		"specification":{"generate":"noise","dimensions":[32,32]}
+	})"), *QueuedTarget);
+	const FString QueuedJson =
+		UUeremcpMaterialToolset::CreateProceduralTexture(QueuedRequest);
+	FString QueuedStatus;
+	TestTrue(TEXT("queued response parseable"), UeremcpMaterialTests::ParseStatus(QueuedJson, QueuedStatus));
+	TestEqual(TEXT("second Material create queues"), QueuedStatus, FString(TEXT("partially_completed")));
+	TestTrue(TEXT("queued response contains job"), QueuedJson.Contains(TEXT("\"job\"")));
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	TestTrue(
+		TEXT("queued Material service did not create target"),
+		!Subsystem || !Subsystem->DoesAssetExist(QueuedTarget));
+
+	FUeremcpResponse HolderResponse;
+	HolderResponse.RequestId = TEXT("mat-security-queue-holder");
+	HolderResponse.Status = TEXT("no_change_required");
+	HolderResponse.Summary = TEXT("Queue holder test complete without mutation.");
+	Holder.Complete(HolderResponse);
+	TestTrue(
+		TEXT("queued waiter removed after assertion"),
+		FUeremcpMutatorQueue::CancelQueued(
+			FPaths::GetProjectFilePath(),
+			TEXT("mat-security-queue-waiter")));
+
+	UeremcpMaterialTests::DeleteIfExists(QueuedTarget);
 	return true;
 }
 
