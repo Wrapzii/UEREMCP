@@ -118,3 +118,7 @@ triggered on the repeats.
 Test `Revision.StaleRejected`: retrieve a graph, modify the asset out-of-band, submit
 with the original `expected_revision`, assert `status: rejected` with the current
 revision returned and **no mutation performed**.
+
+### Runtime status (2026-07-30)
+
+`Idempotency.RepeatedCreate` and `Revision.StaleRejected` pass on RE (`-KeepUeremcp -NoProbe`, filter `UEREMCP.Validation`). Fix: `dad8717`/`d4ce1e5`, `1e6119e`/`ea8b845`. Full suite 6/6 `[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260730_005518.log]`.

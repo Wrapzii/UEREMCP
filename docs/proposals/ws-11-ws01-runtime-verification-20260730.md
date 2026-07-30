@@ -1,9 +1,35 @@
 # WS-11 runtime verification handoff (WS-01 orch gate)
 
 - **Date:** 2026-07-30
-- **Branch:** ws-01-orch @ 35aba09 (no-ff merge WS-11 `0cdea82` post-Templates Validation log)
+- **Branch:** ws-01-orch @ ea8b845 (Validation 6/6; see section below)
 - **Prior gate:** ws-01-orch @ 9eb7531 — WS-15 Templates compile fix integrated; Validation blocked on plugin load until rebuild
 - **RE junction:** RE\Plugins\UEREMCP -> UEREMCP-ws01\Plugins\UEREMCP [VERIFIED-RUNTIME: junction target query]
+
+## Validation 6/6 Success (post idempotency replay fix)
+
+- **Date:** 2026-07-30
+- **Branch:** ws-01-orch @ ea8b845 (no-ff merges `d4ce1e5` WS-05 `dad8717`, `ea8b845` WS-11 `1e6119e`)
+- **Fix commits:** WS-05 `dad8717` (`TryGetReplay` + `metrics.replayed` on stored responses); WS-11 `1e6119e` (RepeatedCreate harness uses `TryGetReplay`)
+- **Command:** `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"` on RE junction to orch tip
+- **Exit:** 0 (six tests, all Success)
+- **Evidence:** `[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260730_005518.log]` (local `tests/integration/_logs/`; not committed)
+
+| Test | Status |
+|------|--------|
+| UEREMCP.Validation.Harness.Smoke | PASS |
+| UEREMCP.Validation.Rollback.MultiAssetDiscard | PASS |
+| UEREMCP.Validation.Rollback.DeletedAssetDiscard | PASS |
+| UEREMCP.Validation.Rollback.BlueprintCompileDiscard | PASS |
+| UEREMCP.Validation.Idempotency.RepeatedCreate | PASS |
+| UEREMCP.Validation.Revision.StaleRejected | PASS |
+
+**Summary:** **6 PASS, 0 FAIL.** Prior 5/6 gate closed by replay annotation + harness wiring.
+
+ADR-0005 q4/q5: **runtime POSITIVE** for BP compile and deleted-asset discard on this gate. Do not broaden `rollback.available` beyond proven Content/ + BP compile + deleted-asset discard scopes.
+
+## Open blockers (updated)
+
+- None on the Validation automation gate. Wave 2 (Saved/Config, durable idempotency store) remains out of band.
 
 ## Build (post WS-15 merge)
 
@@ -50,6 +76,3 @@ Redacted log: `tests/integration/_logs/editor_UEREMCP_Validation_20260730_ws01or
 
 ADR-0005 q4/q5: Rollback tests **ran and passed** on the post-merge gate; idempotency failure is separate from sandbox semantics.
 
-## Open blockers
-
-- **Idempotency.RepeatedCreate** — behavior mismatch (not a plugin-load/build gate).
