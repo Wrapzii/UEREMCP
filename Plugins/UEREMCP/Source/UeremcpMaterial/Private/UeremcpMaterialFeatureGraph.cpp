@@ -9,6 +9,7 @@
 #include "Materials/MaterialExpressionFresnel.h"
 #include "Materials/MaterialExpressionLinearInterpolate.h"
 #include "Materials/MaterialExpressionMultiply.h"
+#include "Materials/MaterialExpressionAppendVector.h"
 #include "Materials/MaterialExpressionNoise.h"
 #include "Materials/MaterialExpressionOneMinus.h"
 #include "Materials/MaterialExpressionPanner.h"
@@ -64,6 +65,22 @@ namespace
 				++Ops;
 			}
 			return bOk;
+		}
+
+		bool ConnectToInputWithFallback(
+			UMaterialExpression* From,
+			const FString& FromOut,
+			UMaterialExpression* To,
+			std::initializer_list<const TCHAR*> InputPinCandidates)
+		{
+			for (const TCHAR* PinName : InputPinCandidates)
+			{
+				if (Connect(From, FromOut, To, PinName))
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 
 		UMaterialExpressionMultiply* Multiply(
@@ -236,8 +253,12 @@ namespace
 			{
 				UMaterialExpressionTime* TimeExpr = AddExpression<UMaterialExpressionTime>(-650, 420);
 				UMaterialExpressionPanner* NoisePanner = AddExpression<UMaterialExpressionPanner>(-500, 420);
+				UMaterialExpressionAppendVector* NoisePosition =
+					AddExpression<UMaterialExpressionAppendVector>(-420, 420);
+				UMaterialExpressionConstant* NoisePositionZ =
+					AddExpression<UMaterialExpressionConstant>(-550, 480);
 				UMaterialExpressionNoise* NoiseExpr = AddExpression<UMaterialExpressionNoise>(-350, 420);
-				if (!TimeExpr || !NoisePanner || !NoiseExpr)
+				if (!TimeExpr || !NoisePanner || !NoisePosition || !NoisePositionZ || !NoiseExpr)
 				{
 					Result.Error = TEXT("Failed to create animated_noise nodes.");
 					return false;
@@ -246,9 +267,17 @@ namespace
 				NoiseExpr->Quality = 2;
 				NoisePanner->SpeedX = 0.25f;
 				NoisePanner->SpeedY = 0.25f;
+				NoisePositionZ->R = 0.0f;
+				// Panner outputs float2; Noise Position expects float3 [DOCS: utility material expressions].
 				if (!Connect(TexCoord, TEXT(""), NoisePanner, TEXT("Coordinate")) ||
 					!Connect(TimeExpr, TEXT(""), NoisePanner, TEXT("Time")) ||
-					!Connect(NoisePanner, TEXT(""), NoiseExpr, TEXT("Position")) ||
+					!ConnectToInputWithFallback(NoisePanner, TEXT(""), NoisePosition, {TEXT("A"), TEXT("Input1"), TEXT("")}) ||
+					!ConnectToInputWithFallback(NoisePositionZ, TEXT(""), NoisePosition, {TEXT("B"), TEXT("Input2"), TEXT("")}) ||
+					!ConnectToInputWithFallback(
+						NoisePosition,
+						TEXT(""),
+						NoiseExpr,
+						{TEXT("World Position"), TEXT("Position"), TEXT("")}) ||
 					!Connect(Turbulence, TEXT(""), NoiseExpr, TEXT("FilterWidth")))
 				{
 					Result.Error = TEXT("Failed to wire animated_noise.");

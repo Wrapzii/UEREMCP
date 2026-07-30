@@ -4,10 +4,13 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
-#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "FileHelpers.h"
 #include "MaterialEditingLibrary.h"
+#include "Misc/PackageName.h"
+#include "ObjectTools.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
+#include "PackageTools.h"
 #include "ScopedTransaction.h"
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialAssetLoad.h"
@@ -29,18 +32,64 @@ namespace
 		return GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
 	}
 
-	static bool SaveAssetObject(UObject* Asset, const FString& PreferredPackagePath)
+	static void ReleaseInProcessPackageForCreate(
+		const FString& PackagePath,
+		UEditorAssetSubsystem* AssetSubsystem)
+	{
+		if (AssetSubsystem && AssetSubsystem->DoesAssetExist(PackagePath))
+		{
+			AssetSubsystem->DeleteAsset(PackagePath);
+		}
+
+		if (UPackage* ExistingPackage = FindPackage(nullptr, *PackagePath))
+		{
+			TArray<UPackage*> PackagesToUnload;
+			PackagesToUnload.Add(ExistingPackage);
+			UPackageTools::UnloadPackages(PackagesToUnload);
+		}
+
+		const FString PackageFilename = FPackageName::LongPackageNameToFilename(
+			PackagePath,
+			FPackageName::GetAssetPackageExtension());
+		if (FPaths::FileExists(PackageFilename))
+		{
+			IFileManager::Get().Delete(*PackageFilename);
+		}
+	}
+
+	static bool SaveAssetObject(
+		UObject* Asset,
+		const FString& PreferredPackagePath,
+		FString* OutFailureReason = nullptr)
 	{
 		UEditorAssetSubsystem* AssetSubsystem = GetEditorAssetSubsystem();
 		if (!AssetSubsystem || !Asset || PreferredPackagePath.IsEmpty())
 		{
+			if (OutFailureReason)
+			{
+				*OutFailureReason = TEXT("SaveAssetObject: missing AssetSubsystem, Asset, or package path.");
+			}
 			return false;
 		}
 
 		Asset->MarkPackageDirty();
-		if (UPackage* Package = Asset->GetPackage())
+		UPackage* Package = Asset->GetOutermost();
+		if (!Package)
 		{
-			Package->MarkPackageDirty();
+			if (OutFailureReason)
+			{
+				*OutFailureReason = TEXT("SaveAssetObject: asset has no outermost package.");
+			}
+			return false;
+		}
+
+		Package->MarkPackageDirty();
+
+		TArray<UPackage*> PackagesToSave;
+		PackagesToSave.Add(Package);
+		if (UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false))
+		{
+			return true;
 		}
 
 		if (AssetSubsystem->SaveAsset(PreferredPackagePath, false))
@@ -48,13 +97,35 @@ namespace
 			return true;
 		}
 
-		const FString ActualPackagePath = Asset->GetOutermost()->GetName();
+		const FString ActualPackagePath = Package->GetName();
 		if (!ActualPackagePath.Equals(PreferredPackagePath, ESearchCase::CaseSensitive))
 		{
-			return AssetSubsystem->SaveAsset(ActualPackagePath, false);
+			if (AssetSubsystem->SaveAsset(ActualPackagePath, false))
+			{
+				return true;
+			}
 		}
 
+		if (OutFailureReason)
+		{
+			*OutFailureReason = FString::Printf(
+				TEXT("UEditorLoadingAndSavingUtils::SavePackages and EditorAssetSubsystem::SaveAsset failed for '%s'."),
+				*PreferredPackagePath);
+		}
 		return false;
+	}
+
+	static void ReportMiSaveFailure(
+		const FString& PackagePath,
+		const FString& FailureReason,
+		FUeremcpMaterialCreateResult& Result)
+	{
+		Result.CapabilityNotes.Add(
+			FString::Printf(TEXT("MI save failed for '%s': %s"), *PackagePath, *FailureReason));
+		Result.InterpretationNotes.Add(
+			FString::Printf(
+				TEXT("Disk persistence for MI '%s' was requested (options.save=true) but save did not succeed."),
+				*PackagePath));
 	}
 
 	struct FVfxPersistTargets
@@ -75,7 +146,8 @@ namespace
 
 		if (Targets.Instance)
 		{
-			if (SaveAssetObject(Targets.Instance, Targets.Request->TargetAssetPath))
+			FString SaveFailure;
+			if (SaveAssetObject(Targets.Instance, Targets.Request->TargetAssetPath, &SaveFailure))
 			{
 				++Result.InternalOperations;
 				Result.InterpretationNotes.Add(
@@ -85,10 +157,7 @@ namespace
 			}
 			else
 			{
-				Result.CapabilityNotes.Add(
-					FString::Printf(
-						TEXT("MI save unverified for '%s' — in-process object exists; disk persistence not proven."),
-						*Targets.Request->TargetAssetPath));
+				ReportMiSaveFailure(Targets.Request->TargetAssetPath, SaveFailure, Result);
 			}
 		}
 
@@ -435,6 +504,7 @@ namespace
 	static UMaterialInstanceConstant* CreateMaterialInstanceAtPath(
 		const FString& PackagePath,
 		UMaterialInterface* Parent,
+		UEditorAssetSubsystem* AssetSubsystem,
 		FString& OutError,
 		int32& InOutOps)
 	{
@@ -446,6 +516,22 @@ namespace
 			return nullptr;
 		}
 
+		if (!Parent)
+		{
+			OutError = TEXT("Cannot create MaterialInstanceConstant without parent material.");
+			return nullptr;
+		}
+
+		ReleaseInProcessPackageForCreate(PackagePath, AssetSubsystem);
+
+		const FString ObjectPath = FString::Printf(TEXT("%s.%s"), *PackagePath, *AssetName);
+		if (UObject* ExistingObject = StaticFindObject(UObject::StaticClass(), nullptr, *ObjectPath))
+		{
+			TArray<UObject*> ObjectsToDelete;
+			ObjectsToDelete.Add(ExistingObject);
+			ObjectTools::DeleteObjectsUnchecked(ObjectsToDelete);
+		}
+
 		UPackage* Package = CreatePackage(*PackagePath);
 		if (!Package)
 		{
@@ -453,24 +539,35 @@ namespace
 			return nullptr;
 		}
 
-		UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
-		Factory->InitialParent = Parent;
-
-		UObject* NewAsset = Factory->FactoryCreateNew(
-			UMaterialInstanceConstant::StaticClass(),
+		UMaterialInstanceConstant* Instance = NewObject<UMaterialInstanceConstant>(
 			Package,
+			UMaterialInstanceConstant::StaticClass(),
 			FName(*AssetName),
-			RF_Public | RF_Standalone,
-			nullptr,
-			GWarn);
-		UMaterialInstanceConstant* Instance = Cast<UMaterialInstanceConstant>(NewAsset);
+			RF_Public | RF_Standalone);
 		if (!Instance)
 		{
-			OutError = TEXT("MaterialInstanceConstantFactoryNew did not return UMaterialInstanceConstant.");
+			OutError = FString::Printf(
+				TEXT("NewObject<UMaterialInstanceConstant> failed for '%s'."),
+				*PackagePath);
+			return nullptr;
+		}
+
+		UMaterialEditingLibrary::SetMaterialInstanceParent(Instance, Parent);
+
+		if (!Instance->GetOutermost()->GetName().Equals(PackagePath, ESearchCase::CaseSensitive) ||
+			!Instance->GetName().Equals(AssetName, ESearchCase::CaseSensitive))
+		{
+			OutError = FString::Printf(
+				TEXT("MI object path mismatch after create: expected '%s.%s', got '%s.%s'."),
+				*PackagePath,
+				*AssetName,
+				*Instance->GetOutermost()->GetName(),
+				*Instance->GetName());
 			return nullptr;
 		}
 
 		FAssetRegistryModule::AssetCreated(Instance);
+		Instance->GetOutermost()->MarkPackageDirty();
 		++InOutOps;
 		return Instance;
 	}
@@ -788,15 +885,11 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	}
 	else
 	{
-		if (AssetSubsystem->DoesAssetExist(Request.TargetAssetPath))
-		{
-			AssetSubsystem->DeleteAsset(Request.TargetAssetPath);
-		}
-
 		FString CreateError;
 		Instance = CreateMaterialInstanceAtPath(
 			Request.TargetAssetPath,
 			MasterMaterial,
+			AssetSubsystem,
 			CreateError,
 			Result.InternalOperations);
 		if (!Instance)
@@ -804,6 +897,13 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 			TryPersistVfxAssets(
 				MakePersistTargets(Request, nullptr, MasterMaterial, MasterPath, MasterResult.bCreated),
 				Result);
+			if (Request.bSave)
+			{
+				Result.InterpretationNotes.Add(
+					FString::Printf(
+						TEXT("MI save skipped for '%s': instance creation failed before save gate."),
+						*Request.TargetAssetPath));
+			}
 			CapPartialWhenProofUnavailable(
 				Result,
 				Request.TargetAssetPath,
@@ -854,8 +954,10 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	if (Request.bSave)
 	{
-		if (!SaveAssetObject(Instance, Request.TargetAssetPath))
+		FString SaveFailure;
+		if (!SaveAssetObject(Instance, Request.TargetAssetPath, &SaveFailure))
 		{
+			ReportMiSaveFailure(Request.TargetAssetPath, SaveFailure, Result);
 			Result.Status = TEXT("partially_completed");
 			Result.Summary = FString::Printf(
 				TEXT("MI parameters applied%s but save failed for '%s'."),
@@ -867,6 +969,11 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		++Result.InternalOperations;
 		Result.InterpretationNotes.Add(
 			FString::Printf(TEXT("Saved in-process MI package '%s' to disk before compile/validate gates."), *Request.TargetAssetPath));
+		Result.InterpretationNotes.Add(
+			FString::Printf(
+				TEXT("Post-save disk probe: FPackageName::DoesPackageExist('%s')=%s."),
+				*Request.TargetAssetPath,
+				FPackageName::DoesPackageExist(Request.TargetAssetPath) ? TEXT("true") : TEXT("false")));
 		if (MasterResult.bCreated)
 		{
 			if (SaveAssetObject(MasterMaterial, MasterPath))

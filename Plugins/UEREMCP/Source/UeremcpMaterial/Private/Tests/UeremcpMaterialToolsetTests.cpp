@@ -609,6 +609,10 @@ bool FUeremcpMaterialCreateVfxValidateFalseTest::RunTest(const FString& Paramete
 	TestEqual(TEXT("partially_completed when validate false"), Status, FString(TEXT("partially_completed")));
 	TestFalse(TEXT("summary must not claim re-read verified"), Json.Contains(TEXT("re-read verified")));
 	TestFalse(TEXT("fresh MI save must not fail registry lookup"), Json.Contains(TEXT("save failed")));
+	if (!FPackageName::DoesPackageExist(Target))
+	{
+		UE_LOG(LogTemp, Error, TEXT("CreateVfxMaterial.ValidateFalse response: %s"), *Json);
+	}
 	TestTrue(TEXT("fresh MI package saved to disk"), FPackageName::DoesPackageExist(Target));
 
 	const FString MasterPath =
