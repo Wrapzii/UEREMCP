@@ -3,6 +3,7 @@
 #include "UeremcpNiagaraMaterialBinding.h"
 
 #include "UeremcpNiagaraPaths.h"
+#include "UeremcpNiagaraRendererResolve.h"
 #include "UeremcpNiagaraRoleNames.h"
 #include "UeremcpMaterialNiagaraExport.h"
 
@@ -702,8 +703,11 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			}
 			else
 			{
-				UNiagaraRendererProperties* RendererProps = RendererRef.GetRenderer(Context, false);
-				UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(RendererProps);
+				UNiagaraMeshRendererProperties* MeshProps =
+					UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
+						System,
+						FName(*EmitterName),
+						Renderer.RendererIndex);
 				if (!MeshProps)
 				{
 					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
@@ -776,8 +780,11 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			bool bVerified = false;
 			if (Kind == EUeremcpNiagaraRendererMaterialKind::Mesh)
 			{
-				UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(
-					RendererRef.GetRenderer(Context, false));
+				UNiagaraMeshRendererProperties* MeshProps =
+					UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
+						System,
+						FName(*EmitterName),
+						Renderer.RendererIndex);
 				bVerified = MeshRendererMaterialMatchesExpected(MeshProps, CanonicalMaterialPath);
 			}
 			else
@@ -863,8 +870,11 @@ void FUeremcpNiagaraMaterialBinding::NormalizeMeshRendererOverrideFlags(
 			FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
 			RendererRef.RendererIndex = Renderer.RendererIndex;
 
-			UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(
-				RendererRef.GetRenderer(Context, false));
+			UNiagaraMeshRendererProperties* MeshProps =
+				UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
+					System,
+					EmitterName,
+					Renderer.RendererIndex);
 			if (!MeshProps || MeshProps->bOverrideMaterials || MeshProps->OverrideMaterials.Num() == 0)
 			{
 				continue;

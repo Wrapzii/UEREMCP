@@ -4,6 +4,7 @@
 
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraMaterialBinding.h"
+#include "UeremcpNiagaraRendererResolve.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraMeshRendererProperties.h"
 #include "NiagaraSystem.h"
@@ -174,8 +175,11 @@ TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererExten
 
 		if (Kind == EUeremcpNiagaraRendererMaterialKind::Mesh)
 		{
-			UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(
-				RendererRef.GetRenderer(Context, false));
+			UNiagaraMeshRendererProperties* MeshProps =
+				UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
+					System,
+					EmitterName,
+					Renderer.RendererIndex);
 			if (MeshProps)
 			{
 				++InOutInternalOperations;
