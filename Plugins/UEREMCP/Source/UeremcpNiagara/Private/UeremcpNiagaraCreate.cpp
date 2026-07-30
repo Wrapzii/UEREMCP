@@ -165,8 +165,15 @@ namespace
 		int32 TimeoutSeconds,
 		FNiagaraExt_SystemCompileState& OutState)
 	{
+		if (!System)
+		{
+			return false;
+		}
+
 		System->RequestCompile(false);
 
+		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Private/NiagaraSystem.cpp:3227-3233]
+		// Sleeping alone never drains ActiveCompilations; QueryCompileComplete must run each tick.
 		const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
 		while (FPlatformTime::Seconds() < Deadline)
 		{
@@ -175,7 +182,9 @@ namespace
 			{
 				break;
 			}
-			FPlatformProcess::Sleep(0.1f);
+
+			System->QueryCompileComplete(/*bWait=*/true);
+			FPlatformProcess::Sleep(0.01f);
 		}
 
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
