@@ -16,6 +16,12 @@
 Registration and execution snapshots are lock-protected. Handlers and
 transaction callbacks run outside that lock.
 
+## Template bind
+
+WS-15 binds and clears the delegate in `UeremcpTemplatesModule`; that binding is
+present on this synced branch. Protocol cannot depend on Templates. Domain
+handler and transaction registration remain separate integration requirements.
+
 ## Execution contract
 
 Before transaction begin, the interpreter:
@@ -29,7 +35,8 @@ Before transaction begin, the interpreter:
 
 Execution resolves `$ref` values from completed response envelopes, propagates
 the parent options, and forces nested operation `timeout_ms` to zero. A
-dependent operation never runs from a `partially_completed` result.
+dependent operation never runs from a non-success status (including optional
+failures and `partially_completed` skips).
 
 Compile/validation policy maps to each nested request:
 
@@ -38,9 +45,16 @@ Compile/validation policy maps to each nested request:
 - `at_end` — final operation;
 - `never` — compile disabled (validation has no `never` option in the schema).
 
-Required failure follows `on_failure`; atomic plans roll back when
-`rollback_on_failure` is true or `on_failure` is `rollback_all`. Optional
-failures do not stop independent work, but their dependents are skipped.
+Required failure follows `on_failure`:
+
+- `stop` — skip remaining operations;
+- `continue_independent` — keep running ops whose dependencies succeeded;
+- `rollback_all` — treat as required failure for rollback accounting.
+
+Atomic plans roll back when `rollback_on_failure` is true or `on_failure` is
+`rollback_all`. Optional failures do not stop independent work, but their
+dependents are skipped. `operation_status` conditions may skip an op with
+`no_change_required` without failing the plan.
 
 ## Domain registration
 
