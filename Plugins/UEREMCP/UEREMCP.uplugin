@@ -31,6 +31,12 @@
 			"TargetAllowList": [ "Editor" ]
 		},
 		{
+			"Name": "UeremcpMaterial",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
 			"Name": "UeremcpSecurity",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
@@ -76,6 +82,10 @@
 		},
 		{
 			"Name": "Niagara",
+			"Enabled": true
+		},
+		{
+			"Name": "EditorToolset",
 			"Enabled": true
 		}
 	]
