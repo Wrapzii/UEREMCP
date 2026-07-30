@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `43b8a5a` (WS-07 inline Niagara material co-location fix)
+- **Orch tip at writing:** `9d6ed26` (ordered WS-08 → WS-07 MI co-location stack)
 - **Date:** 2026-07-30
-- **Status:** Runtime acceptance follow-up on `d691316` **failed**. Fireball root cause (Niagara passed `AssetName` into legacy test-root material APIs) has a WS-07 co-location fix on orch (`43b8a5a` / `60cb3a4`), but **B4 / POC-B remain unproven pending WS-11 re-run**. A6 still fails on missing BeginPlay→Branch and A8/A11 no-op. Material Toolset **PASS 14/14**. No A6 / POC A / B1 / B2 / B4 / overall POC-B claim.
+- **Status:** Runtime acceptance follow-up on `d691316` **failed**. The ordered MI co-location stack is now on orch: WS-08 `58036dd` (`81b56e2`) then WS-07 `dc4f118` (`60cb3a4`). It is ready for a WS-11 fireball re-run, but **B4 / POC-B remain unproven**. A6 still fails on missing BeginPlay→Branch and A8/A11 no-op. Material Toolset **PASS 14/14**. No A6 / POC A / B1 / B2 / B4 / overall POC-B claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -77,14 +77,15 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Blueprint A6 reread-after-write implementation | `13bf529` (`2a0b2cd`) | **Code landed; runtime-unproven** |
 | WS-11 runtime follow-up | `d691316` | Fireball **FAIL**; A6 **FAIL**; Material **PASS 14/14** |
 | Fireball proof parsing fix | `674c439` (`656ffe0`) | Harness/log parsing fix only; no acceptance claim |
-| Inline Niagara material co-location fix | `43b8a5a` (`60cb3a4`) | Uses `ResolveMaterialInstancePathForNiagaraSystem` / `ExecuteCreateVfxMaterialForNiagaraSystem`; **B4 not yet re-proven** |
+| Material system-path API | `58036dd` (`81b56e2`) | Provides `ExecuteCreateVfxMaterialForNiagaraSystem` before Niagara call sites |
+| Inline Niagara material co-location fix | `dc4f118` (`60cb3a4`) | Uses system-path resolve/execute APIs; **B4 not yet re-proven** |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
 
 Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Material rejected `/Game/__UeremcpPoc/`.
 
-**Runtime result on `d691316`:** Niagara system path was under `/Game/__UeremcpPoc/`, but generated MIs resolved under `/Game/__UeremcpTests/`; B4 was false. B2 also encountered a harness manifest-path issue. Parsing fix is at `674c439`; WS-07 co-location fix is at `43b8a5a`. Log: `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_050816.log`. **Re-run required.**
+**Runtime result on `d691316`:** Niagara system path was under `/Game/__UeremcpPoc/`, but generated MIs resolved under `/Game/__UeremcpTests/`; B4 was false. B2 also encountered a harness manifest-path issue. Parsing fix is at `674c439`; ordered co-location stack is `58036dd` → `dc4f118`. Log: `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_050816.log`. **WS-11 re-run required.**
 
 ### POC B checklist (B1–B10)
 
@@ -93,7 +94,7 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 | B1 | One MCP request produces the complete effect — no follow-ups | **Still open** — filter is one direct editor tool call, not MCP; live fireball MCP missing | WS-07 + WS-11 |
 | B2 | Materials created or reused; reuse in `result.reused_assets` | **Fixes landed, not proven** — parser + MI co-location now on orch; awaiting WS-11 fireball re-run | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **Partial scaffolding** — needs fireball acceptance run | WS-07 |
-| B4 | Renderers configured and bound to valid materials | **Fix landed, not proven** — `43b8a5a` co-locates MIs; prior result `B4=false`; awaiting re-run | WS-07 + WS-08 |
+| B4 | Renderers configured and bound to valid materials | **Stack landed, not proven** — `58036dd` → `dc4f118`; prior result `B4=false`; awaiting re-run | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B6 | System compiles; compile genuinely awaited | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -111,7 +112,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 |---|---|---|---|
 | P0 | POC A scenario including explicit A6 programmatic re-read | WS-06 | Track; do not claim until WS-11 editor/MCP evidence lands |
 | P0 | Fix BeginPlay→Branch link and A8/A11 no-op, then re-run A6 | WS-06 + WS-11 | Current runtime result FAIL; refuse A6/POC-A |
-| P0 | Re-run fireball after WS-07 MI co-location fix `43b8a5a` | WS-11 | Prior result FAIL; refuse B1/B2/B4 until PASS |
+| P0 | Re-run fireball after MI co-location stack `58036dd` → `dc4f118` | WS-11 | Stack ready; prior result FAIL; refuse B1/B2/B4 until PASS |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
