@@ -12,6 +12,7 @@
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialFeatureGraph.h"
+#include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialPaths.h"
 
 namespace
