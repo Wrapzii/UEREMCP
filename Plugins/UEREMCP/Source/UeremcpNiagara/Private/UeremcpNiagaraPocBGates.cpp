@@ -342,6 +342,35 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 	return Out;
 }
 
+bool FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(
+	const FUeremcpNiagaraPocBGateResult& Result)
+{
+	return Result.bB1SingleRequestEvaluated
+		&& Result.bB1SingleRequestComplete
+		&& Result.bB2MaterialsManifestEvaluated
+		&& (Result.bB2ReusedAssetsReported || Result.bB2CreatedAssetsReported)
+		&& Result.bB3SixEmittersEvaluated
+		&& Result.bB3SixEmittersPresent
+		&& Result.bB4Attempted
+		&& Result.bB4MaterialBindingsVerified
+		&& Result.bB5UserParametersEvaluated
+		&& Result.bB5UserParametersPresent
+		&& Result.bB6CompileAwaitedEvaluated
+		&& Result.bB6CompileAwaited
+		&& Result.bB7EmittersNonEmpty
+		&& Result.bB7StructuralMatchEvaluated
+		&& Result.bB7StructuralMatch
+		&& Result.bB7RenderersPresentEvaluated
+		&& Result.bB7RenderersPresent
+		&& Result.bB7RenderersBoundEvaluated
+		&& Result.bB7RenderersBound
+		&& Result.bB8AssetsSavedEvaluated
+		&& Result.bB8AssetsSaved
+		&& Result.bB9ChangeManifestEvaluated
+		&& Result.bB9ChangeManifestPresent
+		&& Result.bB9ChangeManifestComplete;
+}
+
 TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	const FUeremcpNiagaraPocBGateResult& Result)
 {
@@ -507,8 +536,6 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	Gates->SetField(TEXT("B10_visible_render"), MakeShared<FJsonValueNull>());
 
 	TArray<TSharedPtr<FJsonValue>> NeverClaims;
-	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("created_and_validated")));
-	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("modified_and_validated")));
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("mcp_transport_one_call")));
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("editor_restart_survival")));
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("B10_visible_render_supplementary")));

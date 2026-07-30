@@ -274,6 +274,15 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	const FUeremcpNiagaraChangeManifestResult ChangeManifest =
 		FUeremcpNiagaraChangeManifest::BuildFromCreateResult(CreateResult, Request.bDryRun);
 
+	TOptional<FUeremcpNiagaraPocBGateResult> PocBGates;
+	if (!Request.bDryRun && CreateResult.EmittersAdded.Num() > 0)
+	{
+		PocBGates = FUeremcpNiagaraPocBGates::Evaluate(
+			CreateResult,
+			bRanRoundTrip ? &RoundTripResult : nullptr,
+			&ChangeManifest);
+	}
+
 	if (!Request.bDryRun && !CreateResult.CreatedAssetPath.IsEmpty())
 	{
 		// Post-create inspect (validate:true) still needs live MeshRendererInfo DIs; release
@@ -325,11 +334,23 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	}
 	else
 	{
-		Response.Status = TEXT("partially_completed");
+		const bool bValidated = PocBGates.IsSet()
+			&& FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(PocBGates.GetValue());
+		Response.Status = bValidated
+			? (CreateResult.bReplacedExisting
+				? TEXT("modified_and_validated")
+				: TEXT("created_and_validated"))
+			: TEXT("partially_completed");
 		Response.Summary = CreateResult.Summary;
 		if (bRanRoundTrip && !RoundTripResult.Summary.IsEmpty())
 		{
 			Response.Summary += FString::Printf(TEXT(" %s"), *RoundTripResult.Summary);
+		}
+		if (bValidated)
+		{
+			Response.Summary += TEXT(
+				" Saved package, compile state, six emitter roles, user parameters, "
+				"renderer/material bindings, structural re-read, and change manifest were verified.");
 		}
 	}
 
@@ -425,32 +446,29 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 
 	Extra->SetObjectField(TEXT("validation"), Validation);
 
-	if (!Request.bDryRun && CreateResult.EmittersAdded.Num() > 0)
+	if (PocBGates.IsSet())
 	{
-		const FUeremcpNiagaraPocBGateResult PocBGates = FUeremcpNiagaraPocBGates::Evaluate(
-			CreateResult,
-			bRanRoundTrip ? &RoundTripResult : nullptr,
-			&ChangeManifest);
+		const FUeremcpNiagaraPocBGateResult& Gates = PocBGates.GetValue();
 		Extra->SetObjectField(
 			TEXT("poc_b_gates"),
-			FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(PocBGates));
+			FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(Gates));
 
-		if (PocBGates.bB1SingleRequestEvaluated)
+		if (Gates.bB1SingleRequestEvaluated)
 		{
 			Validation->SetBoolField(
 				TEXT("single_request_pipeline"),
-				PocBGates.bB1SingleRequestComplete);
+				Gates.bB1SingleRequestComplete);
 		}
 		else
 		{
 			Validation->SetField(TEXT("single_request_pipeline"), MakeShared<FJsonValueNull>());
 		}
 
-		for (const FString& Check : PocBGates.ChecksPerformed)
+		for (const FString& Check : Gates.ChecksPerformed)
 		{
 			ChecksPerformed.Add(MakeShared<FJsonValueString>(Check));
 		}
-		for (const FString& Check : PocBGates.ChecksSkipped)
+		for (const FString& Check : Gates.ChecksSkipped)
 		{
 			if (!ChecksSkipped.ContainsByPredicate([&Check](const TSharedPtr<FJsonValue>& Value) {
 				return Value->AsString() == Check;

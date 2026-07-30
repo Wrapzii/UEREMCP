@@ -36,6 +36,7 @@ namespace UeremcpNiagaraCapability
 			TEXT("material_bindings: assigns probe UMaterialInterface paths via GetRendererData/SetRendererData; inline create_spec delegates to UeremcpMaterialNiagaraExport (probe MI paths only)."),
 			TEXT("orphaned_inline_creates lists roles where inline MI creation succeeded but renderer bind/re-read failed — Create::Run continues as partially_completed; probe MIs are never deleted."),
 			TEXT("POC B emitters non-empty / renderer-bound checks surface via extra.poc_b_gates; B7_renderers_bound true only after material bind re-read verify; extracted inspect material_path is never validated."),
+			TEXT("created_and_validated / modified_and_validated require saved + compile-up-to-date, six roles, user parameters, verified material bindings/renderers, structural re-read, and complete change manifest; otherwise status remains partially_completed."),
 			TEXT("execute_plan: create_niagara_effect registers with FUeremcpPlanExecutor at module startup; template instantiation remains partially_completed until atomic transaction callbacks (WS-03) and create_vfx_material handler (WS-08) land."),
 			TEXT("envelope mode 'replace' deletes and recreates probe assets under /Game/__UeremcpTests/ only; never deletes user content elsewhere."),
 			TEXT("options.validate=true runs post-create inspect (FUeremcpNiagaraRoundTrip): structural emitter/user-var match + content_hash manifest; not content_hash round-trip stability."),

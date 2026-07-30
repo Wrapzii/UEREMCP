@@ -826,7 +826,7 @@ bool FUeremcpNiagaraCreate::Run(
 	if (OutResult.bReplacedExisting)
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s). Status is not *_validated."),
+			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s)."),
 			*CreatedPath,
 			*Spec.EffectType,
 			OutResult.EmittersAdded.Num(),
@@ -836,7 +836,7 @@ bool FUeremcpNiagaraCreate::Run(
 	else
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Created Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s). Status is not *_validated."),
+			TEXT("Created Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s)."),
 			*CreatedPath,
 			*Spec.EffectType,
 			OutResult.EmittersAdded.Num(),

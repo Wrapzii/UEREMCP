@@ -53,6 +53,20 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	FUeremcpNiagaraRoundTripResult RoundTrip;
 	RoundTrip.bInspectSucceeded = true;
 	RoundTrip.bStructuralMatch = true;
+	for (const FString& EmitterName : CreateResult.EmittersAdded)
+	{
+		TSharedPtr<FJsonObject> EmitterGraph = MakeShared<FJsonObject>();
+		EmitterGraph->SetStringField(TEXT("graph_type"), TEXT("NiagaraEmitterGraph"));
+		EmitterGraph->SetStringField(TEXT("graph_name"), EmitterName);
+		TSharedPtr<FJsonObject> Extensions = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Niagara = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> Renderers;
+		Renderers.Add(MakeShared<FJsonValueObject>(MakeShared<FJsonObject>()));
+		Niagara->SetArrayField(TEXT("renderers"), Renderers);
+		Extensions->SetObjectField(TEXT("niagara"), Niagara);
+		EmitterGraph->SetObjectField(TEXT("extensions"), Extensions);
+		RoundTrip.InspectGraphs.Add(MakeShared<FJsonValueObject>(EmitterGraph));
+	}
 
 	CreateResult.ChecksPerformed = {
 		TEXT("niagara.create_system_from_template"),
@@ -89,6 +103,10 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	TestTrue(
 		TEXT("renderers bound verified"),
 		Gates.bB7RenderersBoundEvaluated && Gates.bB7RenderersBound);
+	TestTrue(TEXT("renderers present"), Gates.bB7RenderersPresent);
+	TestTrue(
+		TEXT("complete create supports validated status"),
+		FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(Gates));
 	TestTrue(
 		TEXT("hash round trip still skipped"),
 		Gates.ChecksSkipped.Contains(TEXT("niagara.content_hash_round_trip_stability")));
@@ -99,6 +117,33 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 		FUeremcpNiagaraPocBGates::Evaluate(PartialMaterials, &RoundTrip, &Manifest);
 	TestFalse(TEXT("B4 false when one role unverified"), PartialGates.bB4MaterialBindingsVerified);
 	TestFalse(TEXT("B7 renderers bound false when B4 false"), PartialGates.bB7RenderersBound);
+	TestFalse(
+		TEXT("missing material bind stays partial"),
+		FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(PartialGates));
+
+	FUeremcpNiagaraCreateResult DeferredCompile = CreateResult;
+	DeferredCompile.bCompiled = false;
+	const FUeremcpNiagaraPocBGateResult DeferredCompileGates =
+		FUeremcpNiagaraPocBGates::Evaluate(DeferredCompile, &RoundTrip, &Manifest);
+	TestFalse(
+		TEXT("deferred compile stays partial"),
+		FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(DeferredCompileGates));
+
+	FUeremcpNiagaraCreateResult Unsaved = CreateResult;
+	Unsaved.bSaved.Reset();
+	const FUeremcpNiagaraPocBGateResult UnsavedGates =
+		FUeremcpNiagaraPocBGates::Evaluate(Unsaved, &RoundTrip, &Manifest);
+	TestFalse(
+		TEXT("save skipped stays partial"),
+		FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(UnsavedGates));
+
+	FUeremcpNiagaraCreateResult MissingUserParameter = CreateResult;
+	MissingUserParameter.UserVariablesAdded.Remove(TEXT("User.Intensity"));
+	const FUeremcpNiagaraPocBGateResult MissingUserParameterGates =
+		FUeremcpNiagaraPocBGates::Evaluate(MissingUserParameter, &RoundTrip, &Manifest);
+	TestFalse(
+		TEXT("missing user parameter stays partial"),
+		FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(MissingUserParameterGates));
 
 	const TSharedPtr<FJsonObject> PartialDiagnostics =
 		FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(PartialGates);
@@ -145,7 +190,20 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 
 	const TArray<TSharedPtr<FJsonValue>>* NeverClaims = nullptr;
 	TestTrue(TEXT("never_claims array"), Diagnostics->TryGetArrayField(TEXT("never_claims"), NeverClaims));
-	TestTrue(TEXT("never_claims populated"), NeverClaims && NeverClaims->Num() == 5);
+	TestTrue(TEXT("supplementary never_claims populated"), NeverClaims && NeverClaims->Num() == 3);
+	if (NeverClaims)
+	{
+		TestFalse(
+			TEXT("created_and_validated no longer globally forbidden"),
+			NeverClaims->ContainsByPredicate([](const TSharedPtr<FJsonValue>& Value) {
+				return Value->AsString() == TEXT("created_and_validated");
+			}));
+		TestFalse(
+			TEXT("modified_and_validated no longer globally forbidden"),
+			NeverClaims->ContainsByPredicate([](const TSharedPtr<FJsonValue>& Value) {
+				return Value->AsString() == TEXT("modified_and_validated");
+			}));
+	}
 
 	FUeremcpNiagaraCreateResult NoRoundTripCreate = CreateResult;
 	const FUeremcpNiagaraPocBGateResult NoInspectGates =
@@ -153,6 +211,9 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("no inspect structural evaluated"), NoInspectGates.bB7StructuralMatchEvaluated);
 	TestFalse(TEXT("no inspect renderers present evaluated"), NoInspectGates.bB7RenderersPresentEvaluated);
 	TestFalse(TEXT("no inspect renderers bound evaluated"), NoInspectGates.bB7RenderersBoundEvaluated);
+	TestFalse(
+		TEXT("validation disabled stays partial"),
+		FUeremcpNiagaraPocBGates::SupportsValidatedCreateStatus(NoInspectGates));
 
 	const TSharedPtr<FJsonObject> NoInspectDiagnostics =
 		FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(NoInspectGates);

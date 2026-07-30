@@ -1,6 +1,6 @@
 // UEREMCP — POC B acceptance gate scaffolding (WS-07).
 //
-// Surfaces honest B4/B7 partial status — never claims *_validated or full POC B pass.
+// Surfaces honest create verification without claiming supplementary B8/B10 proof.
 
 #pragma once
 
@@ -66,6 +66,13 @@ public:
 		const FUeremcpNiagaraCreateResult& CreateResult,
 		const FUeremcpNiagaraRoundTripResult* RoundTrip,
 		const FUeremcpNiagaraChangeManifestResult* Manifest = nullptr);
+
+	/**
+	 * True only when all create-time POC B gates needed to re-read and verify the
+	 * saved six-emitter effect are evaluated and pass. Supplementary restart and
+	 * visible-render evidence remain separate and are never inferred here.
+	 */
+	static bool SupportsValidatedCreateStatus(const FUeremcpNiagaraPocBGateResult& Result);
 
 	static TSharedPtr<FJsonObject> BuildDiagnosticsObject(const FUeremcpNiagaraPocBGateResult& Result);
 };

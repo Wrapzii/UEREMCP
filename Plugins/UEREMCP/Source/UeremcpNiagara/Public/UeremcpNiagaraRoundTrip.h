@@ -1,6 +1,6 @@
 // UEREMCP — Post-create inspect round-trip helpers (WS-07).
 //
-// Structural re-read after create — honest partially_completed only.
+// Structural re-read used by honest create-time validation.
 
 #pragma once
 
@@ -29,7 +29,7 @@ struct FUeremcpNiagaraRoundTripResult
 	int32 InternalOperations = 0;
 };
 
-/** Post-create inspect helpers — never report *_validated. */
+/** Post-create inspect helpers; the toolset combines this with the remaining create gates. */
 class FUeremcpNiagaraRoundTrip
 {
 public:
