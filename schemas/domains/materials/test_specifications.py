@@ -29,6 +29,10 @@ SCHEMAS_DIR = REPO_ROOT / "schemas"
 MATERIALS_DIR = SCHEMAS_DIR / "domains" / "materials"
 ELEMENTAL_TEMPLATE = REPO_ROOT / "templates" / "niagara" / "niagara.projectile.elemental.v1.json"
 
+
+def load_fixture(name: str) -> dict:
+    return json.loads((MATERIALS_DIR / "fixtures" / name).read_text(encoding="utf-8"))
+
 EXPECTED_LOSSY_AREAS = frozenset({
     "expression_subclass_properties",
     "material_function_internals",
@@ -38,6 +42,7 @@ EXPECTED_LOSSY_AREAS = frozenset({
 EXPECTED_CAPABILITY_SNIPPETS = frozenset({
     "feature_graph_v1",
     "procedural_texture_v1",
+    "execute_plan",
 })
 
 WS15_ELEMENTAL_PURPOSES = frozenset({
@@ -131,6 +136,28 @@ class MaterialsSpecificationTests(unittest.TestCase):
         readme = (MATERIALS_DIR / "README.md").read_text(encoding="utf-8")
         for modifier in WS15_SUPPORTED_MODIFIERS:
             self.assertIn(modifier, readme, f"README must document modifier {modifier}")
+
+    def test_execute_plan_create_vfx_material_fixture(self) -> None:
+        fixture = load_fixture("execute_plan_create_vfx_material_dry.json")
+        expectations = fixture["expectations"]
+        operation = fixture["plan_request"]["specification"]["operations"][0]
+
+        self.assertEqual(fixture["registered_action"], "create_vfx_material")
+        self.assertEqual(fixture["owner"], "WS-08")
+        self.assertEqual(operation["action"], "create_vfx_material")
+        self.assertTrue(operation["target"]["asset_path"].startswith("/Game/__UeremcpTests/"))
+        self.assertTrue(expectations["requires_registered_handler"])
+        self.assertEqual(expectations["dry_run_operation_status"], "no_change_required")
+        self.assertEqual(expectations["mutating_operation_status"], "partially_completed")
+        self.assertTrue(expectations["atomic_plan_still_blocked_without_ws03_callbacks"])
+        self.assertIn(
+            expectations["atomic_preflight_rejection_contains"],
+            "atomic execute_plan requires transaction callbacks",
+        )
+        self.assertEqual(
+            set(expectations["validation_never_claims"]),
+            {"created_and_validated", "modified_and_validated"},
+        )
 
 
 if __name__ == "__main__":

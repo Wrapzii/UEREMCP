@@ -1,0 +1,48 @@
+{
+  "$comment": "Offline fixture: execute_plan operation dispatching create_vfx_material (WS-08 / WS-15 b15658f contract).",
+  "registered_action": "create_vfx_material",
+  "owner": "WS-08",
+  "plan_request": {
+    "protocol_version": "1.0",
+    "request_id": "ws08-plan-create-dry",
+    "action": "execute_plan",
+    "specification": {
+      "transaction": {
+        "atomic": false,
+        "rollback_on_failure": false
+      },
+      "operations": [
+        {
+          "id": "core_material",
+          "action": "create_vfx_material",
+          "target": {
+            "asset_path": "/Game/__UeremcpTests/Materials/MI_WS08_PlanDry"
+          },
+          "specification": {
+            "purpose": "elemental_projectile_core",
+            "element": "fire",
+            "features": [
+              "radial_falloff",
+              "animated_noise",
+              "fresnel",
+              "dynamic_color",
+              "dynamic_intensity"
+            ]
+          }
+        }
+      ],
+      "on_failure": "stop"
+    },
+    "options": {
+      "dry_run": true
+    }
+  },
+  "expectations": {
+    "requires_registered_handler": true,
+    "dry_run_operation_status": "no_change_required",
+    "mutating_operation_status": "partially_completed",
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"],
+    "atomic_plan_still_blocked_without_ws03_callbacks": true,
+    "atomic_preflight_rejection_contains": "transaction callbacks"
+  }
+}

@@ -24,7 +24,7 @@ class UEREMCPMATERIAL_API UUeremcpMaterialToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.2.0-procedural-texture"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.2.1-plan-handler"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.

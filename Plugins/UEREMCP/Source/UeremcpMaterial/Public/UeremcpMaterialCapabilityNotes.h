@@ -20,6 +20,7 @@ namespace UeremcpMaterialCapability
 			TEXT("material_function_internals: nested MaterialFunction graphs are not composed."),
 			TEXT("editor_chrome: comment boxes, preview settings, and layout beyond x/y are not round-tripped."),
 			TEXT("procedural_texture_v1: CPU pixel fill via FImageUtils::CreateTexture2D — not Epic MaterialTools/RT draw; flipbook_atlas assembles procedural per-frame cells (no external sheet import)."),
+			TEXT("execute_plan: create_vfx_material registers with FUeremcpPlanExecutor at module startup; mutating create stays partially_completed until WS-11 RE runtime validation."),
 			TEXT("Substrate interaction with Unlit/Additive masters not runtime-verified on RE project."),
 		};
 	}

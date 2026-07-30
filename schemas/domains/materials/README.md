@@ -90,6 +90,10 @@ UEREMCP does **not** re-expose MaterialTools' 29 primitives. Internal batching v
 
 These keys match `UeremcpMaterialCapabilityNotes.h` and `create_vfx_material` `capability_notes`.
 
+`create_vfx_material` registers with `FUeremcpPlanExecutor` at Material module startup
+(WS-15 handler contract). Dry-run plan steps surface `no_change_required`; mutating
+create stays **`partially_completed`** until WS-11 runtime validation on RE.
+
 ## Known gaps (capability_notes)
 
 | Gap | Severity | Mitigation |

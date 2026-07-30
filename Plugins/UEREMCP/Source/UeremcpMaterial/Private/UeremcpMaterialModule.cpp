@@ -5,6 +5,7 @@
 #include "Misc/CoreDelegates.h"
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpMaterialPlanHandlers.h"
 #include "UeremcpMaterialToolset.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcpMaterial, Log, All);
@@ -29,6 +30,7 @@ public:
 
 		if (UObjectInitialized())
 		{
+			FUeremcpMaterialPlanHandlers::Unregister();
 			UToolsetRegistry::UnregisterToolsetClass(UUeremcpMaterialToolset::StaticClass());
 		}
 		UE_LOG(LogUeremcpMaterial, Log, TEXT("UEREMCP Material module shut down."));
@@ -49,6 +51,18 @@ private:
 		{
 			UE_LOG(LogUeremcpMaterial, Warning,
 				TEXT("UUeremcpMaterialToolset registration failed at PostEngineInit."));
+		}
+
+		FString PlanHandlerError;
+		if (FUeremcpMaterialPlanHandlers::Register(PlanHandlerError))
+		{
+			UE_LOG(LogUeremcpMaterial, Log,
+				TEXT("Material execute_plan handler registered (create_vfx_material)."));
+		}
+		else
+		{
+			UE_LOG(LogUeremcpMaterial, Warning,
+				TEXT("Material execute_plan handler registration failed: %s"), *PlanHandlerError);
 		}
 	}
 
