@@ -267,9 +267,16 @@ Separately, `$TR/.../Public/ToolsetRegistry/ToolsetLibrary.h` —
 
 **Implication for master prompt §2.8:** we have two complementary mechanisms —
 `FileSandbox` for package/file-level atomicity and rollback, and the editor
-transaction buffer for in-memory undo. The design question is how they compose for
-a multi-asset batch that includes compilation. That is a **primary open question**,
-assigned to `research/RB-06`. Do not assume either one alone is sufficient.
+transaction buffer for in-memory undo.
+
+**RB-06 runtime (2026-07-29):** Content-mount `UPackage::Save` **is** intercepted
+into `GetChanges()`; full `Discard()` + `Leave` cleans disk / asset registry /
+`FindPackage` for discarded adds
+`[VERIFIED-RUNTIME: UEREMCP.Validation.Rollback.MultiAssetDiscard]`.
+`Saved/`/`Config/` are not sandboxed `[VERIFIED: ISandboxInstance.h:28-30]`.
+`DiscardFiles` does not auto purge/hot-reload
+`[VERIFIED: SandboxLibrary.cpp:178-203]`. BP compile/CDO and deletions remain
+open. ADR-0005 stands; see `docs/proposals/ws-11-adr-0005-sandbox-semantics.md`.
 
 ### 2.6 Generic property/JSON plumbing
 
@@ -498,8 +505,9 @@ from memory — they are assigned in `research/`.
 6. Whether Blueprint/Niagara/Material/AnimBP/ControlRig graphs can be fully
    serialized and rebuilt via public editor API, and where that breaks. This is
    the project's central technical risk. (`RB-05`, `RB-07`, `RB-08`, `RB-09`)
-7. How `FileSandbox` interacts with package saves, asset registry state,
-   Blueprint compilation, and the editor transaction buffer. (`RB-06`)
+7. How `FileSandbox` interacts with **Blueprint compilation / deletions /
+   non-Content paths** and the editor transaction buffer. Package-save
+   interception + Discard cleanup for Content/ adds: **closed** (RB-06 q1/q3).
 8. Whether `UAgentSkill` is a suitable base for structured templates. (`RB-10`)
 9. Whether UE 5.8 is the shipping/GA version in use and how stable these
    Experimental APIs are across hotfixes. All three plugins are
