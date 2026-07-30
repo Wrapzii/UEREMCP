@@ -38,7 +38,11 @@ All three tips were ancestors of / based on `227cb99`. Merge conflicts: none (`t
 2. **Durable idempotency** — metadata + package files are not one atomic transaction; crash-after-mutation-before-completion leaves an in-progress claim (~1h reclaim); legacy `Put`/`TryGetReplay` call sites lack fingerprint conflict detection until migrated (`execute_plan` is migrated).
 3. **Metrics** — many WS-14 cells remain `unavailable`; overall POC-B metrics close is not claimed.
 4. **Production visual perfection** — B10 gate PASS does not claim fireball looks correct on every scene/hardware/quality setting.
-5. **WS-12 / WS-13 adoption pending** — SECURITY.md and `docs/guide/**` still carry pre-hardening cancel SKIP residual wording; owners should adopt `ws-04-cancellation-hardening-closeout.md` (WS-01 did not edit those paths).
+5. **WS-12 / WS-13 adoption** — **landed after this consolidation** on `f2513a7` (`[WS-12] Document cooperative job cancellation`) and `6a611cf` (`[WS-13] Adopt hardened cancellation guidance`). The "pending" wording below is historical for this consolidation tip only.
+
+> **Historical (this consolidation tip only):** SECURITY.md and `docs/guide/**`
+> still carried pre-hardening cancel SKIP residual wording until the WS-12/WS-13
+> commits above. Do not treat that residual as current on `main` after `6a611cf`.
 
 ## Verification (this consolidation)
 

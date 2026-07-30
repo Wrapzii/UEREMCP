@@ -79,7 +79,7 @@ docs/
   ROADMAP.md           Phased plan.
   RISK_REGISTER.md     What could sink this.
 schemas/               Frozen JSON contracts: envelope, graph, batch, templates.
-Plugins/UEREMCP/       C++ editor plugin scaffold (not yet compiled).
+Plugins/UEREMCP/       C++ editor plugin (shipping on RE; build via UE 5.8).
 tools/                 Schema validator, ownership guard.
 ```
 

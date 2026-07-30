@@ -3,6 +3,13 @@
 **Owner:** WS-01. Criteria are binary — met or not met. No partial credit, no
 "essentially working."
 
+**Claim status (2026-07-30):** POC A–E are **claimed** against the criteria in this
+file on the post-hardening local tip (see
+`docs/proposals/ws-01-poc-closeout-2026-07-30.md` and
+`docs/proposals/ws-01-hardening-consolidation-2026-07-30.md`). That claim is
+**POC-complete, not production-ready**. Criteria text below remains the acceptance
+bar — do not weaken it when reopening a gate.
+
 ## Why these are strict
 
 Master prompt §26 lists "an architecture document with no executable proof of concept"

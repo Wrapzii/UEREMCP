@@ -47,8 +47,9 @@ grouping on top of it rather than replacing it (ADR-0002).
 ## Actions
 
 Statuses below reflect **registered code + runtime/editor evidence**, not Phase 0 design
-intent. Many surfaces remain `partial` because POC-B visibility, metrics, or domain-wide
-ADR-0005/0006/0010 proofs are incomplete.
+intent. Many surfaces remain `partial` because metrics (R-17), production visual
+perfection beyond the B10 warm-pixel gate, Animation authoring, and domain-wide
+ADR-0005 coverage outside proven scopes are still incomplete.
 
 ### Graph operations — the core thesis
 
@@ -118,7 +119,7 @@ names below are the semantic actions; notes map to the live tool surface.
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
 | `search_templates` | project | WS-15 | partial | RB-10 — AICallable; Templates Toolset PASS 4/4 on `f15ea96` |
-| `instantiate_template` | project | WS-15 | partial | RB-10 — materializes via internal `execute_plan`; POC C not started |
+| `instantiate_template` | project | WS-15 | partial | RB-10 — materializes via internal `execute_plan`; POC C variation + C7 claimed — not a general template marketplace |
 | `promote_to_template` | project | WS-15 | partial | RB-10 — preview-oriented until cross-domain gates bound |
 
 ### Later domains

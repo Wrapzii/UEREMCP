@@ -64,52 +64,75 @@ over that substrate, which is exactly POC A scope.
 This phase is deliberately all *executable* deliverables. Phase 1 producing only
 documents is R-15 materialising.
 
+## POC claim status (2026-07-30)
+
+**POC A–E claimed** against `docs/POC_ACCEPTANCE.md` on the post-hardening local tip
+(parent of documentation certification). Live closeouts include D5 multi-client,
+B10 rendered warm-pixel, Niagara/Material Domain E3/E4, durable `execute_plan`
+idempotency, and cooperative `cancel_job`.
+
+**Production-ready: No.** Remaining: Epic MCP `notifications/cancelled` immutable
+adapter limitation; durable-idempotency crash/migration caveats; metrics gaps (R-17);
+experimental engine churn (R-02); domains beyond wired mutators. See
+`docs/proposals/ws-01-hardening-consolidation-2026-07-30.md` and
+`docs/proposals/ws-01-documentation-certification-2026-07-30.md`.
+
 ## Phase 2 — The core thesis
 
 **Authorized 2026-07-30.** Start with WS-06 P0 (`docs/proposals/ws-06-p0-authorized.md`).
+**POC A path claimed** on tip (scoped CRT — not arbitrary complex graphs).
 
 | Deliverable | WS | Notes |
 |---|---|---|
-| **POC A** — Blueprint round trip | WS-06 | The make-or-break deliverable; P0 scaffolding first |
-| Blueprint semantic analysis and `repair_blueprint` | WS-06 | Master prompt §7.2 |
-| Batch executor: dependency graph, `$ref`, atomic, rollback | WS-05 | Audit `execute_editor_batch` first (RB-15 q6) |
-| Validation framework: check registry, re-read-after-write | WS-11 | The engine of rule 6 |
-| Niagara **read** into `graph.schema.json` + `extensions.niagara` | WS-07 | Verdict on R-05 |
-| VFX material authoring; master material set | WS-08 | POC B dependency |
-| Permission tiers, allowed roots, audit log | WS-12 | R-07 |
+| **POC A** — Blueprint round trip | WS-06 | **Claimed** (scoped); patch mode / exotic islands residual |
+| Blueprint semantic analysis and `repair_blueprint` | WS-06 | Master prompt §7.2 — still planned |
+| Batch executor: dependency graph, `$ref`, atomic, rollback | WS-05 | `execute_plan` partial; durable Claim/Complete landed |
+| Validation framework: check registry, re-read-after-write | WS-11 | Landed for POC gates; R-14 still open |
+| Niagara **read** into `graph.schema.json` + `extensions.niagara` | WS-07 | Landed (intentionally lossy topology) |
+| VFX material authoring; master material set | WS-08 | Landed for POC B dependency |
+| Permission tiers, allowed roots, audit log | WS-12 | **Mitigated** — R-07/R-12; see RISK_REGISTER |
 
 ## Phase 3 — Semantic creation
 
-| Deliverable | WS |
-|---|---|
-| **POC B** — goal-level Niagara creation | WS-07 + WS-08 |
-| Procedural texture / helper mesh generation | WS-08 |
-| Template library: store, search, instantiate, promote | WS-15 |
-| **POC C** — variation from existing effect, incl. third-generation instantiation | WS-07 + WS-15 |
-| Capability discovery layered over `list_toolsets` | WS-05 |
+**POC B and POC C claimed** (structural + B10 warm-pixel; variation + C7). Metrics
+overall close (E7 / R-17) **not** claimed.
+
+| Deliverable | WS | Status |
+|---|---|---|
+| **POC B** — goal-level Niagara creation | WS-07 + WS-08 | **Claimed** — B10 `VisibleRender` PASS; production visual perfection not claimed |
+| Procedural texture / helper mesh generation | WS-08 | Partial — test-root AICallable |
+| Template library: store, search, instantiate, promote | WS-15 | Partial — AICallable; used by POC C |
+| **POC C** — variation from existing effect, incl. third-generation instantiation | WS-07 + WS-15 | **Claimed** |
+| Capability discovery layered over `list_toolsets` | WS-05 | Still planned (`list_domains`, …) |
 
 ## Phase 4 — Breadth
 
-| Deliverable | WS |
-|---|---|
-| GAS: abilities, effects, tags, cues, replication validation | WS-09 |
-| **POC D** — batched gameplay ability | WS-09 |
-| Player-system goal operations (movement, interaction, inventory, spellcasting) | WS-09 |
-| Animation: sequences, montages, notifies, AnimBP graphs | WS-10 |
-| Control Rig / IK to the ceiling RB-09 establishes | WS-10 |
-| **POC E** — durability and honesty | WS-11 |
+**POC D and POC E claimed** (D5 live multi-client + Domain E3/E4). Animation /
+full GAS textbook surface remain partial/research.
+
+| Deliverable | WS | Status |
+|---|---|---|
+| GAS: abilities, effects, tags, cues, replication validation | WS-09 | Partial — RE Pattern B / create_spell path |
+| **POC D** — batched gameplay ability | WS-09 | **Claimed** — D5 live multi-client proof |
+| Player-system goal operations (movement, interaction, inventory, spellcasting) | WS-09 | Beyond POC D scope |
+| Animation: sequences, montages, notifies, AnimBP graphs | WS-10 | Partial inspect / read; authoring unsupported |
+| Control Rig / IK to the ceiling RB-09 establishes | WS-10 | Research — may prove read-only |
+| **POC E** — durability and honesty | WS-11 | **Claimed** — Domain E3/E4 + restart durable pair |
 
 ## Phase 5 — Consolidation
 
-| Deliverable | WS |
-|---|---|
-| Long-running job model per ADR-0009 | WS-04 |
-| Performance: payload trimming, caching, compile batching | WS-05 |
-| Security hardening per ADR-0010 | WS-12 |
-| Benchmark report vs the ~5:1 baseline | WS-11 |
-| Agent usage docs, capability catalog, template authoring guide | WS-13 |
-| Full compatibility review vs Epic + REAgentTools coverage | WS-02 + WS-14 |
-| REAgentTools cutover | WS-02 |
+Hardening slice landed 2026-07-30 (cancel, durable idempotency, D5/B10). Remaining
+Phase 5 work is production breadth, not POC reopen.
+
+| Deliverable | WS | Status |
+|---|---|---|
+| Long-running job model per ADR-0009 | WS-04 | Partial — `get_job_result` / cooperative `cancel_job` available; Epic protocol cancel immutable limit |
+| Performance: payload trimming, caching, compile batching | WS-05 | Open |
+| Security hardening per ADR-0010 | WS-12 | **Mitigated** for wired mutators (R-07/R-12); residual unwired paths |
+| Benchmark report vs the ~5:1 baseline | WS-11 | Open (R-17); many metrics cells `unavailable` |
+| Agent usage docs, capability catalog, template authoring guide | WS-13 | Landed under `docs/guide/**` — keep current with catalog |
+| Full compatibility review vs Epic + REAgentTools coverage | WS-02 + WS-14 | Partial — schema-matrix closed; cutover bar open |
+| REAgentTools cutover | WS-02 | Open |
 
 ## Later domains — designed now, built later
 
