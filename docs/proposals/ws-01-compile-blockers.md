@@ -3,7 +3,7 @@
 - **From:** WS-01 orchestration
 - **To:** WS-06 Blueprint, WS-09 Gameplay, WS-15 Templates, WS-11 Validation
 - **Date:** 2026-07-30
-- **Status:** original WS-06/09/15 blockers closed; WS-11 full-target blocker open
+- **Status:** closed; Validation and full REEditor builds succeeded
 - **Evidence:** `tests/integration/Editor.Handoff.Gates.md`; targeted UBT module
   rebuilds on orch `8eebca0`
 
@@ -50,7 +50,7 @@ module builds returned `Result: Succeeded` and exit `0`:
 
 `[VERIFIED-RUNTIME: six targeted UBT module builds on 2026-07-30]`.
 
-## Remaining full-target blocker
+## WS-11 dependency resolution
 
 The subsequent full `REEditor Win64 Development` build reached the WS-11
 validation tests and failed with C1083:
@@ -68,15 +68,18 @@ public dependency: `UeremcpMutatingDispatch.h` includes
 `UeremcpValidation` rebuild still exits `6` with C1083
 `[VERIFIED-RUNTIME: targeted UeremcpValidation UBT build on 2026-07-30]`.
 
-Requested residual fix: declare the required `UeremcpSecurity` dependency/include
-visibility in `UeremcpValidation.Build.cs`, then rebuild `UeremcpValidation` and
-the full target. WS-01 does not edit that foreign-owned build rule.
+WS-11 commit `795d844` (integrated as `34220ee`) added the required
+`UeremcpSecurity` dependency. The following verification then succeeded:
+
+- targeted `UeremcpValidation`: `Result: Succeeded`, exit `0`;
+- full `REEditor Win64 Development`: `Result: Succeeded`, exit `0`.
+
+`[VERIFIED-RUNTIME: targeted Validation and full REEditor UBT builds on
+2026-07-30]`.
 
 ## Integration consequence
 
-The stale `UnrealEditor.modules` omission of `UeremcpMaterial` cannot be corrected
-until the full target succeeds. Editor filters remain blocked before Automation
-discovery. No A6, B7, Material, Niagara, or POC B runtime pass is claimed.
-
-After WS-11 lands its fix, rerun `UeremcpValidation`, the full `REEditor` build,
-then `pwsh tests/run_editor_handoff_gates.ps1 -Gate All`.
+Compile blockers in this record are closed and the full target metadata was
+written successfully. Editor automation may resume. Build success alone does not
+claim A6, B7, Material, Niagara, or POC B runtime success; those filters must
+still execute and report their own outcomes.
