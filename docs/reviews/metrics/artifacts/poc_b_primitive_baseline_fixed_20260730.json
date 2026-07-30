@@ -1,0 +1,1522 @@
+{
+  "schema_version": 1,
+  "scenario_id": "poc-b-fireball-primitive-baseline",
+  "arm": "epic_reagenttools_primitives",
+  "transport": "streamable_http_mcp",
+  "measured_tip_sha": "24fbe956b6176590b9e1db5c398ab02f5183b4c0",
+  "status": "created_and_validated",
+  "primitive_ops_executed_per_trial": 63,
+  "wall_clock_seconds": {
+    "mean": 6.277154733333335,
+    "median": 6.212059500000002,
+    "minimum": 6.203132600000002,
+    "maximum": 6.4162721000000005
+  },
+  "full_trace_reference": "inline:trials[*].result.primitive_trace and trials[*].raw_mcp_response",
+  "endpoint": "http://127.0.0.1:8001/mcp",
+  "outer_mcp_round_trips_per_trial": 1,
+  "timer": "time.perf_counter immediately around execute_tool_script",
+  "fixture": "schemas\\domains\\niagara\\fixtures\\poc_b_primitive_baseline.py",
+  "trials_requested": 3,
+  "trials_usable": 3,
+  "trials": [
+    {
+      "trial": 1,
+      "started_utc": "2026-07-30T14:38:51.829503+00:00",
+      "clean_state_removed": [],
+      "clean_state_quarantined": [],
+      "wall_clock_seconds": 6.4162721000000005,
+      "usable": true,
+      "acceptance_failures": [],
+      "primitive_ops_executed": 63,
+      "result": {
+        "status": "created_and_validated",
+        "completed": true,
+        "system": "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline.NS_POCB_Fireball_Baseline",
+        "created_outputs": [
+          "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+        ],
+        "removed_template_emitters": [
+          "Minimal"
+        ],
+        "emitters": [
+          "Core",
+          "FlameShell",
+          "Sparks",
+          "Smoke",
+          "RibbonTrail",
+          "ImpactBurst"
+        ],
+        "user_variables": [
+          "User.Color",
+          "User.Intensity",
+          "User.Scale",
+          "User.SecondaryColor"
+        ],
+        "renderer_bindings_verified": [
+          "Core/renderer_0",
+          "FlameShell/renderer_0",
+          "Sparks/renderer_0",
+          "Smoke/renderer_0",
+          "RibbonTrail/renderer_0",
+          "ImpactBurst/renderer_0"
+        ],
+        "compile_state": {
+          "aggregateStatus": "UpToDate",
+          "bIsCompiling": false,
+          "bIsStale": false,
+          "bHasErrors": false,
+          "bHasWarnings": false,
+          "scripts": [
+            {
+              "emitterName": "None",
+              "scriptName": "ENiagaraScriptUsage::SystemSpawnScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "None",
+              "scriptName": "ENiagaraScriptUsage::SystemUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Core",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Core",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "FlameShell",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "FlameShell",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Sparks",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Sparks",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Smoke",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Smoke",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleEventScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "ImpactBurst",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "ImpactBurst",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            }
+          ]
+        },
+        "primitive_ops_executed": 63,
+        "primitive_trace": [
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 15.999999974155799
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 14.999999984866008
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 46.999999991385266
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 109.0000000258442
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 171.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 250.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 266.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 389.999999984866
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddUserVariables",
+            "ok": true,
+            "elapsed_ms": 547.0000000204891
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 109.99999998603016
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 342.99999999348074
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 297.0000000204891
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 187.9999999946449
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 187.0000000053551
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 187.9999999946449
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.save_assets",
+            "ok": true,
+            "elapsed_ms": 608.9999999967404
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 141.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 14.999999984866008
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          }
+        ],
+        "inner_elapsed_ms": 6390.00000001397
+      },
+      "raw_mcp_response": {
+        "jsonrpc": "2.0",
+        "id": 1785422331699784602,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"returnValue\":\"{\\\"status\\\": \\\"created_and_validated\\\", \\\"completed\\\": true, \\\"system\\\": \\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline.NS_POCB_Fireball_Baseline\\\", \\\"created_outputs\\\": [\\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst\\\"], \\\"removed_template_emitters\\\": [\\\"Minimal\\\"], \\\"emitters\\\": [\\\"Core\\\", \\\"FlameShell\\\", \\\"Sparks\\\", \\\"Smoke\\\", \\\"RibbonTrail\\\", \\\"ImpactBurst\\\"], \\\"user_variables\\\": [\\\"User.Color\\\", \\\"User.Intensity\\\", \\\"User.Scale\\\", \\\"User.SecondaryColor\\\"], \\\"renderer_bindings_verified\\\": [\\\"Core/renderer_0\\\", \\\"FlameShell/renderer_0\\\", \\\"Sparks/renderer_0\\\", \\\"Smoke/renderer_0\\\", \\\"RibbonTrail/renderer_0\\\", \\\"ImpactBurst/renderer_0\\\"], \\\"compile_state\\\": {\\\"aggregateStatus\\\": \\\"UpToDate\\\", \\\"bIsCompiling\\\": false, \\\"bIsStale\\\": false, \\\"bHasErrors\\\": false, \\\"bHasWarnings\\\": false, \\\"scripts\\\": [{\\\"emitterName\\\": \\\"None\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::SystemSpawnScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"None\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::SystemUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Core\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Core\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"FlameShell\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"FlameShell\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Sparks\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Sparks\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Smoke\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Smoke\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleEventScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"ImpactBurst\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"ImpactBurst\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}]}, \\\"primitive_ops_executed\\\": 63, \\\"primitive_trace\\\": [{\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.999999974155799}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 14.999999984866008}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.RemoveEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 46.999999991385266}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.0000000258442}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 171.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 250.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 266.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 389.999999984866}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddUserVariables\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 547.0000000204891}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.99999998603016}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 342.99999999348074}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 297.0000000204891}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 187.9999999946449}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 187.0000000053551}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 187.9999999946449}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.save_assets\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 608.9999999967404}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 141.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 14.999999984866008}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}], \\\"inner_elapsed_ms\\\": 6390.00000001397}\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "trial": 2,
+      "started_utc": "2026-07-30T14:39:02.153163+00:00",
+      "clean_state_removed": [
+        "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+      ],
+      "clean_state_quarantined": [],
+      "wall_clock_seconds": 6.203132600000002,
+      "usable": true,
+      "acceptance_failures": [],
+      "primitive_ops_executed": 63,
+      "result": {
+        "status": "created_and_validated",
+        "completed": true,
+        "system": "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline.NS_POCB_Fireball_Baseline",
+        "created_outputs": [
+          "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+        ],
+        "removed_template_emitters": [
+          "Minimal"
+        ],
+        "emitters": [
+          "Core",
+          "FlameShell",
+          "Sparks",
+          "Smoke",
+          "RibbonTrail",
+          "ImpactBurst"
+        ],
+        "user_variables": [
+          "User.Color",
+          "User.Intensity",
+          "User.Scale",
+          "User.SecondaryColor"
+        ],
+        "renderer_bindings_verified": [
+          "Core/renderer_0",
+          "FlameShell/renderer_0",
+          "Sparks/renderer_0",
+          "Smoke/renderer_0",
+          "RibbonTrail/renderer_0",
+          "ImpactBurst/renderer_0"
+        ],
+        "compile_state": {
+          "aggregateStatus": "UpToDate",
+          "bIsCompiling": false,
+          "bIsStale": false,
+          "bHasErrors": false,
+          "bHasWarnings": false,
+          "scripts": [
+            {
+              "emitterName": "None",
+              "scriptName": "ENiagaraScriptUsage::SystemSpawnScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "None",
+              "scriptName": "ENiagaraScriptUsage::SystemUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Core",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Core",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "FlameShell",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "FlameShell",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Sparks",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Sparks",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Smoke",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Smoke",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleEventScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "ImpactBurst",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "ImpactBurst",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            }
+          ]
+        },
+        "primitive_ops_executed": 63,
+        "primitive_trace": [
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 15.999999974155799
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 46.999999991385266
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 156.00000001722947
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 218.99999998277053
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 296.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 359.0000000258442
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddUserVariables",
+            "ok": true,
+            "elapsed_ms": 530.9999999881256
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 375.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 171.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 172.0000000204891
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 140.9999999741558
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 172.0000000204891
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 139.999999984866
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 172.0000000204891
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState",
+            "ok": true,
+            "elapsed_ms": 140.9999999741558
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.save_assets",
+            "ok": true,
+            "elapsed_ms": 625.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 109.0000000258442
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 109.99999998603016
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 110.00000001513399
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 14.999999984866008
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          }
+        ],
+        "inner_elapsed_ms": 6125.0
+      },
+      "raw_mcp_response": {
+        "jsonrpc": "2.0",
+        "id": 1785422331699784604,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"returnValue\":\"{\\\"status\\\": \\\"created_and_validated\\\", \\\"completed\\\": true, \\\"system\\\": \\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline.NS_POCB_Fireball_Baseline\\\", \\\"created_outputs\\\": [\\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst\\\"], \\\"removed_template_emitters\\\": [\\\"Minimal\\\"], \\\"emitters\\\": [\\\"Core\\\", \\\"FlameShell\\\", \\\"Sparks\\\", \\\"Smoke\\\", \\\"RibbonTrail\\\", \\\"ImpactBurst\\\"], \\\"user_variables\\\": [\\\"User.Color\\\", \\\"User.Intensity\\\", \\\"User.Scale\\\", \\\"User.SecondaryColor\\\"], \\\"renderer_bindings_verified\\\": [\\\"Core/renderer_0\\\", \\\"FlameShell/renderer_0\\\", \\\"Sparks/renderer_0\\\", \\\"Smoke/renderer_0\\\", \\\"RibbonTrail/renderer_0\\\", \\\"ImpactBurst/renderer_0\\\"], \\\"compile_state\\\": {\\\"aggregateStatus\\\": \\\"UpToDate\\\", \\\"bIsCompiling\\\": false, \\\"bIsStale\\\": false, \\\"bHasErrors\\\": false, \\\"bHasWarnings\\\": false, \\\"scripts\\\": [{\\\"emitterName\\\": \\\"None\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::SystemSpawnScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"None\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::SystemUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Core\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Core\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"FlameShell\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"FlameShell\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Sparks\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Sparks\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Smoke\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Smoke\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleEventScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"ImpactBurst\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"ImpactBurst\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}]}, \\\"primitive_ops_executed\\\": 63, \\\"primitive_trace\\\": [{\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.999999974155799}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.RemoveEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 46.999999991385266}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 156.00000001722947}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 218.99999998277053}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 296.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 359.0000000258442}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddUserVariables\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 530.9999999881256}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 375.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 171.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 172.0000000204891}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 140.9999999741558}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 172.0000000204891}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 139.999999984866}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 172.0000000204891}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 140.9999999741558}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.save_assets\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 625.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.0000000258442}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.99999998603016}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 110.00000001513399}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 14.999999984866008}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}], \\\"inner_elapsed_ms\\\": 6125.0}\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "trial": 3,
+      "started_utc": "2026-07-30T14:39:12.224294+00:00",
+      "clean_state_removed": [
+        "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+      ],
+      "clean_state_quarantined": [],
+      "wall_clock_seconds": 6.212059500000002,
+      "usable": true,
+      "acceptance_failures": [],
+      "primitive_ops_executed": 63,
+      "result": {
+        "status": "created_and_validated",
+        "completed": true,
+        "system": "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline.NS_POCB_Fireball_Baseline",
+        "created_outputs": [
+          "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+        ],
+        "removed_template_emitters": [
+          "Minimal"
+        ],
+        "emitters": [
+          "Core",
+          "FlameShell",
+          "Sparks",
+          "Smoke",
+          "RibbonTrail",
+          "ImpactBurst"
+        ],
+        "user_variables": [
+          "User.Color",
+          "User.Intensity",
+          "User.Scale",
+          "User.SecondaryColor"
+        ],
+        "renderer_bindings_verified": [
+          "Core/renderer_0",
+          "FlameShell/renderer_0",
+          "Sparks/renderer_0",
+          "Smoke/renderer_0",
+          "RibbonTrail/renderer_0",
+          "ImpactBurst/renderer_0"
+        ],
+        "compile_state": {
+          "aggregateStatus": "UpToDate",
+          "bIsCompiling": false,
+          "bIsStale": false,
+          "bHasErrors": false,
+          "bHasWarnings": false,
+          "scripts": [
+            {
+              "emitterName": "None",
+              "scriptName": "ENiagaraScriptUsage::SystemSpawnScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "None",
+              "scriptName": "ENiagaraScriptUsage::SystemUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Core",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Core",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "FlameShell",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "FlameShell",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Sparks",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Sparks",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Smoke",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "Smoke",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "RibbonTrail",
+              "scriptName": "ENiagaraScriptUsage::ParticleEventScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "ImpactBurst",
+              "scriptName": "ENiagaraScriptUsage::ParticleSpawnScriptInterpolated",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            },
+            {
+              "emitterName": "ImpactBurst",
+              "scriptName": "ENiagaraScriptUsage::ParticleUpdateScript",
+              "lastCompileStatus": "UpToDate",
+              "errorSummary": "",
+              "compileEvents": []
+            }
+          ]
+        },
+        "primitive_ops_executed": 63,
+        "primitive_trace": [
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 14.999999984866008
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 62.999999994644895
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 171.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 219.00000001187436
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 264.999999984866
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 360.000000015134
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddUserVariables",
+            "ok": true,
+            "elapsed_ms": 530.9999999881256
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 358.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 172.0000000204891
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 187.9999999946449
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 187.0000000053551
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 109.99999998603016
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 187.0000000053551
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.save_assets",
+            "ok": true,
+            "elapsed_ms": 625.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 109.99999998603016
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 109.0000000258442
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 109.99999998603016
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.get_asset_class",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 15.999999974155799
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          }
+        ],
+        "inner_elapsed_ms": 6156.0000000172295
+      },
+      "raw_mcp_response": {
+        "jsonrpc": "2.0",
+        "id": 1785422331699784606,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"returnValue\":\"{\\\"status\\\": \\\"created_and_validated\\\", \\\"completed\\\": true, \\\"system\\\": \\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline.NS_POCB_Fireball_Baseline\\\", \\\"created_outputs\\\": [\\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst\\\"], \\\"removed_template_emitters\\\": [\\\"Minimal\\\"], \\\"emitters\\\": [\\\"Core\\\", \\\"FlameShell\\\", \\\"Sparks\\\", \\\"Smoke\\\", \\\"RibbonTrail\\\", \\\"ImpactBurst\\\"], \\\"user_variables\\\": [\\\"User.Color\\\", \\\"User.Intensity\\\", \\\"User.Scale\\\", \\\"User.SecondaryColor\\\"], \\\"renderer_bindings_verified\\\": [\\\"Core/renderer_0\\\", \\\"FlameShell/renderer_0\\\", \\\"Sparks/renderer_0\\\", \\\"Smoke/renderer_0\\\", \\\"RibbonTrail/renderer_0\\\", \\\"ImpactBurst/renderer_0\\\"], \\\"compile_state\\\": {\\\"aggregateStatus\\\": \\\"UpToDate\\\", \\\"bIsCompiling\\\": false, \\\"bIsStale\\\": false, \\\"bHasErrors\\\": false, \\\"bHasWarnings\\\": false, \\\"scripts\\\": [{\\\"emitterName\\\": \\\"None\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::SystemSpawnScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"None\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::SystemUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Core\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Core\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"FlameShell\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"FlameShell\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Sparks\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Sparks\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Smoke\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"Smoke\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"RibbonTrail\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleEventScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"ImpactBurst\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleSpawnScriptInterpolated\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}, {\\\"emitterName\\\": \\\"ImpactBurst\\\", \\\"scriptName\\\": \\\"ENiagaraScriptUsage::ParticleUpdateScript\\\", \\\"lastCompileStatus\\\": \\\"UpToDate\\\", \\\"errorSummary\\\": \\\"\\\", \\\"compileEvents\\\": []}]}, \\\"primitive_ops_executed\\\": 63, \\\"primitive_trace\\\": [{\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 14.999999984866008}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.RemoveEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 62.999999994644895}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 171.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 219.00000001187436}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 264.999999984866}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 360.000000015134}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddUserVariables\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 530.9999999881256}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 358.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 172.0000000204891}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 187.9999999946449}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 187.0000000053551}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.99999998603016}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 187.0000000053551}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.save_assets\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 625.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.99999998603016}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.0000000258442}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.99999998603016}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.get_asset_class\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.999999974155799}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.is_dirty\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}], \\\"inner_elapsed_ms\\\": 6156.0000000172295}\"}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

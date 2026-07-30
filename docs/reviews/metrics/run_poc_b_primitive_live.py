@@ -141,7 +141,7 @@ def return_value(response: dict[str, Any]) -> Any:
     return value
 
 
-def clean_outputs(client: McpClient, execute_cleanup: bool) -> list[str]:
+def clean_outputs(client: McpClient, execute_cleanup: bool) -> dict[str, list[str]]:
     packages_json = json.dumps(OUTPUT_PACKAGES)
     cleanup_nonce = time.time_ns()
     cleanup_script = f"""
@@ -175,6 +175,7 @@ def run():
         ):
             raise RuntimeError("failed to save dirty controlled outputs")
     removed = []
+    quarantined = []
     for package in existing:
         if not call("editor_toolset.toolsets.asset.AssetTools.delete", {{"path": package}}):
             fallback = (
@@ -191,8 +192,11 @@ def run():
                 "editor_toolset.toolsets.asset.AssetTools.delete",
                 {{"path": fallback}},
             ):
-                raise RuntimeError("failed to delete moved controlled output " + fallback)
-        removed.append(package)
+                quarantined.append(fallback)
+            else:
+                removed.append(package)
+        else:
+            removed.append(package)
     remaining = [
         package
         for package in OUTPUT_PACKAGES
@@ -200,7 +204,12 @@ def run():
     ]
     if remaining:
         raise RuntimeError("controlled outputs remain after cleanup: " + json.dumps(remaining))
-    return {{"status": "clean", "existing": existing, "removed": removed}}
+    return {{
+        "status": "clean",
+        "existing": existing,
+        "removed": removed,
+        "quarantined": quarantined,
+    }}
 
 # Unique outer request avoids transport replay of destructive calls.
 # cleanup nonce: {cleanup_nonce}
@@ -217,7 +226,10 @@ def run():
             "controlled outputs exist; rerun with --execute-cleanup: "
             + json.dumps(cleanup["existing"])
         )
-    return cleanup["removed"]
+    return {
+        "removed": cleanup["removed"],
+        "quarantined": cleanup["quarantined"],
+    }
 
 
 def trial_is_usable(value: Any) -> tuple[bool, list[str]]:
@@ -281,7 +293,7 @@ def main() -> int:
     trials: list[dict[str, Any]] = []
 
     for index in range(1, args.trials + 1):
-        removed = clean_outputs(client, args.execute_cleanup)
+        cleanup = clean_outputs(client, args.execute_cleanup)
         started_utc = datetime.now(timezone.utc).isoformat()
         started = time.perf_counter()
         raw = client.call_tool(
@@ -302,7 +314,8 @@ def main() -> int:
             {
                 "trial": index,
                 "started_utc": started_utc,
-                "clean_state_removed": removed,
+                "clean_state_removed": cleanup["removed"],
+                "clean_state_quarantined": cleanup["quarantined"],
                 "wall_clock_seconds": wall_clock_seconds,
                 "usable": usable,
                 "acceptance_failures": failures,
