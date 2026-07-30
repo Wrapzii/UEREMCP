@@ -270,7 +270,10 @@ namespace UeremcpIntentRouterInternal
 					const TSharedPtr<FJsonObject>* Props = nullptr;
 					if ((*InputSchema)->TryGetObjectField(TEXT("properties"), Props) && Props)
 					{
-						(*Props)->Values.GetKeys(Doc.Properties);
+						for (const auto& Pair : (*Props)->Values)
+						{
+							Doc.Properties.Add(Pair.Key);
+						}
 					}
 					const TArray<TSharedPtr<FJsonValue>>* Req = nullptr;
 					if ((*InputSchema)->TryGetArrayField(TEXT("required"), Req) && Req)
@@ -316,7 +319,7 @@ namespace UeremcpIntentRouterInternal
 
 		for (FToolDoc& Doc : Docs)
 		{
-			if (TSharedPtr<FJsonObject>* Op = Catalog.OpsByQualified.Find(Doc.Qualified))
+			if (const TSharedPtr<FJsonObject>* Op = Catalog.OpsByQualified.Find(Doc.Qualified))
 			{
 				Doc.CatalogOp = *Op;
 				const TArray<TSharedPtr<FJsonValue>>* UseWhen = nullptr;
