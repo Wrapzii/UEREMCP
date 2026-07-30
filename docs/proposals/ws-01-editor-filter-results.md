@@ -1,14 +1,15 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `f759152` (Material PASS 11/11 record)
+- **Current orchestration tip:** `cb7d3e5` (VisualTest T1a freshness blocker note; superseded by live MCP PASS below)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
 - **Latest Material re-run tip:** `7535e6c`
 - **Latest Templates re-run tip:** `f15ea96`
+- **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Wave 2 listed editor filters are green on current-tip or unchanged-source proofs. Material is **PASS 11/11** on `7535e6c`, including ValidateFalse disk persistence; Templates is **PASS 4/4** on `f15ea96`; Niagara Create/Inspect/B7 are green. No A6 / overall POC-B completion claim.
+- **Status:** Wave 2 listed editor filters are green on current-tip or unchanged-source proofs. Material is **PASS 11/11** on `7535e6c`, including ValidateFalse disk persistence; Templates is **PASS 4/4** on `f15ea96`; Niagara Create/Inspect/B7 are green. Optional live VisualTest MCP `BENCHMARK_PROTOCOL` T1a freshness is **PASS** after editor restart. No A6 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -26,14 +27,14 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Filter / gate | Recorded result | Proof tip | Freshness / residual |
 |---|---:|---|---|
 | `UeremcpBlueprint.Toolset` | **PASS, 4/4** | `35b4cab` | Blueprint sources unchanged since proof. |
-| `UeremcpMaterial.Toolset` | **PASS, 11/11** | `7535e6c` | ValidateFalse and MI/master disk persistence are green; closes the T1a-related filter residual. |
+| `UeremcpMaterial.Toolset` | **PASS, 11/11** | `7535e6c` | ValidateFalse and MI/master disk persistence are green; live VisualTest MCP T1a freshness also PASS. |
 | `UEREMCP.Animation` | **PASS, 10/10** | `5ea9277` | Animation sources unchanged since proof. |
 | `UEREMCP.Niagara.Create` | **PASS, 10/10** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: optional live VisualTest MCP `BENCHMARK_PROTOCOL` T1a freshness against `7535e6c` was attempted but blocked because the editor was not running: `list_toolsets` returned WinError 10061 while port 8001 was held only by the proxy. Editor restart and retry are in flight; Material's editor-filter proof remains PASS 11/11. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
+Residuals: optional live VisualTest MCP `BENCHMARK_PROTOCOL` T1a freshness is no longer blocked — **PASS** after editor restart (see below). Material editor-filter PASS 11/11 on `7535e6c` remains the primary filter proof. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
 
 ## Templates editor result and handoff
 
@@ -135,7 +136,16 @@ Standing by for a deeper WS-07 fix before another Inspect/B7 re-run.
 |---|---:|---|---|
 | `UeremcpMaterial.Toolset` | **PASS, 11/11** | WS-08 | `CreateVfxMaterial.ValidateFalse` and MI/master disk-persistence checks passed. The T1a-related editor-filter residual is closed. |
 
-Optional freshness only: the live VisualTest MCP T1a attempt was blocked by a dead editor (`list_toolsets`: WinError 10061; port 8001 proxy-only). Restart and retry are in flight. This does not invalidate the Material PASS 11/11 editor-filter proof.
+### Live VisualTest MCP T1a freshness (PASS)
+
+After editor restart, optional live MCP freshness against the `7535e6c` Material lineage succeeded:
+
+- VisualTest `UnrealEditor` PID `38668`; crash monitor re-armed PID `14548`
+- `list_toolsets` OK on `http://127.0.0.1:8001/mcp`
+- T1a `create_vfx_material` with `validate:false` returned `partially_completed` as contract-expected (45 internal ops / 1 MCP round trip)
+- Disk verified under `/Game/__UeremcpTests/`: MI ~11637 bytes, master ~16225 bytes
+
+This is live MCP freshness on VisualTest, not a replacement for the Material editor-filter PASS 11/11.
 
 ## Update on tip `942e8bc` (WS-11 Material re-run)
 
@@ -234,7 +244,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | B7 PASS on `825e4f4`; no remaining B7 failure in this filter record. |
 | WS-08 | Material Toolset PASS 11/11 on `7535e6c`; no remaining Material editor-filter failure in this record. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Listed editor filters are green. Optional live VisualTest MCP T1a freshness is blocked on a dead editor; restart and retry are in flight. Keep A6 / overall POC-B claims gated separately. |
+| WS-11 | Listed editor filters are green. Optional live VisualTest MCP T1a freshness is PASS after editor restart. Keep A6 / overall POC-B claims gated separately. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Wave 2 listed editor filters are green: Material PASS 11/11 on `7535e6c`, Templates PASS 4/4 on `f15ea96`, and Niagara Create/Inspect/B7 green on their recorded proof tips. Remaining optional freshness: live VisualTest MCP T1a is blocked on a dead editor, with restart and retry in flight. A6 / overall POC-B remain separate criteria. No junction retarget.
+Wave 2 listed editor filters are green: Material PASS 11/11 on `7535e6c`, Templates PASS 4/4 on `f15ea96`, and Niagara Create/Inspect/B7 green on their recorded proof tips. Optional live VisualTest MCP T1a freshness is also PASS (disk packages present). Remaining open items are acceptance gates outside this filter record: A6 and overall POC-B. No junction retarget.
