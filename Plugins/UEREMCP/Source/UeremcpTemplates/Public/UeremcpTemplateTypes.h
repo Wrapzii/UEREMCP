@@ -73,6 +73,9 @@ struct UEREMCPTEMPLATES_API FUeremcpTemplateInstantiateResult
 	FString Summary;
 	FString Status;
 	TArray<FString> CapabilityNotes;
+	/** Machine-stable response notes distinguishing reused pattern structure from deltas. */
+	TArray<FString> InheritedFacts;
+	TArray<FString> OverriddenFacts;
 	TArray<FString> ExpectedValidationChecks;
 	TArray<FString> NonExecutableValidationChecks;
 	TSharedPtr<FJsonObject> MaterializedPlan;

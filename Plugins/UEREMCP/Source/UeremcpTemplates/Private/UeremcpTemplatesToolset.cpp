@@ -83,6 +83,8 @@ namespace
 		const FString& DelegatedResponseJson,
 		const FUeremcpRequest& OriginalRequest,
 		const FUeremcpTemplateInstantiateRequest& InstantiateRequest,
+		const TArray<FString>& InheritedFacts,
+		const TArray<FString>& OverriddenFacts,
 		const TArray<FString>& ExpectedValidationChecks,
 		const TArray<FString>& NonExecutableValidationChecks,
 		FString& OutResponseJson,
@@ -140,6 +142,20 @@ namespace
 		if (!InstantiateRequest.TargetAssetPath.IsEmpty())
 		{
 			Understood->SetStringField(TEXT("resolved_target"), InstantiateRequest.TargetAssetPath);
+		}
+		for (const FString& Fact : InheritedFacts)
+		{
+			AppendStringArrayValue(
+				Understood,
+				TEXT("interpretation_notes"),
+				FString::Printf(TEXT("inherited:%s"), *Fact));
+		}
+		for (const FString& Fact : OverriddenFacts)
+		{
+			AppendStringArrayValue(
+				Understood,
+				TEXT("interpretation_notes"),
+				FString::Printf(TEXT("overridden:%s"), *Fact));
 		}
 		ResponseObject->SetObjectField(TEXT("understood"), Understood);
 
@@ -364,6 +380,8 @@ FString UUeremcpTemplatesToolset::InstantiateTemplate(const FString& RequestJson
 		DelegatedResponseJson,
 		Request,
 		InstantiateRequest,
+		Result.InheritedFacts,
+		Result.OverriddenFacts,
 		Result.ExpectedValidationChecks,
 		Result.NonExecutableValidationChecks,
 		FinalResponseJson,

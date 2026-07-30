@@ -352,6 +352,13 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 		Result.Summary = FString::Printf(TEXT("Unknown template_id '%s'."), *Request.TemplateId);
 		return Result;
 	}
+	Result.InheritedFacts.Add(FString::Printf(TEXT("template_id=%s"), *Record->TemplateId));
+	if (Record->Composes.Num() > 0)
+	{
+		Result.InheritedFacts.Add(FString::Printf(
+			TEXT("composes=%s"),
+			*FString::Join(Record->Composes, TEXT(","))));
+	}
 
 	TSharedPtr<FJsonObject> EffectiveInputs = CloneJsonObject(Request.Inputs);
 	if (!EffectiveInputs.IsValid())
@@ -361,6 +368,43 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 	if (!Request.TargetAssetPath.IsEmpty() && !EffectiveInputs->HasField(TEXT("target_path")))
 	{
 		EffectiveInputs->SetStringField(TEXT("target_path"), Request.TargetAssetPath);
+	}
+	TArray<FString> InputNames;
+	for (const auto& InputPair : EffectiveInputs->Values)
+	{
+		InputNames.Add(FString(InputPair.Key));
+	}
+	InputNames.Sort();
+	for (const FString& InputName : InputNames)
+	{
+		if (InputName == TEXT("preset_material_parameters")
+			|| InputName == TEXT("preset_niagara_parameters"))
+		{
+			continue;
+		}
+		Result.OverriddenFacts.Add(FString::Printf(TEXT("input=%s"), *InputName));
+	}
+	static const TCHAR* ModifierBuckets[] = { TEXT("replace"), TEXT("adjust"), TEXT("add"), TEXT("preserve") };
+	for (const TCHAR* Bucket : ModifierBuckets)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* RequestedModifiers = nullptr;
+		if (!Request.Modifiers.IsValid()
+			|| !Request.Modifiers->TryGetArrayField(Bucket, RequestedModifiers)
+			|| !RequestedModifiers)
+		{
+			continue;
+		}
+		for (const TSharedPtr<FJsonValue>& ModifierValue : *RequestedModifiers)
+		{
+			FString ModifierName;
+			if (ModifierValue.IsValid() && ModifierValue->TryGetString(ModifierName))
+			{
+				Result.OverriddenFacts.Add(FString::Printf(
+					TEXT("modifier.%s=%s"),
+					Bucket,
+					*ModifierName));
+			}
+		}
 	}
 
 	FString InputError;
@@ -441,6 +485,24 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 	Result.Summary = FString::Printf(
 		TEXT("Materialized an execute_plan specification for '%s'."),
 		*Request.TemplateId);
+	if (const TArray<TSharedPtr<FJsonValue>>* Operations = nullptr;
+		Plan->TryGetArrayField(TEXT("operations"), Operations) && Operations)
+	{
+		TArray<FString> OperationIds;
+		for (const TSharedPtr<FJsonValue>& OperationValue : *Operations)
+		{
+			FString OperationId;
+			if (OperationValue.IsValid()
+				&& OperationValue->Type == EJson::Object
+				&& OperationValue->AsObject()->TryGetStringField(TEXT("id"), OperationId))
+			{
+				OperationIds.Add(OperationId);
+			}
+		}
+		Result.InheritedFacts.Add(FString::Printf(
+			TEXT("materialized_operations=%s"),
+			*FString::Join(OperationIds, TEXT(","))));
+	}
 	Result.MaterializedPlan = Plan;
 	return Result;
 }

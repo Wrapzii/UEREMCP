@@ -316,7 +316,7 @@ class TemplateInstantiateTests(unittest.TestCase):
         niagara_spec = copy.deepcopy(operations["projectile_fx"]["specification"])
         niagara_spec["materials"] = {
             "core": "/Game/VFX/Materials/MI_Ice_ProjectileCore",
-            "trail": "/Game/VFX/Materials/MI_Ice_ProjectileTrail",
+            "ribbon_trail": "/Game/VFX/Materials/MI_Ice_ProjectileTrail",
         }
         errors = list(
             self.action_validators["create_niagara_effect"].iter_errors(niagara_spec)
@@ -401,7 +401,7 @@ class TemplateInstantiateTests(unittest.TestCase):
                     operations["projectile_fx"]["specification"]["materials"],
                     {
                         "core": {"$ref": "core_material.result.primary_asset"},
-                        "trail": {"$ref": "trail_material.result.primary_asset"},
+                        "ribbon_trail": {"$ref": "trail_material.result.primary_asset"},
                     },
                 )
                 self.assertEqual(
@@ -485,7 +485,7 @@ class TemplateInstantiateTests(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertIn("Unsupported modifier", result.summary)
 
-    def test_declared_modifier_without_delta_fails_closed(self) -> None:
+    def test_preserve_modifier_materializes_explicit_contract(self) -> None:
         result = self.service.instantiate(
             InstantiateRequest(
                 template_id="niagara.projectile.elemental.v1",
@@ -493,14 +493,25 @@ class TemplateInstantiateTests(unittest.TestCase):
                 modifiers={"preserve": ["preserve_networking"]},
             )
         )
-        self.assertFalse(result.success)
-        self.assertIn("no executable delta", result.summary)
+        self.assertTrue(result.success, result.summary)
+        projectile = next(
+            operation
+            for operation in result.plan["operations"]
+            if operation["id"] == "projectile_fx"
+        )
+        self.assertEqual(
+            projectile["specification"]["emitters"],
+            [{"preservation_contract": "source_networking_and_damage_unchanged"}],
+        )
 
     def test_executable_modifiers_merge_in_deterministic_bucket_order(self) -> None:
         result = self.service.instantiate(
             InstantiateRequest(
                 template_id="niagara.projectile.elemental.v1",
-                inputs=self.projectile_inputs("ice"),
+                inputs={
+                    **self.projectile_inputs("ice"),
+                    "source_system": "/Game/__UeremcpPoc/NS_POCB_Fireball",
+                },
                 modifiers={
                     "adjust": ["reduce_trail_persistence", "boost_impact"],
                     "add": ["crystalline_fragments"],
@@ -518,6 +529,23 @@ class TemplateInstantiateTests(unittest.TestCase):
         self.assertEqual(
             operations["trail_material"]["specification"]["modifiers"],
             ["reduce_trail_persistence"],
+        )
+        projectile = operations["projectile_fx"]["specification"]
+        self.assertEqual(
+            projectile["base_system"]["asset_path"],
+            "/Game/__UeremcpPoc/NS_POCB_Fireball",
+        )
+        self.assertEqual(
+            [component["role"] for component in projectile["components"]],
+            ["crystalline", "ice_impact"],
+        )
+        self.assertIn(
+            "modifier.add=crystalline_fragments",
+            result.overridden_facts,
+        )
+        self.assertIn(
+            "template_id=niagara.projectile.elemental.v1",
+            result.inherited_facts,
         )
 
     def test_duplicate_modifier_across_buckets_fails_before_delegation(self) -> None:
@@ -597,6 +625,129 @@ class TemplateInstantiateTests(unittest.TestCase):
         finally:
             record.document["modifier_definitions"] = original_definitions
 
+    def test_poc_c_third_generation_reuses_same_pattern(self) -> None:
+        ice = self.service.instantiate(
+            InstantiateRequest(
+                template_id="niagara.projectile.elemental.v1",
+                inputs={
+                    **self.projectile_inputs("ice"),
+                    "source_system": "/Game/__UeremcpPoc/NS_POCB_Fireball",
+                },
+                modifiers={
+                    "adjust": ["reduce_trail_persistence", "boost_impact"],
+                    "add": ["crystalline_fragments"],
+                    "preserve": ["preserve_networking"],
+                },
+            )
+        )
+        wind = self.service.instantiate(
+            InstantiateRequest(
+                template_id="niagara.projectile.elemental.v1",
+                inputs={
+                    **self.projectile_inputs("wind"),
+                    "target_path": "/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration",
+                    "source_system": "/Game/__UeremcpPoc/NS_POCC_IceVariation",
+                },
+                modifiers={"preserve": ["preserve_networking"]},
+            )
+        )
+        self.assertTrue(ice.success, ice.summary)
+        self.assertTrue(wind.success, wind.summary)
+        ice_projectile = next(
+            operation for operation in ice.plan["operations"]
+            if operation["id"] == "projectile_fx"
+        )
+        wind_projectile = next(
+            operation for operation in wind.plan["operations"]
+            if operation["id"] == "projectile_fx"
+        )
+        self.assertEqual(
+            ice.inherited_facts[0],
+            "template_id=niagara.projectile.elemental.v1",
+        )
+        self.assertEqual(ice.inherited_facts[0], wind.inherited_facts[0])
+        self.assertEqual(ice_projectile["specification"]["element"], "ice")
+        self.assertEqual(wind_projectile["specification"]["element"], "wind")
+        self.assertEqual(
+            wind_projectile["specification"]["base_system"]["asset_path"],
+            "/Game/__UeremcpPoc/NS_POCC_IceVariation",
+        )
+        self.assertEqual(
+            wind_projectile["target"]["asset_path"],
+            "/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration",
+        )
+        self.assertIn("overridden:input=element", [
+            f"overridden:{fact}" for fact in wind.overridden_facts
+        ])
+
+    def test_poc_c_fixture_materializes_binary_variation_contract(self) -> None:
+        fixture = json.loads(
+            (
+                ROOT
+                / "schemas"
+                / "domains"
+                / "niagara"
+                / "fixtures"
+                / "poc_c_ice_variation_request.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        materialized: dict[str, object] = {}
+        for fixture_key in ("ice_request", "third_generation_request"):
+            envelope = fixture[fixture_key]
+            specification = envelope["specification"]
+            result = self.service.instantiate(
+                InstantiateRequest(
+                    template_id=specification["template_id"],
+                    inputs=specification["inputs"],
+                    modifiers=specification["modifiers"],
+                    target_asset_path=specification["target"]["asset_path"],
+                    mode=specification["mode"],
+                )
+            )
+            self.assertTrue(result.success, result.summary)
+            materialized[fixture_key] = result
+
+        ice = materialized["ice_request"]
+        third = materialized["third_generation_request"]
+        ice_operations = {
+            operation["id"]: operation for operation in ice.plan["operations"]
+        }
+        ice_spec = ice_operations["projectile_fx"]["specification"]
+        self.assertEqual(ice_spec["element"], "ice")
+        self.assertEqual(
+            ice_spec["base_system"]["asset_path"],
+            "/Game/__UeremcpPoc/NS_POCB_Fireball",
+        )
+        self.assertEqual(
+            [component["role"] for component in ice_spec["components"]],
+            ["crystalline", "ice_impact"],
+        )
+        self.assertEqual(
+            ice_operations["core_material"]["specification"]["parameter_overrides"],
+            self.store.find_element_preset("ice").material_parameter_overrides,
+        )
+        self.assertEqual(
+            ice.inherited_facts[0],
+            third.inherited_facts[0],
+        )
+        self.assertEqual(
+            ice.inherited_facts[0],
+            "template_id=niagara.projectile.elemental.v1",
+        )
+        third_projectile = next(
+            operation for operation in third.plan["operations"]
+            if operation["id"] == "projectile_fx"
+        )
+        self.assertEqual(
+            third_projectile["specification"]["base_system"]["asset_path"],
+            "/Game/__UeremcpPoc/NS_POCC_IceVariation",
+        )
+        self.assertIn(
+            "modifier.preserve=preserve_networking",
+            ice.overridden_facts,
+        )
+
     def test_delegate_returns_complete_execute_plan_result(self) -> None:
         request = InstantiateRequest(
             template_id="niagara.projectile.elemental.v1",
@@ -667,6 +818,14 @@ class TemplateInstantiateTests(unittest.TestCase):
         )
         self.assertTrue(response["validation"]["reread_after_write"])
         self.assertEqual(response["understood"]["template_used"], request.template_id)
+        self.assertIn(
+            "inherited:template_id=niagara.projectile.elemental.v1",
+            response["understood"]["interpretation_notes"],
+        )
+        self.assertIn(
+            "overridden:input=element",
+            response["understood"]["interpretation_notes"],
+        )
         self.assertEqual(response["status"], "partially_completed")
         self.assertIn(
             "template.niagara.projectile.elemental.v1.six_emitters",

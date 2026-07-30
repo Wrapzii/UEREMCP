@@ -45,6 +45,8 @@ class InstantiateResult:
     summary: str
     plan: dict[str, Any] | None = None
     capability_notes: list[str] | None = None
+    inherited_facts: list[str] | None = None
+    overridden_facts: list[str] | None = None
     expected_validation_checks: list[str] | None = None
     non_executable_validation_checks: list[str] | None = None
 
@@ -215,12 +217,31 @@ class TemplateService:
             "operations": materialized,
             "on_failure": "rollback_all",
         }
+        inherited_facts = [f"template_id={record.template_id}"]
+        if record.composes:
+            inherited_facts.append(f"composes={','.join(record.composes)}")
+        inherited_facts.append(
+            "materialized_operations="
+            + ",".join(str(operation["id"]) for operation in materialized)
+        )
+        overridden_facts = [
+            f"input={name}"
+            for name in sorted(effective_inputs)
+            if name not in {"preset_material_parameters", "preset_niagara_parameters"}
+        ]
+        for bucket in ("replace", "adjust", "add", "preserve"):
+            overridden_facts.extend(
+                f"modifier.{bucket}={modifier}"
+                for modifier in (request.modifiers or {}).get(bucket, [])
+            )
 
         return InstantiateResult(
             success=True,
             status="partially_completed",
             summary=f"Materialized an execute_plan specification for '{request.template_id}'.",
             plan=plan,
+            inherited_facts=inherited_facts,
+            overridden_facts=overridden_facts,
             expected_validation_checks=expected_checks,
             non_executable_validation_checks=non_executable_checks,
         )
@@ -575,6 +596,12 @@ def delegate_execute_plan(
     understood["template_used"] = request.template_id
     if request.target_asset_path:
         understood["resolved_target"] = request.target_asset_path
+    understood.setdefault("interpretation_notes", []).extend(
+        f"inherited:{fact}" for fact in materialized.inherited_facts or []
+    )
+    understood["interpretation_notes"].extend(
+        f"overridden:{fact}" for fact in materialized.overridden_facts or []
+    )
 
     validation = response.setdefault("validation", {})
     performed = set(validation.get("checks_performed", []))

@@ -26,6 +26,10 @@
         "enum": ["fire", "water", "wind", "earth", "ice"]
       },
       "target_path": { "type": "string" },
+      "source_system": {
+        "type": "string",
+        "description": "Optional existing projectile system whose emitter structure is inherited by variation modifiers."
+      },
       "scale": { "type": "number", "minimum": 0.1 },
       "intensity": { "type": "number", "minimum": 0.1 },
       "preset_material_parameters": { "type": "object" },
@@ -51,6 +55,21 @@
       "merge_specifications": {
         "core_material": {
           "modifiers": ["crystalline_fragments"]
+        },
+        "projectile_fx": {
+          "base_system": {
+            "asset_path": "{{inputs.source_system}}"
+          },
+          "components": [
+            {
+              "archetype": "niagara.emitter.sparks.v1",
+              "role": "crystalline"
+            },
+            {
+              "archetype": "niagara.emitter.impact_burst.v1",
+              "role": "ice_impact"
+            }
+          ]
         }
       }
     },
@@ -67,6 +86,21 @@
       "merge_specifications": {
         "core_material": {
           "modifiers": ["boost_impact"]
+        }
+      }
+    },
+    "preserve_networking": {
+      "bucket": "preserve",
+      "merge_specifications": {
+        "projectile_fx": {
+          "base_system": {
+            "asset_path": "{{inputs.source_system}}"
+          },
+          "emitters": [
+            {
+              "preservation_contract": "source_networking_and_damage_unchanged"
+            }
+          ]
         }
       }
     }
@@ -125,7 +159,7 @@
         ],
         "materials": {
           "core": { "$ref": "core_material.result.primary_asset" },
-          "trail": { "$ref": "trail_material.result.primary_asset" }
+          "ribbon_trail": { "$ref": "trail_material.result.primary_asset" }
         }
       }
     }

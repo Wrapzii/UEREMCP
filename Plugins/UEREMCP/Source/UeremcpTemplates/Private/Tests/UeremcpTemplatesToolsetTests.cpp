@@ -6,6 +6,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UObject/SoftObjectPath.h"
 
 #include "UeremcpTemplatesToolset.h"
 
@@ -177,6 +178,110 @@ bool FUeremcpTemplatesToolsetPromotePreviewTest::RunTest(const FString& Paramete
 		TEXT("preview does not claim modified_and_validated"),
 		ResponseJson.Contains(TEXT("\"status\":\"modified_and_validated\"")));
 	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpTemplatesPocCThirdGenerationTest,
+	"UEREMCP.Templates.POCC.ThirdGeneration",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpTemplatesPocCThirdGenerationTest::RunTest(const FString& Parameters)
+{
+	struct FGeneration
+	{
+		FString RequestId;
+		FString Element;
+		FString SourcePath;
+		FString TargetPath;
+		FString ModifiersJson;
+	};
+	const TArray<FGeneration> Generations = {
+		{
+			TEXT("poc-c-ice-live"),
+			TEXT("ice"),
+			TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball"),
+			TEXT("/Game/__UeremcpPoc/NS_POCC_IceVariation"),
+			TEXT("\"adjust\":[\"reduce_trail_persistence\",\"boost_impact\"],\"add\":[\"crystalline_fragments\"],\"preserve\":[\"preserve_networking\"]")
+		},
+		{
+			TEXT("poc-c-wind-live"),
+			TEXT("wind"),
+			TEXT("/Game/__UeremcpPoc/NS_POCC_IceVariation"),
+			TEXT("/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration"),
+			TEXT("\"preserve\":[\"preserve_networking\"]")
+		},
+	};
+
+	for (const FGeneration& Generation : Generations)
+	{
+		const FString Request = FString::Printf(
+			TEXT("{\"protocol_version\":\"1.0\",\"request_id\":\"%s\",\"action\":\"instantiate_template\",")
+			TEXT("\"mode\":\"replace\",\"specification\":{\"template_id\":\"niagara.projectile.elemental.v1\",")
+			TEXT("\"inputs\":{\"element\":\"%s\",\"target_path\":\"%s\",\"source_system\":\"%s\",\"scale\":1.0,\"intensity\":6.0},")
+			TEXT("\"modifiers\":{%s},\"target\":{\"asset_path\":\"%s\"},\"mode\":\"replace\"},")
+			TEXT("\"options\":{\"dry_run\":false,\"allow_destructive\":true,\"atomic\":true,\"rollback_on_failure\":true,")
+			TEXT("\"compile\":true,\"validate\":true,\"save\":true,\"response_detail\":\"complete\",\"timeout_ms\":0}}"),
+			*Generation.RequestId,
+			*Generation.Element,
+			*Generation.TargetPath,
+			*Generation.SourcePath,
+			*Generation.ModifiersJson,
+			*Generation.TargetPath);
+
+		const FString ResponseJson = UUeremcpTemplatesToolset::InstantiateTemplate(Request);
+		TSharedPtr<FJsonObject> Root;
+		if (!UeremcpTemplatesToolsetTests::ParseResponse(*this, ResponseJson, Root))
+		{
+			return false;
+		}
+		FString Status;
+		if (!UeremcpTemplatesToolsetTests::ReadStatus(*this, Root, Status))
+		{
+			return false;
+		}
+		TestTrue(
+			*FString::Printf(TEXT("%s reached an honest terminal response"), *Generation.Element),
+			Status == TEXT("created_and_validated")
+				|| Status == TEXT("modified_and_validated")
+				|| Status == TEXT("partially_completed"));
+
+		const TSharedPtr<FJsonObject>* Metrics = nullptr;
+		double RoundTrips = 0.0;
+		TestTrue(
+			TEXT("generation reports one MCP round trip"),
+			Root->TryGetObjectField(TEXT("metrics"), Metrics)
+				&& Metrics
+				&& (*Metrics)->TryGetNumberField(TEXT("mcp_round_trips"), RoundTrips)
+				&& RoundTrips == 1.0);
+
+		const TSharedPtr<FJsonObject>* Understood = nullptr;
+		const TArray<TSharedPtr<FJsonValue>>* Notes = nullptr;
+		bool bInherited = false;
+		bool bOverridden = false;
+		if (Root->TryGetObjectField(TEXT("understood"), Understood)
+			&& Understood
+			&& (*Understood)->TryGetArrayField(TEXT("interpretation_notes"), Notes)
+			&& Notes)
+		{
+			for (const TSharedPtr<FJsonValue>& Note : *Notes)
+			{
+				FString Text;
+				if (Note.IsValid() && Note->TryGetString(Text))
+				{
+					bInherited |= Text.StartsWith(TEXT("inherited:"));
+					bOverridden |= Text.StartsWith(TEXT("overridden:"));
+				}
+			}
+		}
+		TestTrue(TEXT("response reports inherited pattern facts"), bInherited);
+		TestTrue(TEXT("response reports overridden variation facts"), bOverridden);
+		TestNotNull(
+			*FString::Printf(TEXT("%s generation asset exists"), *Generation.Element),
+			FSoftObjectPath(Generation.TargetPath).TryLoad());
+	}
+	return !HasAnyErrors();
 }
 
 #endif // WITH_DEV_AUTOMATION_TESTS
