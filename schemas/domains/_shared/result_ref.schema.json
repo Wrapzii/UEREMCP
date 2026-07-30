@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/_shared/result_ref.schema.json",
+  "title": "UEREMCP provisional batch result $ref",
+  "description": "PROVISIONAL. Object form for result substitution inside batch operation specifications. Mirrors schemas/batch/plan.schema.json $comment. Do not treat as final grammar until WS-02 audits REAgentTools execute_editor_batch and Epic execute_tool_script. Owner: WS-05.",
+  "type": "object",
+  "required": ["$ref"],
+  "additionalProperties": false,
+  "properties": {
+    "$ref": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_]+)+$",
+      "description": "operation_id + dotted path into that operation's response JSON, e.g. material.result.primary_asset. Resolution failure fails the operation; never substitutes null.",
+      "examples": [
+        "material.result.primary_asset",
+        "niagara.result.created_assets.0.asset_path"
+      ]
+    }
+  },
+  "examples": [
+    { "$ref": "material.result.primary_asset" }
+  ]
+}

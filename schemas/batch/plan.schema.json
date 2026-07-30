@@ -136,5 +136,5 @@
     }
   ],
 
-  "$comment": "$ref substitution: any string-valued object of the form {\"$ref\": \"<operation_id>.<dotted.path.into.that.operation's.response>\"} is replaced with the referenced value before the operation executes. Resolution failure fails the operation rather than substituting null — a silently-null asset path produces a broken asset that validates. This mirrors REAgentTools' existing $ref convention; WS-02 must audit that implementation before WS-05 finalises the grammar."
+  "$comment": "PROVISIONAL pending WS-02 audit of REAgentTools execute_editor_batch and Epic execute_tool_script (docs/proposals/ws-05-batch-grammar-blocked.md). $ref substitution: any object of the form {\"$ref\": \"<operation_id>.<dotted.path.into.that.operation's.response>\"} is replaced with the referenced value before the operation executes. Resolution failure fails the operation rather than substituting null — a silently-null asset path produces a broken asset that validates. This mirrors the *idea* behind REAgentTools' $ref convention but not necessarily its string grammar; do not finalise until the audit lands. Shared schema fragment: domains/_shared/result_ref.schema.json."
 }
