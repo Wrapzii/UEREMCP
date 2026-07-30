@@ -1,7 +1,7 @@
 # POC metrics
 
 **Owner:** WS-14  
-**Status:** Partial — POC-B client wall measured via editor equivalent; tokens / primitive baseline honestly unavailable  
+**Status:** Partial — POC-B B1 transport passed; executable primitive baseline failed validation  
 **Last updated:** 2026-07-30  
 **Harness:** [`metrics/`](metrics/) (parser + prepare script + unit tests)
 
@@ -57,9 +57,11 @@ remain estimated is forbidden.
 | `server_side_lower_bound_seconds` | **2.319** | measured (≠ wall clock) | Editor log dispatch `11:14:53.492` → content-validation `11:14:55.811` on `RE-backup-2026.07.30-11.18.22.log` lines 3034–3075 per WS-11. **Raw log file is no longer present under `RE/Saved/Logs/` as of 2026-07-30 WS-14 inspection**; value retained as cited `[VERIFIED-RUNTIME]` from WS-11 handoff, reproduced by harness fixture `metrics/fixtures/sample_editor_interval.log` |
 | `wall_clock_seconds` | **31.370670** | measured — editor single-call equivalent | `metrics/artifacts/poc_b_editor_single_call_20260730_095849.json`; client `System.Diagnostics.Stopwatch` immediately around one `tests/run_poc_b_fireball.ps1` invocation. Includes cold editor startup, the one goal-level create + validation, and shutdown. Live MCP was attempted first and refused before dispatch (`WinError 10061`), so this uses the explicitly permitted editor equivalent; it is not labeled MCP transport timing. |
 | `tokens_total` | — | **unavailable** | Cursor MCP caller exposes no per-call agent usage; `wire_bytes/4` is not total agent tokens. Reason string: see `metrics/token_accounting.py` `CURSOR_MCP_NO_USAGE` |
-| `primitive_call_equivalent` | — | **unavailable** | Live discovery confirmed the named Epic tools, but WS-07's sequence is not executable without inventing emitter template refs, Niagara variable type/default payloads, renderer payloads, a fixed material primitive chain, and compile/save policy. Exact attempt record: `metrics/artifacts/poc_b_primitive_baseline_attempt_20260730.json`. The planned 17 and UEREMCP 46 are not substituted. |
-| Planned known Niagara min (excl. materials + compile polls) | **17** | planned_partial only | `metrics/primitive_baseline.py` from WS-07 sequence — **not** a measured baseline |
-| Completion (overall POC B) | not claimed | open | Production B10 now PASSes on `268a102` / `6cc1b7a` with `warm_changed_pixels=30454`. Overall remains orchestration-owned and blocked by the current-lineage B1–B10/B8 evidence bundle plus the unavailable primitive baseline. |
+| `primitive_call_equivalent` | **36 operations reached** | measured failed trial — not a successful equivalent | `metrics/artifacts/poc_b_primitive_baseline_live_20260730.json`, trial 1. Client wall **10.5785073s** around one `execute_tool_script` call; all 36 trace entries returned `ok=true`, then fixture reread failed because the `MinimalLightweight` system retained template emitter `Minimal` in addition to the six requested emitters. `status=failed_validation`, `completed=false`; no reduction ratio may be claimed. |
+| Primitive baseline trial count | **3 attempted / 0 usable** | failed | Trial 1 was a real clean execution. Trials 2–3 returned identical script results in ~1 ms after cleanup and are retained as non-independent replay/cache observations, not successful clean trials. |
+| Live UEREMCP B1 transport | **PASS, 4.7001219s** | measured | `metrics/artifacts/poc_b_b1_live_mcp_20260730.json`; one uncached Streamable HTTP MCP call using the canonical request with unique request/idempotency identifiers. Response: `metrics.mcp_round_trips=1`, `validation.single_request_pipeline=true`, `poc_b_gates.B1_single_request_complete=true`, status honestly `partially_completed`. |
+| Planned known Niagara min (excl. materials + compile polls) | **17** | superseded planning datum | `metrics/primitive_baseline.py` from the earlier WS-07 sequence; not substituted for the measured failed 36-operation execution. |
+| Completion (overall POC B) | not claimed | open | B1 transport and production B10 evidence exist, but the primitive baseline has no successful validated trial and remaining current-lineage acceptance gaps remain orchestration-owned. |
 
 ### Comparability audit: `internal_operations=46`
 
@@ -81,11 +83,11 @@ unavailable (Cursor MCP caller does not expose per-call agent usage; wire_bytes/
 
 ### Live-run outcome and blockers
 
-1. **Client wall clock** — closed with the permitted editor single-call equivalent: **31.370670s**. The live MCP endpoint was tried first and actively refused the connection before dispatch; evidence records the transport distinction and cold-start scope.  
+1. **Client wall clock** — editor-equivalent goal run remains **31.370670s**. A later live B1 MCP transport trial passed in **4.7001219s**, but its response remains honestly `partially_completed`; the two timings have distinct scopes.  
 2. **Total agent tokens** — requires a harness that reports input/output usage for an isolated goal trial; Cursor MCP does not.  
-3. **Primitive baseline wall clock + ops** — unavailable from the current WS-07 outline. It names operations but does not fix the concrete emitter, variable, renderer, material, compile-poll, or save inputs needed for a semantically equivalent executable script. WS-07 must supply that fixture; then WS-11/WS-14 can run the requested clean-state trials. Planned known minimum **17** remains non-measured.  
+3. **Primitive baseline wall clock + ops** — executable fixture attempted three times, with **0 usable trials**. The first clean execution reached **36 primitive operations in 10.5785073s** before honest validation failure: actual emitters were `Minimal, Core, FlameShell, Sparks, Smoke, RibbonTrail, ImpactBurst`, while the fixture expected only the six requested roles. The baseline remains open until the WS-07-owned fixture removes or accepts the inherited template emitter and at least one clean trial validates (the handoff requests three).  
 4. **Raw B1 log archival** — restore or re-capture `RE-backup-2026.07.30-11.18.22.log` (or a new timed run) for independent re-parse.  
-5. **Overall POC-B lineage** — B10 is closed on `268a102` / `6cc1b7a`, but orchestration still needs one complete current-lineage B1–B10/B8 evidence bundle. WS-14 does not claim overall POC B.
+5. **Overall POC-B lineage** — B1 transport now passes live and B10 is closed on `268a102` / `6cc1b7a`, but orchestration still needs the remaining complete current-lineage acceptance bundle and a successful primitive baseline. WS-14 does not claim overall POC B.
 
 Prepared handoff: [`docs/proposals/ws-14-poc-b-metrics-live-run-handoff.md`](../proposals/ws-14-poc-b-metrics-live-run-handoff.md).
 

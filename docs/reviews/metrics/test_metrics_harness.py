@@ -31,6 +31,8 @@ from metrics.primitive_baseline import (  # noqa: E402
     planned_known_minimum,
     summarize_trials,
 )
+from metrics.run_poc_b_b1_live import b1_failures  # noqa: E402
+from metrics.run_poc_b_primitive_live import trial_is_usable  # noqa: E402
 from metrics.token_accounting import CURSOR_MCP_NO_USAGE, resolve_token_accounting  # noqa: E402
 
 
@@ -158,6 +160,30 @@ class TestPrimitiveBaseline(unittest.TestCase):
         self.assertEqual(summary["status"], "measured")
         self.assertEqual(summary["n"], 2)
         self.assertEqual(summary["primitive_ops"]["min"], 40)
+
+    def test_live_trial_rejects_fixture_validation_failure(self):
+        usable, failures = trial_is_usable(
+            {
+                "status": "failed_validation",
+                "completed": False,
+                "primitive_ops_executed": 1,
+                "primitive_trace": [{"ok": True}],
+            }
+        )
+        self.assertFalse(usable)
+        self.assertIn("status", failures)
+
+    def test_b1_accepts_current_top_level_gate_payloads(self):
+        self.assertEqual(
+            b1_failures(
+                {
+                    "metrics": {"mcp_round_trips": 1},
+                    "validation": {"single_request_pipeline": True},
+                    "poc_b_gates": {"B1_single_request_complete": True},
+                }
+            ),
+            [],
+        )
 
 
 class TestPrepareScript(unittest.TestCase):
