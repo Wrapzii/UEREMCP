@@ -15,9 +15,9 @@
 // Reference adopters:
 //   UeremcpGameplayToolset::CreateSpell
 //   FUeremcpBlueprintMutatingGate (WS-06 adapter)
-// Pending: UeremcpNiagaraToolset::CreateNiagaraEffect, UeremcpMaterialToolset mutators
-//   (see docs/proposals/ws-12-niagara-mutating-dispatch-handoff.md,
-//    docs/proposals/ws-12-material-mutating-dispatch-handoff.md).
+//   UeremcpMaterialToolset::CreateVfxMaterial / CreateProceduralTexture
+//   UeremcpNiagaraToolset::CreateNiagaraEffect
+// (see docs/proposals/ws-12-*-mutating-dispatch-handoff.md).
 
 #pragma once
 

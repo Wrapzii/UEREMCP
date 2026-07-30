@@ -159,10 +159,11 @@ Helpers for PredictedDeleted / soft-path preflight without forking policy:
 |---|---|---|---|
 | Gameplay (WS-09) | `CreateSpell` | **yes** | `FUeremcpMutatingDispatch` around live DataTable write |
 | Blueprint (WS-06) | `SubmitGraph` / `ReadGraph` | **yes** | `FUeremcpBlueprintMutatingGate` adapter |
-| Niagara (WS-07) | `CreateNiagaraEffect` | **no** | handoff: `docs/proposals/ws-12-niagara-mutating-dispatch-handoff.md` |
-| Material (WS-08) | `CreateVfxMaterial`, `CreateProceduralTexture` | **no** | handoff: `docs/proposals/ws-12-material-mutating-dispatch-handoff.md` |
+| Niagara (WS-07) | `CreateNiagaraEffect` | **yes** | `FUeremcpMutatingDispatch` + ADR-0006 revision/idempotency gates (2026-07-30) |
+| Material (WS-08) | `CreateVfxMaterial`, `CreateProceduralTexture` | **yes** | `FUeremcpMutatingDispatch` (prior) + ADR-0006 revision/idempotency gates (2026-07-30) |
 
-**R-07 stays open** until Niagara and Material call the dispatch on live mutate paths.
+**R-07 closed for Niagara and Material live mutators** on the tip recorded in
+`docs/proposals/ws-01-poc-closeout-2026-07-30.md`.
 
 ## Audit
 
