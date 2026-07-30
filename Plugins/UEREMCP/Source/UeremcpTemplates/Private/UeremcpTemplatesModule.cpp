@@ -3,11 +3,16 @@
 #include "UeremcpTemplatesModule.h"
 
 #include "Interfaces/IPluginManager.h"
+#include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 
+#include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpTemplateService.h"
 #include "UeremcpTemplateStore.h"
+#include "UeremcpTemplatesToolset.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogUeremcpTemplates, Log, All);
 
 class FUeremcpTemplatesModule;
 
@@ -27,10 +32,24 @@ public:
 
 		TArray<FString> Errors;
 		Store->LoadFromDirectory(UeremcpTemplates::ResolveTemplatesDirectory(), Errors);
+
+		OnPostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddRaw(
+			this, &FUeremcpTemplatesModule::RegisterTemplatesToolset);
 	}
 
 	virtual void ShutdownModule() override
 	{
+		if (OnPostEngineInitHandle.IsValid())
+		{
+			FCoreDelegates::GetOnPostEngineInit().Remove(OnPostEngineInitHandle);
+			OnPostEngineInitHandle.Reset();
+		}
+
+		if (UObjectInitialized())
+		{
+			UToolsetRegistry::UnregisterToolsetClass(UUeremcpTemplatesToolset::StaticClass());
+		}
+
 		Service.Reset();
 		Store.Reset();
 		GTemplatesModule = nullptr;
@@ -57,6 +76,24 @@ public:
 	}
 
 private:
+	void RegisterTemplatesToolset()
+	{
+		// Domain toolsets register after engine initialization.
+		// [VERIFIED: Plugins/UEREMCP/Source/UeremcpCore/Private/UeremcpCoreModule.cpp:31-53]
+		UToolsetRegistry::RegisterToolsetClass(UUeremcpTemplatesToolset::StaticClass());
+
+		if (UToolsetRegistry::IsToolsetClassRegistered(UUeremcpTemplatesToolset::StaticClass()))
+		{
+			UE_LOG(LogUeremcpTemplates, Log, TEXT("UUeremcpTemplatesToolset registered (PostEngineInit)."));
+		}
+		else
+		{
+			UE_LOG(LogUeremcpTemplates, Warning,
+				TEXT("UUeremcpTemplatesToolset registration failed at PostEngineInit."));
+		}
+	}
+
+	FDelegateHandle OnPostEngineInitHandle;
 	TUniquePtr<FUeremcpTemplateStore> Store;
 	TUniquePtr<FUeremcpTemplateService> Service;
 	FUeremcpExecutePlanDelegate ExecutePlanDelegate;
