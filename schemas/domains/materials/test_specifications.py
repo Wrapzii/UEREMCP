@@ -35,6 +35,11 @@ EXPECTED_LOSSY_AREAS = frozenset({
     "editor_chrome",
 })
 
+EXPECTED_CAPABILITY_SNIPPETS = frozenset({
+    "Minimal master graph",
+    "textures.generate",
+})
+
 WS15_ELEMENTAL_PURPOSES = frozenset({
     "elemental_projectile_core",
     "elemental_projectile_trail",
@@ -90,13 +95,15 @@ class MaterialsSpecificationTests(unittest.TestCase):
         for area in EXPECTED_LOSSY_AREAS:
             self.assertIn(area, readme, f"README must document lossy area {area}")
 
-    def test_capability_header_lossy_areas(self) -> None:
+    def test_capability_header_documents_limitations(self) -> None:
         header = (
             REPO_ROOT
             / "Plugins/UEREMCP/Source/UeremcpMaterial/Public/UeremcpMaterialCapabilityNotes.h"
         ).read_text(encoding="utf-8")
         for area in EXPECTED_LOSSY_AREAS:
             self.assertIn(area, header, f"Capability header must define {area}")
+        for snippet in EXPECTED_CAPABILITY_SNIPPETS:
+            self.assertIn(snippet, header, f"Capability header must mention {snippet}")
 
     def test_ws15_elemental_template_specs_validate(self) -> None:
         if not ELEMENTAL_TEMPLATE.is_file():

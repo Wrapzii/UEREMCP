@@ -1,0 +1,58 @@
+{
+  "$comment": "WS-08 reference data: element → default MI parameters. Mirrored in UeremcpMaterialElementPresets.cpp. Tested by test_element_presets.py.",
+  "version": 1,
+  "elements": {
+    "fire": {
+      "particle_color": [1.0, 0.35, 0.05, 1.0],
+      "color_secondary": [1.0, 0.8, 0.2, 1.0],
+      "emissive_scale": 8.0,
+      "flow_speed": 0.3,
+      "turbulence": 0.8,
+      "soft_edge": 0.85,
+      "depth_fade": 120.0
+    },
+    "water": {
+      "particle_color": [0.1, 0.4, 0.8, 1.0],
+      "color_secondary": [0.8, 0.9, 1.0, 1.0],
+      "emissive_scale": 4.0,
+      "flow_speed": 0.5,
+      "turbulence": 0.4,
+      "soft_edge": 0.7,
+      "depth_fade": 150.0
+    },
+    "wind": {
+      "particle_color": [0.7, 0.85, 1.0, 1.0],
+      "color_secondary": [0.9, 0.95, 1.0, 1.0],
+      "emissive_scale": 3.0,
+      "flow_speed": 1.2,
+      "turbulence": 0.9,
+      "soft_edge": 0.6,
+      "depth_fade": 100.0
+    },
+    "earth": {
+      "particle_color": [0.3, 0.25, 0.2, 1.0],
+      "color_secondary": [0.5, 0.45, 0.35, 1.0],
+      "emissive_scale": 2.0,
+      "flow_speed": 0.1,
+      "turbulence": 0.3,
+      "soft_edge": 0.9,
+      "depth_fade": 80.0
+    },
+    "ice": {
+      "particle_color": [0.6, 0.85, 1.0, 1.0],
+      "color_secondary": [0.9, 0.95, 1.0, 1.0],
+      "emissive_scale": 6.0,
+      "flow_speed": 0.4,
+      "turbulence": 0.5,
+      "soft_edge": 0.75,
+      "depth_fade": 130.0
+    }
+  },
+  "purpose_master_map": {
+    "elemental_projectile_core": "M_Ueremcp_VFX_Sprite_Additive",
+    "fireball_core": "M_Ueremcp_VFX_Sprite_Additive",
+    "elemental_projectile_trail": "M_Ueremcp_VFX_Ribbon",
+    "fireball_ribbon_trail": "M_Ueremcp_VFX_Ribbon"
+  },
+  "master_folder": "/Game/__UeremcpTests/Materials/Masters"
+}

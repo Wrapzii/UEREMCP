@@ -3,7 +3,7 @@
 #include "UeremcpMaterialToolset.h"
 
 #include "UeremcpEnvelope.h"
-#include "UeremcpMaterialCapabilityNotes.h"
+#include "UeremcpMaterialService.h"
 
 FString UUeremcpMaterialToolset::Echo(const FString& RequestJson)
 {
@@ -79,30 +79,24 @@ FString UUeremcpMaterialToolset::CreateVfxMaterial(const FString& RequestJson)
 			TEXT("create_vfx_material requires target.asset_path (material instance package path, e.g. /Game/__UeremcpTests/Materials/MI_Fireball_Core)."));
 	}
 
-	FString Purpose;
-	FString Element;
-	if (Request.Specification.IsValid())
-	{
-		Request.Specification->TryGetStringField(TEXT("purpose"), Purpose);
-		Request.Specification->TryGetStringField(TEXT("element"), Element);
-	}
-
-	const TArray<FString> CapabilityNotes = UeremcpMaterialCapability::DefaultCreateCapabilityNotes();
+	const FUeremcpMaterialCreateResult CreateResult = UeremcpMaterialService::ExecuteCreateVfxMaterial(Request);
 
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
-	Response.Status = TEXT("partially_completed");
-	Response.Summary = FString::Printf(
-		TEXT("create_vfx_material scaffold for '%s' (purpose='%s', element='%s'): envelope accepted; Epic MaterialTools composition not yet implemented."),
-		*Request.TargetAssetPath,
-		Purpose.IsEmpty() ? TEXT("(unset)") : *Purpose,
-		Element.IsEmpty() ? TEXT("(unset)") : *Element);
+	Response.Status = CreateResult.Status;
+	Response.Summary = CreateResult.Summary;
 	Response.UnderstoodAction = Request.Action;
 	Response.UnderstoodTarget = Request.TargetAssetPath;
-	Response.PrimaryAsset = Request.TargetAssetPath;
-	Response.CapabilityNotes = CapabilityNotes;
+	Response.PrimaryAsset = CreateResult.PrimaryAsset;
+	Response.CreatedAssets = CreateResult.CreatedAssets;
+	Response.ModifiedAssets = CreateResult.ModifiedAssets;
+	Response.Dependencies = CreateResult.Dependencies;
+	Response.InterpretationNotes = CreateResult.InterpretationNotes;
+	Response.CapabilityNotes = CreateResult.CapabilityNotes;
 	Response.Metrics.McpRoundTrips = 1;
-	Response.Metrics.InternalOperations = 0;
+	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
+	Response.Metrics.AssetsAffected =
+		CreateResult.CreatedAssets.Num() + CreateResult.ModifiedAssets.Num();
 
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }

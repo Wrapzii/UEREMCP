@@ -6,7 +6,7 @@
 
 | Action | Specification schema | Status |
 |---|---|---|
-| `create_vfx_material` | `create_vfx_material.schema.json` | Wave 2 scaffold (stub) |
+| `create_vfx_material` | `create_vfx_material.schema.json` | Wave 2 slice — elemental projectile core/trail wired via MaterialEditingLibrary |
 
 Register `create_vfx_material` in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 when the tool leaves scaffold status.
 
@@ -85,5 +85,12 @@ Runtime probes and created assets: **`/Game/__UeremcpTests/Materials/**` only.
 ```bash
 python tools/validate_schemas.py
 python schemas/domains/materials/test_specifications.py
+python schemas/domains/materials/test_element_presets.py
 python tools/check_ownership.py --ws WS-08
+```
+
+Editor automation (RE project + compiled plugin):
+
+```bash
+# WS-11 harness — UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileCore|ProjectileTrail
 ```

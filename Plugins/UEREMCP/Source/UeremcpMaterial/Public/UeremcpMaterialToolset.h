@@ -1,7 +1,7 @@
 // UEREMCP — Material domain toolset (WS-08).
 //
-// Wave 2 scaffold: envelope echo + create_vfx_material stub with honest
-// capability_notes until real Epic MaterialTools composition lands.
+// Wave 2: create_vfx_material composes MaterialEditingLibrary (Epic MaterialTools
+// substrate) for elemental projectile core/trail; envelope Echo for protocol checks.
 
 #pragma once
 
@@ -35,11 +35,11 @@ public:
 	static FString Echo(const FString& RequestJson);
 
 	/**
-	 * Create or update a VFX material instance from element templates (stub).
+	 * Create or update a VFX material instance from element templates.
 	 *
-	 * Wave 2 first slice: validates the envelope, echoes understood specification
-	 * fields, and returns honest capability_notes. Does not yet call Epic
-	 * MaterialTools / MaterialEditingLibrary.
+	 * Wave 2 slice: elemental_projectile_core|trail (+ fireball aliases) under
+	 * /Game/__UeremcpTests/. Ensures minimal master, creates MI, applies element
+	 * defaults + modifiers, recompiles parent, re-reads parameters for validation.
 	 *
 	 * @param RequestJson  Request with action create_vfx_material and target.asset_path set.
 	 */

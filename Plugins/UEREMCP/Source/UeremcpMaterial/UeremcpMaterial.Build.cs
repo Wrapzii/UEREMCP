@@ -1,7 +1,6 @@
 // UEREMCP — Material domain module (WS-08).
 //
-// Wave 2 scaffold: thin toolset over Epic MaterialTools + MaterialEditingLibrary
-// batching. Primitives stay internal (ADR-0002 rule 5).
+// Wave 2: MaterialEditingLibrary substrate (equivalent to Epic MaterialTools batching).
 
 using UnrealBuildTool;
 
@@ -21,18 +20,17 @@ public class UeremcpMaterial : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"UnrealEd",
+			"Editor",
+			"AssetTools",
 			"Json",
 			"JsonUtilities",
 			"Projects",
 
 			"UeremcpCore",
-			// Epic's tool-declaration layer (UToolsetDefinition / AICallable). ADR-0002.
 			"ToolsetRegistry",
-
 			"UeremcpProtocol",
 
-			// Epic material editor surface — used when create_vfx_material is implemented.
-			// MaterialTools (EditorToolset) must be enabled in the target project.
+			// Epic material editor surface [VERIFIED: MaterialEditingLibrary.h].
 			"MaterialEditor",
 		});
 	}
