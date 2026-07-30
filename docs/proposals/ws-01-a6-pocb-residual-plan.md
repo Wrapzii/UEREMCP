@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `3756244` (Python-free A5 handoff; residual commit follows)
+- **Orch tip at writing:** `5ec7e02` (WS-08 trail UV + WS-07 proposal closed; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** WS-11 fireball on fresh post-`886d09d` DLLs still **FAILS** on `ribbon_trail` (`editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_063745.log`); B8 was skipped. WS-08 trail graph remains the critical blocker. Python-free SubmitGraph `d7fe3b2` is built, so CRT A5 re-run is unblocked. No POC claims.
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Trail UV fix landed as `cf7e6d3` (`2187d69`); proposal closed as `5ec7e02` (`ff648ab`). Fireball/B8 still pending after UV rebuild — **no overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -84,24 +84,47 @@ Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`. 
 | A9 | **FAIL** | Blocked by A5 |
 | A10 | **PASS** | |
 
-BlueprintTools bootstrap `809f863` did not clear A5. Python-free SubmitGraph landed as `d7fe3b2` (`e58466f`); CRT re-run required. **No overall POC-A claim.**
+BlueprintTools bootstrap `809f863` did not clear A5. Python-free SubmitGraph landed as `d7fe3b2` (`e58466f`).
 
-### Missing A6 / POC A evidence (owners)
+### CompleteRoundTrip on tip `3756244` (WS-11; Python-free SubmitGraph)
 
-| Gap | Owner | Evidence needed |
+| Criterion | Result | Evidence |
 |---|---|---|
-| **A6 code on orch** | WS-06 | Landed `13bf529` (`2a0b2cd`): programmatic reread-after-write validation + harness handoff `docs/proposals/ws-06-a6-ws11-harness.md`. |
-| **A6 selector/no-op fix** | WS-06 | Landed `7b2ed34` (`90b8a6d`): multi-event endpoint IDs + hash-based no-op. |
-| Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **PASS on `c87b1db`** — `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_052810.log`; test Success, exit 0 |
-| Complete submit evidence scaffolding | WS-06 | Landed `7cd6c93` (`eded4f8`): complete payloads + expanded A1/A2/A5/A8/A10 assertions; proposal `ws-06-a1-a2-a5-ws11-complete-round-trip.md`. **Not a POC-A claim.** |
-| A1 / A2 complete read payload | WS-11 | **PASS** in CRT transport run |
-| A5 changed submit | WS-06 + WS-11 | Prior **FAIL on `70cc348`**; Python-free fix `d7fe3b2` landed and awaits CRT re-run |
-| A9 MCP round-trip metrics | WS-11 | **FAIL on `70cc348`** — blocked by A5 |
-| A10 `fidelity.lossy_areas` | WS-11 | **PASS** on `70cc348` and prior CRT |
-| Aggregate `POCA.CompleteRoundTrip` | WS-11 | **FAIL overall on `70cc348`** (A5/A9); A1–A4/A10 PASS |
-| Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
+| A1–A11 | **ALL PASS** | Aggregate `outcome: pass` |
+| Metrics | 3 MCP calls; 4 internal ops; 2.30s wall; 0 errors | Same evidence file |
 
-**WS-01 next step:** WS-11 re-runs CRT after Python-free SubmitGraph `d7fe3b2`; refuse A5/A9 and overall POC-A until runtime proof.
+Evidence: `tests/integration/_logs/poc_a_complete_round_trip_3756244.json`.
+
+### Overall POC A evaluation (`docs/POC_ACCEPTANCE.md`)
+
+**Claim: overall POC A met** at the demonstrated simple-graph CRT scenario.
+
+| # | Required by acceptance | Evidence on `3756244` |
+|---|---|---|
+| A1 | One MCP complete graph retrieve | PASS |
+| A2 | Reconstructable payload | PASS |
+| A3 | Dead node + disconnected subgraph diagnostics | PASS |
+| A4 | External JSON modify (branch + function call) | PASS (`BeginPlay→Branch→PrintString`) |
+| A5 | One-call `replace`; compile + save | PASS (native Python-free writer) |
+| A6 | Programmatic re-read of expected nodes/links | PASS |
+| A7 | `modified_and_validated` + `reread_after_write: true` | PASS |
+| A8 | Unchanged replace → identical `content_hash` | PASS |
+| A9 | ≤ 3 MCP calls | PASS (exactly 3) |
+| A10 | Honest `fidelity.lossy_areas` | PASS (lists MultiGate/Timeline/bind/etc.) |
+| A11 | Second identical replace → `no_change_required`, no recompile | PASS |
+
+**Scope caveats (not gaps that block the claim):** writer is the bounded native semantic slice, not every Epic Blueprint DSL expression; `fidelity.round_trip_supported: false` is honest A10 documentation. POC_ACCEPTANCE already allows simple-graph POC A when A10 documents the boundary. **Not claimed:** arbitrary complex Blueprint graphs beyond this scenario; POC B; E7 metrics file.
+
+### Closed A6 / POC A evidence trail
+
+| Item | Owner | Status |
+|---|---|---|
+| A6 code / harness | WS-06 | Landed earlier; CRT A6 PASS on `3756244` |
+| Python-free SubmitGraph | WS-06 | `d7fe3b2` (`e58466f`) |
+| Aggregate CRT A1–A11 | WS-11 | **PASS** — overall POC A claimed |
+| Metrics file (`poc-metrics.md`) | WS-11 / WS-14 | Still open for POC **E7** only — not a POC A blocker |
+
+**WS-01 next step:** fireball/B8 after trail UV `cf7e6d3`; keep overall POC-B unclaimed.
 
 ---
 
@@ -137,6 +160,8 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Expanded fireball B-gate assertions | `3b39dd3` (`0474e4e`) | Filter asserts B1/B3/B5/B6/B9 fields; runtime proof pending; ribbon_trail regression under diagnosis |
 | Stale ProjTrail master verify/rebuild | `7a417bb` (`dbb3638`) | Ribbon-trail regression fix landed; Material rebuilt; fireball runtime re-run required |
 | Stale ProjTrail pre-create cleanup | `886d09d` (`ee905ed`) | Clears stale masters when ribbon MI is absent; defense in depth with `7a417bb`; Niagara rebuilt |
+| Trail MainTexture UV + master package release | `cf7e6d3` (`2187d69`) | WS-08 UV pin fix; Material rebuilt; fireball/B8 still pending |
+| Ribbon_trail proposal closed | `5ec7e02` (`ff648ab`) | Documents WS-08 `2187d69` as the durable trail fix; not a POC-B claim |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
@@ -158,9 +183,9 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **FAIL on fresh DLLs** — blocked by `ribbon_trail` | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | `ribbon_trail` still missing/broken on fresh DLLs; WS-08 trail graph blocker | WS-08 + WS-07 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | Prior fresh-DLL FAIL; trail UV `cf7e6d3` landed — **fireball re-run required** | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **PASS on `70cc348`** | WS-07 + WS-11 |
-| B4 | Renderers configured and bound to valid materials | **FAIL on fresh DLLs** — `ribbon_trail`; log `...063745.log` | WS-07 + WS-08 |
+| B4 | Renderers configured and bound to valid materials | Prior fresh-DLL FAIL on `ribbon_trail`; UV `cf7e6d3` awaits fireball re-run | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B6 | System compiles; compile genuinely awaited | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -176,13 +201,13 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Re-run CRT after Python-free SubmitGraph `d7fe3b2` | WS-11 | Prior A1–A4/A10 PASS; A5/A9 need fresh proof; refuse overall POC-A |
-| P0 | Fix/confirm WS-08 `FireballRibbonTrailPoc` trail graph, then re-run fireball | WS-08 + WS-11 | Fresh-DLL fireball still fails `ribbon_trail`; refuse overall POC-B |
-| P0 | Re-run B8 Create→restart→Verify after ribbon MI green | WS-11 | Fresh-DLL B8 skipped; refuse B8/POC-B until PASS |
+| P0 | Re-run fireball after trail UV `cf7e6d3`, then B8 Create→restart→Verify | WS-11 | UV landed + Material rebuilt; refuse overall POC-B until PASS |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
-| P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
-| P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after A6 + POC B |
+| P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
+| P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
 
-**Not claimed:** overall POC A, overall POC B, or POC-A/POC-B “essentially done.”
+**Claimed:** overall POC A (CRT A1–A11 on tip `3756244`, simple-graph / native slice scope).
+
+**Not claimed:** overall POC B, or POC-A beyond the demonstrated CRT scenario.
 
 **Junction:** RE and VisualTest must remain on `UEREMCP-ws01\Plugins\UEREMCP`.

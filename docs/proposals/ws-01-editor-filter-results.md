@@ -1,7 +1,7 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `3756244` (Python-free A5 handoff; residual commit follows)
-- **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
+- **Current orchestration tip:** `5ec7e02` (trail UV + proposal closed; residual commit follows)
+- **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
 - **Latest Material re-run tip:** `d691316` (**PASS 14/14**)
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Fresh post-`886d09d` DLL fireball still **FAILS** `ribbon_trail` (`editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_063745.log`); B8 skipped. WS-08 trail graph is the critical blocker. Python-free SubmitGraph `d7fe3b2` leaves CRT A5 re-run unblocked. No POC claims.
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Trail UV `cf7e6d3` (`2187d69`) + proposal close `5ec7e02` (`ff648ab`) landed; Material rebuilt. Fireball/B8 still pending — **no overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: fresh-DLL fireball still fails `ribbon_trail`; B8 skipped pending WS-08 trail graph. Python-free SubmitGraph `d7fe3b2` is built, so WS-11 can re-run CRT A5. No overall POC-A/POC-B claim.
+Residuals: **overall POC A claimed** on CRT `3756244`. Fireball/B8 pending after trail UV `cf7e6d3`. No overall POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -103,27 +103,24 @@ Stacked defenses now on tip: `7a417bb` (`dbb3638`) + `886d09d` (`ee905ed`). Re-r
 | Fireball expanded gates | **FAIL (`ribbon_trail`)** | `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_063745.log` |
 | B8 | **SKIPPED** | Fireball remained blocked; WS-08 trail graph / `FireballRibbonTrailPoc` is critical |
 
-Both stale-master defenses were present in the rebuilt DLLs, so stale binaries no longer explain the failure. No overall POC-B claim.
+Both stale-master defenses were present in the rebuilt DLLs, so stale binaries no longer explain the failure. Trail UV fix later landed as `cf7e6d3` (`2187d69`); fireball/B8 must re-run. No overall POC-B claim.
+
+## CompleteRoundTrip on tip `3756244` — overall POC A
+
+| Proof | Result | Evidence |
+|---|---|---|
+| A1–A11 | **ALL PASS** | `tests/integration/_logs/poc_a_complete_round_trip_3756244.json` |
+| Metrics | 3 MCP / 4 internal / 2.30s / 0 errors | Same file |
+
+**Overall POC A CLAIMED** for the demonstrated simple-graph CRT scenario (native `EventBeginPlay→Branch→PrintString` slice; honest A10 lossy_areas). Not a claim for arbitrary complex Blueprint graphs.
 
 ## Blueprint CompleteRoundTrip current result
 
-Transport run on `600c383` lineage: **FAIL overall** (BlueprintTools missing). Re-run on `70cc348` after bootstrap `809f863`: still **FAIL overall**.
-
-| Criterion | Result | Evidence / residual |
-|---|---|---|
-| A1 | **PASS** | Complete read in one MCP call |
-| A2 | **PASS** | Complete payload fields asserted |
-| A3 | **PASS** | On `70cc348` re-run |
-| A4 | **PASS** | On `70cc348` re-run |
-| A5 | **FAIL** | Python/MCP conflict on `70cc348`; Python-free fix `d7fe3b2` landed and awaits re-run |
-| A9 | **FAIL** | Blocked by A5 |
-| A10 | **PASS** | `fidelity.lossy_areas` asserted honestly |
-
-Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json` (prior); `70cc348` re-run confirms A1–A4/A10 PASS with A5/A9 still FAIL. No overall POC-A claim.
+Prior transport run on `600c383` / `70cc348`: **FAIL overall** (A5 blocked). Superseded by `3756244` PASS above.
 
 ## B8 restart current result
 
-**SKIPPED on fresh post-`886d09d` DLLs:** fireball still failed `ribbon_trail`, so B8 was not attempted. Prior Create failed on the same MI and Verify remains unproven. Re-run after WS-08 `FireballRibbonTrailPoc` is green. No B8 claim until PASS.
+**SKIPPED pending trail UV re-run:** prior fresh-DLL fireball failed `ribbon_trail`; UV fix `cf7e6d3` (`2187d69`) landed and Material rebuilt. Re-run Create→restart→Verify after fireball green. No B8 / POC-B claim until PASS.
 
 ## Templates editor result and handoff
 
@@ -330,11 +327,11 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-06 | Python-free SubmitGraph landed as `d7fe3b2`; support WS-11 CRT re-run if needed. |
-| WS-07 | Stacked pre-create cleanup `886d09d` landed; support fireball/B8 re-run on `01b9320`. |
-| WS-08 | Trail graph / `FireballRibbonTrailPoc` is the critical blocker after fresh-DLL fireball still failed. |
+| WS-06 | Overall POC A claimed via Python-free CRT on `3756244`; support only if regressions appear. |
+| WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
+| WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | CRT A5 re-run is unblocked by `d7fe3b2`; re-run fireball/B8 after WS-08 trail graph is green. Keep overall POC-A/POC-B unclaimed. |
+| WS-11 | Re-run fireball + B8 after UV `cf7e6d3`. Keep overall POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-POC A remains partial, with CRT A5 re-run now unblocked by `d7fe3b2`. Fresh-DLL fireball still fails `ribbon_trail`; B8 was skipped. No overall POC-A / overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. Fireball/B8 still pending after UV land. No overall POC-B claim. No junction retarget.
