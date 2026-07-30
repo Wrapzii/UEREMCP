@@ -2,9 +2,10 @@
 
 - **Date:** 2026-07-30
 - **RE project:** `$UEREMCP_LEGACY_PROJECT`
-- **Integrated code under test:** `ddd18909f68c4fb840b0834de41ff0852e94ce22`
+- **Integrated code under test:** through `3c27922`
 - **POC C source commits:** `ead0cc4` / `b6bb8d4`
 - **Integrated POC C equivalents:** `81d819f` / `ddd1890`
+- **Integrated POC C live-fix commits:** `2ae2e01` / `a46517e` / `3c27922`
 - **Integrated POC D live-fix commits:** `00fd824` / `2ae2e01`
 - **Overall result:** partial; POC C, POC D, and POC E are not fully claimed
 - **Main ready for another C/D/E fast-forward:** **no**
@@ -20,30 +21,34 @@ Result: Succeeded on 2026-07-30]`.
 
 | # | Result | Live evidence |
 |---|---|---|
-| C1 | **NOT MET** | The canonical MCP call was one round trip, but returned `rolled_back`; the direct runtime envelope was rejected. |
-| C2 | **NOT MET live** | The response reported `inherited:*` / `overridden:*`, but no variation asset was produced. |
-| C3 | **NOT MET live** | Ice material creation returned `partially_completed`; the required plan then rolled back. |
-| C4 | **NOT MET live** | `NS_POCC_IceVariationDirect` did not exist after the runtime filter. |
+| C1 | **MET live** | Both live filters completed their requested generation in one reported MCP round trip. |
+| C2 | **MET live** | Direct variation preserved all source emitter names and added `Crystalline` plus `IceImpact`; template responses retained inherited/overridden facts. |
+| C3 | **MET live** | Core/trail material assets were created and the required Niagara dependency chain completed without rollback. |
+| C4 | **MET live** | `NS_POCC_IceVariationDirect` loaded after save; source/target summaries had no edit errors and required user parameters were present. |
 | C5 | **FAIL** | No verified networking/damage contract exists for the Niagara source. No preservation claim is made. |
-| C6 | **MET offline only; NOT MET live** | The conforming reusable template is present, but its live instantiation rolled back. |
-| C7 | **NOT MET live** | The third-generation filter failed; neither ice nor wind result asset existed. |
+| C6 | **MET live** | The reusable elemental template instantiated the requested ice and wind assets through its canonical plan. |
+| C7 | **MET live** | The third-generation filter produced and loaded both ice and wind result assets. |
 
 Filters:
 
-- `UEREMCP.Niagara.Create.PocCVariationRuntime` — **FAIL**
-  (`editor_UEREMCP_Niagara_Create_PocCVariationRuntime_20260730_114317.log`)
-- `UEREMCP.Templates.POCC.ThirdGeneration` — **FAIL**
-  (`editor_UEREMCP_Templates_POCC_ThirdGeneration_20260730_114410.log`)
+- `UEREMCP.Protocol.PlanExecutor.UsablePartialDependency` — **PASS**
+  (`editor_UEREMCP_Protocol_PlanExecutor_UsablePartialDependency_20260730_120033.log`)
+- `UEREMCP.Niagara.Create.PocCVariationRuntime` — **PASS**
+  (`editor_UEREMCP_Niagara_Create_PocCVariationRuntime_20260730_120054.log`)
+- `UEREMCP.Templates.POCC.ThirdGeneration` — **PASS**
+  (`editor_UEREMCP_Templates_POCC_ThirdGeneration_20260730_122445.log`)
 
-Exact live blockers:
+Live fixes:
 
-1. The direct POC C test sends `options.allow_destructive`; the live envelope parser
-   rejects that unknown field before mutation, so the test subsequently cannot load
-   `NS_POCC_IceVariationDirect`.
-2. The canonical template call returns `rolled_back`. Its required `core_material`
-   operation returns `partially_completed` because it executes with
-   `options.validate=false`; `trail_material` and `projectile_fx` are then skipped.
-3. C5 remains an intentional honest failure, independent of the runtime defects.
+1. The C++ and Python envelope parsers now accept the ADR-0010/schema-defined
+   `options.allow_destructive` field.
+2. `execute_plan` now permits an honest `partially_completed` dependency to continue
+   only when its response contains a usable `result.primary_asset`; aggregate status
+   remains `partially_completed`, so `validate:false` never becomes `*_validated`.
+3. Template materialization binds a named terminal operation to the requested target
+   asset identity instead of creating the generic template name in the target folder.
+
+POC C remains **partial overall** because C5 is still an intentional honest failure.
 
 ## POC D
 
@@ -107,11 +112,7 @@ scratch restart pair.
 
 ## Remaining finish-the-plugin residuals
 
-1. Remove the unsupported `allow_destructive` field from the POC C direct envelope (or
-   add it to the frozen request contract through WS-01, if truly required).
-2. Ensure template construction operations inherit `validate=true` and do not treat an
-   honest but incomplete material response as sufficient for a required dependency.
-3. Add a real networking/damage source contract before reconsidering C5.
-4. Add the D5 multi-client networking proof; static Pattern B checks remain the only
+1. Add a real networking/damage source contract before reconsidering C5.
+2. Add the D5 multi-client networking proof; static Pattern B checks remain the only
    unresolved POC D criterion.
-5. Extend E1 restart proof to all successful POC A-D results and close E7 metrics.
+3. Extend E1 restart proof to all successful POC A-D results and close E7 metrics.
