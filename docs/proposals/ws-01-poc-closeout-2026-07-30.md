@@ -4,7 +4,7 @@
 **Worktree:** `UEREMCP-integration`  
 **Branch:** `ws-01-poc-cde-integration`  
 **Base tip before this closeout:** `109119b`  
-**Final tip / local main SHA:** `3750e6551da93cdae1bf81fcc1666ecdae42f615`  
+**Final tip / local main:** fast-forwarded to this branch tip (no push). Verify with `git rev-parse main`.  
 **Push:** not performed.
 
 ## Verdict
