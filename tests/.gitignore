@@ -3,6 +3,11 @@ integration/_logs/*
 # Allow small redacted status notes committed for blockers / shipping-gate evidence.
 !integration/_logs/*.redacted.md
 !integration/_logs/README.md
+# Allow machine-checkable POC criterion / lineage evidence JSON (not raw editor logs).
+!integration/_logs/poc_*_lineage*.json
+!integration/_logs/poc_e_criterion_bundle.json
+!integration/_logs/poc_a_complete_round_trip_*.json
+!integration/_logs/mcp_poc_b_transport_attempt_*.json
 
 # Probe plugin build outputs (local only).
 integration/editor_plugin/**/Binaries/

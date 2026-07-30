@@ -25,6 +25,7 @@ METRIC_FIELDS = (
 )
 POC_A_CRITERIA = tuple(f"A{index}" for index in range(1, 12))
 POC_B_CRITERIA = tuple(f"B{index}" for index in range(1, 11))
+POC_E_CRITERIA = tuple(f"E{index}" for index in range(1, 8))
 POC_B_B1_LIVE_MCP_ARTIFACT = (
     "docs/reviews/metrics/artifacts/poc_b_b1_live_mcp_20260730.json"
 )
@@ -34,6 +35,9 @@ POC_B_CRITERION_BUNDLE = (
     "tests/integration/_logs/poc_b_current_lineage_e85da3e.json"
 )
 POC_B_CRITERION_BUNDLE_SHA = "e85da3ea36c92dd8f2f61c6d29591f53094f9c63"
+POC_E_CRITERION_BUNDLE = "tests/integration/_logs/poc_e_criterion_bundle.json"
+VALIDATED_STATUSES = ("created_and_validated", "modified_and_validated")
+
 
 
 def extract_last_evidence(log_text: str) -> dict[str, Any] | None:
@@ -132,6 +136,35 @@ def validate_evidence(
         elif not isinstance(checkpoint.get("assets"), list) or not checkpoint["assets"]:
             errors.append("checkpoint.assets must be a non-empty array")
         _validate_metrics(evidence.get("metrics"), errors)
+
+    elif expected_scenario == "poc_e1_create":
+        checkpoint = evidence.get("checkpoint")
+        if not isinstance(checkpoint, dict):
+            errors.append("checkpoint object is required")
+        else:
+            if not checkpoint.get("id"):
+                errors.append("checkpoint.id is required")
+            if not isinstance(checkpoint.get("assets"), list) or not checkpoint["assets"]:
+                errors.append("checkpoint.assets must be a non-empty array")
+
+    elif expected_scenario == "poc_e1_verify":
+        if evidence.get("restart_observed") is not True:
+            errors.append("restart_observed must be true")
+        if evidence.get("reread_after_restart") is not True:
+            errors.append("reread_after_restart must be true")
+        if not _criterion_passed(evidence.get("criteria"), "E1"):
+            errors.append("E1 must have status=pass")
+        checkpoint = evidence.get("checkpoint")
+        if not isinstance(checkpoint, dict) or not checkpoint.get("id"):
+            errors.append("checkpoint.id is required")
+        elif not isinstance(checkpoint.get("assets"), list) or not checkpoint["assets"]:
+            errors.append("checkpoint.assets must be a non-empty array")
+
+    elif expected_scenario in {"poc_e_e5", "poc_e_e6"}:
+        criterion = "E5" if expected_scenario == "poc_e_e5" else "E6"
+        if not _criterion_passed(evidence.get("criteria"), criterion):
+            errors.append(f"{criterion} must have status=pass")
+
     else:
         errors.append(f"unsupported scenario {expected_scenario!r}")
     return errors
@@ -264,20 +297,97 @@ def validate_poc_b_bundle(bundle: Any) -> list[str]:
     return errors
 
 
+def validate_poc_e_bundle(bundle: Any) -> list[str]:
+    """Validate a criterion-indexed POC-E durability/honesty evidence summary."""
+    errors: list[str] = []
+    if not isinstance(bundle, dict):
+        return ["bundle must be an object"]
+    if bundle.get("schema_version") != 1:
+        errors.append("schema_version must be 1")
+    if bundle.get("scenario") != "poc_e":
+        errors.append("scenario must be 'poc_e'")
+    overall_claimed = bundle.get("overall_poc_e_claimed")
+    if not isinstance(overall_claimed, bool):
+        errors.append("overall_poc_e_claimed must be boolean")
+    tested_tip = bundle.get("tested_tip_sha")
+    if not isinstance(tested_tip, str) or not re.fullmatch(r"[0-9a-f]{40}", tested_tip):
+        errors.append("tested_tip_sha must be a full lowercase Git SHA")
+    if not isinstance(bundle.get("generated_at_utc"), str):
+        errors.append("generated_at_utc is required")
+
+    criteria = bundle.get("criteria")
+    if not isinstance(criteria, dict):
+        return errors + ["criteria object is required"]
+    for name in POC_E_CRITERIA:
+        criterion = criteria.get(name)
+        if not isinstance(criterion, dict):
+            errors.append(f"{name} object is required")
+            continue
+        if criterion.get("status") not in {"pass", "fail", "skip"}:
+            errors.append(f"{name}.status must be pass, fail, or skip")
+        evidence = criterion.get("evidence")
+        if not isinstance(evidence, list) or not evidence:
+            errors.append(f"{name}.evidence must be a non-empty array")
+        elif any(
+            not isinstance(item, dict)
+            or not isinstance(item.get("path"), str)
+            or not item["path"]
+            for item in evidence
+        ):
+            errors.append(f"{name}.evidence entries require path")
+
+    e5 = criteria.get("E5")
+    if isinstance(e5, dict) and e5.get("status") == "pass":
+        response_status = e5.get("response_status")
+        if response_status in VALIDATED_STATUSES:
+            errors.append("E5 PASS must not report a *_validated response_status")
+
+    e6 = criteria.get("E6")
+    if isinstance(e6, dict) and e6.get("status") == "pass":
+        response_status = e6.get("response_status")
+        if response_status not in {"failed_validation", "rejected"}:
+            errors.append(
+                "E6 PASS requires response_status failed_validation or rejected"
+            )
+
+    if overall_claimed:
+        for name in POC_E_CRITERIA:
+            if not _criterion_passed(criteria, name):
+                errors.append(f"claimed POC E requires {name}.status=pass")
+        residuals = bundle.get("residuals")
+        if isinstance(residuals, list) and residuals:
+            errors.append("claimed POC E forbids non-empty residuals")
+        elif isinstance(residuals, dict) and residuals:
+            errors.append("claimed POC E forbids non-empty residuals")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario")
     parser.add_argument("--log", type=Path)
     parser.add_argument("--bundle", type=Path)
+    parser.add_argument(
+        "--poc-e-bundle",
+        type=Path,
+        help="Validate a POC E criterion bundle (E1-E7)",
+    )
     args = parser.parse_args()
 
+    if args.poc_e_bundle:
+        bundle = json.loads(args.poc_e_bundle.read_text(encoding="utf-8-sig"))
+        errors = validate_poc_e_bundle(bundle)
+        print(json.dumps({"valid": not errors, "errors": errors}, separators=(",", ":")))
+        return 0 if not errors else 1
     if args.bundle:
         bundle = json.loads(args.bundle.read_text(encoding="utf-8-sig"))
         errors = validate_poc_b_bundle(bundle)
         print(json.dumps({"valid": not errors, "errors": errors}, separators=(",", ":")))
         return 0 if not errors else 1
     if not args.scenario or not args.log:
-        parser.error("--scenario and --log are required unless --bundle is used")
+        parser.error(
+            "--scenario and --log are required unless --bundle/--poc-e-bundle is used"
+        )
 
     evidence = extract_last_evidence(args.log.read_text(encoding="utf-8", errors="replace"))
     errors = validate_evidence(evidence, args.scenario)

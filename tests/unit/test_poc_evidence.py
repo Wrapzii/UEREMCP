@@ -295,5 +295,151 @@ class PocBBundleTest(unittest.TestCase):
         self.assertIn("B10 object is required", errors)
 
 
+class PocEEvidenceTest(unittest.TestCase):
+    def test_e1_create_requires_checkpoint_assets(self):
+        evidence = {
+            "schema_version": 1,
+            "scenario": "poc_e1_create",
+            "run_id": "poc-e1",
+            "outcome": "pass",
+            "checkpoint": {"id": "poc-e1-validation-scratch", "assets": []},
+        }
+        errors = poc_evidence.validate_evidence(evidence, "poc_e1_create")
+        self.assertIn("checkpoint.assets must be a non-empty array", errors)
+
+    def test_e1_verify_requires_restart_flags(self):
+        evidence = {
+            "schema_version": 1,
+            "scenario": "poc_e1_verify",
+            "run_id": "poc-e1",
+            "outcome": "pass",
+            "restart_observed": True,
+            "reread_after_restart": True,
+            "criteria": {"E1": {"status": "pass"}},
+            "checkpoint": {
+                "id": "poc-e1-validation-scratch",
+                "assets": ["/Game/__UeremcpTests/PocE_Restart/PocERestartCurve.PocERestartCurve"],
+            },
+        }
+        self.assertEqual(
+            poc_evidence.validate_evidence(evidence, "poc_e1_verify"),
+            [],
+        )
+
+    def test_e5_pass_marker_requires_criterion(self):
+        evidence = {
+            "schema_version": 1,
+            "scenario": "poc_e_e5",
+            "run_id": "poc-e-e5",
+            "outcome": "pass",
+            "criteria": {"E5": {"status": "pass", "detail": "partially_completed"}},
+        }
+        self.assertEqual(poc_evidence.validate_evidence(evidence, "poc_e_e5"), [])
+        evidence["criteria"]["E5"]["status"] = "fail"
+        self.assertIn(
+            "E5 must have status=pass",
+            poc_evidence.validate_evidence(evidence, "poc_e_e5"),
+        )
+
+    def test_honest_poc_e_bundle_allows_residuals_without_overall_claim(self):
+        bundle = {
+            "schema_version": 1,
+            "scenario": "poc_e",
+            "tested_tip_sha": "c" * 40,
+            "generated_at_utc": "2026-07-30T15:00:00Z",
+            "overall_poc_e_claimed": False,
+            "criteria": {
+                f"E{index}": {
+                    "status": "pass" if index != 1 else "skip",
+                    "evidence": [{"path": f"tests/integration/_logs/e{index}.md"}],
+                    **(
+                        {"response_status": "partially_completed"}
+                        if index == 5
+                        else (
+                            {"response_status": "failed_validation"}
+                            if index == 6
+                            else {}
+                        )
+                    ),
+                }
+                for index in range(1, 8)
+            },
+            "residuals": [
+                "E1 incomplete for POC A/C/D restart survival",
+            ],
+        }
+        self.assertEqual(poc_evidence.validate_poc_e_bundle(bundle), [])
+
+    def test_claimed_poc_e_rejects_residuals_and_open_criteria(self):
+        bundle = {
+            "schema_version": 1,
+            "scenario": "poc_e",
+            "tested_tip_sha": "d" * 40,
+            "generated_at_utc": "2026-07-30T15:00:00Z",
+            "overall_poc_e_claimed": True,
+            "criteria": {
+                f"E{index}": {
+                    "status": "pass" if index != 7 else "skip",
+                    "evidence": [{"path": f"tests/integration/_logs/e{index}.md"}],
+                    **(
+                        {"response_status": "partially_completed"}
+                        if index == 5
+                        else {}
+                    ),
+                    **(
+                        {"response_status": "failed_validation"}
+                        if index == 6
+                        else {}
+                    ),
+                }
+                for index in range(1, 8)
+            },
+            "residuals": ["E7 metrics open for POC A"],
+        }
+        errors = poc_evidence.validate_poc_e_bundle(bundle)
+        self.assertIn("claimed POC E requires E7.status=pass", errors)
+        self.assertIn("claimed POC E forbids non-empty residuals", errors)
+
+    def test_e5_pass_rejects_validated_response_status(self):
+        bundle = {
+            "schema_version": 1,
+            "scenario": "poc_e",
+            "tested_tip_sha": "e" * 40,
+            "generated_at_utc": "2026-07-30T15:00:00Z",
+            "overall_poc_e_claimed": False,
+            "criteria": {
+                f"E{index}": {
+                    "status": "pass",
+                    "evidence": [{"path": f"tests/integration/_logs/e{index}.md"}],
+                    **(
+                        {"response_status": "created_and_validated"}
+                        if index == 5
+                        else (
+                            {"response_status": "failed_validation"}
+                            if index == 6
+                            else {}
+                        )
+                    ),
+                }
+                for index in range(1, 8)
+            },
+        }
+        errors = poc_evidence.validate_poc_e_bundle(bundle)
+        self.assertIn(
+            "E5 PASS must not report a *_validated response_status",
+            errors,
+        )
+
+    def test_runner_covers_poc_e_scenarios(self):
+        runner = (REPO_ROOT / "tests" / "run_poc_acceptance.ps1").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('ValidateSet("A", "B8", "E", "E1", "E5", "E6")', runner)
+        self.assertIn("poc_e1_create", runner)
+        self.assertIn("poc_e_e5", runner)
+        self.assertIn("poc_e_e6", runner)
+        self.assertIn("ValidateFalseForbidsValidated", runner)
+
+
 if __name__ == "__main__":
     unittest.main()

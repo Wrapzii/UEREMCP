@@ -87,10 +87,21 @@ Named in the ADRs. Until each passes at runtime, the corresponding claim is not 
 | `UEREMCP.Validation.Rollback.BlueprintCompileDiscard` | One trivial Actor Blueprint member edit, compile/save, disk/reload restoration | ADR-0005 q4 | **PASS (scoped)** |
 | `UEREMCP.Validation.Idempotency.RepeatedCreate` | In-process create replay through `TryGetReplay` | ADR-0006 | **PASS** |
 | `UEREMCP.Validation.Revision.StaleRejected` | `expected_revision` reject with no mutation | ADR-0006 | **PASS** |
+| `UEREMCP.Validation.Honesty.ValidateFalseForbidsValidated` | `validate=false` never `*_validated` (E5) | POC E | **gate (this branch)** |
+| `UEREMCP.Validation.Honesty.BrokenRequestFailedValidation` | broken request → `failed_validation` (E6) | POC E | **gate (this branch)** |
+| `UEREMCP.Validation.Honesty.DestructiveDryRunDefault` | destructive omit → dry_run forced | ADR-0010 | **gate (this branch)** |
+| `UEREMCP.Validation.Domain.Blueprint.IdempotencyRepeatedReplace` | Blueprint `no_change_required` x3 | ADR-0006 / E3 | **gate (this branch)** |
+| `UEREMCP.Validation.Domain.Blueprint.RevisionStaleRejected` | Blueprint stale revision rejected | ADR-0006 / E4 | **gate (this branch)** |
+| `UEREMCP.Validation.PocE.Restart.Create` / `Verify` | Validation scratch restart (E1 scoped) | POC E | **harness (this branch)** |
 
-All five rows plus `UEREMCP.Validation.Harness.Smoke` passed in one shipping-plugin run
+All five ADR rows plus `UEREMCP.Validation.Harness.Smoke` passed in one shipping-plugin run
 `[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260730_005518.log]`; see
 `integration/_logs/editor_UEREMCP_Validation_20260730_6of6.redacted.md`.
+
+POC E criterion bundle (honest, **overall not claimed**):
+`integration/_logs/poc_e_criterion_bundle.json` — validate with
+`python tests/poc_evidence.py --poc-e-bundle …`. Orchestrator:
+`pwsh tests/run_poc_acceptance.ps1 -Scenario E`.
 
 ADR-0005 q4/q5 are closed only for those fixtures. Remaining rollback residuals:
 
