@@ -21,7 +21,7 @@ Unowned path? It is WS-01's until assigned. Propose, do not squat.
 
 | WS | Role | Owns | Wave |
 |---|---|---|---|
-| **WS-01** | Lead Architect | `docs/adr/**`, `docs/GROUNDED_FACTS.md`, `docs/WHY.md`, `docs/WORK_ALLOCATION.md`, `docs/RESEARCH_PROTOCOL.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/POC_ACCEPTANCE.md`, `docs/CAPABILITY_CATALOG.md`, `schemas/common/**`, `schemas/envelope/**`, `schemas/graph/**`, `schemas/template-library/**`, `AGENTS.md` | 0 |
+| **WS-01** | Lead Architect | `docs/adr/**`, `docs/GROUNDED_FACTS.md`, `docs/WHY.md`, `docs/WORK_ALLOCATION.md`, `docs/RESEARCH_PROTOCOL.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/POC_ACCEPTANCE.md`, `docs/CAPABILITY_CATALOG.md`, `docs/SWARM_LAUNCH.md`, `schemas/common/**`, `schemas/envelope/**`, `schemas/graph/**`, `schemas/template-library/**`, `AGENTS.md`, `README.md` | 0 |
 | **WS-02** | Existing-System Auditor | `docs/audit/**` | 1 |
 | **WS-03** | Unreal Plugin Architect | `Plugins/UEREMCP/UEREMCP.uplugin`, `Plugins/UEREMCP/Source/UeremcpCore/**` | 1 |
 | **WS-04** | MCP Server / Transport | `Plugins/UEREMCP/Source/UeremcpTransport/**`, `docs/research/RB-04-*.md` | 1 |
@@ -33,7 +33,7 @@ Unowned path? It is WS-01's until assigned. Propose, do not squat.
 | **WS-10** | Animation & Control Rig | `Plugins/UEREMCP/Source/UeremcpAnimation/**`, `schemas/domains/animation/**` | 3 |
 | **WS-11** | Validation & Testing | `Plugins/UEREMCP/Source/UeremcpValidation/**`, `tests/**` | 1 |
 | **WS-12** | Security & Reliability | `Plugins/UEREMCP/Source/UeremcpSecurity/**`, `docs/SECURITY.md` | 2 |
-| **WS-13** | Documentation | `docs/guide/**`, `README.md` | 3 |
+| **WS-13** | Documentation | `docs/guide/**` | 3 |
 | **WS-14** | Integration Critic | `docs/reviews/**` | continuous |
 | **WS-15** | Template & Pattern Library | `Plugins/UEREMCP/Source/UeremcpTemplates/**`, `templates/**` | 2 |
 

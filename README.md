@@ -81,6 +81,10 @@ tools/                 Schema validator, ownership guard.
 
 ## Getting started
 
+**To launch the agent swarm:** copy-paste prompts are in
+[`docs/SWARM_LAUNCH.md`](docs/SWARM_LAUNCH.md) — one orchestrator, a worker template,
+and the four Wave 1 workstreams filled in.
+
 **If you are an agent working this repo:** read [`AGENTS.md`](AGENTS.md), then find
 your workstream in [`docs/WORK_ALLOCATION.md`](docs/WORK_ALLOCATION.md).
 

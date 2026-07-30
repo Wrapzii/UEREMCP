@@ -34,6 +34,7 @@ OWNERSHIP: dict[str, list[str]] = {
         "docs/adr/**", "docs/GROUNDED_FACTS.md", "docs/WHY.md",
         "docs/WORK_ALLOCATION.md", "docs/RESEARCH_PROTOCOL.md", "docs/ROADMAP.md",
         "docs/RISK_REGISTER.md", "docs/POC_ACCEPTANCE.md", "docs/CAPABILITY_CATALOG.md",
+        "docs/SWARM_LAUNCH.md", "README.md",
         "docs/research/README.md", "docs/research/RB-01-*",
         "schemas/common/**", "schemas/envelope/**", "schemas/graph/**",
         "schemas/template-library/**", "schemas/examples/**",
@@ -77,7 +78,7 @@ OWNERSHIP: dict[str, list[str]] = {
         "Plugins/UEREMCP/Source/UeremcpSecurity/**", "docs/SECURITY.md",
         "docs/research/RB-13-*",
     ],
-    "WS-13": ["docs/guide/**", "README.md"],
+    "WS-13": ["docs/guide/**"],
     "WS-14": ["docs/reviews/**"],
     "WS-15": [
         "Plugins/UEREMCP/Source/UeremcpTemplates/**", "templates/**",
