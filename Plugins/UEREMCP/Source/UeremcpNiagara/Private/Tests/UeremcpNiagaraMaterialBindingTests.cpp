@@ -261,4 +261,136 @@ bool FUeremcpNiagaraMaterialBindingDiagnosticsOfflineTest::RunTest(const FString
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraMaterialBindingOrphanPartialFailureOfflineTest,
+	"UEREMCP.Niagara.Create.MaterialBindingOrphanPartialFailureOffline",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraMaterialBindingOrphanPartialFailureOfflineTest::RunTest(const FString& Parameters)
+{
+	auto MakeSuccessfulInline = [](const FString& Role, const FString& PrimaryAsset) {
+		FUeremcpNiagaraInlineMaterialCreate Inline;
+		Inline.Role = Role;
+		Inline.bSuccess = true;
+		Inline.Status = TEXT("partially_completed");
+		Inline.PrimaryAsset = PrimaryAsset;
+		return Inline;
+	};
+
+	{
+		FUeremcpNiagaraMaterialBindingResult FailedInline;
+		FUeremcpNiagaraInlineMaterialCreate Inline;
+		Inline.Role = TEXT("ribbon_trail");
+		Inline.bSuccess = false;
+		Inline.Status = TEXT("failed_validation");
+		FailedInline.InlineMaterialCreates.Add(Inline);
+		FailedInline.UnresolvedMaterialBindings.Add(
+			TEXT("ribbon_trail: inline create_spec failed (status=failed_validation)"));
+		TestEqual(
+			TEXT("failed inline create is not orphan"),
+			FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCreates(FailedInline).Num(),
+			0);
+		TestFalse(
+			TEXT("failed inline create not continuable"),
+			FUeremcpNiagaraMaterialBindingDiagnostics::ShouldContinueAfterBindingFailure(FailedInline));
+	}
+
+	{
+		FUeremcpNiagaraMaterialBindingResult EmptyPrimary;
+		EmptyPrimary.InlineMaterialCreates.Add(MakeSuccessfulInline(TEXT("core"), FString()));
+		EmptyPrimary.UnresolvedMaterialBindings.Add(TEXT("core: PrimaryAsset verification failed"));
+		TestEqual(
+			TEXT("empty PrimaryAsset is not orphan"),
+			FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCreates(EmptyPrimary).Num(),
+			0);
+	}
+
+	{
+		FUeremcpNiagaraMaterialBindingResult WrongRoleUnresolved;
+		WrongRoleUnresolved.InlineMaterialCreates.Add(MakeSuccessfulInline(
+			TEXT("ribbon_trail"),
+			TEXT("/Game/__UeremcpTests/Materials/MI_Probe_RibbonTrail")));
+		WrongRoleUnresolved.UnresolvedMaterialBindings.Add(
+			TEXT("sparks: renderer 0 re-read material path mismatch"));
+		TestEqual(
+			TEXT("unresolved role mismatch is not orphan"),
+			FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCreates(WrongRoleUnresolved).Num(),
+			0);
+	}
+
+	{
+		FUeremcpNiagaraMaterialBindingResult MixedPartial;
+		MixedPartial.ResolvedMaterialPaths.Add(
+			TEXT("sparks"),
+			TEXT("/Game/__UeremcpTests/Materials/MI_Sparks.MI_Sparks"));
+		MixedPartial.RendererBindingsVerified.Add(TEXT("sparks/renderer_0"));
+		MixedPartial.InlineMaterialCreates.Add(MakeSuccessfulInline(
+			TEXT("ribbon_trail"),
+			TEXT("/Game/__UeremcpTests/Materials/MI_Probe_RibbonTrail")));
+		MixedPartial.UnresolvedMaterialBindings.Add(
+			TEXT("ribbon_trail: renderer 0 re-read material path mismatch"));
+
+		const TArray<FString> Orphans =
+			FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCreates(MixedPartial);
+		TestEqual(TEXT("mixed partial has one orphan"), Orphans.Num(), 1);
+		TestEqual(TEXT("mixed partial orphan role"), Orphans[0], FString(TEXT("ribbon_trail")));
+		TestTrue(
+			TEXT("mixed partial continuable"),
+			FUeremcpNiagaraMaterialBindingDiagnostics::ShouldContinueAfterBindingFailure(MixedPartial));
+
+		const TSharedPtr<FJsonObject> Diagnostics =
+			FUeremcpNiagaraMaterialBindingDiagnostics::BuildMaterialBindingsObject(MixedPartial);
+		TestTrue(TEXT("mixed partial diagnostics"), Diagnostics.IsValid());
+
+		const TArray<TSharedPtr<FJsonValue>>* VerifiedBindings = nullptr;
+		TestTrue(
+			TEXT("renderer_bindings_verified present"),
+			Diagnostics->TryGetArrayField(TEXT("renderer_bindings_verified"), VerifiedBindings));
+		TestTrue(TEXT("sparks binding verified"), VerifiedBindings && VerifiedBindings->Num() == 1);
+
+		const TArray<TSharedPtr<FJsonValue>>* OrphanField = nullptr;
+		TestTrue(
+			TEXT("orphaned_inline_creates emitted"),
+			Diagnostics->TryGetArrayField(TEXT("orphaned_inline_creates"), OrphanField));
+		TestEqual(TEXT("orphan field count"), OrphanField ? OrphanField->Num() : 0, 1);
+	}
+
+	{
+		FUeremcpNiagaraMaterialBindingResult DualOrphan;
+		DualOrphan.InlineMaterialCreates.Add(MakeSuccessfulInline(
+			TEXT("core"),
+			TEXT("/Game/__UeremcpTests/Materials/MI_Probe_Core")));
+		DualOrphan.InlineMaterialCreates.Add(MakeSuccessfulInline(
+			TEXT("ribbon_trail"),
+			TEXT("/Game/__UeremcpTests/Materials/MI_Probe_RibbonTrail")));
+		DualOrphan.UnresolvedMaterialBindings.Add(TEXT("core: renderer 0 re-read material path mismatch"));
+		DualOrphan.UnresolvedMaterialBindings.Add(
+			TEXT("ribbon_trail: renderer 0 re-read material path mismatch"));
+
+		const TArray<FString> Orphans =
+			FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCreates(DualOrphan);
+		TestEqual(TEXT("two orphans"), Orphans.Num(), 2);
+
+		const FString SummarySuffix =
+			FUeremcpNiagaraMaterialBindingDiagnostics::BuildOrphanPartialFailureSummarySuffix(Orphans.Num());
+		TestTrue(TEXT("summary mentions orphan count"), SummarySuffix.Contains(TEXT("2 orphaned inline material")));
+		TestTrue(TEXT("summary mentions probe root"), SummarySuffix.Contains(TEXT("probe root")));
+	}
+
+	TArray<FString> ChecksSkipped;
+	FUeremcpNiagaraMaterialBindingDiagnostics::AppendOrphanPartialFailureChecksSkipped(ChecksSkipped);
+	TestEqual(TEXT("two orphan checks skipped"), ChecksSkipped.Num(), 2);
+	TestTrue(TEXT("material_bindings skipped"), ChecksSkipped.Contains(TEXT("niagara.material_bindings")));
+	TestTrue(
+		TEXT("orphaned inline check skipped"),
+		ChecksSkipped.Contains(TEXT("niagara.material_bindings_orphaned_inline_creates")));
+
+	TestEqual(
+		TEXT("zero orphan summary empty"),
+		FUeremcpNiagaraMaterialBindingDiagnostics::BuildOrphanPartialFailureSummarySuffix(0),
+		FString());
+
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

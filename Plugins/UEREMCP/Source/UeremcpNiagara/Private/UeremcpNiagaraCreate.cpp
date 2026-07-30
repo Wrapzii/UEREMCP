@@ -513,8 +513,8 @@ bool FUeremcpNiagaraCreate::Run(
 				OutResult.MaterialBindings))
 			{
 				OutResult.bMaterialBindingPartialFailure = true;
-				OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings"));
-				OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings_orphaned_inline_creates"));
+				FUeremcpNiagaraMaterialBindingDiagnostics::AppendOrphanPartialFailureChecksSkipped(
+					OutResult.ChecksSkipped);
 			}
 			else
 			{
@@ -630,8 +630,7 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		const TArray<FString> OrphanedRoles =
 			FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCreates(OutResult.MaterialBindings);
-		OutResult.Summary += FString::Printf(
-			TEXT(" %d orphaned inline material(s) saved under probe root but renderer bind unverified."),
+		OutResult.Summary += FUeremcpNiagaraMaterialBindingDiagnostics::BuildOrphanPartialFailureSummarySuffix(
 			OrphanedRoles.Num());
 	}
 

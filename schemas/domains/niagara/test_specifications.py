@@ -38,6 +38,7 @@ EXPECTED_LOSSY_AREAS = frozenset({
 EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
     "material_bindings",
     "partially_completed",
+    "orphaned_inline_creates",
     "POC B",
     "post-create inspect",
     "mode 'replace'",
@@ -194,6 +195,52 @@ class NiagaraSpecificationTests(unittest.TestCase):
             set(expectations["validation_never_claims"]),
             {"created_and_validated", "modified_and_validated"},
         )
+        self.assertTrue(expectations["continues_on_orphaned_inline_bind_failure"])
+        self.assertEqual(expectations["response_status"], "partially_completed")
+        self.assertEqual(
+            expectations["checks_skipped_when_orphaned"],
+            [
+                "niagara.material_bindings",
+                "niagara.material_bindings_orphaned_inline_creates",
+            ],
+        )
+
+    def test_create_material_bindings_orphan_partial_fixture(self) -> None:
+        fixture = load_fixture("create_material_bindings_orphan_partial.json")
+        diagnostics = fixture["material_bindings_diagnostics_example"]
+        expectations = fixture["expectations"]
+
+        self.assertIn("orphaned_inline_creates", diagnostics)
+        self.assertEqual(diagnostics["orphaned_inline_creates"], ["ribbon_trail"])
+
+        inline_entries = diagnostics["inline_material_creates"]
+        self.assertEqual(len(inline_entries), 1)
+        inline = inline_entries[0]
+        self.assertEqual(inline["role"], "ribbon_trail")
+        self.assertTrue(inline["success"])
+        self.assertEqual(inline["status"], "partially_completed")
+        self.assertTrue(inline["primary_asset"].startswith(expectations["allowed_material_root"]))
+
+        for path in diagnostics["resolved_paths"].values():
+            self.assertTrue(path.startswith("/Game/__UeremcpTests/"))
+
+        self.assertEqual(expectations["response_status"], "partially_completed")
+        self.assertEqual(
+            set(expectations["validation_never_claims"]),
+            {"created_and_validated", "modified_and_validated"},
+        )
+        self.assertEqual(
+            expectations["checks_skipped_when_orphaned"],
+            [
+                "niagara.material_bindings",
+                "niagara.material_bindings_orphaned_inline_creates",
+            ],
+        )
+
+        unresolved = diagnostics["unresolved"]
+        self.assertTrue(any(entry.startswith("ribbon_trail:") for entry in unresolved))
+        self.assertIn("sparks/renderer_0", diagnostics["renderer_bindings_verified"])
+        self.assertNotIn("ribbon_trail/renderer_0", diagnostics["renderer_bindings_verified"])
 
     def test_hash_round_trip_scaffold_fixture(self) -> None:
         import sys

@@ -25,4 +25,10 @@ public:
 	/** True when bind failed but probe inline MIs were saved — continuable partial failure. */
 	static bool ShouldContinueAfterBindingFailure(
 		const FUeremcpNiagaraMaterialBindingResult& Result);
+
+	/** Checks skipped when Create::Run continues after orphaned inline bind failure. */
+	static void AppendOrphanPartialFailureChecksSkipped(TArray<FString>& OutChecksSkipped);
+
+	/** Summary suffix appended when orphaned inline probe MIs remain on disk. */
+	static FString BuildOrphanPartialFailureSummarySuffix(int32 OrphanCount);
 };

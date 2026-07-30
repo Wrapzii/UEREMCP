@@ -1,0 +1,53 @@
+{
+  "$comment": "Offline golden vector for orphan partial-failure diagnostics (WS-07).",
+  "material_bindings_diagnostics_example": {
+    "resolved_paths": {
+      "sparks": "/Game/__UeremcpTests/Materials/MI_Sparks.MI_Sparks",
+      "ribbon_trail": "/Game/__UeremcpTests/Materials/MI_Probe_RibbonTrail.MI_Probe_RibbonTrail"
+    },
+    "renderer_bindings_applied": [
+      "sparks/renderer_0",
+      "ribbon_trail/renderer_0"
+    ],
+    "renderer_bindings_verified": [
+      "sparks/renderer_0"
+    ],
+    "unresolved": [
+      "ribbon_trail: renderer 0 re-read material path mismatch"
+    ],
+    "inline_material_creates": [
+      {
+        "role": "ribbon_trail",
+        "success": true,
+        "status": "partially_completed",
+        "primary_asset": "/Game/__UeremcpTests/Materials/MI_Probe_RibbonTrail",
+        "created_assets": [
+          {
+            "asset_path": "/Game/__UeremcpTests/Materials/MI_Probe_RibbonTrail",
+            "asset_class": "MaterialInstanceConstant"
+          }
+        ]
+      }
+    ],
+    "orphaned_inline_creates": [
+      "ribbon_trail"
+    ]
+  },
+  "expectations": {
+    "response_status": "partially_completed",
+    "validation_orphan_field": "material_bindings_orphaned_inline_creates",
+    "validation_orphan_value": true,
+    "validation_bindings_verified_value": false,
+    "orphaned_inline_field": "orphaned_inline_creates",
+    "checks_skipped_when_orphaned": [
+      "niagara.material_bindings",
+      "niagara.material_bindings_orphaned_inline_creates"
+    ],
+    "validation_never_claims": [
+      "created_and_validated",
+      "modified_and_validated"
+    ],
+    "probe_material_paths_only": true,
+    "allowed_material_root": "/Game/__UeremcpTests/Materials"
+  }
+}

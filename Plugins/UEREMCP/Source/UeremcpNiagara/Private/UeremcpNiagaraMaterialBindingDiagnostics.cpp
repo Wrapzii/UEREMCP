@@ -93,6 +93,26 @@ bool FUeremcpNiagaraMaterialBindingDiagnostics::ShouldContinueAfterBindingFailur
 	return FindOrphanedInlineCreates(Result).Num() > 0;
 }
 
+void FUeremcpNiagaraMaterialBindingDiagnostics::AppendOrphanPartialFailureChecksSkipped(
+	TArray<FString>& OutChecksSkipped)
+{
+	OutChecksSkipped.Add(TEXT("niagara.material_bindings"));
+	OutChecksSkipped.Add(TEXT("niagara.material_bindings_orphaned_inline_creates"));
+}
+
+FString FUeremcpNiagaraMaterialBindingDiagnostics::BuildOrphanPartialFailureSummarySuffix(
+	int32 OrphanCount)
+{
+	if (OrphanCount <= 0)
+	{
+		return FString();
+	}
+
+	return FString::Printf(
+		TEXT(" %d orphaned inline material(s) saved under probe root but renderer bind unverified."),
+		OrphanCount);
+}
+
 TSharedPtr<FJsonObject> FUeremcpNiagaraMaterialBindingDiagnostics::BuildMaterialBindingsObject(
 	const FUeremcpNiagaraMaterialBindingResult& Result)
 {
