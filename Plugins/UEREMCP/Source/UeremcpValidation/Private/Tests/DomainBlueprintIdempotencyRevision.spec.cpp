@@ -84,9 +84,9 @@ namespace UeremcpDomainBlueprintIdemRev
 		FAutomationTestBase& Test)
 	{
 		const FString ReadJson = FString::Printf(
-			TEXT(R"({"protocol_version":"1.0","request_id":"bp-idem-read","action":"read_graph",)"
-				 TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)"
-				 TEXT(R"("options":{"response_detail":"complete"}})"),
+			TEXT(R"({"protocol_version":"1.0","request_id":"bp-idem-read","action":"read_graph",)")
+			TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)")
+			TEXT(R"("options":{"response_detail":"complete"}})"),
 			*AssetPath);
 		const TSharedPtr<FJsonObject> Root = ParseJson(UUeremcpBlueprintToolset::ReadGraph(ReadJson));
 		if (!Test.TestTrue(TEXT("read_graph parseable"), Root.IsValid()))
@@ -121,11 +121,11 @@ namespace UeremcpDomainBlueprintIdemRev
 			FJsonSerializer::Serialize(Graph.ToSharedRef(), Writer);
 		}
 		return FString::Printf(
-			TEXT(R"({"protocol_version":"1.0","request_id":"%s","action":"submit_graph",)"
-				 TEXT(R"("mode":"replace","expected_revision":"%s",)"
-				 TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)"
-				 TEXT(R"("specification":{"graph":%s},)"
-				 TEXT(R"("options":{"dry_run":false,"validate":true,"compile":true,"save":true}})"),
+			TEXT(R"({"protocol_version":"1.0","request_id":"%s","action":"submit_graph",)")
+			TEXT(R"("mode":"replace","expected_revision":"%s",)")
+			TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)")
+			TEXT(R"("specification":{"graph":%s},)")
+			TEXT(R"("options":{"dry_run":false,"validate":true,"compile":true,"save":true}})"),
 			*RequestId,
 			*ExpectedRevision,
 			*AssetPath,

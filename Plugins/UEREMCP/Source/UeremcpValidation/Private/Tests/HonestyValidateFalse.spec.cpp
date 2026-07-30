@@ -151,8 +151,8 @@ bool FUeremcpHonestyValidateFalse::RunTest(const FString& Parameters)
 	FUeremcpRequest Parsed;
 	FString ParseError;
 	const FString ValidateFalseJson =
-		TEXT(R"({"protocol_version":"1.0","request_id":"e5-parse","action":"submit_graph",)"
-			 TEXT(R"("options":{"validate":false}})");
+		TEXT(R"({"protocol_version":"1.0","request_id":"e5-parse","action":"submit_graph",)")
+		TEXT(R"("options":{"validate":false}})");
 	TestTrue(TEXT("parse validate=false"),
 		FUeremcpEnvelope::ParseRequest(ValidateFalseJson, Parsed, ParseError));
 	TestFalse(TEXT("bValidate false"), Parsed.bValidate);
@@ -168,9 +168,9 @@ bool FUeremcpHonestyValidateFalse::RunTest(const FString& Parameters)
 	const FString AssetPath = SoftPath(AssetName);
 
 	const FString ReadJson = FString::Printf(
-		TEXT(R"({"protocol_version":"1.0","request_id":"e5-read","action":"read_graph",)"
-			 TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)"
-			 TEXT(R"("options":{"response_detail":"complete"}})"),
+		TEXT(R"({"protocol_version":"1.0","request_id":"e5-read","action":"read_graph",)")
+		TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)")
+		TEXT(R"("options":{"response_detail":"complete"}})"),
 		*AssetPath);
 	const TSharedPtr<FJsonObject> ReadRoot = ParseJson(UUeremcpBlueprintToolset::ReadGraph(ReadJson));
 	if (!TestTrue(TEXT("read_graph parseable"), ReadRoot.IsValid()))
@@ -200,11 +200,11 @@ bool FUeremcpHonestyValidateFalse::RunTest(const FString& Parameters)
 	}
 
 	const FString SubmitJson = FString::Printf(
-		TEXT(R"({"protocol_version":"1.0","request_id":"e5-submit","action":"submit_graph",)"
-			 TEXT(R"("mode":"replace","expected_revision":"%s",)"
-			 TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)"
-			 TEXT(R"("specification":{"graph":%s},)"
-			 TEXT(R"("options":{"dry_run":false,"validate":false,"compile":true,"save":true}})"),
+		TEXT(R"({"protocol_version":"1.0","request_id":"e5-submit","action":"submit_graph",)")
+		TEXT(R"("mode":"replace","expected_revision":"%s",)")
+		TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)")
+		TEXT(R"("specification":{"graph":%s},)")
+		TEXT(R"("options":{"dry_run":false,"validate":false,"compile":true,"save":true}})"),
 		*Revision,
 		*AssetPath,
 		*GraphJson);

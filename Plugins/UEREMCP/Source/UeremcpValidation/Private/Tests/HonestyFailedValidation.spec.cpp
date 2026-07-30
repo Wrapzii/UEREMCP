@@ -132,12 +132,12 @@ bool FUeremcpHonestyFailedValidation::RunTest(const FString& Parameters)
 
 	// Deliberately incomplete graph (missing graph_type/fidelity) → failed_validation.
 	const FString BrokenSubmit = FString::Printf(
-		TEXT(R"({"protocol_version":"1.0","request_id":"e6-broken","action":"submit_graph",)"
-			 TEXT(R"("mode":"replace",)"
-			 TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)"
-			 TEXT(R"("specification":{"graph":{"schema_version":"1.0","asset_path":"%s",)"
-			 TEXT(R"("graph_id":"EventGraph","nodes":[],"links":[]}},)"
-			 TEXT(R"("options":{"dry_run":false,"validate":true,"compile":true,"save":true}})"),
+		TEXT(R"({"protocol_version":"1.0","request_id":"e6-broken","action":"submit_graph",)")
+		TEXT(R"("mode":"replace",)")
+		TEXT(R"("target":{"asset_path":"%s","graph_id":"EventGraph"},)")
+		TEXT(R"("specification":{"graph":{"schema_version":"1.0","asset_path":"%s",)")
+		TEXT(R"("graph_id":"EventGraph","nodes":[],"links":[]}},)")
+		TEXT(R"("options":{"dry_run":false,"validate":true,"compile":true,"save":true}})"),
 		*AssetPath,
 		*AssetPath);
 
