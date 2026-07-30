@@ -126,6 +126,115 @@ bool FUeremcpNiagaraCreateReplaceDryRunTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraPocCVariationParseTest,
+	"UEREMCP.Niagara.Create.PocCVariationParse",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraPocCVariationParseTest::RunTest(const FString& Parameters)
+{
+	const FString RequestJson = TEXT(
+		R"({"protocol_version":"1.0","request_id":"ws07-poc-c-parse","action":"create_niagara_effect","target":{"asset_path":"/Game/__UeremcpPoc/NS_POCC_Ice"},"specification":{"effect_type":"projectile","element":"ice","base_system":{"asset_path":"/Game/__UeremcpPoc/NS_POCB_Fireball"},"components":[{"role":"crystalline","archetype":"niagara.emitter.sparks.v1"},{"role":"ice_impact","archetype":"niagara.emitter.impact_burst.v1"}],"parameters":{"primary_color":[0.6,0.85,1.0,1.0],"intensity":6.0}},"options":{"dry_run":true}})");
+	FUeremcpRequest Request;
+	FString Error;
+	TestTrue(TEXT("variation envelope parses"), FUeremcpEnvelope::ParseRequest(RequestJson, Request, Error));
+
+	FUeremcpNiagaraCreateSpec Spec;
+	TestTrue(TEXT("variation specification parses"), FUeremcpNiagaraCreate::ParseSpecification(Request, Spec, Error));
+	TestEqual(
+		TEXT("base system retained"),
+		Spec.BaseSystemPath,
+		FString(TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball")));
+	TestEqual(TEXT("two additive variation roles"), Spec.ComponentRoles.Num(), 2);
+	TestTrue(TEXT("crystalline requested"), Spec.ComponentRoles.Contains(TEXT("crystalline")));
+	TestTrue(TEXT("changed impact requested"), Spec.ComponentRoles.Contains(TEXT("ice_impact")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraPocCVariationRuntimeTest,
+	"UEREMCP.Niagara.Create.PocCVariationRuntime",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraPocCVariationRuntimeTest::RunTest(const FString& Parameters)
+{
+	const FString SourcePath = TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball");
+	const FString TargetPath = TEXT("/Game/__UeremcpPoc/NS_POCC_IceVariationDirect");
+	UNiagaraSystem* Source = Cast<UNiagaraSystem>(FSoftObjectPath(SourcePath).TryLoad());
+	if (!TestNotNull(TEXT("POC B source fireball exists"), Source))
+	{
+		return false;
+	}
+
+	const FString Request = FString::Printf(
+		TEXT("{\"protocol_version\":\"1.0\",\"request_id\":\"ws07-poc-c-runtime\",\"action\":\"create_niagara_effect\",")
+		TEXT("\"mode\":\"replace\",\"target\":{\"asset_path\":\"%s\"},")
+		TEXT("\"specification\":{\"name\":\"NS_POCC_IceVariationDirect\",\"effect_type\":\"projectile\",\"element\":\"ice\",")
+		TEXT("\"base_system\":{\"asset_path\":\"%s\"},\"components\":[\"crystalline\",\"ice_impact\"],")
+		TEXT("\"parameters\":{\"primary_color\":[0.6,0.85,1.0,1.0],\"secondary_color\":[0.9,0.95,1.0,1.0],\"scale\":1.0,\"intensity\":6.0}},")
+		TEXT("\"options\":{\"dry_run\":false,\"allow_destructive\":true,\"compile\":true,\"validate\":true,\"save\":true,\"timeout_ms\":0}}"),
+		*TargetPath,
+		*SourcePath);
+	const FString ResponseJson = UUeremcpNiagaraToolset::CreateNiagaraEffect(Request);
+	TSharedPtr<FJsonObject> Response;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
+	if (!TestTrue(
+		TEXT("variation response parses"),
+		FJsonSerializer::Deserialize(Reader, Response) && Response.IsValid()))
+	{
+		return false;
+	}
+	const TSharedPtr<FJsonObject>* Metrics = nullptr;
+	double RoundTrips = 0.0;
+	TestTrue(
+		TEXT("variation is one MCP round trip"),
+		Response->TryGetObjectField(TEXT("metrics"), Metrics)
+			&& Metrics
+			&& (*Metrics)->TryGetNumberField(TEXT("mcp_round_trips"), RoundTrips)
+			&& RoundTrips == 1.0);
+
+	UNiagaraSystem* Target = Cast<UNiagaraSystem>(FSoftObjectPath(TargetPath).TryLoad());
+	if (!TestNotNull(TEXT("ice variation exists"), Target))
+	{
+		return false;
+	}
+	FNiagaraExternalEditContext SourceContext(Source);
+	FNiagaraExternalEditContext TargetContext(Target);
+	FNiagaraExt_SystemSummary SourceSummary;
+	FNiagaraExt_SystemSummary TargetSummary;
+	UNiagaraExternalEditUtilities::GetSystemSummary(Source, SourceSummary, SourceContext);
+	UNiagaraExternalEditUtilities::GetSystemSummary(Target, TargetSummary, TargetContext);
+	TestFalse(TEXT("source summary has no errors"), SourceContext.HasErrors());
+	TestFalse(TEXT("target summary has no errors"), TargetContext.HasErrors());
+
+	TSet<FName> TargetEmitterNames;
+	for (const FNiagaraExt_EmitterSummary& Emitter : TargetSummary.Emitters)
+	{
+		TargetEmitterNames.Add(Emitter.EmitterName);
+	}
+	for (const FNiagaraExt_EmitterSummary& Emitter : SourceSummary.Emitters)
+	{
+		TestTrue(
+			*FString::Printf(TEXT("inherited emitter preserved: %s"), *Emitter.EmitterName.ToString()),
+			TargetEmitterNames.Contains(Emitter.EmitterName));
+	}
+	TestTrue(TEXT("crystalline emitter added"), TargetEmitterNames.Contains(FName(TEXT("Crystalline"))));
+	TestTrue(TEXT("ice impact emitter added"), TargetEmitterNames.Contains(FName(TEXT("IceImpact"))));
+
+	FNiagaraExt_UserVariables UserVariables;
+	UNiagaraExternalEditUtilities::GetUserVariables(Target, UserVariables, TargetContext);
+	TSet<FName> UserVariableNames;
+	for (const FNiagaraExt_UserVariable& Variable : UserVariables.UserVariables)
+	{
+		UserVariableNames.Add(Variable.Name);
+	}
+	TestTrue(TEXT("ice color parameter exists"), UserVariableNames.Contains(FName(TEXT("User.Color"))));
+	TestTrue(TEXT("ice secondary color parameter exists"), UserVariableNames.Contains(FName(TEXT("User.SecondaryColor"))));
+	TestTrue(TEXT("ice scale parameter exists"), UserVariableNames.Contains(FName(TEXT("User.Scale"))));
+	TestTrue(TEXT("ice intensity parameter exists"), UserVariableNames.Contains(FName(TEXT("User.Intensity"))));
+	return !HasAnyErrors();
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpNiagaraPocBParticleRuntimeTest,
 	"UEREMCP.Niagara.Create.PocBParticlesSpawn",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

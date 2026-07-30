@@ -1,0 +1,83 @@
+{
+  "$comment": "POC C generation-2 ice variation and generation-3 pattern proof. Each instantiate_template envelope is one MCP request; no primitive follow-ups.",
+  "owner": ["WS-07", "WS-15"],
+  "ice_request": {
+    "protocol_version": "1.0",
+    "request_id": "poc-c-ice-variation-001",
+    "action": "instantiate_template",
+    "mode": "create_or_update",
+    "specification": {
+      "template_id": "niagara.projectile.elemental.v1",
+      "inputs": {
+        "element": "ice",
+        "target_path": "/Game/__UeremcpPoc/NS_POCC_IceVariation",
+        "source_system": "/Game/__UeremcpPoc/NS_POCB_Fireball",
+        "scale": 1.0,
+        "intensity": 6.0
+      },
+      "modifiers": {
+        "adjust": ["reduce_trail_persistence", "boost_impact"],
+        "add": ["crystalline_fragments"],
+        "preserve": ["preserve_networking"]
+      },
+      "target": {
+        "asset_path": "/Game/__UeremcpPoc/NS_POCC_IceVariation"
+      },
+      "mode": "create_or_update"
+    },
+    "options": {
+      "dry_run": false,
+      "atomic": true,
+      "rollback_on_failure": true,
+      "compile": true,
+      "validate": true,
+      "save": true,
+      "response_detail": "complete",
+      "timeout_ms": 0
+    },
+    "idempotency_key": "poc-c-ice-variation-001"
+  },
+  "third_generation_request": {
+    "protocol_version": "1.0",
+    "request_id": "poc-c-wind-third-generation-001",
+    "action": "instantiate_template",
+    "mode": "create_or_update",
+    "specification": {
+      "template_id": "niagara.projectile.elemental.v1",
+      "inputs": {
+        "element": "wind",
+        "target_path": "/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration",
+        "source_system": "/Game/__UeremcpPoc/NS_POCC_IceVariation",
+        "scale": 1.15,
+        "intensity": 5.0
+      },
+      "modifiers": {
+        "preserve": ["preserve_networking"]
+      },
+      "target": {
+        "asset_path": "/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration"
+      },
+      "mode": "create_or_update"
+    },
+    "options": {
+      "dry_run": false,
+      "atomic": true,
+      "rollback_on_failure": true,
+      "compile": true,
+      "validate": true,
+      "save": true,
+      "response_detail": "complete",
+      "timeout_ms": 0
+    },
+    "idempotency_key": "poc-c-wind-third-generation-001"
+  },
+  "machine_assertions": {
+    "C1": "ice_response.metrics.mcp_round_trips == 1",
+    "C2": "ice_response.understood.interpretation_notes contains inherited:* and overridden:*",
+    "C3": "ice plan uses element.ice.v1 material and Niagara parameters",
+    "C4": "ice plan adds component role crystalline",
+    "C5_impact": "ice plan adds component role ice_impact",
+    "C6_shared_behavior": "ice result reuses source_system as variation_source and preserves inherited emitter names",
+    "C7": "third request uses the same template_id with a different element, source, and target"
+  }
+}

@@ -302,6 +302,21 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	Response.CreatedAssets = ChangeManifest.CreatedAssets;
 	Response.ModifiedAssets = ChangeManifest.ModifiedAssets;
 	Response.ReusedAssets = ChangeManifest.ReusedAssets;
+	if (!CreateResult.InheritedAssetPath.IsEmpty())
+	{
+		Response.InterpretationNotes.Add(FString::Printf(
+			TEXT("inherited:source_system=%s"),
+			*CreateResult.InheritedAssetPath));
+		Response.InterpretationNotes.Add(FString::Printf(
+			TEXT("inherited:emitters=%s"),
+			*FString::Join(CreateResult.EmittersInherited, TEXT(","))));
+		Response.InterpretationNotes.Add(FString::Printf(
+			TEXT("overridden:element=%s"),
+			*Spec.Element));
+		Response.InterpretationNotes.Add(FString::Printf(
+			TEXT("overridden:added_emitters=%s"),
+			*FString::Join(CreateResult.EmittersAdded, TEXT(","))));
+	}
 	Response.CapabilityNotes = UeremcpNiagaraCapability::DefaultCreateCapabilityNotes();
 	if (CreateResult.bMaterialBindingPartialFailure)
 	{

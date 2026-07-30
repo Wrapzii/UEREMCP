@@ -23,6 +23,9 @@ struct FUeremcpNiagaraCreateSpec
 	/** Optional template system soft path (package/object). */
 	FString TemplateSystemPath;
 
+	/** Optional existing Niagara system whose emitter structure is inherited by a variation. */
+	FString BaseSystemPath;
+
 	/** User-parameter knobs from specification.parameters. */
 	TSharedPtr<FJsonObject> Parameters;
 
@@ -38,8 +41,10 @@ struct FUeremcpNiagaraCreateResult
 
 	FString Summary;
 	FString CreatedAssetPath;
+	FString InheritedAssetPath;
 
 	TArray<FString> EmittersAdded;
+	TArray<FString> EmittersInherited;
 	TArray<FString> UserVariablesAdded;
 	TArray<FString> ChecksPerformed;
 	TArray<FString> ChecksSkipped;

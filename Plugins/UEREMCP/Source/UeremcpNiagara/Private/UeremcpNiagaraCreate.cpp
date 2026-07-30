@@ -456,6 +456,11 @@ bool FUeremcpNiagaraCreate::ParseSpecification(
 		const TSharedPtr<FJsonObject> TemplateObj = Spec->GetObjectField(TEXT("template_system"));
 		TemplateObj->TryGetStringField(TEXT("asset_path"), OutSpec.TemplateSystemPath);
 	}
+	if (Spec->HasTypedField<EJson::Object>(TEXT("base_system")))
+	{
+		const TSharedPtr<FJsonObject> BaseObj = Spec->GetObjectField(TEXT("base_system"));
+		BaseObj->TryGetStringField(TEXT("asset_path"), OutSpec.BaseSystemPath);
+	}
 
 	if (Spec->HasTypedField<EJson::Object>(TEXT("parameters")))
 	{
@@ -527,32 +532,38 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		OutResult.bSuccess = true;
 		OutResult.CreatedAssetPath = CreatedPath;
+		const FString StructureIntent = Spec.BaseSystemPath.IsEmpty()
+			? FString::Printf(TEXT("create from template with %d emitter role(s)"), Spec.ComponentRoles.Num())
+			: FString::Printf(
+				TEXT("inherit emitter structure from '%s' and add %d variation role(s)"),
+				*Spec.BaseSystemPath,
+				Spec.ComponentRoles.Num());
 		if (bReplaceMode)
 		{
 			if (bAssetExists)
 			{
 				OutResult.Summary = FString::Printf(
-					TEXT("Dry run: would replace existing probe asset '%s' (effect_type=%s) by deleting and recreating with %d emitter role(s). No editor state touched."),
+					TEXT("Dry run: would replace existing probe asset '%s' (effect_type=%s), %s. No editor state touched."),
 					*CreatedPath,
 					*Spec.EffectType,
-					Spec.ComponentRoles.Num());
+					*StructureIntent);
 			}
 			else
 			{
 				OutResult.Summary = FString::Printf(
-					TEXT("Dry run: replace mode on '%s' (no existing asset; would create from template with %d emitter role(s)). No editor state touched."),
+					TEXT("Dry run: replace mode on '%s' (no existing asset); would %s. No editor state touched."),
 					*CreatedPath,
-					Spec.ComponentRoles.Num());
+					*StructureIntent);
 			}
 			OutResult.ChecksSkipped.Add(TEXT("niagara.replace_delete_and_create_dry_run"));
 		}
 		else
 		{
 			OutResult.Summary = FString::Printf(
-				TEXT("Dry run: would create Niagara effect '%s' (effect_type=%s) with %d emitter role(s) from template. No editor state touched."),
+				TEXT("Dry run: would create Niagara effect '%s' (effect_type=%s), %s. No editor state touched."),
 				*CreatedPath,
 				*Spec.EffectType,
-				Spec.ComponentRoles.Num());
+				*StructureIntent);
 			OutResult.ChecksSkipped.Add(TEXT("niagara.create_all_steps_dry_run"));
 		}
 		if (Spec.MaterialRequests.Num() > 0)
@@ -587,10 +598,18 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.replace_no_existing_asset"));
 	}
 
-	FString TemplatePath = Spec.TemplateSystemPath.IsEmpty()
-		? FString(GLoopingSystemTemplate)
-		: Spec.TemplateSystemPath;
-	if (Spec.EffectType.Equals(TEXT("projectile"), ESearchCase::IgnoreCase)
+	const bool bVariation = !Spec.BaseSystemPath.IsEmpty();
+	if (bVariation)
+	{
+		OutResult.InheritedAssetPath = Spec.BaseSystemPath;
+	}
+	FString TemplatePath = bVariation
+		? Spec.BaseSystemPath
+		: (Spec.TemplateSystemPath.IsEmpty()
+			? FString(GLoopingSystemTemplate)
+			: Spec.TemplateSystemPath);
+	if (!bVariation
+		&& Spec.EffectType.Equals(TEXT("projectile"), ESearchCase::IgnoreCase)
 		&& TemplatePath.Equals(GMinimalSystemTemplate, ESearchCase::IgnoreCase))
 	{
 		// MinimalLightweight resolves to Once + zero loop duration and completes before
@@ -627,7 +646,23 @@ bool FUeremcpNiagaraCreate::Run(
 	OutResult.ChecksPerformed.Add(TEXT("niagara.create_system_from_template"));
 	Context = FNiagaraExternalEditContext(System);
 
-	if (!PrepareRuntimeScaffold(
+	if (bVariation)
+	{
+		FNiagaraExt_SystemSummary BaseSummary;
+		UNiagaraExternalEditUtilities::GetSystemSummary(System, BaseSummary, Context);
+		++OutResult.InternalOperations;
+		if (Context.HasErrors())
+		{
+			OutResult.Error = ContextErrorsToString(Context);
+			return false;
+		}
+		for (const FNiagaraExt_EmitterSummary& Emitter : BaseSummary.Emitters)
+		{
+			OutResult.EmittersInherited.Add(Emitter.EmitterName.ToString());
+		}
+		OutResult.ChecksPerformed.Add(TEXT("niagara.inherit_base_system_emitters"));
+	}
+	else if (!PrepareRuntimeScaffold(
 		System,
 		Context,
 		OutResult.InternalOperations,
@@ -669,6 +704,11 @@ bool FUeremcpNiagaraCreate::Run(
 	}
 
 	OutResult.ChecksPerformed.Add(TEXT("niagara.add_emitters_from_roles"));
+	TArray<FString> VariationEmitterNames = OutResult.EmittersInherited;
+	VariationEmitterNames.Append(OutResult.EmittersAdded);
+	const TArray<FString>& TargetEmitterNames = bVariation
+		? VariationEmitterNames
+		: OutResult.EmittersAdded;
 
 	FUeremcpNiagaraMaterialBinding::NormalizeMeshRendererOverrideFlags(
 		System,
@@ -700,7 +740,7 @@ bool FUeremcpNiagaraCreate::Run(
 	if (!ApplyParticleColor(
 		System,
 		Context,
-		OutResult.EmittersAdded,
+		TargetEmitterNames,
 		Spec.Parameters,
 		OutResult.InternalOperations,
 		OutResult.ChecksPerformed,
@@ -720,7 +760,7 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		const bool bBindingOk = FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			System,
-			OutResult.EmittersAdded,
+			TargetEmitterNames,
 			ResolvedMaterialPaths,
 			Spec.MaterialRequests,
 			Context,
@@ -826,9 +866,10 @@ bool FUeremcpNiagaraCreate::Run(
 	if (OutResult.bReplacedExisting)
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s)."),
+			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): inherited %d emitter(s), added %d emitter(s), %d user variable(s), %d verified material binding(s)."),
 			*CreatedPath,
 			*Spec.EffectType,
+			OutResult.EmittersInherited.Num(),
 			OutResult.EmittersAdded.Num(),
 			OutResult.UserVariablesAdded.Num(),
 			OutResult.MaterialBindings.RendererBindingsVerified.Num());
@@ -836,9 +877,10 @@ bool FUeremcpNiagaraCreate::Run(
 	else
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Created Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s), %d verified material binding(s)."),
+			TEXT("Created Niagara probe effect '%s' (effect_type=%s): inherited %d emitter(s), added %d emitter(s), %d user variable(s), %d verified material binding(s)."),
 			*CreatedPath,
 			*Spec.EffectType,
+			OutResult.EmittersInherited.Num(),
 			OutResult.EmittersAdded.Num(),
 			OutResult.UserVariablesAdded.Num(),
 			OutResult.MaterialBindings.RendererBindingsVerified.Num());

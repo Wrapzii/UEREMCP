@@ -176,6 +176,22 @@ FUeremcpNiagaraChangeManifestResult FUeremcpNiagaraChangeManifest::BuildFromCrea
 		MergeInlineMaterialSubManifest(Inline, Out);
 	}
 
+	if (!CreateResult.InheritedAssetPath.IsEmpty())
+	{
+		const FUeremcpAssetRef SourceRef = MakeAssetRef(
+			CreateResult.InheritedAssetPath,
+			TEXT("NiagaraSystem"),
+			TEXT("variation_source"));
+		AppendUniqueAssetRef(Out.ReusedAssets, SourceRef);
+		Out.Changes.Add(MakeShared<FJsonValueObject>(MakeChangeEntry(
+			TEXT("reused"),
+			CreateResult.InheritedAssetPath,
+			TEXT("NiagaraSystem"),
+			FString::Printf(
+				TEXT("inherited %d source emitter(s) without reconstructing them"),
+				CreateResult.EmittersInherited.Num()))));
+	}
+
 	for (const FString& EmitterName : CreateResult.EmittersAdded)
 	{
 		Out.Changes.Add(MakeShared<FJsonValueObject>(MakeChangeEntry(

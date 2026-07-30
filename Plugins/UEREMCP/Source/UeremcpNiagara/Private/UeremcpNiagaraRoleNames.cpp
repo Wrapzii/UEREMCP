@@ -30,6 +30,8 @@ FString UeremcpNiagaraRoles::ResolveEmitterTemplatePath(const FString& Role)
 		{ TEXT("smoke"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/Fountain") },
 		{ TEXT("ribbon_trail"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/LocationBasedRibbon") },
 		{ TEXT("impact_burst"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/OmnidirectionalBurst") },
+		{ TEXT("crystalline"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/SimpleSpriteBurst") },
+		{ TEXT("ice_impact"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/OmnidirectionalBurst") },
 	};
 	if (const FString* Found = RoleTemplates.Find(Key))
 	{
@@ -62,7 +64,9 @@ FString UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(const FString& Role)
 		|| Key == TEXT("flame_shell")
 		|| Key == TEXT("sparks")
 		|| Key == TEXT("smoke")
-		|| Key == TEXT("impact_burst"))
+		|| Key == TEXT("impact_burst")
+		|| Key == TEXT("crystalline")
+		|| Key == TEXT("ice_impact"))
 	{
 		return TEXT("elemental_projectile_core");
 	}

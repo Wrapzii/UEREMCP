@@ -61,6 +61,14 @@ bool FUeremcpNiagaraPocBEmitterPlanOfflineTest::RunTest(const FString& Parameter
 		TEXT("unknown role falls back to sparks template"),
 		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("unknown_role")),
 		ExpectedTemplates.FindRef(TEXT("sparks")));
+	TestEqual(
+		TEXT("crystalline role uses sparks archetype"),
+		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("crystalline")),
+		ExpectedTemplates.FindRef(TEXT("sparks")));
+	TestEqual(
+		TEXT("ice impact role uses burst archetype"),
+		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("ice_impact")),
+		ExpectedTemplates.FindRef(TEXT("impact_burst")));
 
 	TestEqual(
 		TEXT("ribbon_trail material purpose"),
