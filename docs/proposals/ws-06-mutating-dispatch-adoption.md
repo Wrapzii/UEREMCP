@@ -25,15 +25,13 @@ Reference adoption: `UeremcpGameplayToolset::CreateSpell` on `ws-01-orch`.
 | `FUeremcpBlueprintMutatingGate` | Domain adapter; `#if UEREMCP_BLUEPRINT_MUTATING_DISPATCH` |
 | `UeremcpBlueprintToolset::ReadGraph` | `TryBeginRead` → work → `Complete` |
 | `UeremcpBlueprintToolset::SubmitGraph` | `TryBeginMutating` before live `ReplaceGraph`; `Complete` on live paths |
-| `UeremcpBlueprint.Build.cs` | `UEREMCP_BLUEPRINT_MUTATING_DISPATCH=0` (default) |
+| `UeremcpBlueprint.Build.cs` | `UEREMCP_BLUEPRINT_MUTATING_DISPATCH=1`; `UeremcpCore` and `UeremcpSecurity` linked |
 
-### Enable after orch merge
+### Enabled on orch
 
-1. Merge `ws-01-orch` (or equivalent) into this worktree.
-2. In `UeremcpBlueprint.Build.cs`:
-   - Set `UEREMCP_BLUEPRINT_MUTATING_DISPATCH=1`
-   - Add `UeremcpCore`, `UeremcpSecurity` to `PrivateDependencyModuleNames`
-3. Rebuild plugin; WS-11 adds editor regression for queue + permission blocks.
+The orch integration enables `UEREMCP_BLUEPRINT_MUTATING_DISPATCH=1` and adds
+`UeremcpCore` plus `UeremcpSecurity` to `PrivateDependencyModuleNames`. WS-11
+retains the editor regression handoff for queue and permission blocks.
 
 ### Call-site parameters
 

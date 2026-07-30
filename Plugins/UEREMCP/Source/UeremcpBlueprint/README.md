@@ -36,7 +36,7 @@ implements graph read/submit.
 | Tool / action | Purpose |
 |---|---|
 | `ReadGraph` / `read_graph` | One call → `graph.schema.json` + diagnostics + `content_hash` |
-| `SubmitGraph` / `submit_graph` | Scratch-only changed/unchanged `replace` via `write_graph_dsl`; dry_run-first; rejects stale revisions and invalid graphs before mutation; honest status ladder; `FUeremcpBlueprintMutatingGate` disabled until orch enables it |
+| `SubmitGraph` / `submit_graph` | Scratch-only changed/unchanged `replace` via `write_graph_dsl`; dry_run-first; rejects stale revisions and invalid graphs before mutation; honest status ladder; `FUeremcpBlueprintMutatingGate` uses enabled Core dispatch |
 
 ## Planned (P2+)
 

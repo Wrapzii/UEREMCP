@@ -27,9 +27,11 @@ class BlueprintMutatingGateContractTests(unittest.TestCase):
             with self.subTest(symbol=symbol):
                 self.assertIn(symbol, text)
 
-    def test_compile_gate_defaults_disabled(self) -> None:
+    def test_compile_gate_enabled_with_core_deps(self) -> None:
         build = BUILD_CS.read_text(encoding="utf-8")
-        self.assertIn("UEREMCP_BLUEPRINT_MUTATING_DISPATCH=0", build)
+        self.assertIn("UEREMCP_BLUEPRINT_MUTATING_DISPATCH=1", build)
+        self.assertIn("UeremcpCore", build)
+        self.assertIn("UeremcpSecurity", build)
 
     def test_toolset_wires_read_and_submit(self) -> None:
         body = TOOLSET.read_text(encoding="utf-8")
@@ -46,7 +48,7 @@ class BlueprintMutatingGateContractTests(unittest.TestCase):
         proposal = PROPOSAL.read_text(encoding="utf-8")
         self.assertIn("TryBegin", proposal)
         self.assertIn("not RunOnGameThread", proposal)
-        self.assertIn("UEREMCP_BLUEPRINT_MUTATING_DISPATCH=0", proposal)
+        self.assertIn("UEREMCP_BLUEPRINT_MUTATING_DISPATCH=1", proposal)
 
 
 if __name__ == "__main__":
