@@ -142,8 +142,8 @@ Record exact code and output for every `[VERIFIED-RUNTIME]` claim.
 - [x] ADR-0005 recommendation as proposal (supplement, do not replace; C-3 nuance)
 - [x] Known hazards list for WS-12 (in proposal + Â§C notes above)
 
-## Shipping UEREMCP gate (C-3) — 2026-07-30
+## Shipping UEREMCP gate (C-3) ï¿½ 2026-07-30
 
 `UEREMCP.Validation.Rollback.MultiAssetDiscard` under enabled UEREMCP on `RE.uproject`:
-`Result={Success}` `[VERIFIED-RUNTIME: tests/integration/_logs/editor_UEREMCP_Validation_20260729_234458.log]`.
+`Result={Success}` `[VERIFIED-RUNTIME: tests/integration/_logs/editor_UEREMCP_Validation_shipping.redacted.md]`.
 Does not extend coverage beyond CurveFloat Content/ adds documented in the test body.

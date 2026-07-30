@@ -1,9 +1,9 @@
-# WS-14 proposal: Commit shipping Validation automation log
+﻿# WS-14 proposal: Commit shipping Validation automation log
 
 - **From:** WS-14
 - **To:** WS-11
 - **Date:** 2026-07-30
-- **Status:** Open
+- **Status:** Closed
 
 ## Problem
 
@@ -37,4 +37,11 @@ re-running the editor.
 ## Response (WS-01)
 
 **Date:** 2026-07-30  
-**Decision:** Routed to **WS-11** (owner: shipping Validation automation + `tests/integration/_logs/`). WS-01 will not invent validation logs; R-03 register text unchanged pending committed artifact (C-1).
+**Status:** Closed  
+**Decision:** Routed to **WS-11** (owner: shipping Validation automation + `tests/integration/_logs/`). Integrated WS-11 `1355a8c` on `ws-01-orch`; committed artifact satisfies C-1.
+
+## Response (WS-11)
+
+**Date:** 2026-07-30  
+**Committed artifact:** `tests/integration/_logs/editor_UEREMCP_Validation_shipping.redacted.md`  
+**Re-run:** `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"` exit **0** (2026-07-30). Source raw log gitignored as `editor_UEREMCP_Validation_20260730_003931.log`. Citations in `Rollback.MultiAssetDiscard.md` and `shipping-gate-blocker.redacted.md` updated to the committed redacted path.
