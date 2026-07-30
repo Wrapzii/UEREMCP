@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 
 #include "UeremcpNiagaraCreate.h"
+#include "UeremcpNiagaraChangeManifest.h"
 #include "UeremcpNiagaraPocBGates.h"
 #include "UeremcpNiagaraRoundTrip.h"
 
@@ -28,15 +29,31 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	};
 	CreateResult.MaterialBindings.bAttempted = true;
 	CreateResult.MaterialBindings.bAllRequestedVerified = true;
+	CreateResult.UserVariablesAdded = {
+		TEXT("User.Color"),
+		TEXT("User.SecondaryColor"),
+		TEXT("User.Scale"),
+		TEXT("User.Intensity"),
+	};
+	CreateResult.bCompiled = true;
+	CreateResult.ChecksPerformed.Add(TEXT("niagara.compile_await"));
 
 	FUeremcpNiagaraRoundTripResult RoundTrip;
 	RoundTrip.bInspectSucceeded = true;
 	RoundTrip.bStructuralMatch = true;
 
-	const FUeremcpNiagaraPocBGateResult Gates =
-		FUeremcpNiagaraPocBGates::Evaluate(CreateResult, &RoundTrip);
+	FUeremcpNiagaraChangeManifestResult Manifest;
+	Manifest.bPopulated = true;
+	Manifest.Changes.Add(MakeShared<FJsonValueObject>(MakeShared<FJsonObject>()));
 
+	const FUeremcpNiagaraPocBGateResult Gates =
+		FUeremcpNiagaraPocBGates::Evaluate(CreateResult, &RoundTrip, &Manifest);
+
+	TestTrue(TEXT("B3 six emitters"), Gates.bB3SixEmittersPresent);
 	TestTrue(TEXT("B4 verified"), Gates.bB4MaterialBindingsVerified);
+	TestTrue(TEXT("B5 user parameters"), Gates.bB5UserParametersPresent);
+	TestTrue(TEXT("B6 compile awaited"), Gates.bB6CompileAwaited);
+	TestTrue(TEXT("B9 change manifest"), Gates.bB9ChangeManifestPresent);
 	TestTrue(TEXT("B7 emitters non-empty"), Gates.bB7EmittersNonEmpty);
 	TestTrue(TEXT("B7 structural match"), Gates.bB7StructuralMatch);
 	TestTrue(TEXT("B7 structural evaluated"), Gates.bB7StructuralMatchEvaluated);
@@ -58,6 +75,14 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("diagnostics object"), Diagnostics.IsValid());
 	TestTrue(TEXT("round_trip_supported field"), Diagnostics->TryGetBoolField(TEXT("round_trip_supported"), bRoundTripSupported));
 	TestFalse(TEXT("round_trip_supported false"), bRoundTripSupported);
+
+	bool bB3Present = false;
+	TestTrue(TEXT("B3 field"), Diagnostics->TryGetBoolField(TEXT("B3_six_emitters_present"), bB3Present));
+	TestTrue(TEXT("B3 true in diagnostics"), bB3Present);
+
+	bool bB9Present = false;
+	TestTrue(TEXT("B9 field"), Diagnostics->TryGetBoolField(TEXT("B9_change_manifest_present"), bB9Present));
+	TestTrue(TEXT("B9 true in diagnostics"), bB9Present);
 
 	bool bB4Verified = false;
 	TestTrue(TEXT("B4 field"), Diagnostics->TryGetBoolField(TEXT("B4_material_bindings_verified"), bB4Verified));

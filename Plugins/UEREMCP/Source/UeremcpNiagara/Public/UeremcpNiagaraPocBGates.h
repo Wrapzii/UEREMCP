@@ -6,6 +6,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "UeremcpNiagaraChangeManifest.h"
 #include "UeremcpNiagaraCreate.h"
 #include "UeremcpNiagaraPocBInspectFidelity.h"
 #include "UeremcpNiagaraRoundTrip.h"
@@ -13,8 +14,20 @@
 /** Honest POC B gate evaluation for create_niagara_effect responses. */
 struct FUeremcpNiagaraPocBGateResult
 {
+	bool bB3SixEmittersPresent = false;
+	bool bB3SixEmittersEvaluated = false;
+
 	bool bB4Attempted = false;
 	bool bB4MaterialBindingsVerified = false;
+
+	bool bB5UserParametersPresent = false;
+	bool bB5UserParametersEvaluated = false;
+
+	bool bB6CompileAwaited = false;
+	bool bB6CompileAwaitedEvaluated = false;
+
+	bool bB9ChangeManifestPresent = false;
+	bool bB9ChangeManifestEvaluated = false;
 
 	bool bB7EmittersNonEmpty = false;
 	bool bB7StructuralMatch = false;
@@ -40,7 +53,8 @@ class FUeremcpNiagaraPocBGates
 public:
 	static FUeremcpNiagaraPocBGateResult Evaluate(
 		const FUeremcpNiagaraCreateResult& CreateResult,
-		const FUeremcpNiagaraRoundTripResult* RoundTrip);
+		const FUeremcpNiagaraRoundTripResult* RoundTrip,
+		const FUeremcpNiagaraChangeManifestResult* Manifest = nullptr);
 
 	static TSharedPtr<FJsonObject> BuildDiagnosticsObject(const FUeremcpNiagaraPocBGateResult& Result);
 };

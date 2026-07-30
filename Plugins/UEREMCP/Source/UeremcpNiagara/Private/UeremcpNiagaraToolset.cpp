@@ -4,6 +4,7 @@
 
 #include "UeremcpEnvelope.h"
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraChangeManifest.h"
 #include "UeremcpNiagaraCreate.h"
 #include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspect.h"
@@ -252,6 +253,9 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 		&& !Request.bDryRun
 		&& FUeremcpNiagaraRoundTrip::ValidateCreateResult(Request, CreateResult, RoundTripResult);
 
+	const FUeremcpNiagaraChangeManifestResult ChangeManifest =
+		FUeremcpNiagaraChangeManifest::BuildFromCreateResult(CreateResult, Request.bDryRun);
+
 	if (!Request.bDryRun && !CreateResult.CreatedAssetPath.IsEmpty())
 	{
 		// Post-create inspect (validate:true) still needs live MeshRendererInfo DIs; release
@@ -268,6 +272,9 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	Response.UnderstoodAction = Request.Action;
 	Response.UnderstoodTarget = Request.TargetAssetPath;
 	Response.PrimaryAsset = CreateResult.CreatedAssetPath;
+	Response.CreatedAssets = ChangeManifest.CreatedAssets;
+	Response.ModifiedAssets = ChangeManifest.ModifiedAssets;
+	Response.ReusedAssets = ChangeManifest.ReusedAssets;
 	Response.CapabilityNotes = UeremcpNiagaraCapability::DefaultCreateCapabilityNotes();
 	if (CreateResult.bMaterialBindingPartialFailure)
 	{
@@ -276,6 +283,7 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	}
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
+	Response.Metrics.AssetsAffected = ChangeManifest.AssetsAffected;
 	if (bRanRoundTrip)
 	{
 		Response.Metrics.InternalOperations += RoundTripResult.InternalOperations;
@@ -357,10 +365,12 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	if (bRanRoundTrip && RoundTripResult.bInspectSucceeded)
 	{
 		Validation->SetBoolField(TEXT("structurally_valid"), RoundTripResult.bStructuralMatch);
+		Validation->SetBoolField(TEXT("reread_after_write"), RoundTripResult.bInspectSucceeded);
 	}
 	else
 	{
 		Validation->SetField(TEXT("structurally_valid"), MakeShared<FJsonValueNull>());
+		Validation->SetField(TEXT("reread_after_write"), MakeShared<FJsonValueNull>());
 	}
 	Validation->SetField(TEXT("runtime_smoke_test"), MakeShared<FJsonValueNull>());
 
@@ -390,7 +400,8 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	{
 		const FUeremcpNiagaraPocBGateResult PocBGates = FUeremcpNiagaraPocBGates::Evaluate(
 			CreateResult,
-			bRanRoundTrip ? &RoundTripResult : nullptr);
+			bRanRoundTrip ? &RoundTripResult : nullptr,
+			&ChangeManifest);
 		Extra->SetObjectField(
 			TEXT("poc_b_gates"),
 			FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(PocBGates));
@@ -445,11 +456,9 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 		Extra->SetObjectField(TEXT("diagnostics"), ExtraDiagnostics);
 	}
 
-	if (!Request.bDryRun && CreateResult.EmittersAdded.Num() > 0)
+	if (ChangeManifest.Changes.Num() > 0)
 	{
-		TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
-		Result->SetStringField(TEXT("primary_asset"), CreateResult.CreatedAssetPath);
-		Extra->SetObjectField(TEXT("result"), Result);
+		Extra->SetArrayField(TEXT("changes"), ChangeManifest.Changes);
 	}
 
 	Response.ExtraFields = Extra;

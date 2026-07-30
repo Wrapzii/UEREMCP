@@ -2,11 +2,55 @@
 
 #include "UeremcpNiagaraPocBGates.h"
 
+#include "UeremcpNiagaraRoleNames.h"
+
+namespace
+{
+	bool HasAllPocBEmitterRoles(const TArray<FString>& EmittersAdded)
+	{
+		for (const FString& Role : UeremcpNiagaraRoles::DefaultPocBComponentRoles())
+		{
+			const FString EmitterName = UeremcpNiagaraRoles::RoleToEmitterName(Role);
+			if (!EmittersAdded.Contains(EmitterName))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool HasPocBUserParameters(const TArray<FString>& UserVariablesAdded)
+	{
+		return UserVariablesAdded.Contains(TEXT("User.Scale"))
+			&& UserVariablesAdded.Contains(TEXT("User.Intensity"))
+			&& UserVariablesAdded.Contains(TEXT("User.Color"));
+	}
+}
+
 FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 	const FUeremcpNiagaraCreateResult& CreateResult,
-	const FUeremcpNiagaraRoundTripResult* RoundTrip)
+	const FUeremcpNiagaraRoundTripResult* RoundTrip,
+	const FUeremcpNiagaraChangeManifestResult* Manifest)
 {
 	FUeremcpNiagaraPocBGateResult Out;
+
+	if (CreateResult.EmittersAdded.Num() > 0)
+	{
+		Out.bB3SixEmittersEvaluated = true;
+		Out.bB3SixEmittersPresent = HasAllPocBEmitterRoles(CreateResult.EmittersAdded);
+		if (Out.bB3SixEmittersPresent)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B3_six_emitters"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B3_six_emitters"));
+		}
+	}
+	else
+	{
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B3_six_emitters"));
+	}
 
 	Out.bB4Attempted = CreateResult.MaterialBindings.bAttempted;
 	Out.bB4MaterialBindingsVerified = CreateResult.MaterialBindings.bAllRequestedVerified;
@@ -17,6 +61,61 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 	else
 	{
 		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B4_material_bindings"));
+	}
+
+	if (CreateResult.UserVariablesAdded.Num() > 0)
+	{
+		Out.bB5UserParametersEvaluated = true;
+		Out.bB5UserParametersPresent = HasPocBUserParameters(CreateResult.UserVariablesAdded);
+		if (Out.bB5UserParametersPresent)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B5_user_parameters"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B5_user_parameters"));
+		}
+	}
+	else
+	{
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B5_user_parameters"));
+	}
+
+	if (CreateResult.bCompiled.IsSet())
+	{
+		Out.bB6CompileAwaitedEvaluated = true;
+		Out.bB6CompileAwaited = CreateResult.bCompiled.GetValue()
+			&& CreateResult.ChecksPerformed.Contains(TEXT("niagara.compile_await"));
+		if (Out.bB6CompileAwaited)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B6_compile_awaited"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B6_compile_awaited"));
+		}
+	}
+	else
+	{
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B6_compile_awaited"));
+	}
+
+	if (Manifest)
+	{
+		Out.bB9ChangeManifestEvaluated = true;
+		Out.bB9ChangeManifestPresent = Manifest->bPopulated && Manifest->Changes.Num() > 0;
+		if (Out.bB9ChangeManifestPresent)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B9_change_manifest"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B9_change_manifest"));
+		}
+	}
+	else
+	{
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B9_change_manifest"));
 	}
 
 	Out.bB7EmittersNonEmpty = CreateResult.EmittersAdded.Num() > 0;
@@ -100,6 +199,15 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	TSharedPtr<FJsonObject> Gates = MakeShared<FJsonObject>();
 	Gates->SetBoolField(TEXT("round_trip_supported"), false);
 
+	if (Result.bB3SixEmittersEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B3_six_emitters_present"), Result.bB3SixEmittersPresent);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B3_six_emitters_present"), MakeShared<FJsonValueNull>());
+	}
+
 	if (Result.bB4Attempted)
 	{
 		Gates->SetBoolField(TEXT("B4_material_bindings_verified"), Result.bB4MaterialBindingsVerified);
@@ -107,6 +215,33 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	else
 	{
 		Gates->SetField(TEXT("B4_material_bindings_verified"), MakeShared<FJsonValueNull>());
+	}
+
+	if (Result.bB5UserParametersEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B5_user_parameters_present"), Result.bB5UserParametersPresent);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B5_user_parameters_present"), MakeShared<FJsonValueNull>());
+	}
+
+	if (Result.bB6CompileAwaitedEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B6_compile_awaited"), Result.bB6CompileAwaited);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B6_compile_awaited"), MakeShared<FJsonValueNull>());
+	}
+
+	if (Result.bB9ChangeManifestEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B9_change_manifest_present"), Result.bB9ChangeManifestPresent);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B9_change_manifest_present"), MakeShared<FJsonValueNull>());
 	}
 
 	Gates->SetBoolField(TEXT("B7_emitters_non_empty"), Result.bB7EmittersNonEmpty);
