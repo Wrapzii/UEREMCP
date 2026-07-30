@@ -22,8 +22,9 @@ Slot, segment, and section fields are public
 `read_anim_bp` inventory scaffold is also owned-implemented: graph enumeration via
 `GetAnimationGraphs` / `GetAllGraphs`, type discriminators, node counts, and fidelity
 flags with `nodes_emitted=false`. Full ADR-0004 node/link emission awaits WS-06
-shared EdGraph serialization. Tool response remains `partially_completed` and does
-not emit `asset_state` while ADR-0011 is Proposed.
+shared EdGraph serialization — ask recorded in
+`docs/proposals/ws-10-edgraph-share-ws06.md`. Tool response remains
+`partially_completed` and does not emit `asset_state` while ADR-0011 is Proposed.
 `[VERIFIED: AnimationBlueprintLibrary.h:681]`
 `[VERIFIED: Blueprint.h:1107]`
 
@@ -109,10 +110,16 @@ Add actions, not primitives:
 - Mode: read-only inventory
 - Specification: `schemas/domains/animation/read_anim_bp.schema.json`
 - Result: graph inventory + revision now; full ADR-0004 node/link state after
-  WS-06 shared EdGraph serializer (and after Blocker 2 if emitted via `asset_state`
-  / `diagnostics.graphs`)
+  WS-06 shared EdGraph serializer (see `ws-10-edgraph-share-ws06.md`) and after
+  Blocker 2 if emitted via `asset_state` / `diagnostics.graphs`
 - Verification: AnimBP load, `GetAnimationGraphs` + `GetAllGraphs`, content hash
 - Limitations: no AnimBP state-machine authoring; nodes/links not yet emitted
+
+## Blocker 4 — shared EdGraph reader (WS-06)
+
+Full AnimBP node/link dump cannot land on a forked walker. Proposal:
+`docs/proposals/ws-10-edgraph-share-ws06.md`. Meanwhile inventory-only
+`partially_completed` remains the honest agent surface.
 
 ## Completion boundary
 

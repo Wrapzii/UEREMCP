@@ -354,7 +354,8 @@ No ADR challenge filed — representation holds; achievability differs by family
    `[VERIFIED: Blueprint.h:1107]`
    `[VERIFIED: AnimationGraph.h:20]`
    `[VERIFIED: AnimationStateMachineGraph.h:16]`
-6. Coordinate with WS-06 for shared EdGraph serializer (still open).
+6. Coordinate with WS-06 for shared EdGraph serializer — **proposal filed:**
+   `docs/proposals/ws-10-edgraph-share-ws06.md` (awaiting WS-06 Response).
 
 ### Phase 4c — Control Rig (compose, don't rebuild)
 
