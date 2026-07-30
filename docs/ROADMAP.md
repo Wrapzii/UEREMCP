@@ -35,7 +35,7 @@ they are, because all four can invalidate Phase 2 work.
 | Deliverable | WS | Closes |
 |---|---|---|
 | Compiling plugin, one `AICallable` tool reachable from an MCP client | WS-03 | R-04 |
-| Epic toolset inventory — the "do not rebuild" list | WS-02 | R-06 (partial — source audit landed; runtime schema dumps still needed) |
+| Epic toolset inventory — the "do not rebuild" list | WS-02 | R-06 (**`runtime_partial`** — source audit + 12 priority schemas + 73 `list_toolsets` on RE 2026-07-30; ~61 toolsets / RE describe / payload calibration still open) |
 | `FileSandbox` semantics; `Rollback.MultiAssetDiscard` | WS-11 | R-03 **mitigated** for Content/ full-Discard on shipping plugin; BP/deletes/Config still open |
 | Blueprint graph **read** into `graph.schema.json` | WS-06 | R-01 research done (RB-05); impl = Wave 2 after R-04 |
 | Envelope parse/serialise/validate in C++ | WS-05 | — (landed on `ws-05-protocol`; batch `$ref` grammar final per accepted proposal) |

@@ -78,3 +78,21 @@ When editor MCP is up, batch `describe_toolset` for:
 
 None for continuing Wave 1 workstreams. MCP was reachable via `user-unreal-mcp` and
 REAgentTools `unreal_mcp_proxy` client on 2026-07-30.
+
+## Response (WS-01)
+
+**Date:** 2026-07-30  
+**Decision:** Accept WS-02 recommendation — **mitigate R-06, do not close.**
+
+Integrated `7443fda` on `ws-01-orch` (no-ff). Risk register and roadmap updated to
+`runtime_partial`: 12 priority toolsets + full `list_toolsets` (73) captured on RE
+2026-07-30. Residual gaps (remaining Epic toolsets, REAgentTools `describe_toolset`
+dumps, payload calibration) stay on the R-06 open bar.
+
+**Wave 2:** Still gated on Phase 1 exit (R-01, R-03, R-04, **R-06 closed**). R-04 is
+closed; R-06 is materially reduced but not closed. No Wave 2 implementation started
+from this integration.
+
+**Further dumps:** WS-02 (or WS-14 opportunistically) may continue `describe_toolset`
+captures when MCP is up; not a Phase 1 blocker for other workstreams.
+
