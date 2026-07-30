@@ -24,7 +24,7 @@ FString UeremcpNiagaraRoles::ResolveEmitterTemplatePath(const FString& Role)
 {
 	const FString Key = Role.ToLower();
 	static const TMap<FString, FString> RoleTemplates = {
-		{ TEXT("core"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/Minimal") },
+		{ TEXT("core"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/Fountain") },
 		{ TEXT("flame_shell"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/UpwardMeshBurst") },
 		{ TEXT("sparks"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/SimpleSpriteBurst") },
 		{ TEXT("smoke"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/Fountain") },

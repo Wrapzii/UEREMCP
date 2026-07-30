@@ -43,7 +43,8 @@ namespace
 		TMap<FString, double>& TimingMs;
 		double LastMark;
 	};
-	const TCHAR* GDefaultSystemTemplate = TEXT("/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight");
+	const TCHAR* GMinimalSystemTemplate = TEXT("/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight");
+	const TCHAR* GLoopingSystemTemplate = TEXT("/Niagara/DefaultAssets/Templates/Systems/FountainLightweight");
 
 	FString RoleToEmitterName(const FString& Role)
 	{
@@ -203,6 +204,46 @@ namespace
 			OutError = FString::Printf(TEXT("SavePackage failed for '%s'."), *Package->GetName());
 			return false;
 		}
+		return true;
+	}
+
+	bool PrepareRuntimeScaffold(
+		UNiagaraSystem* System,
+		FNiagaraExternalEditContext& Context,
+		int32& InOutOps,
+		TArray<FString>& OutChecks,
+		FString& OutError)
+	{
+		// The complete-state generator adds emitter state/spawn modules after cloning the
+		// system template. Force Niagara to compile and execute those scripts instead of
+		// retaining a template-derived constant system-state fast path.
+		// [VERIFIED: NiagaraSystem.cpp:4218-4230]
+		FNiagaraExt_SystemData RuntimeSystemData;
+		RuntimeSystemData.PropertyValues = TEXT("{\"bAllowSystemStateFastPath\":false}");
+		UNiagaraExternalEditUtilities::SetSystemData(System, RuntimeSystemData, Context);
+		++InOutOps;
+		if (Context.HasErrors())
+		{
+			OutError = ContextErrorsToString(Context);
+			return false;
+		}
+		OutChecks.Add(TEXT("niagara.disable_system_state_fast_path"));
+
+		FNiagaraExt_SystemSummary InitialSummary;
+		UNiagaraExternalEditUtilities::GetSystemSummary(System, InitialSummary, Context);
+		++InOutOps;
+		for (const FNiagaraExt_EmitterSummary& InitialEmitter : InitialSummary.Emitters)
+		{
+			const FNiagaraExt_StackItemReference InitialEmitterRef(System, InitialEmitter.EmitterName);
+			UNiagaraExternalEditUtilities::RemoveEmitter(InitialEmitterRef, Context);
+			++InOutOps;
+			if (Context.HasErrors())
+			{
+				OutError = ContextErrorsToString(Context);
+				return false;
+			}
+		}
+		OutChecks.Add(TEXT("niagara.remove_template_emitters"));
 		return true;
 	}
 }
@@ -402,9 +443,19 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.replace_no_existing_asset"));
 	}
 
-	const FString TemplatePath = Spec.TemplateSystemPath.IsEmpty()
-		? FString(GDefaultSystemTemplate)
+	FString TemplatePath = Spec.TemplateSystemPath.IsEmpty()
+		? FString(GLoopingSystemTemplate)
 		: Spec.TemplateSystemPath;
+	if (Spec.EffectType.Equals(TEXT("projectile"), ESearchCase::IgnoreCase)
+		&& TemplatePath.Equals(GMinimalSystemTemplate, ESearchCase::IgnoreCase))
+	{
+		// MinimalLightweight resolves to Once + zero loop duration and completes before
+		// stateful emitter spawn modules execute. FountainLightweight supplies a looping
+		// system lifecycle; its template emitter is removed by PrepareRuntimeScaffold.
+		// [VERIFIED-RUNTIME: UEREMCP.Niagara.Create.PocBParticlesSpawn pre-fix:
+		//  resolved loopBehavior=Once, loopDuration=0, total_spawned_particles=0]
+		TemplatePath = GLoopingSystemTemplate;
+	}
 
 	UNiagaraSystem* TemplateSystem = Cast<UNiagaraSystem>(LoadSoftPath(TemplatePath));
 	if (!TemplateSystem)
@@ -431,6 +482,16 @@ bool FUeremcpNiagaraCreate::Run(
 
 	OutResult.ChecksPerformed.Add(TEXT("niagara.create_system_from_template"));
 	Context = FNiagaraExternalEditContext(System);
+
+	if (!PrepareRuntimeScaffold(
+		System,
+		Context,
+		OutResult.InternalOperations,
+		OutResult.ChecksPerformed,
+		OutResult.Error))
+	{
+		return false;
+	}
 
 	for (const FString& Role : Spec.ComponentRoles)
 	{
