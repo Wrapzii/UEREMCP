@@ -1,0 +1,17 @@
+{
+  "protocol_version": "1.0",
+  "status": "no_change_required",
+  "summary": "Echoed request for action create_niagara_effect.",
+  "metrics": {
+    "mcp_round_trips": 1,
+    "internal_operations": 0
+  },
+  "request_id": "3f1c2e40-8a11-4c2b-9b7e-2e5d1a0c9f31",
+  "understood": {
+    "action": "create_niagara_effect",
+    "resolved_target": "/Game/VFX/Spells/NS_Fireball"
+  },
+  "result": {
+    "primary_asset": "/Game/VFX/Spells/NS_Fireball"
+  }
+}

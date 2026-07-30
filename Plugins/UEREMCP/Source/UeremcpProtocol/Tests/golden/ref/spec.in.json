@@ -1,0 +1,13 @@
+{
+  "name": "Fireball",
+  "core_material": {
+    "$ref": "material.result.primary_asset"
+  },
+  "trail_material": "$material",
+  "effects": [
+    {
+      "$ref": "fx.result.primary_asset"
+    },
+    "literal"
+  ]
+}

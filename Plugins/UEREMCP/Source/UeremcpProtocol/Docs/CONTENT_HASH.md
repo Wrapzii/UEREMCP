@@ -60,8 +60,11 @@ structured JSON representation, not on compiled bytecode.
 
 | Language | Location |
 |---|---|
-| C++ | `FUeremcpContentHash` in this module |
-| Python (outside-editor tests) | `Tests/py/ueremcp_protocol/content_hash.py` |
+| C++ (production) | `FUeremcpContentHash` in this module |
+| Python (regression / golden generator) | `Tests/py/ueremcp_protocol/content_hash.py` |
+| Shared vectors | `Tests/golden/content_hash/` |
 
-The Python module is the executable specification for CI; C++ must match its
-canonical bytes for the same input.
+Cross-language contract is the golden `hash.expected.txt`, asserted by Python
+`test_golden.py` and C++ `UEREMCP.Protocol.Golden.ContentHash`. **Do not claim
+byte-identical C++/Python output until that AutomationTest passes** — see
+`Docs/CPP_PARITY.md` (WS-14 C-2).
