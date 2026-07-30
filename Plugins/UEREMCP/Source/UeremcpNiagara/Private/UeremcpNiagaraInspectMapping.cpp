@@ -162,7 +162,7 @@ TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererExten
 		}
 
 		FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
-		RendererRef.SetRenderer(Renderer.RendererIndex);
+		RendererRef.RendererIndex = Renderer.RendererIndex;
 
 		FNiagaraExt_RendererData RendererData;
 		UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);

@@ -574,7 +574,7 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			}
 
 			FNiagaraExt_StackItemReference RendererRef(System, FName(*EmitterName));
-			RendererRef.SetRenderer(Renderer.RendererIndex);
+			RendererRef.RendererIndex = Renderer.RendererIndex;
 
 			FNiagaraExt_RendererData RendererData;
 			UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
