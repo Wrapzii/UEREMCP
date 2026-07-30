@@ -29,27 +29,53 @@ criteria, risk register, plugin scaffold. Frozen.
 
 ## Phase 1 — Prove the architecture
 
-**Exit condition: R-01, R-03, R-04, R-06 are closed.** Nothing in Phase 2 starts until
-they are, because all four can invalidate Phase 2 work.
+**Status: exited 2026-07-30** (WS-01 decision — mitigated gates; see below).
 
-| Deliverable | WS | Closes |
+**Original exit condition:** R-01, R-03, R-04, R-06 **closed**.
+
+**Actual exit (2026-07-30):** architecture de-risk complete with three gates **mitigated**
+and one **closed**. Wave 2 implementation is authorized; first kick is WS-06 P0
+(`docs/proposals/ws-06-p0-authorized.md`).
+
+| Gate | Phase 1 verdict | Evidence |
 |---|---|---|
-| Compiling plugin, one `AICallable` tool reachable from an MCP client | WS-03 | R-04 |
-| Epic toolset inventory — the "do not rebuild" list | WS-02 | R-06 (**`runtime_partial`** — source audit + 12 priority schemas + 73 `list_toolsets` on RE 2026-07-30; ~61 toolsets / RE describe / payload calibration still open) |
-| `FileSandbox` semantics; `Rollback.MultiAssetDiscard` | WS-11 | R-03 **mitigated** for Content/ full-Discard on shipping plugin; BP/deletes/Config still open |
-| Blueprint graph **read** into `graph.schema.json` | WS-06 | R-01 research done (RB-05); impl = Wave 2 after R-04 |
-| Envelope parse/serialise/validate in C++ | WS-05 | — (landed on `ws-05-protocol`; batch `$ref` grammar final per accepted proposal) |
-| Test harness, one passing integration test | WS-11 | R-14 |
-| Transport capabilities and job model constraints | WS-04 | R-11 (partial — ADR-0009 accepted; modal companion still WS-12) |
+| R-04 | **Closed** | MCP Ping/Echo on RE `[VERIFIED-RUNTIME: 127.0.0.1:8000, 2026-07-30]` |
+| R-03 | **Mitigated** | Shipping Validation Rollback Content/ full-Discard green on RE |
+| R-01 | **Mitigated** | RB-05: public-API reconstruction tractable (Epic DSL + primitives); scratch round-trip identical; bridge plan accepted. Residual: `graph.schema.json` envelope bridge = POC A (Wave 2) |
+| R-06 | **Mitigated** | Source audit complete; 73 `list_toolsets` + 12 priority `describe_toolset` dumps on RE; disposition matrix schema-complete for cited toolsets. Residual: ~61 non-priority dumps, REAgentTools 15 runtime schemas, payload calibration |
+
+**Why mitigated suffices for R-01:** Phase 1 was to answer whether the central thesis
+can hold — not to ship POC A. RB-05 answers the thesis risk ("cannot reconstruct via
+public API") **no**: Epic `BlueprintTools` + `write_graph_dsl` reconstruct a large,
+well-defined subset today. The UEREMCP gap is envelope + stable IDs/hashes/verification
+over that substrate, which is exactly POC A scope.
+
+**Why mitigated suffices for R-06:** Rule 2 ("audit before you build") is operational:
+`docs/audit/epic-toolsets.md` dispositions every priority domain toolset with source +
+runtime schema evidence for the 12 toolsets the matrix cites. Dumping all 73
+`describe_toolset` payloads is enrichment for payload calibration, not a duplicate-check
+gate.
+
+| Deliverable | WS | Status |
+|---|---|---|
+| Compiling plugin, one `AICallable` tool reachable from an MCP client | WS-03 | **Done** — R-04 closed |
+| Epic toolset inventory — the "do not rebuild" list | WS-02 | **Done (mitigated)** — R-06 mitigated; enrichment tracked in `docs/audit/epic-toolsets.md` |
+| `FileSandbox` semantics; `Rollback.MultiAssetDiscard` | WS-11 | **Done (mitigated)** — R-03 mitigated |
+| Blueprint graph **read** into `graph.schema.json` | WS-06 | **Research done** — RB-05; impl deferred to POC A (Wave 2) |
+| Envelope parse/serialise/validate in C++ | WS-05 | **Done** — `ws-05-protocol` |
+| Test harness, one passing integration test | WS-11 | Landed; R-14 still open |
+| Transport capabilities and job model constraints | WS-04 | Partial — ADR-0009 accepted |
 
 This phase is deliberately all *executable* deliverables. Phase 1 producing only
 documents is R-15 materialising.
 
 ## Phase 2 — The core thesis
 
+**Authorized 2026-07-30.** Start with WS-06 P0 (`docs/proposals/ws-06-p0-authorized.md`).
+
 | Deliverable | WS | Notes |
 |---|---|---|
-| **POC A** — Blueprint round trip | WS-06 | The make-or-break deliverable |
+| **POC A** — Blueprint round trip | WS-06 | The make-or-break deliverable; P0 scaffolding first |
 | Blueprint semantic analysis and `repair_blueprint` | WS-06 | Master prompt §7.2 |
 | Batch executor: dependency graph, `$ref`, atomic, rollback | WS-05 | Audit `execute_editor_batch` first (RB-15 q6) |
 | Validation framework: check registry, re-read-after-write | WS-11 | The engine of rule 6 |

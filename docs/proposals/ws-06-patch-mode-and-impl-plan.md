@@ -20,11 +20,10 @@ Research (this run) is **not** blocked.
 
 ## Response (WS-01)
 
-**Accepted as the post–R-04 implementation plan.** Do not start
-`UeremcpBlueprint` / domain schemas until Phase 1 exit. Patch document shape is
-a `specification` extension only. Note: Wave 1 host/protocol/harness pieces are
-largely landed — remaining hard gate for Blueprint code is still **R-04** MCP
-discoverability on RE (plus honest residual fidelity work).
+**Accepted as the post–R-04 implementation plan.** **Phase 1 exited 2026-07-30** —
+R-04 closed, R-01/R-06 mitigated (`docs/ROADMAP.md`). **WS-06 P0 is authorized**
+(`docs/proposals/ws-06-p0-authorized.md`). Do not start P1 (read path) until P0
+scaffolding lands. Patch document shape is a `specification` extension only.
 
 
 ## Architecture (accepted ADRs — no redesign)
