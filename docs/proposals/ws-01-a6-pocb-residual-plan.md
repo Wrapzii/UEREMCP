@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `72241c2` (WS-07 direct sprite/ribbon B4 binding fix)
+- **Orch tip at writing:** `279f09a` (B4 direct-binding residual note; tip lineage `d1eb1ea`→`279f09a`)
 - **Date:** 2026-07-30
-- **Status:** `PocA6Reread` **PASS** on `c87b1db`, proving the A6 runtime criterion; overall POC A remains open until A1–A11 are evidenced. WS-07 direct sprite/ribbon bind + UObject re-read fix is now on orch as `72241c2` (`4e82c68`), ready for fireball re-run. **B4 / POC-B remain unproven**; template `MaterialUserParamBinding` may still block roles.
+- **Status:** POC A slice on tip lineage `d1eb1ea`→`279f09a`: A3/A4/A6/A7/A8/A11 **PASS**; A1/A2/A5/A9/A10 **SKIP**. Aggregate filter `UEREMCP.Blueprint.POCA.CompleteRoundTrip` has no matching marker. **Overall POC A unclaimed.** B4 fix `72241c2` awaits fireball re-run; B4 / POC-B unproven.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -42,18 +42,38 @@ Recorded proof: `UeremcpBlueprint.Toolset` **PASS 4/4** on tip `35b4cab` (`docs/
 
 Those Wave 2 tests alone do not prove A6. The later dedicated `PocA6Reread` PASS on `c87b1db` does; it still does not prove overall POC A.
 
+### POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
+
+| Criterion | Result | Note |
+|---|---|---|
+| A1 | **SKIP** | One MCP call not proven |
+| A2 | **SKIP** | Complete payload fields not all asserted |
+| A3 | **PASS** | |
+| A4 | **PASS** | |
+| A5 | **SKIP** | One MCP call not proven |
+| A6 | **PASS** | Also dedicated `PocA6Reread` PASS on `c87b1db` |
+| A7 | **PASS** | |
+| A8 | **PASS** | |
+| A9 | **SKIP** | No MCP round-trip metrics |
+| A10 | **SKIP** | `lossy_areas` not asserted |
+| A11 | **PASS** | |
+
+Aggregate filter missing: no matching `editor_UEREMCP_Blueprint_POCA_CompleteRoundTrip_...` marker. **Overall POC A unclaimed.**
+
 ### Missing A6 / POC A evidence (owners)
 
 | Gap | Owner | Evidence needed |
 |---|---|---|
-| **A6 code on orch** | WS-06 | Landed `13bf529` (`2a0b2cd`): programmatic reread-after-write validation + harness handoff `docs/proposals/ws-06-a6-ws11-harness.md`. **Not an A6 claim.** |
-| **A6 selector/no-op fix** | WS-06 | Landed `7b2ed34` (`90b8a6d`): multi-event endpoint IDs + hash-based no-op. **Ready for re-run; not an A6 claim.** |
+| **A6 code on orch** | WS-06 | Landed `13bf529` (`2a0b2cd`): programmatic reread-after-write validation + harness handoff `docs/proposals/ws-06-a6-ws11-harness.md`. |
+| **A6 selector/no-op fix** | WS-06 | Landed `7b2ed34` (`90b8a6d`): multi-event endpoint IDs + hash-based no-op. |
 | Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **PASS on `c87b1db`** — `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_052810.log`; test Success, exit 0 |
-| End-to-end POC A (A1–A11) or A8 patch escape + A10 | WS-06 + WS-11 | Full scenario metrics under `/Game/__UeremcpPoc/` |
-| A7 / A8 / A11 fields on success path | WS-06 | A6 filter is green; full A1–A11 scenario evidence remains open |
+| A1 / A2 / A5 MCP one-call / complete payload | WS-06 + WS-11 | Slice SKIP — need live MCP call evidence |
+| A9 MCP round-trip metrics | WS-11 | Slice SKIP |
+| A10 `fidelity.lossy_areas` | WS-06 + WS-11 | Slice SKIP — not asserted |
+| Aggregate `POCA.CompleteRoundTrip` marker | WS-11 | No matching editor log marker |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** retain the A6 runtime proof and complete the remaining A1–A11 evidence before any overall POC-A claim.
+**WS-01 next step:** keep overall POC A unclaimed until A1/A2/A5/A9/A10 and an aggregate CompleteRoundTrip marker exist.
 
 ---
 
@@ -112,8 +132,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | POC A scenario including explicit A6 programmatic re-read | WS-06 | Track; do not claim until WS-11 editor/MCP evidence lands |
-| P0 | Complete remaining POC A A1–A11 evidence | WS-06 + WS-11 | A6 runtime criterion PASS; no overall POC-A claim |
+| P0 | Close POC A SKIPs (A1/A2/A5 MCP, A9 metrics, A10 lossy_areas) + aggregate CompleteRoundTrip marker | WS-06 + WS-11 | Slice partial; refuse overall POC-A |
 | P0 | Re-run fireball after direct binding fix `72241c2`; diagnose any remaining template user-param binding blockers | WS-07 + WS-11 | B2 path/manifest progress green; B4 unclaimed |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
