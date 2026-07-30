@@ -17,11 +17,13 @@ public:
 	virtual FString GetToolsetVersion() const override { return TEXT("0.1.0-preflight"); }
 
 	/**
-	 * Preflight an RE-native create_spell request.
+	 * Goal-level RE-native create_spell request.
 	 *
-	 * Returns the normalized FREAbilityDef row plan and static Pattern B checks in
-	 * one response. Until the ADR-0010 mutator queue is implemented, this tool
-	 * reports partially_completed and performs no asset mutation.
+	 * Dry-run returns a normalized FREAbilityDef plan and Pattern B checks with
+	 * status partially_completed and no mutation. Non-dry requests admit through
+	 * FUeremcpMutatingDispatch, upsert one row under /Game/__UeremcpTests/, save,
+	 * re-read, and report honest *_validated / rolled_back / failed_validation
+	 * statuses. Also registered with FUeremcpPlanExecutor for execute_plan.
 	 *
 	 * @param RequestJson Request envelope with action=create_spell.
 	 */

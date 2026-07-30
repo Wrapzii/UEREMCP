@@ -3,6 +3,7 @@
 #include "Misc/CoreDelegates.h"
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpGameplayPlanHandlers.h"
 #include "UeremcpGameplayToolset.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcpGameplay, Log, All);
@@ -28,6 +29,7 @@ public:
 		}
 		if (UObjectInitialized())
 		{
+			FUeremcpGameplayPlanHandlers::Unregister();
 			UToolsetRegistry::UnregisterToolsetClass(UUeremcpGameplayToolset::StaticClass());
 		}
 	}
@@ -39,7 +41,24 @@ private:
 		UE_LOG(
 			LogUeremcpGameplay,
 			Log,
-			TEXT("UEREMCP Gameplay create_spell preflight toolset registered."));
+			TEXT("UEREMCP Gameplay create_spell toolset registered."));
+
+		FString PlanHandlerError;
+		if (FUeremcpGameplayPlanHandlers::Register(PlanHandlerError))
+		{
+			UE_LOG(
+				LogUeremcpGameplay,
+				Log,
+				TEXT("Gameplay execute_plan handler registered (create_spell)."));
+		}
+		else
+		{
+			UE_LOG(
+				LogUeremcpGameplay,
+				Warning,
+				TEXT("Gameplay execute_plan handler registration failed: %s"),
+				*PlanHandlerError);
+		}
 	}
 
 	FDelegateHandle OnPostEngineInitHandle;
