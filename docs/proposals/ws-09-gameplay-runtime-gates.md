@@ -18,6 +18,8 @@ WS-09 now owns an independently testable `create_spell` executor:
   acquire→sandbox→upsert→save→re-read→persist/discard steps);
 - sandboxed DataTable create/upsert, package save, normalized row re-read, content
   revision comparison, and persist-or-discard rollback;
+- presentation dependency loading with resolved/unresolved asset evidence; unresolved
+  dependencies block non-dry mutation before the DataTable executor;
 - one envelope-shaped `AICallable` entry point;
 - schema, local-header drift, and C++ automation tests;
 - no Epic GAS/DataTable/Niagara/material primitives re-exposed.
@@ -78,6 +80,12 @@ On failure before persist, it restores the previous in-memory row and discards t
 sandbox. It rejects a foreign active sandbox, mismatched row struct, create-mode row
 collision, unsafe option combinations, and unapproved revision conflict before
 claiming mutation.
+
+Every planned presentation soft path is loaded before mutation. Resolved assets
+return their runtime class; unresolved paths are returned under
+`result.unresolved_dependencies`, set `validation.dependencies_resolved: false`, and
+prevent a non-dry DataTable write
+`[VERIFIED: UObjectGlobals.h:595-600]`.
 
 The prepared plan captures `request_id` for queue ownership, mode, `dry_run`,
 atomicity, save, validation, rollback, queue timeout, revision-conflict policy,

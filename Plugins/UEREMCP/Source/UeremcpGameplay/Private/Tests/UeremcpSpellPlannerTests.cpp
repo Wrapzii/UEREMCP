@@ -35,6 +35,27 @@ const TCHAR* ValidSpecificationJson = TEXT(R"({
 	},
 	"networking":{"pattern":"B","authority":"server","cast_path":"AuthorityCastAbility"}
 })");
+
+const TCHAR* MutationSpecificationJson = TEXT(R"({
+	"name":"Fireball UEREMCP",
+	"row_name":"Fireball_Ueremcp",
+	"element":"Fire",
+	"element_color":[1.0,0.12,0.01,1.0],
+	"delivery":{"type":"projectile","speed":2400,"range":3200},
+	"impact":{"damage":45,"aoe_radius":175,"status":"Burn","status_duration":3},
+	"networking":{"pattern":"B","authority":"server","cast_path":"AuthorityCastAbility"}
+})");
+
+const TCHAR* MissingDependencySpecificationJson = TEXT(R"({
+	"name":"Fireball UEREMCP",
+	"row_name":"Fireball_Ueremcp",
+	"element":"Fire",
+	"element_color":[1.0,0.12,0.01,1.0],
+	"delivery":{"type":"projectile","speed":2400,"range":3200},
+	"impact":{"damage":45,"aoe_radius":175,"status":"Burn","status_duration":3},
+	"presentation":{"projectile_effect":"/Game/__UeremcpTests/Missing/NS_DoesNotExist_ws09"},
+	"networking":{"pattern":"B","authority":"server","cast_path":"AuthorityCastAbility"}
+})");
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -434,7 +455,7 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 			"specification":%s
 		})"),
 		*ProjectPath,
-		ValidSpecificationJson);
+		MutationSpecificationJson);
 
 	const TSharedPtr<FJsonObject> Response =
 		ParseObject(UUeremcpGameplayToolset::CreateSpell(Request));
@@ -484,6 +505,29 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 			RepeatResponse->GetStringField(TEXT("status")),
 			FString(TEXT("no_change_required")));
 	}
+
+	const FString MissingDependencyRequest = Request
+		.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-missing-dependency"))
+		.Replace(MutationSpecificationJson, MissingDependencySpecificationJson);
+	const TSharedPtr<FJsonObject> MissingDependencyResponse =
+		ParseObject(UUeremcpGameplayToolset::CreateSpell(MissingDependencyRequest));
+	TestTrue(TEXT("missing-dependency response parses"), MissingDependencyResponse.IsValid());
+	if (MissingDependencyResponse.IsValid())
+	{
+		TestEqual(
+			TEXT("missing dependency blocks mutation validation"),
+			MissingDependencyResponse->GetStringField(TEXT("status")),
+			FString(TEXT("failed_validation")));
+		const TSharedPtr<FJsonObject>* Result = nullptr;
+		TestTrue(
+			TEXT("missing dependency is returned"),
+			MissingDependencyResponse->TryGetObjectField(TEXT("result"), Result)
+				&& Result && Result->IsValid()
+				&& (*Result)->HasTypedField<EJson::Array>(TEXT("unresolved_dependencies")));
+	}
+	TestFalse(
+		TEXT("missing dependency releases queue"),
+		FUeremcpMutatorQueue::IsActive(FPaths::GetProjectFilePath()));
 
 	const FString ConflictRequest = RepeatRequest
 		.Replace(TEXT("ws09-repeat-no-change"), TEXT("ws09-revision-conflict"))

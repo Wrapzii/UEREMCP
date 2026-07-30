@@ -6,6 +6,7 @@
 #include "UeremcpMutatingDispatch.h"
 #include "UeremcpPathPolicy.h"
 #include "UeremcpSpellPlanner.h"
+#include "UObject/UObjectGlobals.h"
 
 namespace
 {
@@ -101,6 +102,30 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 					*DependencyPathResult.Reason));
 		}
 	}
+	TArray<FUeremcpAssetRef> ResolvedDependencies;
+	TArray<FUeremcpAssetRef> UnresolvedDependencies;
+	for (const FString& DependencyPath : Plan.DependencyAssetPaths)
+	{
+		FUeremcpAssetRef Dependency;
+		Dependency.AssetPath = DependencyPath;
+		Dependency.Role = TEXT("spell_presentation");
+		UObject* DependencyObject = StaticLoadObject(
+			UObject::StaticClass(),
+			nullptr,
+			*DependencyPath,
+			nullptr,
+			LOAD_NoWarn);
+		if (DependencyObject)
+		{
+			Dependency.AssetClass = DependencyObject->GetClass()->GetPathName();
+			ResolvedDependencies.Add(MoveTemp(Dependency));
+		}
+		else
+		{
+			UnresolvedDependencies.Add(MoveTemp(Dependency));
+		}
+	}
+	const bool bDependenciesResolved = UnresolvedDependencies.IsEmpty();
 
 	FUeremcpAbilityTableWriteOptions WriteOptions;
 	WriteOptions.RequestId = Request.RequestId;
@@ -148,11 +173,18 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	FString MutationError;
 	const bool bMutationSucceeded =
 		Request.bDryRun
-			|| FUeremcpAbilityTableMutator::Execute(
+			|| (bDependenciesResolved
+				&& FUeremcpAbilityTableMutator::Execute(
 				WritePlan,
 				Plan,
 				MutationResult,
-				MutationError);
+				MutationError));
+	if (!Request.bDryRun && !bDependenciesResolved)
+	{
+		MutationError = FString::Printf(
+			TEXT("%d presentation dependency asset(s) could not be loaded"),
+			UnresolvedDependencies.Num());
+	}
 
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
@@ -227,13 +259,8 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		WritePlan.bHasExpectedRevision ? *WritePlan.ExpectedRevision : TEXT("<absent>"),
 		WritePlan.IdempotencyKey.IsEmpty() ? TEXT("<absent>") : *WritePlan.IdempotencyKey));
 	Response.PrimaryAsset = Request.TargetAssetPath;
-	for (const FString& DependencyPath : Plan.DependencyAssetPaths)
-	{
-		FUeremcpAssetRef Dependency;
-		Dependency.AssetPath = DependencyPath;
-		Dependency.Role = TEXT("spell_presentation");
-		Response.Dependencies.Add(MoveTemp(Dependency));
-	}
+	Response.Dependencies = ResolvedDependencies;
+	Response.UnresolvedDependencies = UnresolvedDependencies;
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = Request.bDryRun ? 2 : 8;
 	Response.Metrics.AssetsAffected = MutationResult.bPersisted ? 1 : 0;
@@ -246,6 +273,12 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		Request.bDryRun
 			? TEXT("dry_run intentionally did not acquire the mutator queue or write assets.")
 			: TEXT("FUeremcpMutatingDispatch held permission, path, queue, audit, and release around the complete DataTable executor."));
+	if (!bDependenciesResolved)
+	{
+		Response.CapabilityNotes.Add(FString::Printf(
+			TEXT("%d presentation dependency asset(s) were unresolved."),
+			UnresolvedDependencies.Num()));
+	}
 
 	if (!Request.bDryRun)
 	{
@@ -280,7 +313,9 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		Validation->SetBoolField(TEXT("saved"), MutationResult.bSaved);
 	}
 	Validation->SetBoolField(TEXT("structurally_valid"), true);
-	Validation->SetNullField(TEXT("dependencies_resolved"));
+	Validation->SetBoolField(
+		TEXT("dependencies_resolved"),
+		bDependenciesResolved);
 	if (Request.bDryRun)
 	{
 		Validation->SetNullField(TEXT("reread_after_write"));
@@ -295,6 +330,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	Validation->SetNullField(TEXT("editor_validation_run"));
 	TArray<FString> ChecksPerformed = Plan.StaticChecks;
 	ChecksPerformed.Add(TEXT("deterministic_datatable_write_plan_prepared"));
+	ChecksPerformed.Add(TEXT("presentation_dependency_resolution_completed"));
 	if (!Request.bDryRun)
 	{
 		ChecksPerformed.Add(TEXT("core_mutating_dispatch_admitted"));
@@ -317,7 +353,6 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	}
 	Validation->SetArrayField(TEXT("checks_performed"), StringValues(ChecksPerformed));
 	TArray<FString> ChecksSkipped = {
-		TEXT("dependency_resolution: requires editor asset load"),
 		TEXT("runtime_smoke_test: WS-11/RB-14"),
 	};
 	if (Request.bDryRun)

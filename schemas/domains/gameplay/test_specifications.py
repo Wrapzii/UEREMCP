@@ -296,6 +296,22 @@ class GameplaySpecificationTests(unittest.TestCase):
         ):
             self.assertIn(safety, mutator)
 
+    def test_dependency_resolution_blocks_non_dry_mutation(self) -> None:
+        toolset = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpGameplayToolset.cpp"
+        ).read_text(encoding="utf-8")
+        resolve = toolset.index("StaticLoadObject(")
+        resolved_guard = toolset.index("bDependenciesResolved", resolve)
+        execute = toolset.index("FUeremcpAbilityTableMutator::Execute(", resolved_guard)
+        self.assertLess(resolve, resolved_guard)
+        self.assertLess(resolved_guard, execute)
+        for evidence in (
+            "Response.UnresolvedDependencies = UnresolvedDependencies",
+            'SetBoolField(\n\t\tTEXT("dependencies_resolved")',
+            "presentation dependency asset(s) could not be loaded",
+        ):
+            self.assertIn(evidence, toolset)
+
     def test_dry_run_response_golden_is_complete_and_schema_valid(self) -> None:
         response_schema = json.loads(
             (SCHEMAS_DIR / "envelope" / "response.schema.json").read_text(
