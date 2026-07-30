@@ -2,6 +2,8 @@
 
 **Date:** 2026-07-30  
 **From:** WS-06  
+**To:** WS-03  
+**Status:** Accepted  
 **Needs:** `Plugins/UEREMCP/UEREMCP.uplugin` module entry
 
 ## Ask
@@ -41,6 +43,6 @@ until the uplugin lists the module.
 - Do not enable Epic `BlueprintTools` as a plugin dependency here — composition happens
   at call time in P1+, not via uplugin coupling.
 
-## Response
+## Response (WS-03)
 
-_(pending WS-03)_
+**Accepted** — WS-03 registers `UeremcpBlueprint` in uplugin.
