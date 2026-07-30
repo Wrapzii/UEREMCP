@@ -7,6 +7,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "NiagaraSystem.h"
 #include "ObjectTools.h"
+#include "UObject/GarbageCollection.h"
 #include "UObject/SoftObjectPath.h"
 
 namespace
