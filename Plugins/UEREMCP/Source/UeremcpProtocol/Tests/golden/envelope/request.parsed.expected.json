@@ -1,0 +1,15 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "3f1c2e40-8a11-4c2b-9b7e-2e5d1a0c9f31",
+  "action": "create_niagara_effect",
+  "mode": "create_or_update",
+  "target_asset_path": "/Game/VFX/Spells/NS_Fireball",
+  "engine_version": "5.8",
+  "dry_run": false,
+  "atomic": true,
+  "response_detail": "summary",
+  "timeout_ms": 120000,
+  "has_expected_revision": false,
+  "idempotency_key": "poc-b-fireball-001",
+  "specification_name": "Fireball"
+}

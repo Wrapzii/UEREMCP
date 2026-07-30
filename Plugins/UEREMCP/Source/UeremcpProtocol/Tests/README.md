@@ -2,27 +2,43 @@
 
 **Owner:** WS-05.
 
-## Outside-editor (required for Wave 1)
-
-Pure Python mirrors of the C++ protocol algorithms. No Unreal editor required.
+## Outside-editor Python (regression / golden generator)
 
 ```bash
 python Plugins/UEREMCP/Source/UeremcpProtocol/Tests/py/run_tests.py
 ```
 
-Covers:
+Covers unit tests plus `test_golden.py`, which asserts against `Tests/golden/`.
 
-- envelope parse / serialise / validate (`test_envelope.py`)
-- content hashing (`test_content_hash.py`) — see `../Docs/CONTENT_HASH.md`
-- dependency topological sort (`test_dependency_order.py`)
-- `$ref` resolution — object + dollar-string (`test_ref_resolve.py`); see `../Docs/BATCH_REF.md`
-- ADR-0009 job helpers (`test_job.py`) — see `../Docs/JOB_MODEL.md`
+**Python green is not C++ parity** (WS-14 C-2). See `../Docs/CPP_PARITY.md`.
 
-The Python package `ueremcp_protocol/` is the executable specification; C++ in
-`Public/` / `Private/` must match.
+## Golden vectors (`Tests/golden/`)
 
-## In-editor
+Fixed JSON inputs + expected outputs shared by Python and C++:
 
-Automation tests that need `Json`/`Core` module linkage against a built editor
-are WS-11's harness concern. This module stays free of ToolsetRegistry /
-ModelContextProtocol so those tests remain possible without MCP.
+| Suite | Files |
+|---|---|
+| envelope | `request.in.json`, `request.parsed.expected.json`, `response_fields.in.json`, `response.out.expected.json` |
+| content_hash | `graph.in.json`, `graph_cosmetic.in.json`, `hash.expected.txt`, `canonical.expected.json` |
+| ref | `spec.in.json`, `completed.in.json`, `resolved.expected.json` |
+| topo | `nodes.in.json`, `order.expected.json` |
+
+Regenerate expected outputs (then re-run both sides):
+
+```bash
+python Plugins/UEREMCP/Source/UeremcpProtocol/Tests/golden/generate_goldens.py
+```
+
+## C++ AutomationTests (production `FUeremcp*`)
+
+Source: `Private/Tests/UeremcpProtocolGoldenTests.cpp`  
+Filter prefix: `UEREMCP.Protocol.Golden`
+
+```bat
+UnrealEditor-Cmd.exe "<Project>.uproject" -unattended -NullRHI -nop4 ^
+  -ExecCmds="Automation RunTests UEREMCP.Protocol.Golden;Quit"
+```
+
+Optional: `set UEREMCP_PROTOCOL_GOLDEN_ROOT=<abs path to Tests/golden>`
+
+Do **not** claim C++/Python parity until these AutomationTests pass.

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "material",
+    "depends_on": []
+  },
+  {
+    "id": "trail",
+    "depends_on": []
+  },
+  {
+    "id": "fx",
+    "depends_on": [
+      "material",
+      "trail"
+    ]
+  },
+  {
+    "id": "ability",
+    "depends_on": [
+      "fx"
+    ]
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "name": "Fireball",
+  "core_material": "/Game/VFX/Materials/MI_Core",
+  "trail_material": "/Game/VFX/Materials/MI_Core",
+  "effects": [
+    "/Game/VFX/Spells/NS_Fireball",
+    "literal"
+  ]
+}
