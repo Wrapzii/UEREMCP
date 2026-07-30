@@ -26,11 +26,20 @@ in UEREMCP-ws01 at e9bc110]`
 ## Compile attempt
 
 With the editor and Live Coding closed, an REEditor Development build was queued
-with `-NoHotReloadFromIDE -WaitMutex`. `Build.bat` remained blocked by an existing
-build script for more than 30 seconds, so this queued attempt was stopped to avoid
-interfering with the active rebuild lane. No compile result was obtained.
-`[VERIFIED-RUNTIME: Build.bat emitted "already running, waiting for existing script"
-and remained queued through two timed checks]`
+with `-NoHotReloadFromIDE -WaitMutex`. After waiting on an existing `Build.bat`,
+UBT started and failed quickly (exit 8 / RulesError):
+
+```text
+Invalidating makefile for REEditor (UeremcpNiagara.Build.cs modified)
+Could not find definition for module 'Editor',
+  (referenced via REEditor -> UeremcpMaterial.Build.cs)
+Result: Failed (RulesError)
+```
+
+Junction remained on orch after the failure. This is a Material module rules issue
+for the WS-08 lane / follow-up smoke, not a reason to leave the RE junction on a
+workstream checkout.
+`[VERIFIED-RUNTIME: Build.bat/UBT log, exit_code=8]`
 
 ## Process defect
 
