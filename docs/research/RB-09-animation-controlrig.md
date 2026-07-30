@@ -407,11 +407,15 @@ validation evidence, and never saves the fixture
 `[VERIFIED: UeremcpAnimationTests.cpp]`. This test is **authored, not runtime-passed**;
 the separate editor lane must execute it before any runtime claim.
 
-WS-01 selected a future typed `result.asset_state` amendment but left the frozen
-envelope unchanged `[VERIFIED: docs/proposals/ws-01-non-graph-asset-state.md:9-67]`.
+WS-01 drafted the future typed `result.asset_state` amendment as **Proposed
+ADR-0011**, not Accepted, and left the frozen envelope unchanged
+`[VERIFIED: ws-01-orch/docs/adr/ADR-0011-non-graph-asset-state.md:1-32]`.
 The action-owned emitted-state contract now exists at
 `schemas/domains/animation/inspect_montage.asset-state.schema.json`; the tool remains
 `partially_completed` until the protocol amendment and two-pass validator land.
+The editor fixture submits both package and full object paths and requires one
+canonical package identity and revision
+`[VERIFIED: UeremcpAnimationTests.cpp; PackageName.h:882-888]`.
 
 Mutation (`ensure_montage`) remains blocked behind shared mutator-queue / sandbox
 orchestration: `FUeremcpMutatorQueue::IsImplemented()` returns false

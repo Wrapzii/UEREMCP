@@ -166,6 +166,95 @@ class AnimationContractTests(unittest.TestCase):
         errors = list(validator.iter_errors(malformed))
         self.assertGreaterEqual(len(errors), 3)
 
+    def test_asset_state_schema_matches_service_emission_contract(self) -> None:
+        _, schema = asset_state_validator()
+        expected_top_level = {
+            "asset_path",
+            "asset_class",
+            "length_seconds",
+            "auto_blend_out",
+            "sync_group",
+            "skeleton",
+            "slots",
+            "sections",
+            "notifies",
+            "content_hash",
+            "revision",
+        }
+        self.assertEqual(set(schema["required"]), expected_top_level)
+        self.assertEqual(set(schema["properties"]), expected_top_level)
+        self.assertEqual(
+            schema["properties"]["revision"]["$ref"],
+            "../../common/defs.schema.json#/$defs/contentHash",
+        )
+
+        expected_nested_fields = {
+            "slot": {"name", "segments"},
+            "segment": {
+                "animation",
+                "start_time",
+                "animation_start_time",
+                "animation_end_time",
+                "play_rate",
+                "loop_count",
+            },
+            "section": {"name", "start_time", "next_section"},
+            "notify": {
+                "name",
+                "time",
+                "duration",
+                "track",
+                "trigger_chance",
+                "trigger_on_dedicated_server",
+                "is_state",
+                "class",
+            },
+        }
+        expected_nested_required = copy.deepcopy(expected_nested_fields)
+        expected_nested_required["section"].remove("next_section")
+        for definition, fields in expected_nested_fields.items():
+            with self.subTest(definition=definition):
+                self.assertEqual(
+                    set(schema["$defs"][definition]["properties"]),
+                    fields,
+                )
+                self.assertEqual(
+                    set(schema["$defs"][definition]["required"]),
+                    expected_nested_required[definition],
+                )
+
+        source = (
+            MODULE / "Private/UeremcpAnimationService.cpp"
+        ).read_text(encoding="utf-8")
+        for field in expected_top_level | set().union(*expected_nested_fields.values()):
+            with self.subTest(emitted_field=field):
+                self.assertIn(f'TEXT("{field}")', source)
+
+    def test_asset_state_schema_closes_every_object_shape(self) -> None:
+        _, schema = asset_state_validator()
+
+        def assert_closed(value: object, path: str) -> None:
+            if isinstance(value, dict):
+                if value.get("type") == "object":
+                    self.assertIs(
+                        value.get("additionalProperties"),
+                        False,
+                        f"open object schema at {path}",
+                    )
+                for key, child in value.items():
+                    assert_closed(child, f"{path}.{key}")
+            elif isinstance(value, list):
+                for index, child in enumerate(value):
+                    assert_closed(child, f"{path}[{index}]")
+
+        assert_closed(schema, "$")
+
+    def test_schema_identifies_adr_0011_as_proposed(self) -> None:
+        _, schema = asset_state_validator()
+        self.assertIn("Proposed ADR-0011", schema["description"])
+        self.assertIn("Proposed ADR-0011 only", schema["$comment"])
+        self.assertIn("Do not emit", schema["$comment"])
+
     def test_editor_fixture_is_scratch_only_and_unsaved(self) -> None:
         source = (
             MODULE / "Private/Tests/UeremcpAnimationTests.cpp"
@@ -173,6 +262,12 @@ class AnimationContractTests(unittest.TestCase):
         self.assertIn("/Game/__UeremcpTests/Animation/", source)
         self.assertIn("EditorScratchAsset", source)
         self.assertIn("response remains honest before asset_state amendment", source)
+        self.assertIn("package and object paths produce one canonical revision", source)
+        tool_source = (
+            MODULE / "Private/UeremcpAnimationToolset.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("FPackageName::GetLongPackageAssetName", tool_source)
+        self.assertIn("FPackageName::ObjectPathToPackageName", tool_source)
         self.assertNotIn("SavePackage(", source)
         self.assertNotIn("SaveAsset(", source)
 

@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/animation/inspect_montage.asset-state.schema.json",
   "title": "inspect_montage asset state",
-  "description": "Complete non-graph state emitted by the WS-10 montage inspector. Ready for the proposed result.asset_state two-pass validator; does not amend the frozen response envelope.",
-  "$comment": "Draft only: do not emit this object in result.asset_state until the ADR-0003 amendment and action-selected response validation are accepted.",
+  "description": "Complete non-graph state emitted by the WS-10 montage inspector. Draft contract for Proposed ADR-0011; it does not amend the frozen response envelope.",
+  "$comment": "Proposed ADR-0011 only. Do not emit this object in result.asset_state until ADR-0011 is Accepted together with protocol 1.1 negotiation, serializer support, and action-selected response validation.",
   "type": "object",
   "required": [
     "asset_path",

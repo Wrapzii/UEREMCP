@@ -71,8 +71,9 @@ FString UUeremcpAnimationToolset::InspectMontage(const FString& RequestJson)
 
 	// Public UObject load path used only for the explicitly supplied target.
 	// Package-name normalization uses public FPackageName helpers.
-	// [VERIFIED: Runtime/CoreUObject/Public/Misc/PackageName.h:184,224-254]
+	// [VERIFIED: Runtime/CoreUObject/Public/Misc/PackageName.h:184,224-254,882-888]
 	const FString ObjectPath = ResolveObjectPath(Request.TargetAssetPath);
+	const FString AssetPath = FPackageName::ObjectPathToPackageName(ObjectPath);
 	const UAnimMontage* Montage = LoadObject<UAnimMontage>(nullptr, *ObjectPath);
 	if (!Montage)
 	{
@@ -86,7 +87,7 @@ FString UUeremcpAnimationToolset::InspectMontage(const FString& RequestJson)
 	FUeremcpMontageInspection Inspection;
 	FString InspectError;
 	if (!FUeremcpAnimationService::InspectMontage(
-		Montage, Request.TargetAssetPath, Inspection, InspectError))
+		Montage, AssetPath, Inspection, InspectError))
 	{
 		return FUeremcpEnvelope::MakeUnverified(
 			Request.RequestId,
@@ -109,8 +110,8 @@ FString UUeremcpAnimationToolset::InspectMontage(const FString& RequestJson)
 		Inspection.SectionCount,
 		Inspection.NotifyCount);
 	Response.UnderstoodAction = Request.Action;
-	Response.UnderstoodTarget = Request.TargetAssetPath;
-	Response.PrimaryAsset = Request.TargetAssetPath;
+	Response.UnderstoodTarget = AssetPath;
+	Response.PrimaryAsset = AssetPath;
 	Response.Revision = Inspection.ContentHash;
 	Response.CapabilityNotes = AnimationCapabilityNotes();
 	Response.Metrics.McpRoundTrips = 1;

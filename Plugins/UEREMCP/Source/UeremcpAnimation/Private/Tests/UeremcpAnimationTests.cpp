@@ -254,6 +254,7 @@ bool FUeremcpAnimationInspectMontageEditorScratchTest::RunTest(const FString& Pa
 	TestTrue(
 		TEXT("tool response is parseable JSON"),
 		FJsonSerializer::Deserialize(Reader, Response) && Response.IsValid());
+	FString PackagePathRevision;
 	if (Response.IsValid())
 	{
 		TestEqual(
@@ -266,6 +267,7 @@ bool FUeremcpAnimationInspectMontageEditorScratchTest::RunTest(const FString& Pa
 		TestTrue(
 			TEXT("revision returned"),
 			Response->GetStringField(TEXT("revision")).StartsWith(TEXT("sha256:")));
+		PackagePathRevision = Response->GetStringField(TEXT("revision"));
 
 		const TSharedPtr<FJsonObject>* Result = nullptr;
 		TestTrue(
@@ -290,6 +292,48 @@ bool FUeremcpAnimationInspectMontageEditorScratchTest::RunTest(const FString& Pa
 			TestTrue(
 				TEXT("scratch montage structurally inspected"),
 				(*Validation)->GetBoolField(TEXT("structurally_valid")));
+		}
+	}
+
+	const FString ObjectPath = FString::Printf(
+		TEXT("%s.%s"),
+		*PackagePath,
+		*AssetName);
+	const FString ObjectPathRequest = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-editor-object-path","action":"inspect_montage","target":{"asset_path":"%s"},"options":{"response_detail":"complete"}})"),
+		*ObjectPath);
+	const FString ObjectPathResponseJson =
+		UUeremcpAnimationToolset::InspectMontage(ObjectPathRequest);
+	TSharedPtr<FJsonObject> ObjectPathResponse;
+	const TSharedRef<TJsonReader<>> ObjectPathReader =
+		TJsonReaderFactory<>::Create(ObjectPathResponseJson);
+	TestTrue(
+		TEXT("full object path response is parseable"),
+		FJsonSerializer::Deserialize(ObjectPathReader, ObjectPathResponse)
+			&& ObjectPathResponse.IsValid());
+	if (ObjectPathResponse.IsValid())
+	{
+		TestEqual(
+			TEXT("full object path remains honest partial"),
+			ObjectPathResponse->GetStringField(TEXT("status")),
+			FString(TEXT("partially_completed")));
+		TestEqual(
+			TEXT("package and object paths produce one canonical revision"),
+			ObjectPathResponse->GetStringField(TEXT("revision")),
+			PackagePathRevision);
+
+		const TSharedPtr<FJsonObject>* ObjectPathResult = nullptr;
+		TestTrue(
+			TEXT("full object path result returned"),
+			ObjectPathResponse->TryGetObjectField(TEXT("result"), ObjectPathResult)
+				&& ObjectPathResult
+				&& ObjectPathResult->IsValid());
+		if (ObjectPathResult && ObjectPathResult->IsValid())
+		{
+			TestEqual(
+				TEXT("full object path canonicalizes to package primary asset"),
+				(*ObjectPathResult)->GetStringField(TEXT("primary_asset")),
+				PackagePath);
 		}
 	}
 
