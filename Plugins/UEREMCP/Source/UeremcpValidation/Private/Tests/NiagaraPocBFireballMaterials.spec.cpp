@@ -145,9 +145,14 @@ namespace UeremcpValidationNiagaraFireball
 	struct FCleanup
 	{
 		TArray<FString> ResponseAssets;
+		bool bPreserveAssets = false;
 
 		~FCleanup()
 		{
+			if (bPreserveAssets)
+			{
+				return;
+			}
 			for (const FString& Asset : ResponseAssets)
 			{
 				DeleteIfPresent(Asset);
@@ -233,6 +238,8 @@ bool FUeremcpNiagaraPocBFireballMaterials::RunTest(const FString& Parameters)
 	}
 
 	FCleanup Cleanup;
+	Cleanup.bPreserveAssets =
+		FParse::Param(FCommandLine::Get(), TEXT("UeremcpPreservePocBAssets"));
 	DeleteKnownAssets();
 
 	// Exactly one goal-level create invocation; this is not transport/MCP proof.

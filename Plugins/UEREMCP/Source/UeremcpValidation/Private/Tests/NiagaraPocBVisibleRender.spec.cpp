@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
 #include "ImageUtils.h"
+#include "LevelEditorViewport.h"
 #include "Misc/CommandLine.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
@@ -129,7 +130,8 @@ bool FUeremcpNiagaraPocBVisibleRender::RunTest(const FString& Parameters)
 
 	UWorld* World = GEditor->GetEditorWorldContext().World();
 	FEditorViewportClient* ViewportClient = GCurrentLevelEditingViewportClient;
-	FViewport* Viewport = ViewportClient->GetViewport();
+	// [VERIFIED: Engine/Source/Editor/UnrealEd/Public/EditorViewportClient.h:1962]
+	FViewport* Viewport = ViewportClient->Viewport;
 	if (!TestNotNull(TEXT("editor world is available"), World)
 		|| !TestNotNull(TEXT("active viewport render target is available"), Viewport))
 	{
