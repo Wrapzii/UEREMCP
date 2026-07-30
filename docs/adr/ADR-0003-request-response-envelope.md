@@ -91,8 +91,9 @@ cheap to live with and expensive to change.
   agent? If UHT generates only "a string parameter," agents lose schema guidance and
   we need `describe_action` to carry the real schema. **First thing WS-03 must
   test.** (`RB-03`)
-- Whether `expected_revision` belongs in the envelope or per-operation inside batches
-  — currently both are allowed. (`WS-05` to confirm against ADR-0006.)
+- ~~Whether `expected_revision` belongs in the envelope or per-operation inside batches~~
+  **Closed:** both — different scopes
+  (`docs/proposals/ws-05-expected-revision-scope.md`).
 
 ## Verification
 

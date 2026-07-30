@@ -96,10 +96,13 @@ every stored `expected_revision` and every template's recorded hash is invalidat
 
 ## Open questions
 
-- Where does the idempotency store live, and does it survive editor restart? (`WS-05`)
-- What is `content_hash` computed over? It must be stable across cosmetic churn
-  (node reordering, position jitter, GUID regeneration) yet sensitive to real change.
-  Getting this wrong makes conflict detection either useless or maddening. (`WS-05`, `RB-05`)
+- ~~Where does the idempotency store live, and does it survive editor restart?~~
+  **Closed for v1:** in-memory, process-scoped, editor-session lifetime
+  (`docs/proposals/ws-05-idempotency-store.md`). Durable store deferred to
+  WS-03 lifecycle + WS-12 writable-root.
+- ~~What is `content_hash` computed over?~~ **Closed for protocol v1:**
+  `Plugins/UEREMCP/Source/UeremcpProtocol/Docs/CONTENT_HASH.md`. Ignores layout /
+  GUIDs / retrieval metadata; sensitive to pin defaults, links, node properties.
 - Should `revision` cover the asset's dependencies too, so that a changed dependency
   invalidates a cached graph? Probably yes for graphs; cost unknown. (`RB-05`)
 

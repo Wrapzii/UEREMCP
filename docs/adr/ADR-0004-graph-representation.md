@@ -104,8 +104,10 @@ Assigned, not forgotten:
 - Niagara module stacks: are they expressible as `nodes`/`links`, or do they need a
   first-class stack extension? (`RB-07`)
 - Control Rig and AnimBP state machines: what is even readable via public API? (`RB-09`)
-- What is `content_hash` computed over such that it is stable across irrelevant
-  reordering but sensitive to real change? (`WS-05`)
+- ~~What is `content_hash` computed over such that it is stable across irrelevant
+  reordering but sensitive to real change?~~ **Closed for protocol v1:**
+  `Plugins/UEREMCP/Source/UeremcpProtocol/Docs/CONTENT_HASH.md` (WS-05). Domain
+  retrieve must populate `semantic_id` where possible (`RB-05` q14).
 
 ## Verification
 
