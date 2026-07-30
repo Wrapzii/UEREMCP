@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `809f863` (WS-06 BlueprintTools bootstrap; residual commit follows)
+- **Current orchestration tip:** `01b9320` (stacked ribbon defenses + residual)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Ribbon-trail stale-master fix landed as `7a417bb` (`dbb3638`); BlueprintTools bootstrap landed as `809f863` (`9c51b47`). Material and Blueprint modules rebuilt successfully after an orch include fix. WS-11 must re-run fireball and A5 CRT; B8 Create→restart→Verify remains next. No POC claims.
+- **Status:** WS-11 on `70cc348` (pre-`ee905ed`): fireball B1/B4 FAIL (`ribbon_trail`), B3/B5/B6/B8_save/B9 PASS; CRT A1–A4/A10 PASS, A5/A9 FAIL (Python/MCP); B8 Create FAIL (same MI). Tip stacks `7a417bb`+`886d09d`. Re-run fireball/B8 on `01b9320` after WS-08 `FireballRibbonTrailPoc`; WS-06 making SubmitGraph Python-free. No POC claims.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: ribbon fix `7a417bb` landed — WS-11 re-runs fireball with expanded assertions `3b39dd3`. BlueprintTools bootstrap `809f863` landed — WS-11 re-runs A5 CRT. B8 Create→restart→Verify remains next. Prior CRT A1/A2/A10 PASS and A5/A9 FAIL are not a fresh aggregate result. No overall POC-A/POC-B claim.
+Residuals: `70cc348` fireball B1/B4 FAIL (`ribbon_trail`); CRT A5/A9 FAIL (Python/MCP); B8 Create FAIL. Re-run fireball/B8 on `01b9320` after WS-08 `FireballRibbonTrailPoc`; WS-06 Python-free SubmitGraph for A5. No overall POC-A/POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -84,25 +84,37 @@ WS-11 parsing fix is integrated as `674c439`. The ordered co-location stack is `
 |---|---|---|
 | Fireball inline materials | **PASS** | `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_055332.log`: all six B4 roles verified; `UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_b2_b4`; exit 0. |
 
-This proves the B2/B4 editor gate only **on that tip**. The ribbon-trail stale-master fix landed as `7a417bb` (`dbb3638`), so fireball must be re-run for current freshness. Remaining overall POC-B criteria include B1 (MCP proof), B3/B5/B6/B9 (assertions expanded at `3b39dd3`), and B8 Create→restart→Verify. B7 has separate scaffold proof; B10 is optional.
+This proves the B2/B4 editor gate only **on that tip**. Later `70cc348` re-run (with `dbb3638`→`7a417bb`, before `ee905ed`) **FAILED** B1/B4 on `ribbon_trail` again — see below. Remaining overall POC-B criteria include B1, B4 freshness, and B8 Create→restart→Verify. B7 has separate scaffold proof; B10 is optional.
+
+## Fireball / B8 / CRT on tip `70cc348` (WS-11; pre-`ee905ed`)
+
+| Proof | Result | Evidence / residual |
+|---|---|---|
+| Fireball expanded gates | **FAIL (B1/B4)** | `ribbon_trail` MI still absent; B3/B5/B6/B8_save/B9 **PASS** |
+| B8 Create | **FAIL** | Same MI / ribbon path failure; restart Verify not reached |
+| CompleteRoundTrip | **FAIL overall** | A1–A4/A10 **PASS**; A5/A9 **FAIL** (Python/MCP conflict on SubmitGraph) |
+
+Stacked defenses now on tip: `7a417bb` (`dbb3638`) + `886d09d` (`ee905ed`). Re-run fireball/B8 on `01b9320` after WS-08 confirms `FireballRibbonTrailPoc`. No overall POC-B claim.
 
 ## Blueprint CompleteRoundTrip current result
 
-Transport run on `600c383` lineage: **FAIL overall**.
+Transport run on `600c383` lineage: **FAIL overall** (BlueprintTools missing). Re-run on `70cc348` after bootstrap `809f863`: still **FAIL overall**.
 
 | Criterion | Result | Evidence / residual |
 |---|---|---|
 | A1 | **PASS** | Complete read in one MCP call |
 | A2 | **PASS** | Complete payload fields asserted |
-| A5 | **FAIL** | Changed submit could not find Epic `BlueprintTools` |
-| A9 | **FAIL** | 2/3 MCP calls completed |
+| A3 | **PASS** | On `70cc348` re-run |
+| A4 | **PASS** | On `70cc348` re-run |
+| A5 | **FAIL** | Python/MCP conflict on SubmitGraph (`70cc348`); WS-06 making Python-free path |
+| A9 | **FAIL** | Blocked by A5 |
 | A10 | **PASS** | `fidelity.lossy_areas` asserted honestly |
 
-Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`. Expected-selector correction landed as `eccc282` (`69654dd`), and BlueprintTools / PythonScriptPlugin bootstrap landed as `809f863` (`9c51b47`). A5 CRT must be re-run; no overall POC-A claim.
+Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json` (prior); `70cc348` re-run confirms A1–A4/A10 PASS with A5/A9 still FAIL. No overall POC-A claim.
 
 ## B8 restart current result
 
-**FILTERS LANDED, PROOF OPEN:** `UEREMCP.Niagara.POCB.Restart.Create` and `.Verify` are on orch as `163b272` (`5c6422f`). Expanded fireball gate assertions landed as `3b39dd3` (`0474e4e`), and ribbon fix `7a417bb` now awaits fireball re-run. **WS-11 next:** `run_poc_acceptance.ps1 -Scenario B8` (Create → restart → Verify). No B8 claim until PASS.
+**CREATE FAIL on `70cc348`:** same MI / `ribbon_trail` failure blocked Create; Verify not proven. Filters remain at `163b272`. Re-run Create→restart→Verify on `01b9320` after WS-08 `FireballRibbonTrailPoc`. No B8 claim until PASS.
 
 ## Templates editor result and handoff
 
@@ -309,11 +321,11 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-06 | BlueprintTools bootstrap landed as `809f863`; support WS-11 CRT re-run if A5 remains blocked. |
-| WS-07 | B8 Restart.Create/Verify at `163b272`; support fireball re-run after ribbon fix `7a417bb`. |
-| WS-08 | Stale ProjTrail master verify/rebuild landed as `7a417bb`; support fireball re-run if needed. |
+| WS-06 | SubmitGraph Python-free for A5 CRT (bootstrap `809f863` insufficient on `70cc348`). |
+| WS-07 | Stacked pre-create cleanup `886d09d` landed; support fireball/B8 re-run on `01b9320`. |
+| WS-08 | Confirm `FireballRibbonTrailPoc` before WS-11 re-runs fireball/B8 on `01b9320`. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run fireball after `7a417bb`; re-run A5 CRT after `809f863`; run `-Scenario B8` Create → restart → Verify. Keep overall POC-A/POC-B unclaimed. |
+| WS-11 | After WS-08 confirm: re-run fireball + B8 on `01b9320`; after WS-06 Python-free: re-run CRT. Keep overall POC-A/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-POC A remains partial pending CRT re-run after `809f863`. Fireball needs re-run after `7a417bb`; B8 filters remain ready but unproven. No overall POC-A / overall POC-B claim. No junction retarget.
+POC A partial: A1–A4/A10 PASS on `70cc348`, A5/A9 FAIL. Fireball B1/B4 FAIL on `70cc348`; B8 Create FAIL. No overall POC-A / overall POC-B claim. No junction retarget.
