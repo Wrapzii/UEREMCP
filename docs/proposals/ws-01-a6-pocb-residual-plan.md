@@ -1,6 +1,6 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `8a8c75d` (WS-08 trail UV + WS-07 proposal closed + POC-A residual)
+- **Orch tip at writing:** `40cb2a5` (WS-07 MCP B1/B10 handoffs landed; residual commit follows)
 - **Date:** 2026-07-30
 - **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball B2–B6/B9 and B8 Create→restart→Verify now pass. Acceptance B1 still lacks a one-request MCP transport proof, B10 visible rendering is required and unproven, and global POC-B metrics/baseline are unrecorded — **no overall POC-B claim.**
 
@@ -163,6 +163,7 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Stale ProjTrail pre-create cleanup | `886d09d` (`ee905ed`) | Clears stale masters when ribbon MI is absent; defense in depth with `7a417bb`; Niagara rebuilt |
 | Trail MainTexture UV + master package release | `cf7e6d3` (`2187d69`) | WS-08 UV pin fix; Material rebuilt; post-UV fireball and B8 later passed |
 | Ribbon_trail proposal closed | `5ec7e02` (`ff648ab`) | Documents WS-08 `2187d69` as the durable trail fix; not a POC-B claim |
+| MCP B1 fixture + B10 honesty/handoffs | `40cb2a5` (`07f81f5`) | Canonical `poc_b_mcp_fireball_request.json`; `B10_visible_render: null`; WS-11 B1/B10 work remains |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
@@ -225,8 +226,8 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Full POC B fireball through one MCP request | WS-07 (+ WS-08) + WS-11 | Editor single-create is not MCP transport proof; refuse B1 |
-| P0 | Place and visibly render the fireball with non-screenshot validation | WS-07 + WS-11 | B10 is required; screenshot may supplement but cannot be the validation |
+| P0 | Run canonical fireball fixture through one MCP request | WS-11 | Fixture landed in `40cb2a5`; editor single-create is not MCP transport proof |
+| P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | B10 remains honestly `null`; screenshot may supplement but cannot be the validation |
 | P0 | Record POC-B MCP/internal-operation/token/wall metrics and equivalent primitive-call count | WS-11 / WS-14 | Required by global POC rules before overall claim |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
