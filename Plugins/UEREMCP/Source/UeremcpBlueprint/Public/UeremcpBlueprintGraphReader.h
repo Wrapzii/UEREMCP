@@ -1,6 +1,7 @@
 // UEREMCP — Blueprint graph read path (WS-06 P1, ADR-0004).
 //
 // Walks UEdGraph nodes in C++ with structured FEdGraphPinType (not Epic display strings).
+// Generic walk lives in FUeremcpEdGraphReader (shared with WS-10 AnimBP reads).
 // Optionally attaches extensions.blueprint.dsl via Epic BlueprintTools.read_graph_dsl.
 
 #pragma once

@@ -1,6 +1,7 @@
 #include "UeremcpBlueprintGraphReader.h"
 
 #include "UeremcpBlueprintEpicBridge.h"
+#include "UeremcpEdGraphReader.h"
 #include "UeremcpContentHash.h"
 
 #include "BlueprintEditorLibrary.h"
@@ -741,261 +742,73 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	TMap<const UEdGraphNode*, FString> SemanticIds;
 	AssignSemanticIds(Graph, GraphName, SemanticIds);
 
-	TMap<const UEdGraphNode*, FString> NodeIds;
-	for (UEdGraphNode* Node : Graph->Nodes)
-	{
-		NodeIds.Add(Node, MakeNodeId(Node));
-	}
-
-	TArray<TSharedPtr<FJsonValue>> NodeArray;
-	TArray<TSharedPtr<FJsonValue>> LinkArray;
-	TSet<FString> DependencyPaths;
-
 	const bool bIncludeFullNodes =
 		Options.ResponseDetail.Equals(TEXT("complete"), ESearchCase::IgnoreCase)
 		|| Options.ResponseDetail.Equals(TEXT("diagnostic"), ESearchCase::IgnoreCase);
 
+	FUeremcpEdGraphSemanticHooks Hooks;
+	Hooks.ResolveSemanticType = [](const UEdGraphNode* Node) { return GetSemanticType(Node); };
+	Hooks.ResolveSemanticId = [&SemanticIds](const UEdGraphNode* Node) -> FString
 	{
-		for (UEdGraphNode* Node : Graph->Nodes)
+		if (const FString* Id = SemanticIds.Find(Node))
 		{
-			TSharedPtr<FJsonObject> NodeObj = MakeShared<FJsonObject>();
-			const FString& NodeId = NodeIds[Node];
-			NodeObj->SetStringField(TEXT("node_id"), NodeId);
-			if (const FString* SemanticId = SemanticIds.Find(Node))
-			{
-				NodeObj->SetStringField(TEXT("semantic_id"), *SemanticId);
-			}
-
-			NodeObj->SetStringField(TEXT("node_class"), Node->GetClass()->GetName());
-			NodeObj->SetStringField(TEXT("semantic_type"), GetSemanticType(Node));
-			NodeObj->SetStringField(TEXT("title"), Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
-			{
-				TArray<TSharedPtr<FJsonValue>> Pos;
-				Pos.Add(MakeShared<FJsonValueNumber>(Node->NodePosX));
-				Pos.Add(MakeShared<FJsonValueNumber>(Node->NodePosY));
-				NodeObj->SetArrayField(TEXT("position"), Pos);
-			}
-
-			if (const UK2Node_CallFunction* CallFn = Cast<UK2Node_CallFunction>(Node))
-			{
-				TSharedPtr<FJsonObject> Props = MakeShared<FJsonObject>();
-				Props->SetStringField(TEXT("type_id"), GetTypeId(Node));
-				if (const UFunction* Fn = CallFn->GetTargetFunction())
-				{
-					Props->SetStringField(TEXT("function"), Fn->GetPathName());
-				}
-				NodeObj->SetObjectField(TEXT("properties"), Props);
-			}
-			else
-			{
-				TSharedPtr<FJsonObject> Props = MakeShared<FJsonObject>();
-				Props->SetStringField(TEXT("type_id"), GetTypeId(Node));
-				NodeObj->SetObjectField(TEXT("properties"), Props);
-			}
-
-			if (!Node->NodeComment.IsEmpty())
-			{
-				NodeObj->SetStringField(TEXT("comment"), Node->NodeComment);
-			}
-
-			TArray<TSharedPtr<FJsonValue>> InputPins;
-			TArray<TSharedPtr<FJsonValue>> OutputPins;
-			TSharedPtr<FJsonObject> Defaults = MakeShared<FJsonObject>();
-
-			for (UEdGraphPin* Pin : Node->Pins)
-			{
-				if (!Pin)
-				{
-					continue;
-				}
-
-				TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
-				PinObj->SetStringField(TEXT("pin_id"), MakePinId(Pin));
-				PinObj->SetStringField(TEXT("name"), Pin->PinName.ToString());
-				PinObj->SetStringField(
-					TEXT("direction"),
-					Pin->Direction == EGPD_Input ? TEXT("input") : TEXT("output"));
-				PinObj->SetObjectField(TEXT("pin_type"), PinTypeToJson(Pin->PinType));
-
-				if (Pin->PinType.PinSubCategoryObject.IsValid())
-				{
-					DependencyPaths.Add(Pin->PinType.PinSubCategoryObject->GetPathName());
-				}
-
-				if (TSharedPtr<FJsonValue> DefaultVal = PinDefaultToJson(Pin))
-				{
-					Defaults->SetField(Pin->PinName.ToString(), DefaultVal);
-					PinObj->SetField(TEXT("default_value"), DefaultVal);
-				}
-
-				TArray<TSharedPtr<FJsonValue>> PinLinks;
-				for (const UEdGraphPin* Linked : Pin->LinkedTo)
-				{
-					if (!Linked || !Linked->GetOwningNode())
-					{
-						continue;
-					}
-
-					const UEdGraphNode* OtherNode = Linked->GetOwningNode();
-					TSharedPtr<FJsonObject> LinkRef = MakeShared<FJsonObject>();
-					LinkRef->SetStringField(TEXT("node_id"), NodeIds[OtherNode]);
-					LinkRef->SetStringField(TEXT("pin_id"), MakePinId(Linked));
-					PinLinks.Add(MakeShared<FJsonValueObject>(LinkRef));
-
-					if (Pin->Direction == EGPD_Output)
-					{
-						TSharedPtr<FJsonObject> Edge = MakeShared<FJsonObject>();
-						Edge->SetStringField(TEXT("from_node"), NodeId);
-						Edge->SetStringField(TEXT("from_pin"), Pin->PinName.ToString());
-						Edge->SetStringField(TEXT("to_node"), NodeIds[OtherNode]);
-						Edge->SetStringField(TEXT("to_pin"), Linked->PinName.ToString());
-						Edge->SetStringField(TEXT("kind"), IsExecPin(Pin) ? TEXT("exec") : TEXT("data"));
-						Edge->SetBoolField(TEXT("valid"), true);
-						LinkArray.Add(MakeShared<FJsonValueObject>(Edge));
-					}
-				}
-
-				if (PinLinks.Num() > 0)
-				{
-					PinObj->SetArrayField(TEXT("links"), PinLinks);
-				}
-
-				if (Pin->Direction == EGPD_Input)
-				{
-					InputPins.Add(MakeShared<FJsonValueObject>(PinObj));
-				}
-				else
-				{
-					OutputPins.Add(MakeShared<FJsonValueObject>(PinObj));
-				}
-			}
-
-			if (Defaults->Values.Num() > 0)
-			{
-				NodeObj->SetObjectField(TEXT("defaults"), Defaults);
-			}
-			NodeObj->SetArrayField(TEXT("input_pins"), InputPins);
-			NodeObj->SetArrayField(TEXT("output_pins"), OutputPins);
-
-			NodeArray.Add(MakeShared<FJsonValueObject>(NodeObj));
+			return *Id;
 		}
-	}
-
-	TSet<const UEdGraphNode*> Reachable;
-	ComputeReachability(Graph, Reachable);
-
-	TArray<FString> DeadNodes;
-	for (UEdGraphNode* Node : Graph->Nodes)
+		return FString();
+	};
+	Hooks.ResolveProperties = [](const UEdGraphNode* Node) -> TSharedPtr<FJsonObject>
 	{
-		if (!Reachable.Contains(Node) && !IsEntryNode(Node))
+		TSharedPtr<FJsonObject> Props = MakeShared<FJsonObject>();
+		Props->SetStringField(TEXT("type_id"), GetTypeId(Node));
+		if (const UK2Node_CallFunction* CallFn = Cast<UK2Node_CallFunction>(Node))
 		{
-			if (const FString* Id = NodeIds.Find(Node))
+			if (const UFunction* Fn = CallFn->GetTargetFunction())
 			{
-				DeadNodes.Add(*Id);
+				Props->SetStringField(TEXT("function"), Fn->GetPathName());
 			}
 		}
-	}
-	DeadNodes.Sort();
-
-	TArray<TArray<FString>> DisconnectedSubgraphs;
-	FindDisconnectedSubgraphs(Graph, Reachable, DisconnectedSubgraphs, NodeIds);
-
-	TArray<FString> EntryPoints;
-	for (const FEntryContext& Entry : GatherEntryContexts(Graph))
+		return Props;
+	};
+	Hooks.IsEntryNode = [](const UEdGraphNode* Node) { return IsEntryNode(Node); };
+	Hooks.IsExecPin = [](const UEdGraphPin* Pin) { return IsExecPin(Pin); };
+	Hooks.GatherEntryNodes = [](const UEdGraph* EdGraph) -> TArray<const UEdGraphNode*>
 	{
-		if (const FString* Id = NodeIds.Find(Entry.EntryNode))
+		TArray<const UEdGraphNode*> EntryNodes;
+		for (const FEntryContext& Entry : GatherEntryContexts(EdGraph))
 		{
-			EntryPoints.Add(*Id);
-		}
-	}
-
-	TArray<TSharedPtr<FJsonValue>> CompilerErrors;
-	for (UEdGraphNode* Node : Graph->Nodes)
-	{
-		if (!Node->ErrorMsg.IsEmpty())
-		{
-			TSharedPtr<FJsonObject> Diag = MakeShared<FJsonObject>();
-			Diag->SetStringField(TEXT("severity"), TEXT("error"));
-			Diag->SetStringField(TEXT("code"), TEXT("blueprint.node_error"));
-			Diag->SetStringField(TEXT("message"), Node->ErrorMsg);
-			if (const FString* Id = NodeIds.Find(Node))
+			if (Entry.EntryNode)
 			{
-				Diag->SetStringField(TEXT("node_id"), *Id);
+				EntryNodes.Add(Entry.EntryNode);
 			}
-			CompilerErrors.Add(MakeShared<FJsonValueObject>(Diag));
 		}
-	}
+		return EntryNodes;
+	};
 
-	TSharedPtr<FJsonObject> GraphDiagnostics = MakeShared<FJsonObject>();
-	if (DeadNodes.Num() > 0)
+	FUeremcpEdGraphReadOptions EdOptions;
+	EdOptions.AssetPath = AssetPath;
+	EdOptions.GraphName = GraphName;
+	EdOptions.GraphType = ResolveGraphType(Blueprint, Graph);
+	EdOptions.bEmitNodesAndLinks = bIncludeFullNodes;
+	EdOptions.bIncludePinDefaults = true;
+	EdOptions.bRoundTripSupported = false;
+	EdOptions.LossyAreas = DefaultLossyAreas();
+	EdOptions.PurposeSummaryPrefix = TEXT("Blueprint graph");
+
+	FUeremcpEdGraphReadResult EdResult;
+	if (!FUeremcpEdGraphReader::ReadGraph(Graph, EdOptions, Hooks, EdResult))
 	{
-		TArray<TSharedPtr<FJsonValue>> Dead;
-		for (const FString& Id : DeadNodes)
-		{
-			Dead.Add(MakeShared<FJsonValueString>(Id));
-		}
-		GraphDiagnostics->SetArrayField(TEXT("dead_nodes"), Dead);
+		OutResult.Error = EdResult.Error;
+		return false;
 	}
 
-	if (DisconnectedSubgraphs.Num() > 0)
+	TSharedPtr<FJsonObject> GraphObj = EdResult.Graph;
+	const TSharedPtr<FJsonObject>* GraphDiagnosticsPtr = nullptr;
+	if (!GraphObj->TryGetObjectField(TEXT("diagnostics"), GraphDiagnosticsPtr) || !GraphDiagnosticsPtr)
 	{
-		TArray<TSharedPtr<FJsonValue>> Islands;
-		for (const TArray<FString>& Island : DisconnectedSubgraphs)
-		{
-			TArray<TSharedPtr<FJsonValue>> IslandJson;
-			for (const FString& Id : Island)
-			{
-				IslandJson.Add(MakeShared<FJsonValueString>(Id));
-			}
-			Islands.Add(MakeShared<FJsonValueArray>(IslandJson));
-		}
-		GraphDiagnostics->SetArrayField(TEXT("disconnected_subgraphs"), Islands);
+		OutResult.Error = TEXT("shared graph reader returned no diagnostics object");
+		return false;
 	}
-
-	if (CompilerErrors.Num() > 0)
-	{
-		GraphDiagnostics->SetArrayField(TEXT("errors"), CompilerErrors);
-	}
-
-	TSharedPtr<FJsonObject> GraphObj = MakeShared<FJsonObject>();
-	GraphObj->SetStringField(TEXT("asset_path"), AssetPath);
-	GraphObj->SetStringField(TEXT("graph_id"), GraphName);
-	GraphObj->SetStringField(TEXT("graph_name"), GraphName);
-	GraphObj->SetStringField(TEXT("graph_type"), ResolveGraphType(Blueprint, Graph));
-	GraphObj->SetStringField(TEXT("schema_version"), TEXT("1.0"));
-	GraphObj->SetStringField(TEXT("engine_version"), FormatEngineVersionString());
-	GraphObj->SetStringField(TEXT("retrieved_at"), FDateTime::UtcNow().ToIso8601());
-
-	TSharedPtr<FJsonObject> Fidelity = MakeShared<FJsonObject>();
-	Fidelity->SetBoolField(TEXT("round_trip_supported"), false);
-	TArray<TSharedPtr<FJsonValue>> Lossy;
-	for (const FString& Area : DefaultLossyAreas())
-	{
-		Lossy.Add(MakeShared<FJsonValueString>(Area));
-	}
-	Fidelity->SetArrayField(TEXT("lossy_areas"), Lossy);
-	GraphObj->SetObjectField(TEXT("fidelity"), Fidelity);
-
-	TSharedPtr<FJsonObject> Summary = MakeShared<FJsonObject>();
-	Summary->SetStringField(TEXT("purpose"), FString::Printf(TEXT("Blueprint graph '%s'"), *GraphName));
-	Summary->SetNumberField(TEXT("node_count"), Graph->Nodes.Num());
-	GraphObj->SetObjectField(TEXT("semantic_summary"), Summary);
-
-	if (EntryPoints.Num() > 0)
-	{
-		TArray<TSharedPtr<FJsonValue>> EntryJson;
-		for (const FString& Ep : EntryPoints)
-		{
-			EntryJson.Add(MakeShared<FJsonValueString>(Ep));
-		}
-		GraphObj->SetArrayField(TEXT("entry_points"), EntryJson);
-	}
-
-	if (bIncludeFullNodes)
-	{
-		GraphObj->SetArrayField(TEXT("nodes"), NodeArray);
-		GraphObj->SetArrayField(TEXT("links"), LinkArray);
-	}
+	TSharedPtr<FJsonObject> GraphDiagnostics = *GraphDiagnosticsPtr;
 
 	const TArray<TSharedPtr<FJsonValue>> Variables = SerializeVariables(Blueprint);
 	if (Variables.Num() > 0)
@@ -1003,9 +816,9 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 		GraphObj->SetArrayField(TEXT("variables"), Variables);
 	}
 
-	if (DependencyPaths.Num() > 0)
+	if (EdResult.DependencyPaths.Num() > 0)
 	{
-		TArray<FString> SortedDeps = DependencyPaths.Array();
+		TArray<FString> SortedDeps = EdResult.DependencyPaths.Array();
 		SortedDeps.Sort();
 		TArray<TSharedPtr<FJsonValue>> DepJson;
 		for (const FString& Dep : SortedDeps)
@@ -1016,8 +829,6 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 		}
 		GraphObj->SetArrayField(TEXT("dependencies"), DepJson);
 	}
-
-	GraphObj->SetObjectField(TEXT("diagnostics"), GraphDiagnostics);
 
 	TSharedPtr<FJsonObject> Extensions = MakeShared<FJsonObject>();
 	TArray<FString> DslWarnings;
@@ -1057,7 +868,12 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	{
 		GraphObj->RemoveField(TEXT("nodes"));
 		GraphObj->RemoveField(TEXT("links"));
-		Fidelity->SetBoolField(TEXT("omitted_for_size"), true);
+		TSharedPtr<FJsonObject> FidelityField = GraphObj->GetObjectField(TEXT("fidelity"));
+		if (FidelityField.IsValid())
+		{
+			FidelityField->SetBoolField(TEXT("omitted_for_size"), true);
+			GraphObj->SetObjectField(TEXT("fidelity"), FidelityField);
+		}
 	}
 
 	OutResult.Graph = GraphObj;
