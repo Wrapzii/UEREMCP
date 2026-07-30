@@ -1,12 +1,13 @@
 # POC metrics
 
 **Owner:** WS-14  
-**Status:** Partial — POC-B metrics cells closed; overall POC-B claim remains orchestration-owned  
+**Status:** E7 rows recorded for A/B/C/D/E (measured or `unavailable` with machine-checkable reason). Overall POC E remains **not** claimed.  
 **Last updated:** 2026-07-30  
-**Harness:** [`metrics/`](metrics/) (parser + prepare script + unit tests)
+**Harness:** [`metrics/`](metrics/) (parser + prepare script + unit tests)  
+**WS-11 evidence JSON:** `tests/integration/_logs/poc_e7_metrics_20260730.json`
 
-Do **not** treat this file as metrics-complete. E7 requires measured values for every
-POC; open cells below are honest blockers, not zero.
+E7 means required cells are **reported** (measured or precisely `unavailable`). It does
+**not** mean overall POC E passes.
 
 ---
 
@@ -95,14 +96,79 @@ Prepared handoff: [`docs/proposals/ws-14-poc-b-metrics-live-run-handoff.md`](../
 
 ---
 
-## POC A / C / D / E
+## POC A — Blueprint complete round-trip
 
-| POC | Metrics record | Notes |
+**Evidence:** `tests/integration/_logs/poc_a_complete_round_trip_3756244.json`  
+**Tip lineage:** CRT recorded on `3756244` (main/orch claim lineage)
+
+| Field | Value | Status | Evidence |
+|---|---|---|---|
+| `mcp_round_trips` | **3** | measured | CRT transport evidence JSON |
+| `internal_operations` | **4** | measured | same |
+| `wall_clock_seconds` | **2.2996132** | measured | client monotonic in CRT script |
+| `tokens_total` | — | **unavailable** | Cursor MCP caller exposes no per-call agent usage (`CURSOR_MCP_NO_USAGE`). The CRT artifact's `tokens_total: 0` is **rejected** — zero is not allowed. |
+| `primitive_call_equivalent` | **15** | measured | CRT evidence JSON |
+
+---
+
+## POC C — Niagara elemental variation
+
+**Live filter:** `UEREMCP.Niagara.Create.PocCVariationRuntime` (Success on 2026-07-30)  
+**Supporting:** `UEREMCP.Templates.POCC.ThirdGeneration` (Success)  
+**WS-11 JSON:** `tests/integration/_logs/poc_e7_metrics_20260730.json`
+
+| Field | Value | Status | Evidence |
+|---|---|---|---|
+| `mcp_round_trips` | **1** | measured | Filter asserts `metrics.mcp_round_trips == 1` in-process; log `editor_UEREMCP_Niagara_Create_PocCVariationRuntime_20260730_124945.log` Result=Success |
+| `internal_operations` | — | **unavailable** | Automation filter does not emit envelope `internal_operations` to the editor log |
+| `wall_clock_seconds` | — | **unavailable** | No client Stopwatch around the C goal; editor test interval **5.645s** is a server-side lower bound only |
+| `tokens_total` | — | **unavailable** | `CURSOR_MCP_NO_USAGE` |
+| `primitive_call_equivalent` | — | **unavailable** | No measured REAgentTools/Epic primitive baseline trial for POC C on this tip |
+
+C5 (networking/damage) remains **FAIL** and is outside metrics closure.
+
+---
+
+## POC D — Gameplay create_spell plan
+
+**Live filter:** `UEREMCP.Gameplay.PocD.LiveUpsertViaPlan` (Success on 2026-07-30)  
+**WS-11 JSON:** `tests/integration/_logs/poc_e7_metrics_20260730.json`
+
+| Field | Value | Status | Evidence |
+|---|---|---|---|
+| `mcp_round_trips` | **1** | measured | One `execute_plan` request with one `create_spell` op; log `editor_UEREMCP_Gameplay_PocD_LiveUpsertViaPlan_20260730_125056.log` Result=Success |
+| `internal_operations` | — | **unavailable** | Filter does not emit envelope `internal_operations` to the editor log |
+| `wall_clock_seconds` | — | **unavailable** | No client Stopwatch; editor test interval **0.017s** is server-side lower bound only |
+| `tokens_total` | — | **unavailable** | `CURSOR_MCP_NO_USAGE` |
+| `primitive_call_equivalent` | — | **unavailable** | No measured primitive baseline trial for POC D on this tip |
+
+D5 multi-client remains static-only and is outside metrics closure.
+
+---
+
+## POC E — Durability / honesty (not a goal MCP scenario)
+
+| Field | Value | Status | Evidence |
+|---|---|---|---|
+| `mcp_round_trips` | — | **unavailable** | No single goal-level MCP create; E5/E6/E1 are automation filters |
+| `internal_operations` | — | **unavailable** | Honesty/restart filters do not emit goal-level internal ops |
+| `wall_clock_seconds` | — | **unavailable** | Scenario E orchestrator client Stopwatch not captured on this closeout |
+| `tokens_total` | — | **unavailable** | `CURSOR_MCP_NO_USAGE` |
+| `primitive_call_equivalent` | — | **unavailable** | No primitive baseline applies to durability/honesty gates |
+
+Harness evidence: `tests/integration/_logs/poc_e_acceptance_20260730_e7close.json`,
+`tests/integration/_logs/poc_e1_ad_restart_clean_20260730.json`.
+
+### E7 rollup
+
+| POC | Metrics cells | Notes |
 |---|---|---|
-| A | OPEN | CRT claimed on other tips; A9 MCP metrics / tokens / wall not recorded here yet |
-| C | OPEN | not started |
-| D | OPEN | not started |
-| E7 | Partial | POC-B metrics cells closed; POC A/C/D remain open and overall claims remain orchestration-owned |
+| A | closed | tokens precisely unavailable |
+| B | closed | tokens precisely unavailable |
+| C | closed | several cells unavailable with reasons |
+| D | closed | several cells unavailable with reasons |
+| E | closed (harness) | not a goal MCP scenario |
+| **Overall POC E** | **not claimed** | E1 full A–D (incl. C5/D5) unmet |
 
 ---
 
