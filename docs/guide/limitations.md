@@ -1,8 +1,7 @@
 # Limitations
 
-**Owner:** WS-13. Aggregated from catalog, SECURITY, reviews, and the
-post-hardening tip (parent `6a611cf` / documentation certification). An
-undocumented limitation is a defect (`AGENTS.md` rule 6).
+**Owner:** WS-13. Aggregated from catalog, SECURITY, reviews, and the full-use
+integration tip. An undocumented limitation is a defect (`AGENTS.md` rule 6).
 
 **POC A–E claimed; practical goal-level use is ready within the cataloged
 partial scopes, not production-perfect.** Structural POC B and deterministic
@@ -23,7 +22,7 @@ asset, scene, renderer, or hardware configuration.
 | Limit | Detail |
 |---|---|
 | B10 | Programmatic warm-pixel / particle gate **PASS** via `UEREMCP.Niagara.POCB.VisibleRender` (`tests/run_poc_b10_visible_render.ps1`). Does **not** claim correct look on every scene/hardware/quality setting |
-| Visual capture | `capture_effect_frames` is available with warm and fresh-editor cold-job evidence. It requires a renderer/RHI and editor world; a cold request may require one `get_job_result` poll. A second zero-pixel capture remains an honest `failed_validation`, because some systems do not render standalone. |
+| Visual capture | `capture_effect_frames` is available with warm and fresh-editor cold-job evidence. It requires a renderer/RHI and editor world; a cold request may require one `get_job_result` poll. A second zero-pixel capture remains an honest `failed_validation`, because some systems do not render standalone. Pixel deltas do not judge appearance. |
 | Topology inspect | Intentionally lossy (event handler stacks, etc.) |
 | POC C | Claimed under accepted criteria; variation + C7 third generation proven |
 
@@ -72,13 +71,21 @@ agents must use UEREMCP `cancel_job(job_id)` and poll `get_job_result`.
 ## `execute_plan` and durable idempotency
 
 Agent-facing `UUeremcpReferenceToolset::ExecutePlan` is registered (`AICallable`).
-Durable Claim/Complete under `Saved/UEREMCP/idempotency` is verified for
-`execute_plan` (restart Create/Verify pair). Honest caveats:
+Prefer `InstantiateTemplate` / domain goal tools for most agent goals —
+[`tool-selection-policy.md`](tool-selection-policy.md). Durable Claim/Complete under
+`Saved/UEREMCP/idempotency` is verified for `execute_plan` (restart Create/Verify
+pair). Honest caveats:
 
 - metadata + package files are **not** one atomic transaction
 - crash-after-mutation-before-completion leaves a reclaimable in-progress claim (~1h)
 - legacy `Put` / `TryGetReplay` call sites lack fingerprint conflict detection until
   migrated (`execute_plan` is migrated)
+
+## Tool choice is not enforceable
+
+The tool-selection contract makes UEREMCP the documented preferred path. It
+**cannot guarantee** arbitrary agent/LLM behavior. Epic tools remain appropriate
+for read-only discovery and catalog gaps.
 
 ## Gameplay / Animation / discovery
 
@@ -90,7 +97,8 @@ Durable Claim/Complete under `Saved/UEREMCP/idempotency` is verified for
 
 ## Root README
 
-Repository root [`README.md`](../../README.md) reflects POC A–E claimed /
-not-production-ready. Prefer [`CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) and
-[`ws-01-hardening-consolidation-2026-07-30.md`](../proposals/ws-01-hardening-consolidation-2026-07-30.md)
+Repository root [`README.md`](../../README.md) reflects practical full-use within
+cataloged scopes / not-production-perfect. Prefer
+[`CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) and
+[`ws-01-full-use-readiness-2026-07-30.md`](../proposals/ws-01-full-use-readiness-2026-07-30.md)
 for capability truth.

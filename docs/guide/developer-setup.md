@@ -22,6 +22,9 @@ python tools/validate_schemas.py
 # Guide link + fixture path contract (WS-13)
 python docs/guide/check_guide_links.py
 
+# Tool-selection routing contract + intent→tool benchmark (WS-13)
+python docs/guide/check_tool_selection_contract.py
+
 # Ownership guard before commit
 python tools/check_ownership.py --ws WS-13
 ```

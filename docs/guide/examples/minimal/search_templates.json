@@ -1,0 +1,10 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-search-templates-min",
+  "action": "search_templates",
+  "specification": {
+    "query": "projectile",
+    "domain": "niagara",
+    "limit": 10
+  }
+}

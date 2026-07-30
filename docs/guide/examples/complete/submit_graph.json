@@ -1,0 +1,23 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-submit-graph-complete",
+  "action": "submit_graph",
+  "mode": "replace",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch",
+    "graph_id": "EventGraph"
+  },
+  "expected_revision": "<revision from prior read_graph>",
+  "idempotency_key": "ex-submit-graph-complete-attempt-1",
+  "specification": {
+    "$comment": "Load full ADR-0004 graph from Plugins/UEREMCP/Source/UeremcpBlueprint/Tests/fixtures/submit_graph_replace.fixture.json"
+  },
+  "options": {
+    "validate": true,
+    "compile": true,
+    "save": true,
+    "dry_run": false,
+    "response_detail": "complete",
+    "on_revision_conflict": "reject"
+  }
+}

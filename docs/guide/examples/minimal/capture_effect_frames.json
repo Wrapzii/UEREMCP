@@ -1,0 +1,19 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-capture-effect-frames-min",
+  "action": "capture_effect_frames",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Niagara/NS_InspectProbe"
+  },
+  "specification": {
+    "frame_count": 4,
+    "duration_seconds": 1.0,
+    "camera": "three_quarter",
+    "width": 640,
+    "height": 360
+  },
+  "options": {
+    "validate": true,
+    "dry_run": true
+  }
+}

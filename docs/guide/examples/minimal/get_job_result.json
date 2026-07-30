@@ -1,0 +1,8 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-get-job-result-min",
+  "action": "get_job_result",
+  "specification": {
+    "job_id": "<from partially_completed.job>"
+  }
+}

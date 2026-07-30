@@ -27,5 +27,4 @@ Worked envelopes: [`capability-reference.md`](capability-reference.md).
 4. Fill `validation_rules`, `typical_ranges`, and `known_failure_cases` as you learn them
 5. Prefer `inherits_from` / modifiers over copy-paste elemental variants
 
-POC C (variation + C7 third instantiate) is **claimed** on the POC closeout tip â€”
-see `docs/proposals/ws-01-poc-closeout-2026-07-30.md`.
+POC C (variation + C7 third instantiate) is **claimed** on the POC closeout tip — see `docs/proposals/ws-01-poc-closeout-2026-07-30.md`.

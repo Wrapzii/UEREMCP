@@ -1,0 +1,18 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-create-niagara-min",
+  "action": "create_niagara_effect",
+  "mode": "create",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Niagara/NS_AgentMinFireball"
+  },
+  "specification": {
+    "name": "NS_AgentMinFireball",
+    "effect_type": "projectile",
+    "element": "fire"
+  },
+  "options": {
+    "validate": true,
+    "response_detail": "summary"
+  }
+}

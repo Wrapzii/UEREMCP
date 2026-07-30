@@ -32,6 +32,11 @@ If your output looks like any of these, you have failed:
 0. **`docs/WHY.md`** — the actual problem, and the cost model. Short. Read it first:
    it contains the token-economics math that determines whether your design decisions
    help or hurt, and it is counterintuitive.
+0b. **`docs/guide/tool-selection-policy.md`** — when calling editor MCP tools, prefer
+    UEREMCP goal-level semantic tools for create/modify/validate; use Epic for
+    read-only discovery or catalog gaps. Machine contract:
+    `docs/guide/tool-selection-contract.json`. Does not guarantee arbitrary LLM
+    tool choice.
 1. **`docs/GROUNDED_FACTS.md`** — verified UE 5.8 API surface. Read before designing
    anything. Cite it rather than re-deriving it.
 2. **`docs/adr/`** — accepted decisions. These are frozen. See "Frozen decisions" below.

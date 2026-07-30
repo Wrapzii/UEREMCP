@@ -1,0 +1,8 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-cancel-job-min",
+  "action": "cancel_job",
+  "specification": {
+    "job_id": "<from partially_completed.job>"
+  }
+}

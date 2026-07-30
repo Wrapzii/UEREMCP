@@ -1,0 +1,568 @@
+{
+  "contract_id": "ueremcp-tool-selection",
+  "contract_version": "1.0.0",
+  "as_of": "2026-07-30",
+  "owner": "WS-13",
+  "authority": [
+    "docs/WHY.md",
+    "docs/adr/ADR-0002-host-model.md",
+    "docs/adr/ADR-0003-envelope.md",
+    "docs/adr/ADR-0004-graph-representation.md",
+    "docs/adr/ADR-0006-idempotency.md",
+    "docs/adr/ADR-0008-templates.md",
+    "docs/adr/ADR-0009-long-running-jobs.md",
+    "docs/CAPABILITY_CATALOG.md",
+    "AGENTS.md rule 5"
+  ],
+  "limitations": [
+    "This contract makes UEREMCP the documented preferred path; it cannot guarantee arbitrary LLM tool choice.",
+    "Live describe_toolset text still comes from C++ UFUNCTION comments owned by domain workstreams — see docs/proposals/ws-13-tool-selection-discoverability-2026-07-30.md.",
+    "capture_effect_frames is catalog-registered and live-verified; cold renderer may require one ADR-0009 get_job_result poll.",
+    "ExecutePlan is AICallable on UeremcpReferenceToolset but is not the preferred first-choice agent surface — prefer InstantiateTemplate or domain tools."
+  ],
+  "principles": [
+    {
+      "id": "prefer_ueremcp_semantic",
+      "text": "Prefer UEREMCP goal-level semantic operations for create/modify/validate workflows over Epic or REAgentTools primitive chains."
+    },
+    {
+      "id": "epic_readonly_or_gap",
+      "text": "Use Epic tools for read-only discovery, or for gaps where no UEREMCP semantic action exists yet (catalog status planned/research)."
+    },
+    {
+      "id": "no_inspect_mutate_loop",
+      "text": "Avoid primitive inspect→mutate→inspect loops. One complete-state call beats many pin/node calls (docs/WHY.md)."
+    },
+    {
+      "id": "honest_status",
+      "text": "Success requires re-read/validation evidence. Never treat tool-call completion or partially_completed as *_validated."
+    },
+    {
+      "id": "no_force_claim",
+      "text": "Do not claim agents can be forced. Prioritization comes from accurate names, descriptions, schemas, examples, and this routing table."
+    }
+  ],
+  "discovery": {
+    "runtime": ["list_toolsets", "describe_toolset", "call_tool"],
+    "static": [
+      "docs/guide/tool-selection-policy.md",
+      "docs/guide/tool-selection-contract.json",
+      "docs/guide/capability-reference.md",
+      "docs/CAPABILITY_CATALOG.md"
+    ],
+    "invocation_shape": "call_tool(toolset_name, tool_name, arguments={ requestJson: <ADR-0003 envelope string> }) except Ping (no args)"
+  },
+  "required_description_cues": [
+    "UEREMCP",
+    "goal-level",
+    "action=",
+    "request envelope",
+    "status"
+  ],
+  "mutation_markers": ["mutates", "destructive", "dry_run", "create", "replace", "write", "save"],
+  "validation_markers": ["validate", "re-read", "reread", "compiled", "*_validated", "failed_validation"],
+  "idempotency_markers": ["idempotency_key", "expected_revision", "revision"],
+  "toolsets": [
+    {
+      "mcp_name": "UeremcpCore.UeremcpReferenceToolset",
+      "module": "UeremcpCore",
+      "header": "Plugins/UEREMCP/Source/UeremcpCore/Public/UeremcpReferenceToolset.h",
+      "owner_ws": "WS-03",
+      "tools": [
+        {
+          "mcp_tool": "Ping",
+          "action": "ping",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": [],
+          "validation": "none — reachability only",
+          "idempotency": "n/a",
+          "output_status": ["created_and_validated", "rejected", "error"],
+          "prefer_for": ["mcp_reachability"],
+          "description_cues": ["Liveness probe", "registration"]
+        },
+        {
+          "mcp_tool": "Echo",
+          "action": "echo",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": ["protocol_version", "action"],
+          "validation": "envelope parse only",
+          "idempotency": "optional keys ignored for side effects (none)",
+          "output_status": ["no_change_required", "rejected", "error"],
+          "prefer_for": ["envelope_probe"],
+          "description_cues": ["request envelope", "response envelope"]
+        },
+        {
+          "mcp_tool": "GetJobResult",
+          "action": "get_job_result",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "specification.job_id"],
+          "validation": "returns job snapshot; does not re-validate domain work",
+          "idempotency": "poll is read-only",
+          "output_status": ["partially_completed", "created_and_validated", "modified_and_validated", "failed_validation", "rolled_back", "rejected", "error"],
+          "prefer_for": ["poll_long_job"],
+          "description_cues": ["action=get_job_result", "job_id"]
+        },
+        {
+          "mcp_tool": "CancelJob",
+          "action": "cancel_job",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "specification.job_id"],
+          "validation": "cooperative cancel; not MCP notifications/cancelled",
+          "idempotency": "safe to retry cancel",
+          "output_status": ["partially_completed", "rolled_back", "rejected", "error"],
+          "prefer_for": ["cancel_long_job"],
+          "description_cues": ["action=cancel_job", "cooperative"]
+        }
+      ]
+    },
+    {
+      "mcp_name": "UeremcpBlueprint.UeremcpBlueprintToolset",
+      "module": "UeremcpBlueprint",
+      "header": "Plugins/UEREMCP/Source/UeremcpBlueprint/Public/UeremcpBlueprintToolset.h",
+      "owner_ws": "WS-06",
+      "epic_overlap": ["editor_toolset.toolsets.blueprint.BlueprintTools"],
+      "tools": [
+        {
+          "mcp_tool": "Ping",
+          "action": "ping",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": [],
+          "validation": "none",
+          "idempotency": "n/a",
+          "output_status": ["created_and_validated", "rejected", "error"],
+          "prefer_for": ["blueprint_module_reachability"],
+          "description_cues": ["Liveness probe", "Blueprint"]
+        },
+        {
+          "mcp_tool": "Echo",
+          "action": "echo",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": ["protocol_version", "action"],
+          "validation": "envelope parse only",
+          "idempotency": "n/a",
+          "output_status": ["no_change_required", "rejected", "error"],
+          "prefer_for": ["blueprint_envelope_probe"],
+          "description_cues": ["request envelope"]
+        },
+        {
+          "mcp_tool": "ReadGraph",
+          "action": "read_graph",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path"],
+          "validation": "returns graph + diagnostics; prefer response_detail=complete",
+          "idempotency": "read-only; capture revision for later submit",
+          "output_status": ["no_change_required", "partially_completed", "rejected", "error"],
+          "prefer_for": ["blueprint_read_complete_state"],
+          "description_cues": ["action=read_graph", "graph JSON", "diagnostics", "revision"]
+        },
+        {
+          "mcp_tool": "SubmitGraph",
+          "action": "submit_graph",
+          "mutates": true,
+          "destructive": true,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "mode", "target.asset_path", "specification"],
+          "validation": "compile/save/reread when options say so; honest statuses only",
+          "idempotency": "use idempotency_key + expected_revision",
+          "output_status": ["modified_and_validated", "no_change_required", "failed_validation", "rolled_back", "partially_completed", "rejected", "error"],
+          "prefer_for": ["blueprint_replace_graph"],
+          "description_cues": ["action=submit_graph", "mode=replace", "expected_revision", "validate"]
+        }
+      ]
+    },
+    {
+      "mcp_name": "UeremcpNiagara.UeremcpNiagaraToolset",
+      "module": "UeremcpNiagara",
+      "header": "Plugins/UEREMCP/Source/UeremcpNiagara/Public/UeremcpNiagaraToolset.h",
+      "owner_ws": "WS-07",
+      "epic_overlap": ["NiagaraToolsets"],
+      "tools": [
+        {
+          "mcp_tool": "Echo",
+          "action": "echo",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": ["protocol_version", "action"],
+          "validation": "envelope parse only",
+          "idempotency": "n/a",
+          "output_status": ["no_change_required", "rejected", "error"],
+          "prefer_for": ["niagara_envelope_probe"],
+          "description_cues": ["request envelope"]
+        },
+        {
+          "mcp_tool": "InspectSystem",
+          "action": "inspect_system",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path"],
+          "validation": "structured topology; intentionally lossy for some stacks",
+          "idempotency": "read-only",
+          "output_status": ["no_change_required", "partially_completed", "rejected", "error"],
+          "prefer_for": ["niagara_inspect_complete_state"],
+          "description_cues": ["action=inspect_system", "graph.schema.json", "extensions.niagara"]
+        },
+        {
+          "mcp_tool": "CreateNiagaraEffect",
+          "action": "create_niagara_effect",
+          "mutates": true,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path", "specification"],
+          "validation": "structural re-read; may return partially_completed until visual/metrics gates close",
+          "idempotency": "idempotency_key recommended; mode create/create_or_update",
+          "output_status": ["created_and_validated", "created_with_warnings", "partially_completed", "failed_validation", "rejected", "error"],
+          "prefer_for": ["niagara_create_effect"],
+          "description_cues": ["action=create_niagara_effect", "goal-level", "validate", "partially_completed"]
+        }
+      ]
+    },
+    {
+      "mcp_name": "UeremcpMaterial.UeremcpMaterialToolset",
+      "module": "UeremcpMaterial",
+      "header": "Plugins/UEREMCP/Source/UeremcpMaterial/Public/UeremcpMaterialToolset.h",
+      "owner_ws": "WS-08",
+      "epic_overlap": ["editor_toolset.toolsets.material.MaterialTools"],
+      "tools": [
+        {
+          "mcp_tool": "Echo",
+          "action": "echo",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": ["protocol_version", "action"],
+          "validation": "envelope parse only",
+          "idempotency": "n/a",
+          "output_status": ["no_change_required", "rejected", "error"],
+          "prefer_for": ["material_envelope_probe"],
+          "description_cues": ["request envelope"]
+        },
+        {
+          "mcp_tool": "CreateVfxMaterial",
+          "action": "create_vfx_material",
+          "mutates": true,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path", "specification"],
+          "validation": "parameter re-read when validate=true; validate=false => partially_completed",
+          "idempotency": "idempotency_key recommended",
+          "output_status": ["created_and_validated", "modified_and_validated", "partially_completed", "failed_validation", "rejected", "error"],
+          "prefer_for": ["vfx_material_create"],
+          "description_cues": ["action=create_vfx_material", "goal-level", "element"]
+        },
+        {
+          "mcp_tool": "CreateProceduralTexture",
+          "action": "create_procedural_texture",
+          "mutates": true,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path"],
+          "validation": "asset exists under test root",
+          "idempotency": "idempotency_key recommended",
+          "output_status": ["created_and_validated", "partially_completed", "failed_validation", "rejected", "error"],
+          "prefer_for": ["procedural_texture_create"],
+          "description_cues": ["action=create_procedural_texture", "/Game/__UeremcpTests/"]
+        }
+      ]
+    },
+    {
+      "mcp_name": "UeremcpGameplay.UeremcpGameplayToolset",
+      "module": "UeremcpGameplay",
+      "header": "Plugins/UEREMCP/Source/UeremcpGameplay/Public/UeremcpGameplayToolset.h",
+      "owner_ws": "WS-09",
+      "epic_overlap": ["GASToolsets"],
+      "tools": [
+        {
+          "mcp_tool": "CreateSpell",
+          "action": "create_spell",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "specification"],
+          "validation": "preflight only — no asset mutation on this tip",
+          "idempotency": "n/a until mutator queue lands",
+          "output_status": ["partially_completed", "rejected", "error"],
+          "prefer_for": ["spell_preflight"],
+          "description_cues": ["action=create_spell", "preflight", "no asset mutation"]
+        }
+      ]
+    },
+    {
+      "mcp_name": "UeremcpAnimation.UeremcpAnimationToolset",
+      "module": "UeremcpAnimation",
+      "header": "Plugins/UEREMCP/Source/UeremcpAnimation/Public/UeremcpAnimationToolset.h",
+      "owner_ws": "WS-10",
+      "epic_overlap": ["AnimationAssistantToolset"],
+      "tools": [
+        {
+          "mcp_tool": "InspectMontage",
+          "action": "inspect_montage",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path"],
+          "validation": "structured inspect; complete asset_state may be withheld",
+          "idempotency": "read-only",
+          "output_status": ["no_change_required", "partially_completed", "rejected", "error"],
+          "prefer_for": ["montage_inspect"],
+          "description_cues": ["action=inspect_montage", "revision"]
+        },
+        {
+          "mcp_tool": "ReadAnimBp",
+          "action": "read_anim_bp",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path"],
+          "validation": "ADR-0004 graph read; authoring unsupported",
+          "idempotency": "read-only",
+          "output_status": ["no_change_required", "partially_completed", "rejected", "error"],
+          "prefer_for": ["anim_bp_read"],
+          "description_cues": ["action=read_anim_bp", "read-only", "authoring unsupported"]
+        }
+      ]
+    },
+    {
+      "mcp_name": "UeremcpTemplates.UeremcpTemplatesToolset",
+      "module": "UeremcpTemplates",
+      "header": "Plugins/UEREMCP/Source/UeremcpTemplates/Public/UeremcpTemplatesToolset.h",
+      "owner_ws": "WS-15",
+      "tools": [
+        {
+          "mcp_tool": "SearchTemplates",
+          "action": "search_templates",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "specification"],
+          "validation": "returns catalog hits",
+          "idempotency": "read-only",
+          "output_status": ["no_change_required", "partially_completed", "rejected", "error"],
+          "prefer_for": ["template_search"],
+          "description_cues": ["action=search_templates"]
+        },
+        {
+          "mcp_tool": "InstantiateTemplate",
+          "action": "instantiate_template",
+          "mutates": true,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "target.asset_path", "specification.template_id"],
+          "validation": "delegates to internal execute_plan; read validation in response",
+          "idempotency": "idempotency_key recommended",
+          "output_status": ["created_and_validated", "partially_completed", "failed_validation", "rejected", "error"],
+          "prefer_for": ["template_instantiate", "multi_asset_from_template"],
+          "description_cues": ["action=instantiate_template", "execute_plan"]
+        },
+        {
+          "mcp_tool": "PromoteToTemplate",
+          "action": "promote_to_template",
+          "mutates": false,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "specification.source_asset"],
+          "validation": "preview-oriented until cross-domain gates bind",
+          "idempotency": "preview",
+          "output_status": ["partially_completed", "rejected", "error"],
+          "prefer_for": ["template_promote_preview"],
+          "description_cues": ["action=promote_to_template", "preview"]
+        }
+      ]
+    },
+    {
+      "mcp_name": "UeremcpValidation.UeremcpVisualCaptureToolset",
+      "module": "UeremcpValidation",
+      "header": "Plugins/UEREMCP/Source/UeremcpValidation/Public/UeremcpVisualCaptureToolset.h",
+      "owner_ws": "WS-11",
+      "source_note": "Live-verified on RE full-use tip; cold path uses ADR-0009 poll after editor tick",
+      "catalog_status": "available",
+      "tools": [
+        {
+          "mcp_tool": "CaptureEffectFrames",
+          "action": "capture_effect_frames",
+          "mutates": false,
+          "destructive": false,
+          "writes_external_files": true,
+          "status": "available",
+          "required_fields": ["protocol_version", "action", "target.asset_path", "options.validate=true"],
+          "validation": "pixel delta vs empty stage; does not prove Niagara compile or appearance quality; cold may poll once",
+          "idempotency": "outputs isolated by request_id under Saved/UEREMCP/VfxCapture",
+          "output_status": ["no_change_required", "failed_validation", "partially_completed", "rejected", "error"],
+          "prefer_for": ["niagara_visual_frame_evidence"],
+          "description_cues": ["capture_effect_frames", "does not author", "pixel", "Saved/UEREMCP/VfxCapture"]
+        }
+      ]
+    }
+  ],
+  "special_routes": [
+    {
+      "id": "execute_plan",
+      "agent_facing_aicallable": true,
+      "select": "Prefer InstantiateTemplate or domain goal tools for most agent goals. ExecutePlan is registered AICallable for multi-step plans but is not the first-choice agent surface (ADR-0008).",
+      "catalog_status": "partial"
+    },
+    {
+      "id": "templates_vs_domain",
+      "select": "Known pattern → search_templates then instantiate_template. Novel one-off effect → create_niagara_effect / create_vfx_material / submit_graph directly."
+    },
+    {
+      "id": "read_then_submit_graph",
+      "select": "Blueprint modify: ReadGraph (complete) → edit JSON → SubmitGraph with expected_revision. Never pin-by-pin BlueprintTools loops."
+    },
+    {
+      "id": "jobs",
+      "select": "timeout_ms>0 and partially_completed with job → GetJobResult. Stop work → CancelJob (not MCP notifications/cancelled alone)."
+    },
+    {
+      "id": "visual_capture",
+      "select": "Need pixel evidence for an existing Niagara system → CaptureEffectFrames. Does not replace create_niagara_effect or inspect_system."
+    }
+  ],
+  "epic_policy": {
+    "prefer_ueremcp_when": [
+      "Creating or modifying Blueprint graphs with revision/hash/validation",
+      "Creating Niagara effects / VFX materials as one semantic outcome",
+      "Template search/instantiate",
+      "Job poll/cancel for UEREMCP long ops",
+      "Visual frame capture with numeric baseline deltas"
+    ],
+    "use_epic_when": [
+      "Read-only asset/browser/search discovery with no UEREMCP action",
+      "Domain gaps still planned/research in CAPABILITY_CATALOG",
+      "One-off editor utilities outside UEREMCP domains"
+    ],
+    "do_not": [
+      "Use BlueprintTools create_node/connect_pins loops when SubmitGraph covers the goal",
+      "Use NiagaraToolsets module primitives when CreateNiagaraEffect covers the goal",
+      "Use MaterialTools expression primitives when CreateVfxMaterial covers the goal",
+      "Hide all Epic read-only tools globally via SetNameFilters"
+    ]
+  },
+  "set_name_filters": {
+    "api": "UE::ToolsetRegistry::FToolset::SetNameFilters(BlockPatterns, AllowPatterns)",
+    "verified": "[VERIFIED: Engine/Plugins/Experimental/ToolsetRegistry/Source/ToolsetRegistry/Public/ToolsetRegistry/Toolset.h:59-60]",
+    "verified_impl": "[VERIFIED: .../Private/ToolsetRegistry/Toolset.cpp:59-79]",
+    "adr": "ADR-0002 — hide internal primitives from agents",
+    "ueremcp_calls_today": false,
+    "authorized_scope": "Hide UEREMCP-internal or Epic mutation primitives that semantic tools compose — never globally disable useful Epic read-only discovery.",
+    "apply_now": false,
+    "reason_not_applied": "No UEREMCP module currently calls SetNameFilters; selective Epic mutation hiding needs WS-03/settings coordination and must not retarget live RE deploy. Documented + proposed only."
+  },
+  "routing_benchmark": [
+    {
+      "intent_id": "bp_read_event_graph",
+      "intent": "Return the complete EventGraph JSON for a Blueprint under /Game/__UeremcpTests/ with diagnostics and revision.",
+      "expected_toolset_substring": "UeremcpBlueprint",
+      "expected_tool": "ReadGraph",
+      "expected_action": "read_graph",
+      "forbidden_tool_substrings": ["BlueprintTools", "create_node", "connect_pins"]
+    },
+    {
+      "intent_id": "bp_replace_graph",
+      "intent": "Replace a Blueprint EventGraph with a complete graph JSON, compile, save, and validate using expected_revision.",
+      "expected_toolset_substring": "UeremcpBlueprint",
+      "expected_tool": "SubmitGraph",
+      "expected_action": "submit_graph",
+      "forbidden_tool_substrings": ["write_graph_dsl", "create_node"]
+    },
+    {
+      "intent_id": "niagara_create_fireball",
+      "intent": "Create a fire Niagara projectile effect as one goal-level operation with materials and validation notes.",
+      "expected_toolset_substring": "UeremcpNiagara",
+      "expected_tool": "CreateNiagaraEffect",
+      "expected_action": "create_niagara_effect",
+      "forbidden_tool_substrings": ["AddEmitter", "execute_tool_script"]
+    },
+    {
+      "intent_id": "niagara_inspect",
+      "intent": "Inspect an existing Niagara system into structured graph JSON with extensions.niagara.",
+      "expected_toolset_substring": "UeremcpNiagara",
+      "expected_tool": "InspectSystem",
+      "expected_action": "inspect_system",
+      "forbidden_tool_substrings": ["GetEmitterTopology"]
+    },
+    {
+      "intent_id": "vfx_material",
+      "intent": "Create an elemental VFX material instance for a projectile core under the UEREMCP test root.",
+      "expected_toolset_substring": "UeremcpMaterial",
+      "expected_tool": "CreateVfxMaterial",
+      "expected_action": "create_vfx_material",
+      "forbidden_tool_substrings": ["MaterialTools"]
+    },
+    {
+      "intent_id": "template_instantiate",
+      "intent": "Instantiate a known Niagara projectile template with element=fire into /Game/__UeremcpTests/.",
+      "expected_toolset_substring": "UeremcpTemplates",
+      "expected_tool": "InstantiateTemplate",
+      "expected_action": "instantiate_template",
+      "forbidden_tool_substrings": ["ExecutePlan"]
+    },
+    {
+      "intent_id": "job_poll",
+      "intent": "A prior UEREMCP call returned partially_completed with a job id; poll until finished.",
+      "expected_toolset_substring": "UeremcpReference",
+      "expected_tool": "GetJobResult",
+      "expected_action": "get_job_result",
+      "forbidden_tool_substrings": []
+    },
+    {
+      "intent_id": "job_cancel",
+      "intent": "Cooperatively cancel a running UEREMCP long job by job_id.",
+      "expected_toolset_substring": "UeremcpReference",
+      "expected_tool": "CancelJob",
+      "expected_action": "cancel_job",
+      "forbidden_tool_substrings": ["notifications/cancelled"]
+    },
+    {
+      "intent_id": "visual_capture",
+      "intent": "Capture a deterministic PNG frame series for an existing Niagara system and return pixel deltas vs empty stage.",
+      "expected_toolset_substring": "UeremcpVisualCapture",
+      "expected_tool": "CaptureEffectFrames",
+      "expected_action": "capture_effect_frames",
+      "forbidden_tool_substrings": ["HighResShot", "screenshot"]
+    },
+    {
+      "intent_id": "spell_preflight",
+      "intent": "Preflight an RE-native create_spell plan without mutating assets yet.",
+      "expected_toolset_substring": "UeremcpGameplay",
+      "expected_tool": "CreateSpell",
+      "expected_action": "create_spell",
+      "forbidden_tool_substrings": []
+    },
+    {
+      "intent_id": "reachability",
+      "intent": "Confirm UEREMCP MCP registration is alive before domain work.",
+      "expected_toolset_substring": "UeremcpReference",
+      "expected_tool": "Ping",
+      "expected_action": "ping",
+      "forbidden_tool_substrings": []
+    },
+    {
+      "intent_id": "execute_plan_misroute",
+      "intent": "Run a multi-step construction plan for a template-backed effect.",
+      "expected_toolset_substring": "UeremcpTemplates",
+      "expected_tool": "InstantiateTemplate",
+      "expected_action": "instantiate_template",
+      "forbidden_tool_substrings": ["ExecutePlan"]
+    }
+  ],
+  "examples": {
+    "minimal_dir": "docs/guide/examples/minimal",
+    "complete_dir": "docs/guide/examples/complete"
+  }
+}

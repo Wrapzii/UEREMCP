@@ -7,6 +7,11 @@ Then, in order:
 
 1. [`docs/WHY.md`](docs/WHY.md) — the problem and the cost model. Counterintuitive;
    read it before making design tradeoffs.
+1b. [`docs/guide/tool-selection-policy.md`](docs/guide/tool-selection-policy.md) —
+    when calling editor MCP tools, prefer UEREMCP semantic tools for
+    create/modify/validate; use Epic for read-only gaps. Machine contract:
+    [`docs/guide/tool-selection-contract.json`](docs/guide/tool-selection-contract.json).
+    Does not guarantee arbitrary LLM tool choice.
 2. [`docs/GROUNDED_FACTS.md`](docs/GROUNDED_FACTS.md) — verified UE 5.8 API surface.
    Cite it rather than re-deriving it.
 3. [`docs/adr/`](docs/adr/) — frozen decisions. Do not redesign them in passing.

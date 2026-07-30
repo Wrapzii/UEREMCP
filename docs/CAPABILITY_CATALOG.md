@@ -44,6 +44,26 @@ grouping on top of it rather than replacing it (ADR-0002).
 | `get_job_result` | project | available | Registered on `UeremcpReferenceToolset`; ADR-0009 process-local poll path. Timeout behaviour remains domain-adoption dependent. |
 | `cancel_job` | project | available | Cooperative cancel for jobs that advertise `cancellable: true`; editor-verified via `UEREMCP.Transport.JobRegistry.Cancel`. **Not** Epic MCP `notifications/cancelled` — ToolsetRegistry adapter has no `CancelAsync` override (immutable UE 5.8 limitation). |
 
+## Agent routing (prefer UEREMCP)
+
+Canonical policy: [`docs/guide/tool-selection-policy.md`](guide/tool-selection-policy.md) /
+[`docs/guide/tool-selection-contract.json`](guide/tool-selection-contract.json).
+
+| Intent | Prefer (MCP tool) | Action | Avoid |
+|---|---|---|---|
+| Blueprint complete read | `UeremcpBlueprint…ReadGraph` | `read_graph` | BlueprintTools pin loops |
+| Blueprint replace | `…SubmitGraph` | `submit_graph` | `create_node` / `write_graph_dsl` |
+| Niagara create | `UeremcpNiagara…CreateNiagaraEffect` | `create_niagara_effect` | NiagaraToolsets primitives |
+| Niagara inspect | `…InspectSystem` | `inspect_system` | ad-hoc topology scrapes |
+| VFX material | `UeremcpMaterial…CreateVfxMaterial` | `create_vfx_material` | MaterialTools expressions |
+| Template instantiate | `UeremcpTemplates…InstantiateTemplate` | `instantiate_template` | inventing ExecutePlan as first choice |
+| Job poll/cancel | `UeremcpReference…GetJobResult` / `CancelJob` | `get_job_result` / `cancel_job` | MCP cancel alone |
+| Visual frames | `UeremcpValidation…CaptureEffectFrames` | `capture_effect_frames` | screenshot authoring |
+
+Epic tools remain appropriate for read-only discovery and catalog gaps
+(`planned` / `research`). This table does **not** claim arbitrary LLM tool choice
+is guaranteed.
+
 ## Actions
 
 Statuses below reflect **registered code + runtime/editor evidence**, not Phase 0 design
@@ -72,7 +92,7 @@ names below are the semantic actions; notes map to the live tool surface.
 | `execute_plan` | project | WS-05 / WS-03 | partial | Agent-facing `UUeremcpReferenceToolset::ExecutePlan` (`AICallable`) delegates to `FUeremcpPlanActions` / `FUeremcpPlanExecutor`. Durable Claim/Complete idempotency under `Saved/UEREMCP/idempotency` (fingerprint-bound; restart replay verified). Still partial: metadata+package are not one atomic transaction; crash-after-mutation leaves a reclaimable in-progress claim; legacy `Put`/`TryGetReplay` call sites lack fingerprint conflict detection until migrated. |
 | `validate_asset` | validation | WS-11 | planned | |
 | `validate_system` | validation | WS-11 | planned | |
-| `capture_effect_frames` | validation | WS-11 | available | `UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames`; captures and rereads a deterministic PNG series with numeric baseline deltas. Cold renderer startup returns an ADR-0009 `partially_completed` job and completed successfully after one poll in a fresh RE editor. Requires an editor world and renderer/RHI; pixel change proves rendering, not appearance or structural correctness. |
+| `capture_effect_frames` | validation | WS-11 | available | `UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames`; warm path live-verified. Cold renderer residual: first call may return ADR-0009 `partially_completed`; poll `get_job_result` (non-cancellable). Fresh-editor cold path completed after one poll with changed lit pixels. Requires editor world + renderer/RHI; pixel change proves rendering, not appearance or structural correctness. |
 
 ### Niagara
 

@@ -87,12 +87,15 @@ def check_backtick_paths(errors: list[str]) -> int:
 def check_required_guides(errors: list[str]) -> None:
     required = [
         "README.md",
+        "tool-selection-policy.md",
+        "tool-selection-contract.json",
         "agent-usage.md",
         "capability-reference.md",
         "limitations.md",
         "troubleshooting.md",
         "developer-setup.md",
         "template-authoring.md",
+        "check_tool_selection_contract.py",
     ]
     for name in required:
         if not (GUIDE_DIR / name).is_file():

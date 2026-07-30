@@ -6,8 +6,9 @@ integration tip. **Ready for practical use within cataloged partial scopes; not
 production-perfect.** Pixel-delta PASS does not equal correct appearance or a
 full metrics close.
 
-Do not paste full graph payloads into chat. Load the linked fixture; this page names
-the tool, the `action`, the fields that matter, and the ceiling.
+**Routing:** [`tool-selection-policy.md`](tool-selection-policy.md). Prefer these
+UEREMCP tools over Epic primitives for the same goal. Do not paste full graph
+payloads into chat — load fixtures or [`examples/`](examples/).
 
 ## How to invoke
 
@@ -18,6 +19,11 @@ call_tool(toolset=<MCP toolset name>, tool=<PascalCase method>, arguments={ requ
 Exact toolset registration names come from `list_toolsets` at runtime. Headers below
 document the C++ toolset class and method
 `[VERIFIED: Plugins/UEREMCP/Source/Ueremcp*/Public/*Toolset.h]`.
+
+Published examples (valid minimal + complete shapes):
+
+- [`examples/minimal/`](examples/minimal/)
+- [`examples/complete/`](examples/complete/)
 
 ---
 
@@ -134,7 +140,7 @@ metrics close. Materials contract companion:
 
 | | |
 |---|---|
-| Status | **available** |
+| Status | **available** (warm path + fresh-editor cold poll verified; appearance judgment still out of scope) |
 | Toolset / tool | `UeremcpValidation.UeremcpVisualCaptureToolset` → `CaptureEffectFrames` |
 | Spec schema | [`capture_effect_frames.schema.json`](../../schemas/domains/validation/capture_effect_frames.schema.json) |
 
@@ -157,6 +163,9 @@ metrics close. Materials contract companion:
 }
 ```
 
+Minimal dry-run: [`examples/minimal/capture_effect_frames.json`](examples/minimal/capture_effect_frames.json).
+Complete live-shaped: [`examples/complete/capture_effect_frames.json`](examples/complete/capture_effect_frames.json).
+
 The response returns PNG paths under
 `Saved/UEREMCP/VfxCapture/<asset>/<request-id>/`, per-frame luminance data, and
 `verification.rendered_something`. A cold renderer may first return
@@ -166,7 +175,8 @@ fresh-editor path completed in two MCP round trips with 44 changed lit pixels
 
 **Ceiling:** requires an editor world and renderer/RHI. Pixel delta proves only
 that the subject changed the captured frame; it does not judge appearance,
-compile validity, material correctness, or gameplay integration.
+compile validity, material correctness, or gameplay integration. Prefer this for
+pixel evidence after structural create/inspect — not instead of them.
 
 ---
 
@@ -287,6 +297,9 @@ Do not substitute Epic MCP `notifications/cancelled`: UE 5.8's private
 ToolsetRegistry adapter has no `CancelAsync` override, so that notification cannot
 reach AICallable work. This is an immutable adapter limitation, not an open
 `cancel_job` residual — [`limitations.md`](limitations.md).
+
+Minimal fixtures: [`examples/minimal/get_job_result.json`](examples/minimal/get_job_result.json),
+[`examples/minimal/cancel_job.json`](examples/minimal/cancel_job.json).
 
 ---
 

@@ -1,0 +1,14 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-read-graph-min",
+  "action": "read_graph",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch"
+  },
+  "specification": {
+    "graph_id": "EventGraph"
+  },
+  "options": {
+    "response_detail": "complete"
+  }
+}
