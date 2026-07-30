@@ -2,7 +2,7 @@
 
 - **Orch tip at writing:** `40cb2a5` (WS-07 MCP B1/B10 handoffs landed; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball B2–B6/B9 and B8 Create→restart→Verify pass. WS-07's live-MCP compile deferral landed as `79d9d65` (`9c9b9b4`) and Niagara rebuilt; WS-11 MCP B1 must rerun and return JSON without crashing, potentially `partially_completed`. B10 and metrics remain blocked — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball and B8 restart proofs pass. The post-`79d9d65` MCP run is crash-free and returns JSON in one round trip, but honestly reports `partially_completed`, B1 false, and B6 false because compile awaiting was deferred. B10 and complete metrics remain blocked — **no overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -227,16 +227,31 @@ WS-11 must rerun the canonical fixture and confirm a JSON response without an
 editor crash. An honest `partially_completed` response is acceptable crash-fix
 evidence but does not by itself satisfy B1/B6 or overall POC B.
 
+**Post-`79d9d65` MCP rerun: crash fixed, acceptance incomplete.** WS-11
+received a JSON response without an editor crash:
+
+- `status: partially_completed`
+- `metrics.mcp_round_trips: 1`
+- `B1_single_request_complete: false`
+- `B6_compile_awaited: false`
+- `checks_skipped`: `niagara.compile_await_deferred_tool_dispatch`
+
+This proves crash safety and one transport round trip, but not a complete
+one-request effect or genuinely awaited compilation. The remaining implementation
+choice is a safe compile-complete path that does not use the crashing query, or
+ADR-0009 job completion. A polled job can complete safely, but its follow-up MCP
+poll calls do not satisfy B1's explicit “no follow-up calls” wording.
+
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
-| B1 | One MCP request produces the complete effect — no follow-ups | **OPEN after `79d9d65`** — prior rerun crashed; WS-11 must prove one-request JSON response and acceptance gates | WS-07 + WS-11 |
+| B1 | One MCP request produces the complete effect — no follow-ups | **FAIL post-`79d9d65`** — one round trip returned JSON, but `partially_completed` and `B1_single_request_complete: false` | WS-07 + WS-11 |
 | B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS on `8a8c75d` editor fireball** — all six MI roles represented | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
 | B4 | Renderers configured and bound to valid materials | **PASS on `8a8c75d` editor fireball** — all six, including `ribbon_trail` | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
-| B6 | System compiles; compile genuinely awaited | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
+| B6 | System compiles; compile genuinely awaited | **FAIL in MCP scenario** — editor gate passes, but MCP response has `B6_compile_awaited: false` and deferred check | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
 | B8 | Assets saved and survive editor restart | **PASS on `8a8c75d`** — Create→restart→Verify re-read all ten checkpoint assets | WS-11 |
 | B9 | One structured response with complete change manifest | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
@@ -250,7 +265,8 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Rerun canonical MCP fixture after live-dispatch compile deferral | WS-11 | Confirm JSON response without crash; `partially_completed` is honest but not a B1/B6 pass |
+| P0 | Provide safe MCP compile completion without the crashing query, then rerun | WS-07 + WS-11 | Crash is fixed; B1/B6 remain false because compile awaiting is deferred |
+| P0 | If using ADR-0009 job completion, preserve honest round-trip accounting | WS-07 + WS-05/WS-11 | Job polling may solve completion, but follow-up polls do not satisfy current B1 wording |
 | P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | Blocked by MCP B1; B10 remains honestly `null` |
 | P0 | Record POC-B MCP/internal-operation/token/wall metrics and equivalent primitive-call count | WS-11 / WS-14 | Blocked by MCP B1; required before overall claim |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
