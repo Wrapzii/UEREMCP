@@ -210,3 +210,29 @@ pwsh tests/run_poc_b10_visible_render.ps1
 Filter: `UEREMCP.Niagara.POCB.VisibleRender` with `-WithRendering` (not NullRHI).
 Programmatic warm-pixel + particle gate is the PASS; PNG is supplementary.
 Live PASS `warm_changed_pixels=36921` `[VERIFIED-RUNTIME: editor_UEREMCP_Niagara_POCB_VisibleRender_20260730_150551.log]`.
+
+### MCP Niagara frame capture
+
+`UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames` is a
+rendering-enabled MCP observer. It writes a baseline and deterministic-age PNGs
+below `Saved/UEREMCP/VfxCapture/<asset>/<request-id>/`, rereads each PNG, and
+reports a baseline pixel delta. It does not author or compile Niagara assets.
+
+Contract filter:
+
+```powershell
+pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation.VisualCapture"
+```
+
+Live MCP registration and a renderer-warm capture passed against
+`/Game/RE/VFX/Magecraft/Spells/NS_Spell_IceWall_Cast`: four 640×360 PNGs,
+`max_delta_lit_pixels=49`, `rendered_something=true`, and teardown complete
+`[VERIFIED-RUNTIME: request visual-capture-warm-evidence-20260730, 2026-07-30]`.
+The cold request immediately before it returned `failed_validation` with zero
+changed pixels. Renderer warmup therefore needs an editor tick boundary that
+cannot occur inside the synchronous call; catalog this capability as partial
+until it uses an ADR-0009 job across that boundary.
+The generated six-emitter scratch probe returned `failed_validation` because it
+had renderers but no verified material bindings and produced zero changed
+pixels. That is expected honest scope: image capture cannot repair or certify
+the authored Niagara system.

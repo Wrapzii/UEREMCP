@@ -29,6 +29,7 @@ public class UeremcpValidation : ModuleRules
 			"Json",
 			"JsonUtilities",
 			"Projects",
+			"RenderCore",
 			"LevelEditor",
 
 			// ADR-0005 outer layer. [VERIFIED: $TR/.../Public/ToolsetRegistry/SandboxLibrary.h]
