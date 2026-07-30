@@ -3,6 +3,7 @@
 #include "UeremcpNiagaraInspect.h"
 
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraDependencySurvey.h"
 #include "UeremcpNiagaraGraphHash.h"
 #include "UeremcpNiagaraInspectMapping.h"
 #include "UeremcpNiagaraPaths.h"
@@ -444,6 +445,7 @@ bool FUeremcpNiagaraInspect::Run(
 
 	TArray<FString> EmitterSubgraphIds;
 	TArray<TSharedPtr<FJsonValue>> SystemNodes;
+	FUeremcpNiagaraDependencySurveyCounts DependencySurvey;
 
 	for (const FNiagaraExt_EmitterSummary& EmitterSummary : Summary.Emitters)
 	{
@@ -460,6 +462,11 @@ bool FUeremcpNiagaraInspect::Run(
 		FNiagaraExt_EmitterTopology Topology;
 		UNiagaraExternalEditUtilities::GetEmitterTopology(EmitterRef, Topology, Context);
 		++OutResult.InternalOperations;
+
+		if (Spec.bIncludeDependencies)
+		{
+			UeremcpNiagaraDependencySurvey::AccumulateFromEmitterTopology(Topology, DependencySurvey);
+		}
 
 		TMap<FName, const FNiagaraExt_ModuleInputValues*> InputValuesByModule;
 		TArray<FNiagaraExt_ModuleInputValues> EmitterInputValues;
@@ -586,16 +593,6 @@ bool FUeremcpNiagaraInspect::Run(
 			OutResult.ChecksSkipped.Add(TEXT("niagara.emitter_renderers"));
 		}
 
-		FNiagaraExt_EmitterData EmitterData;
-		UNiagaraExternalEditUtilities::GetEmitterData(EmitterRef, EmitterData, Context);
-		++OutResult.InternalOperations;
-		if (!EmitterData.PropertyValues.IsEmpty())
-		{
-			TSharedPtr<FJsonObject> EmitterProps = MakeShared<FJsonObject>();
-			EmitterProps->SetStringField(TEXT("property_values_json"), EmitterData.PropertyValues);
-			EmitterExt->SetObjectField(TEXT("emitter"), EmitterProps);
-		}
-
 		EmitterExtRoot->SetObjectField(TEXT("niagara"), EmitterExt);
 		EmitterGraph->SetObjectField(TEXT("extensions"), EmitterExtRoot);
 
@@ -609,7 +606,7 @@ bool FUeremcpNiagaraInspect::Run(
 			TSharedPtr<FJsonObject> EmitterDiag = MakeShared<FJsonObject>();
 			EmitterDiag->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{
 				MakeShared<FJsonValueString>(
-					TEXT("renderer material_path values are read from GetRendererData propertyValues but not validated or round-tripped (renderer_material_bindings)"))
+					TEXT("renderer material_path values are best-effort extracts from renderer observability fields and are not validated (renderer_material_bindings)"))
 			});
 			EmitterGraph->SetObjectField(TEXT("diagnostics"), EmitterDiag);
 		}
@@ -653,16 +650,16 @@ bool FUeremcpNiagaraInspect::Run(
 
 	if (Spec.bIncludeDependencies)
 	{
-		FNiagaraExt_SystemDependencies Dependencies;
-		UNiagaraExternalEditUtilities::GetSystemDependencies(System, Dependencies, Context);
-		++OutResult.InternalOperations;
 		OutResult.ChecksPerformed.Add(TEXT("niagara.system_dependencies"));
 
 		TSharedPtr<FJsonObject> Deps = MakeShared<FJsonObject>();
-		Deps->SetNumberField(TEXT("used_modules"), Dependencies.UsedModules.Num());
-		Deps->SetNumberField(TEXT("used_data_interfaces"), Dependencies.UsedDataInterfaces.Num());
-		Deps->SetNumberField(TEXT("used_dynamic_inputs"), Dependencies.UsedDynamicInputs.Num());
-		Deps->SetNumberField(TEXT("used_renderers"), Dependencies.UsedRenderers.Num());
+		Deps->SetNumberField(TEXT("used_modules"), DependencySurvey.UsedModules);
+		Deps->SetNumberField(TEXT("used_data_interfaces"), DependencySurvey.UsedDataInterfaces);
+		Deps->SetNumberField(TEXT("used_dynamic_inputs"), DependencySurvey.UsedDynamicInputs);
+		Deps->SetNumberField(TEXT("used_renderers"), DependencySurvey.UsedRenderers);
+		Deps->SetStringField(
+			TEXT("survey_fidelity"),
+			TEXT("topology_and_script_default_dis_only; live stack DI inputs not serialized"));
 		SystemExt->SetObjectField(TEXT("dependencies"), Deps);
 	}
 	else

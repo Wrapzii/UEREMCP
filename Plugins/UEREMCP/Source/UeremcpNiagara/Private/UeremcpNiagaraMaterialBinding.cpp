@@ -680,26 +680,30 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			FNiagaraExt_StackItemReference RendererRef(System, FName(*EmitterName));
 			RendererRef.RendererIndex = Renderer.RendererIndex;
 
-			FNiagaraExt_RendererData RendererData;
-			UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
-			++InOutInternalOperations;
-
-			TSharedPtr<FJsonObject> PropertyValues = ParsePropertyValuesJson(RendererData.PropertyValues);
-			if (!PropertyValues.IsValid())
-			{
-				OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
-					TEXT("%s: renderer %d PropertyValues JSON unreadable"),
-					*Role,
-					Renderer.RendererIndex));
-				continue;
-			}
-
 			FString Conflict;
 			bool bPatched = false;
+			TSharedPtr<FJsonObject> SpriteRibbonPropertyValues;
 			if (Kind == EUeremcpNiagaraRendererMaterialKind::Sprite
 				|| Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
 			{
-				bPatched = PatchSpriteOrRibbonMaterial(PropertyValues, CanonicalMaterialPath, Conflict);
+				FNiagaraExt_RendererData RendererData;
+				UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
+				++InOutInternalOperations;
+
+				SpriteRibbonPropertyValues = ParsePropertyValuesJson(RendererData.PropertyValues);
+				if (!SpriteRibbonPropertyValues.IsValid())
+				{
+					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
+						TEXT("%s: renderer %d PropertyValues JSON unreadable"),
+						*Role,
+						Renderer.RendererIndex));
+					continue;
+				}
+
+				bPatched = PatchSpriteOrRibbonMaterial(
+					SpriteRibbonPropertyValues,
+					CanonicalMaterialPath,
+					Conflict);
 			}
 			else
 			{
@@ -756,7 +760,7 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 				|| Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
 			{
 				FNiagaraExt_RendererData PatchedData;
-				PatchedData.PropertyValues = SerializePropertyValuesJson(PropertyValues);
+				PatchedData.PropertyValues = SerializePropertyValuesJson(SpriteRibbonPropertyValues);
 				UNiagaraExternalEditUtilities::SetRendererData(RendererRef, PatchedData, Context);
 				++InOutInternalOperations;
 

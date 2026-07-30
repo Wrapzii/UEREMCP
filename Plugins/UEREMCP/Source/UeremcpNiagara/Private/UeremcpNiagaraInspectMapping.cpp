@@ -167,40 +167,31 @@ TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererExten
 		FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
 		RendererRef.RendererIndex = Renderer.RendererIndex;
 
-		const FString RendererClassPath = Renderer.RendererClass
-			? Renderer.RendererClass->GetPathName()
-			: FString();
-		const EUeremcpNiagaraRendererMaterialKind Kind =
-			FUeremcpNiagaraMaterialBinding::ClassifyRenderer(RendererClassPath);
-
-		if (Kind == EUeremcpNiagaraRendererMaterialKind::Mesh)
+		UNiagaraMeshRendererProperties* MeshProps =
+			UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
+				System,
+				EmitterName,
+				Renderer.RendererIndex);
+		if (MeshProps)
 		{
-			UNiagaraMeshRendererProperties* MeshProps =
-				UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
-					System,
-					EmitterName,
-					Renderer.RendererIndex);
-			if (MeshProps)
+			++InOutInternalOperations;
+			bOutFetchedPropertyValues = true;
+
+			const TSharedPtr<FJsonObject> PropertyValues =
+				FUeremcpNiagaraMaterialBinding::BuildMeshRendererObservabilityPropertyValues(MeshProps);
+			if (PropertyValues.IsValid())
 			{
-				++InOutInternalOperations;
-				bOutFetchedPropertyValues = true;
+				RendererObj->SetObjectField(TEXT("property_values"), PropertyValues);
+			}
 
-				const TSharedPtr<FJsonObject> PropertyValues =
-					FUeremcpNiagaraMaterialBinding::BuildMeshRendererObservabilityPropertyValues(MeshProps);
-				if (PropertyValues.IsValid())
-				{
-					RendererObj->SetObjectField(TEXT("property_values"), PropertyValues);
-				}
-
-				const FString MaterialPath =
-					FUeremcpNiagaraMaterialBinding::ExtractMaterialPathFromMeshRenderer(MeshProps);
-				if (!MaterialPath.IsEmpty())
-				{
-					RendererObj->SetStringField(TEXT("material_path"), MaterialPath);
-					RendererObj->SetStringField(
-						TEXT("material_path_fidelity"),
-						TEXT("extracted_from_mesh_renderer_fields_not_validated"));
-				}
+			const FString MaterialPath =
+				FUeremcpNiagaraMaterialBinding::ExtractMaterialPathFromMeshRenderer(MeshProps);
+			if (!MaterialPath.IsEmpty())
+			{
+				RendererObj->SetStringField(TEXT("material_path"), MaterialPath);
+				RendererObj->SetStringField(
+					TEXT("material_path_fidelity"),
+					TEXT("extracted_from_mesh_renderer_fields_not_validated"));
 			}
 		}
 		else
