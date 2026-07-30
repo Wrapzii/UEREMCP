@@ -1,4 +1,4 @@
-﻿# WS-01: RE project plugin junction retarget (orch)
+# WS-01: RE project plugin junction retarget (orch)
 
 **Date:** 2026-07-30  
 **Status:** Applied
@@ -24,3 +24,10 @@ still lacks Blueprint sources until WS-06 lands there.
 - `UEREMCP.uplugin` lists: Protocol, Blueprint, Niagara, Security, Templates, Core,
   Transport, Validation
 - `Source/UeremcpBlueprint` present under junction target
+
+## Policy (integration tip)
+
+**Do not retarget** `RE\Plugins\UEREMCP` to `UEREMCP-ws03` (or any non-orch worktree).
+`UEREMCP-ws01` / branch `ws-01-orch` is the integration tip; only that tree is
+guaranteed to carry all eight module sources including `UeremcpBlueprint`.
+
