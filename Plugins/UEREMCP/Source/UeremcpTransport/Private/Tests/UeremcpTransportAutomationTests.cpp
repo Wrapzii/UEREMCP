@@ -2,6 +2,7 @@
 
 #include "UeremcpJobConstraints.h"
 #include "UeremcpTransportProbe.h"
+#include "UeremcpEnvelope.h"
 
 #include "Dom/JsonObject.h"
 #include "Misc/AutomationTest.h"
@@ -251,16 +252,76 @@ bool FUeremcpTransportJobRegistryCancelSkipTest::RunTest(const FString& Paramete
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FUeremcpTransportTimeoutPartialSkipTest,
+	FUeremcpTransportTimeoutPartialResponseTest,
 	"UEREMCP.Transport.Timeout.PartiallyCompleted",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FUeremcpTransportTimeoutPartialSkipTest::RunTest(const FString& Parameters)
+bool FUeremcpTransportTimeoutPartialResponseTest::RunTest(const FString& Parameters)
 {
-	UeremcpTransportTest::SkipMissingApi(
-		*this,
-		TEXT("timeout_ms enforcement returning partially_completed + job handle"),
-		TEXT("ADR-0009 unit: SSE closes before work completes"));
+	const FString ResponseJson = FUeremcpEnvelope::MakeJobTimeoutResponse(
+		TEXT("request-timeout-1"),
+		TEXT("job-timeout-1"),
+		TEXT("Compiling assets"),
+		0);
+
+	TSharedPtr<FJsonObject> Response;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
+	TestTrue(
+		TEXT("timeout response is parseable JSON"),
+		FJsonSerializer::Deserialize(Reader, Response) && Response.IsValid());
+	if (!Response.IsValid())
+	{
+		return false;
+	}
+
+	TestEqual(
+		TEXT("timeout response status is honest"),
+		Response->GetStringField(TEXT("status")),
+		FString(TEXT("partially_completed")));
+	TestEqual(
+		TEXT("timeout response preserves request id"),
+		Response->GetStringField(TEXT("request_id")),
+		FString(TEXT("request-timeout-1")));
+
+	const TSharedPtr<FJsonObject>* Job = nullptr;
+	TestTrue(
+		TEXT("timeout response carries job handle"),
+		Response->TryGetObjectField(TEXT("job"), Job) && Job && (*Job).IsValid());
+	if (Job && (*Job).IsValid())
+	{
+		TestEqual(
+			TEXT("job id is stable for polling"),
+			(*Job)->GetStringField(TEXT("job_id")),
+			FString(TEXT("job-timeout-1")));
+		TestEqual(
+			TEXT("in-flight job state is running"),
+			(*Job)->GetStringField(TEXT("state")),
+			FString(TEXT("running")));
+		TestEqual(
+			TEXT("poll action matches transport handoff"),
+			(*Job)->GetStringField(TEXT("poll_action")),
+			FString(FUeremcpJobModelDefaults::PollActionName));
+		TestFalse(
+			TEXT("job does not advertise unwired cancellation"),
+			(*Job)->GetBoolField(TEXT("cancellable")));
+	}
+
+	const TSharedPtr<FJsonObject>* Metrics = nullptr;
+	TestTrue(
+		TEXT("timeout response carries metrics"),
+		Response->TryGetObjectField(TEXT("metrics"), Metrics) && Metrics && (*Metrics).IsValid());
+	if (Metrics && (*Metrics).IsValid())
+	{
+		TestEqual(
+			TEXT("mcp_round_trips is clamped to at least one"),
+			static_cast<int32>((*Metrics)->GetNumberField(TEXT("mcp_round_trips"))),
+			1);
+		TestEqual(
+			TEXT("timeout response performs no extra editor operations"),
+			static_cast<int32>((*Metrics)->GetNumberField(TEXT("internal_operations"))),
+			0);
+	}
+
 	return true;
 }
 
