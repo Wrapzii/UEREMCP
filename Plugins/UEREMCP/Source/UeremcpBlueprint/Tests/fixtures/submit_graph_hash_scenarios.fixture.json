@@ -1,0 +1,66 @@
+{
+  "$comment": "Offline scenarios for submit_graph dry_run and semantic hash compare (WS-06 P2).",
+  "scenarios": [
+    {
+      "id": "unchanged_replace",
+      "description": "Submitted semantic hash equals live graph; no write.",
+      "expected_status": "no_change_required",
+      "submitted_equals_current_hash": true,
+      "dry_run": false,
+      "revision_after": "unchanged",
+      "validated_claim": false
+    },
+    {
+      "id": "stale_expected_revision",
+      "description": "expected_revision mismatch; reject without mutation.",
+      "expected_status": "rejected",
+      "submitted_equals_current_hash": false,
+      "dry_run": false,
+      "revision_after": "unchanged",
+      "validated_claim": false
+    },
+    {
+      "id": "changed_replace_dry_run",
+      "description": "Hash differs but dry_run=true; DSL resolved, no mutation.",
+      "expected_status": "partially_completed",
+      "submitted_equals_current_hash": false,
+      "dry_run": true,
+      "revision_after": "unchanged",
+      "validated_claim": false,
+      "capability_notes_contains": ["submit_graph.dry_run_no_mutation"]
+    },
+    {
+      "id": "changed_replace_live_validated",
+      "description": "Write+compile+re-read with hash match and validate=true.",
+      "expected_status": "modified_and_validated",
+      "submitted_equals_current_hash": false,
+      "dry_run": false,
+      "compile": true,
+      "validate": true,
+      "reread_hash_matches_submitted": true,
+      "revision_after": "new_hash",
+      "validated_claim": true,
+      "editor_verified": false
+    },
+    {
+      "id": "changed_replace_live_hash_mismatch",
+      "description": "Write succeeded but re-read semantic hash differs (lossy write or dead nodes).",
+      "expected_status": "partially_completed",
+      "submitted_equals_current_hash": false,
+      "dry_run": false,
+      "compile": true,
+      "validate": true,
+      "reread_hash_matches_submitted": false,
+      "revision_after": "new_hash",
+      "validated_claim": false,
+      "capability_notes_contains": ["submit_graph.reread_hash_mismatch"]
+    },
+    {
+      "id": "non_scratch_changed_replace",
+      "description": "Production asset path rejected before DSL resolution.",
+      "expected_status": "rejected",
+      "asset_path": "/Game/Characters/BP_Hero.BP_Hero",
+      "capability_notes_contains": ["submit_graph.scratch_path_only"]
+    }
+  ]
+}
