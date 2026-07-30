@@ -42,23 +42,20 @@ All three tips were ancestors of / based on `227cb99`. Merge conflicts: none (`t
 
 ## Verification (this consolidation)
 
-```text
-python tools/validate_schemas.py
-# OK — schemas validate
+| Check | Result |
+|---|---|
+| `python tools/validate_schemas.py` | **OK** — 25 schemas |
+| `python tools/check_ownership.py --ws WS-01` | **OK** — WS-01 wording paths only |
+| `python tests/run_unit_tests.py` | **OK** — 48 tests |
+| `python tests/unit/test_d5_multiclient_harness.py` | **OK** — 2 tests |
+| `python Plugins/.../scripts/test_transport_constraints.py` | **OK** — cancel_job active; Epic notification limitation closed |
 
-python tools/check_ownership.py --ws WS-01
-# advisory on WS-01 doc commit only
-
-python tools/check_ownership.py --ws WS-04
-python tools/check_ownership.py --ws WS-05
-python tools/check_ownership.py --ws WS-11
-# advisory on landed branch tips (no RE junction / NullRHI in this consolidation)
-```
-
-Editor NullRHI / multi-client / Transport suites were **not** re-run here to avoid fighting
-other worktrees for the RE `Plugins/UEREMCP` junction. Runtime evidence remains on the
-source branch closeouts (WS-04/WS-05/WS-11). Prefer those logs over inventing a fresh run.
+Editor NullRHI / multi-client / Transport C++ suites were **not** re-run here to avoid
+fighting other worktrees for the RE `Plugins/UEREMCP` junction. Runtime evidence
+remains on the source branch closeouts (WS-04/WS-05/WS-11).
 
 ## Local main
 
-Fast-forward `main` to this consolidation tip after the WS-01 wording commit. Do not push.
+Final tip: `33aff30` (WS-01 wording) atop merges of `ded9fc4` / `9cc5381` /
+`deacfa6`. Fast-forward `main` to that tip. Verify with `git rev-parse main`.
+Do not push.
