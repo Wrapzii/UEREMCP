@@ -134,16 +134,30 @@ from source read + `$RAT/Docs/CAPABILITY_MATRIX.md` cross-check where noted.
 | `dress_workflow` | `REDressWorkflowTools` | 4 | Place/scatter static meshes, snap to floor | Cave/hub dressing for RE levels | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED: dress_workflow_tools.py] |
 | `level_workflow` | `RELevelWorkflowTools` | 3 | Open/create level, place actors, map check | `run_map_check` may fail on some builds `[UNVERIFIED: CAPABILITY_MATRIX.md]` | composite | partial supersede | level goal ops + WS-11 validation | [VERIFIED: level_workflow_tools.py] |
 | `lighting_workflow` | `RELightingWorkflowTools` | 4 | Mood presets, light inventory, set+verify | RE mood preset content | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED: lighting_workflow_tools.py] |
-| `material_workflow` | `REMaterialWorkflowTools` | 4 | MI create/configure/assign | **No master material graph** — MI only; defers graphs to Epic `MaterialTools` | composite | supersede | `materials.*` (WS-08) | [VERIFIED: material_workflow_tools.py] |
+| `material_workflow` | `REMaterialWorkflowTools` | 4 | MI create/configure/assign | **No master material graph** — defers to Epic `MaterialTools` | composite | improve (envelope) | `create_vfx_material`, graph JSON (WS-08) | [VERIFIED: material_workflow_tools.py; WS-08 proposal] |
 | `niagara_workflow` | `RENiagaraWorkflowTools` | 4 | Place system, assign, user params, compact inspect | **No system/emitter authoring** — docstring directs to Epic + `execute_tool_script` | composite | supersede placement; compose authoring | `niagara.*` + Epic batch (WS-07) | [VERIFIED: niagara_workflow_tools.py:78-81] |
 | `project_workflow` | `REProjectWorkflowTools` | 2 | Reload modules, architecture gap notes | Dev/diagnostic; not agent-facing production | primitive | retire | — | [VERIFIED: project_workflow_tools.py] |
 | `validation_workflow` | `REValidationWorkflowTools` | 3 | Compile/save/validate bundle; compact errors | `get_recent_errors_compact` build-dependent `[UNVERIFIED: CAPABILITY_MATRIX.md]` | composite | preserve ideas → WS-11 | validation harness + envelope status | [VERIFIED: validation_workflow_tools.py] |
+
+### `material_workflow` — per-tool disposition (WS-08 accepted)
+
+Accepted from `docs/proposals/ws-08-epic-material-audit.md` (WS-01, 2026-07-29).
+`[VERIFIED: material_workflow_tools.py, source scan 2026-07-29]`.
+
+| Tool | Purpose | Disposition | Superseded by / notes | Tag |
+|---|---|---|---|---|
+| `create_material_instance_configure_save` | Create MI, set params, save | improve | Wrap in UEREMCP envelope; keep JSON params pattern | [VERIFIED: material_workflow_tools.py] |
+| `update_material_instance_parameters` | Update existing MI params | improve | Same envelope + idempotency | [VERIFIED: material_workflow_tools.py] |
+| `assign_materials_to_mesh_components` | Assign MI to mesh slots on actor | preserve | Actor workflow — not WS-08 core; keep or route to gameplay/actor goal ops | [VERIFIED: material_workflow_tools.py] |
+| `create_assign_material_instance` | Create MI + assign in one call | improve | Valid composite for quick assign; envelope wrapper | [VERIFIED: material_workflow_tools.py] |
+| Master material graph edit | — | absent (Epic) | Epic `MaterialTools` fills gap — internalise, compose in `create_vfx_material` | [VERIFIED: WS-08 proposal + epic-toolsets.md] |
 
 ### Disposition summary
 
 | Disposition | Toolsets |
 |---|---|
-| **supersede** (core UEREMCP replaces agent surface) | actor, asset, batch, blueprint, context, material, niagara, level (partial) |
+| **supersede** (core UEREMCP replaces agent surface) | actor, asset, batch, blueprint, context, niagara, level (partial) |
+| **improve** (envelope wrapper, keep semantics) | material |
 | **defer — project extension** | anim, character, dress, lighting |
 | **preserve ideas** (patterns, not tools) | capture, validation, batch `$ref` grammar |
 | **retire** | project |

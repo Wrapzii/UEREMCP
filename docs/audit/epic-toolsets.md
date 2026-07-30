@@ -84,7 +84,8 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 |---|---|---|---|---|---|---|---|
 | EditorToolset | `BlueprintTools` | 52 | primitive + DSL composite | preserve / supersede surface | `blueprints.submit_graph`, `blueprints.read_graph` (planned) | UObject pin refs; no envelope; DSL not JSON graph schema | [VERIFIED: source scan] |
 | EditorToolset | `ProgrammaticToolset` | 2 | composite (batch) | preserve | compose in `execute_plan` | Async only; script sandbox; no arbitrary imports | [VERIFIED: programmatic.py] |
-| EditorToolset | `MaterialTools` | 22 | primitive | preserve / internalise | `materials.*` goal ops (planned) | Per-expression ops; no semantic VFX templates | [VERIFIED: source scan] |
+| EditorToolset | `MaterialTools` | 22 | primitive | internalise | compose in `create_vfx_material`, `retrieve/replace_material_graph` (WS-08) | Per-expression ops; UObject refs; no ADR-0004 graph JSON | [VERIFIED: material.py, source scan] |
+| EditorToolset | `MaterialInstanceTools` | 13 | primitive | preserve / improve via envelope | `create_vfx_material` batches MI params (WS-08) | Scalar/vector/texture/switch overrides; static switch recompile cost | [VERIFIED: material_instance.py, source scan] |
 | EditorToolset | `ActorTools`, `SceneTools`, `AssetTools`, `ObjectTools`, … | 174 | primitive–composite | internalise | goal-level domain tools | Many round-trips for workflows | [VERIFIED: source scan] |
 | EditorToolset | `UEditorAppToolset`, `ULogsToolset` (C++) | 25 | primitive | preserve | — | Editor/PIE/log plumbing | [VERIFIED: EditorAppToolset.h, LogsToolset.h] |
 | NiagaraToolsets | C++ Niagara BP API | 56 | primitive–composite | preserve / internalise | `niagara.submit_graph` (planned) | Stack/module topology ops; batched via execute_tool_script in REAgentTools | [VERIFIED: source scan] |
@@ -107,6 +108,68 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 
 ---
 
+## Materials — WS-08 disposition
+
+Accepted from `docs/proposals/ws-08-epic-material-audit.md` (WS-01, 2026-07-29).
+Tool names cross-checked against `docs/audit/raw/plugins/EditorToolset.json`
+`[VERIFIED: material.py, material_instance.py, source scan 2026-07-29]`. No runtime
+schemas — dispositions are source + accepted architecture only.
+
+### Epic `MaterialTools` — internalise (hide from agent via `SetNameFilters`)
+
+| Tool | Purpose | Disposition | Superseded by | Tag |
+|---|---|---|---|---|
+| `create_material` | Empty material asset | internalise | `create_vfx_material` | [VERIFIED: material.py] |
+| `create_function` | Empty material function | internalise | graph replace path | [VERIFIED: material.py] |
+| `create_parameter_collection` | MPC asset | internalise | rare direct use | [VERIFIED: material.py] |
+| `list_expression_classes` | Discover expression types | internalise | semantic tool class pick | [VERIFIED: material.py] |
+| `add_expression` | Add graph node | internalise | `replace_material_graph` | [VERIFIED: material.py] |
+| `delete_expression` | Remove graph node | internalise | same | [VERIFIED: material.py] |
+| `get_expressions` | List nodes | internalise / graph-read adapter | `retrieve_material_graph` | [VERIFIED: material.py] |
+| `layout_expressions` | Auto-layout | internalise (optional) | — | [VERIFIED: material.py] |
+| `list_parameter_groups` | Parameter UI groups | internalise / graph read | `retrieve_material_graph` | [VERIFIED: material.py] |
+| `rename_parameter_group` | Group rename | internalise | — | [VERIFIED: material.py] |
+| `delete_parameter_group` | Ungroup parameters | internalise | — | [VERIFIED: material.py] |
+| `get_expression_input_names` | Pin discovery | internalise / graph read | `retrieve_material_graph` | [VERIFIED: material.py] |
+| `get_expression_output_names` | Pin discovery | internalise / graph read | same | [VERIFIED: material.py] |
+| `connect_expressions` | Wire nodes | internalise | `replace_material_graph` | [VERIFIED: material.py] |
+| `disconnect_expressions` | Unwire pin | internalise | same | [VERIFIED: material.py] |
+| `get_expression_inputs` | Read wiring | internalise / graph read | `retrieve_material_graph` | [VERIFIED: material.py] |
+| `get_property_input` | Read output property source | internalise / graph read | same | [VERIFIED: material.py] |
+| `connect_to_output` | Wire to MP_* | internalise | `replace_material_graph` | [VERIFIED: material.py] |
+| `disconnect_from_output` | Unwire MP_* | internalise | same | [VERIFIED: material.py] |
+| `delete_unused_expressions` | Cleanup | internalise | — | [VERIFIED: material.py] |
+| `recompile` | Shader compile + errors | internalise → validation layer | WS-11 compile gate | [VERIFIED: material.py] |
+| `get_referencing_materials` | Function referencers | internalise | diagnostics | [VERIFIED: material.py] |
+
+### Epic `MaterialInstanceTools` — preserve / improve via envelope
+
+| Tool | Purpose | Disposition | Notes | Tag |
+|---|---|---|---|---|
+| `create` | Create MIC | improve | envelope + idempotency (ADR-0003/0006) | [VERIFIED: material_instance.py] |
+| `list_parameters` | Parameter manifest | improve | return in semantic response | [VERIFIED: material_instance.py] |
+| `get_scalar_parameter` / `set_scalar_parameter` | Scalar MI override | improve | batch in `create_vfx_material` | [VERIFIED: material_instance.py] |
+| `get_vector_parameter` / `set_vector_parameter` | Vector MI override | improve | batch in `create_vfx_material` | [VERIFIED: material_instance.py] |
+| `get_texture_parameter` / `set_texture_parameter` | Texture MI override | improve | batch in `create_vfx_material` | [VERIFIED: material_instance.py] |
+| `get_static_switch_parameter` / `set_static_switch_parameter` | Static switch | improve | warn on recompile cost | [VERIFIED: material_instance.py] |
+| `set_parent` | Reparent MI | internalise | — | [VERIFIED: material_instance.py] |
+| `clear_parameters` | Reset overrides | internalise | dry_run default (ADR-0008 pattern) | [VERIFIED: material_instance.py] |
+| `set_parameter_override` | Toggle override flag | internalise | — | [VERIFIED: material_instance.py] |
+
+### UEREMCP material actions (not duplicates — real gaps)
+
+| Planned action | Why not duplicate Epic/RE | Owner |
+|---|---|---|
+| `create_vfx_material` | One semantic op; batches MaterialTools + MI + validation | WS-08 |
+| `retrieve_material_graph` | ADR-0004 JSON; Epic returns UObject refs | WS-08 |
+| `replace_material_graph` | ADR-0004 round-trip | WS-08 |
+| `create_procedural_texture` | No Epic equivalent | WS-08 |
+| `instantiate_element_material` | Element template + parameter model (ADR-0008) | WS-08 / WS-15 |
+
+Coordinate elemental Niagara+material templates with WS-07 and WS-15 per accepted proposal.
+
+---
+
 ## Do-not-rebuild list
 
 Tools already at composite/goal altitude or that would duplicate working Epic surface:
@@ -115,12 +178,13 @@ Tools already at composite/goal altitude or that would duplicate working Epic su
 2. **`BlueprintTools.read_graph_dsl` / `write_graph_dsl`** — graph logic round-trip `[VERIFIED: blueprint.py:1454-1502]`
 3. **`BlueprintTools` node/pin primitives** — create/connect/compile pipeline `[VERIFIED: source scan — 52 tools]`
 4. **`NiagaraToolsets.*`** — system/emitter/module/renderer stack authoring (56 tools) `[VERIFIED: source scan]`
-5. **`MaterialTools.*`** — master material expression graph (22 tools) `[VERIFIED: source scan]`
-6. **`SemanticSearchToolset.Search` / `FindSimilar`** — project semantic asset search `[VERIFIED: source scan]`
-7. **`ULogsToolset.GetLogEntries`** and editor/PIE helpers on `UEditorAppToolset` `[VERIFIED: LogsToolset.h, EditorAppToolset.h]`
-8. **`SlateInspectorToolset`** — UI dialog automation `[VERIFIED: source scan]`
-9. **`UAgentSkillToolset`** — skill template CRUD `[VERIFIED: AgentSkill.h]`
-10. **REAgentTools `execute_editor_batch`** — prior-art batch with `$ref` chaining; audit disposition in RB-15 / `reagenttools.md` (not Epic, but do not rebuild batch grammar without reading it)
+5. **`MaterialTools.*`** — master material expression graph (22 tools); **internalise**, do not expose `[VERIFIED: material.py, WS-08 proposal]`
+6. **`MaterialInstanceTools.*`** — MI parameter CRUD (13 tools); improve via envelope, do not duplicate per-param agent tools `[VERIFIED: material_instance.py, WS-08 proposal]`
+7. **`SemanticSearchToolset.Search` / `FindSimilar`** — project semantic asset search `[VERIFIED: source scan]`
+8. **`ULogsToolset.GetLogEntries`** and editor/PIE helpers on `UEditorAppToolset` `[VERIFIED: LogsToolset.h, EditorAppToolset.h]`
+9. **`SlateInspectorToolset`** — UI dialog automation `[VERIFIED: source scan]`
+10. **`UAgentSkillToolset`** — skill template CRUD `[VERIFIED: AgentSkill.h]`
+11. **REAgentTools `execute_editor_batch`** — prior-art batch with `$ref` chaining; audit disposition in RB-15 / `reagenttools.md` (not Epic, but do not rebuild batch grammar without reading it)
 
 ---
 
@@ -136,7 +200,7 @@ Capabilities where Epic + REAgentTools still leave holes — justified new UEREM
 | Idempotent goal-level domain actions | Stable paths + expected_revision not on Epic surface | WS-05, domain WS |
 | Multi-asset rollback semantics | `execute_tool_script` undoes single transactional script, not FileSandbox batch | WS-11, WS-12 |
 | GAS **ability graph** authoring | GASToolsets inspect cues/tags/effects; no ability graph construction | WS-09 |
-| Semantic VFX **material templates** | MaterialTools edits expressions; no goal-level “fireball material” op | WS-08 |
+| Semantic VFX **material templates** | MaterialTools are per-expression; REAgentTools MI-only — need `create_vfx_material`, graph JSON, procedural texture, element instantiation | WS-08 |
 | Project-specific RE workflows | dress/character/lighting REAgentTools toolsets | defer / project layer |
 
 ---
