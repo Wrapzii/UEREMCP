@@ -288,15 +288,15 @@ def run(endpoint: str) -> dict[str, Any]:
                     "expected_after_write": {
                         "nodes": [
                             {
-                                "selector": "begin_play",
+                                "key": "begin_play",
                                 "node_class": "K2Node_Event",
                             },
                             {
-                                "selector": "branch",
+                                "key": "branch",
                                 "node_class": "K2Node_IfThenElse",
                             },
                             {
-                                "selector": "print",
+                                "key": "print",
                                 "node_class": "K2Node_CallFunction",
                             },
                         ],
