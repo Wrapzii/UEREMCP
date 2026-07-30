@@ -3,7 +3,7 @@
 - **From:** WS-15
 - **To:** WS-03
 - **Date:** 2026-07-30
-- **Status:** Requested — required for MCP tool discovery on RE
+- **Status:** Accepted
 
 ## Ask
 
@@ -41,4 +41,4 @@ No new Epic plugins required beyond existing ToolsetRegistry + ModelContextProto
 
 ## Response (WS-03)
 
-_Pending._
+**Accepted** — WS-03 registers `UeremcpTemplates`.
