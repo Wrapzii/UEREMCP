@@ -1,0 +1,41 @@
+{
+  "scenario_id": "poc-b-fireball-primitive-baseline",
+  "arm": "epic_reagenttools_primitives",
+  "status": "unavailable",
+  "attempted_utc": "2026-07-30T14:00:00Z",
+  "sequence_authority": "docs/proposals/ws-07-poc-b-primitive-baseline-sequence.md",
+  "planned_known_minimum_primitive_ops": 17,
+  "measured": {
+    "primitive_ops_executed": null,
+    "mcp_round_trips": null,
+    "wall_clock_seconds": null,
+    "completed": false
+  },
+  "reason": "The WS-07 sequence is an accounting outline, not an executable baseline fixture. A semantically equivalent trial cannot be run without inventing inputs that materially determine the primitive count and result.",
+  "live_discovery": {
+    "programmatic_batch_tool": "editor_toolset.toolsets.programmatic.ProgrammaticToolset.execute_tool_script",
+    "niagara_toolset": "NiagaraToolsets.NiagaraToolset_System",
+    "confirmed_tools": [
+      "CreateNiagaraSystem",
+      "AddEmitter",
+      "AddUserVariables",
+      "SetRendererData",
+      "GetSystemCompileState",
+      "GetSystemSummary",
+      "GetEmitterTopology"
+    ]
+  },
+  "missing_executable_inputs": [
+    "Concrete pre-UEREMCP emitter template refPath values for all six semantic roles.",
+    "Concrete NiagaraTypeDefinition and default-value payloads for primary colour, secondary colour, scale, and intensity; the WS-07 sequence explicitly leaves the AddUserVariables/SetVariable split TBD.",
+    "Concrete renderer references and rendererData.propertyValues payloads for six equivalent material bindings.",
+    "A specified primitive material chain for each role. The sequence permits either WS-08 create_vfx_material goal operations or Epic MaterialTools/MaterialInstanceTools, which have different call grain and therefore cannot be selected interchangeably for a measured primitive baseline.",
+    "A deterministic compile-poll termination/count policy and a concrete package-save primitive list."
+  ],
+  "honesty_constraints": [
+    "No partial asset was created because it would not meet the semantic target.",
+    "The planned 17 known Niagara operations are not reported as measured.",
+    "UEREMCP internal_operations=46 is not substituted for the primitive baseline."
+  ],
+  "close_condition": "WS-07 must provide one executable fixture/script with fixed emitter templates, variable payloads, renderer payloads, material primitive chain, compile polling, save, and reread assertions; then run at least one clean timed trial (the existing handoff requests three)."
+}

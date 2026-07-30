@@ -1,0 +1,31 @@
+{
+  "scenario_id": "poc-b-fireball-ueremcp",
+  "arm": "ueremcp",
+  "transport": "editor_single_call_equivalent",
+  "transport_selection_reason": "The live user-unreal-mcp CreateNiagaraEffect attempt failed before dispatch with WinError 10061 (connection actively refused). POC acceptance capture therefore used the permitted editor single-call equivalent.",
+  "runner": "tests/run_poc_b_fireball.ps1",
+  "filter": "UEREMCP.Niagara.POCB.FireballInlineMaterials",
+  "source_tip": "268a102",
+  "client_timer": {
+    "clock": "System.Diagnostics.Stopwatch",
+    "wall_clock_seconds": 31.37067,
+    "measured_utc": "2026-07-30T13:59:20.5703153Z",
+    "scope": "Immediately around one invocation of tests/run_poc_b_fireball.ps1, including editor process startup, the single goal-level create and validation, and editor shutdown."
+  },
+  "result": {
+    "exit_code": 0,
+    "completed": true,
+    "marker": "UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_expanded_gates"
+  },
+  "raw_log": {
+    "capture_path": "$UEREMCP_ROOT-ws01/tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_095849.log",
+    "test_started": "[2026.07.30-13.59.08:071][596]",
+    "test_completed": "[2026.07.30-13.59.19:550][597]",
+    "marker_line": 3245
+  },
+  "limitations": [
+    "This is the explicitly permitted editor single-call equivalent, not an MCP transport timing.",
+    "The 31.370670 second client wall clock includes cold editor startup and shutdown.",
+    "The editor-log test interval is supporting evidence only and is not substituted for client wall clock."
+  ]
+}
