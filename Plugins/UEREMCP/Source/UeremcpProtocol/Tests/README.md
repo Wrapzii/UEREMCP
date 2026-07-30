@@ -48,3 +48,9 @@ ADR-0009 registry tests live in
 `UEREMCP.Protocol.JobRegistry`. They cover lifecycle/poll metrics, cooperative
 cancellation, bounded capacity, concurrent polls, active/terminal expiration,
 and the initiating timeout envelope.
+
+ADR-0008 interpreter tests live in
+`Private/Tests/UeremcpPlanExecutorTests.cpp` with filter prefix
+`UEREMCP.Protocol.PlanExecutor`. They cover fail-closed preflight, stable
+dependency dispatch, response `$ref` substitution, consolidated metrics/change
+results, one-call accounting, and confirmed cross-operation rollback.
