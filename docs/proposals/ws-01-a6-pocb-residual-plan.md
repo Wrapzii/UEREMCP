@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `279f09a` (B4 direct-binding residual note; tip lineage `d1eb1ea`→`279f09a`)
+- **Orch tip at writing:** `b295549` (POC A slice note; B4 fix re-run on `279f09a`)
 - **Date:** 2026-07-30
-- **Status:** POC A slice on tip lineage `d1eb1ea`→`279f09a`: A3/A4/A6/A7/A8/A11 **PASS**; A1/A2/A5/A9/A10 **SKIP**. Aggregate filter `UEREMCP.Blueprint.POCA.CompleteRoundTrip` has no matching marker. **Overall POC A unclaimed.** B4 fix `72241c2` awaits fireball re-run; B4 / POC-B unproven.
+- **Status:** POC A slice remains partial and overall POC A unclaimed. Fireball re-run on `279f09a` **FAILS full B4**: 5/6 roles verified; `ribbon_trail` has no MI and fails binding re-read. Aggregate B4 booleans incorrectly reported true over only five resolved roles, so WS-07 must require all requested roles. No B4 / overall POC-B claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -109,14 +109,16 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 
 **Runtime result on `c87b1db`:** all six MIs were created under `/Game/__UeremcpPoc/Materials/`, and B2 manifest assertions passed. B4 remained false: only `flame_shell` binding verified; `core`, `sparks`, `smoke`, `ribbon_trail`, and `impact_burst` failed re-read verification. Log: `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_052723.log`.
 
+**Runtime result on `279f09a`:** direct binding improved verification to 5/6 roles, but `ribbon_trail` failed. No `/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_ribbon_trail` was created (only its master existed). `B4_material_bindings_verified: true` and `validation.material_bindings_verified: true` were dishonest because they covered only five resolved roles; the gate must require every requested role. Log: `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_053740.log`.
+
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **Still open** — filter is one direct editor tool call, not MCP; live fireball MCP missing | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | **Filter manifest/path slice PASS on `c87b1db`** — six MIs under POC root; not an overall POC-B claim | WS-08 + WS-07 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | Prior manifest/path slice passed on `c87b1db`; latest run lacks the requested `ribbon_trail` MI, so full current fireball proof remains open | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **Partial scaffolding** — needs fireball acceptance run | WS-07 |
-| B4 | Renderers configured and bound to valid materials | **Fix landed, not proven** — direct sprite/ribbon bind at `72241c2`; template `MaterialUserParamBinding` may still block roles | WS-07 |
+| B4 | Renderers configured and bound to valid materials | **FAIL on `279f09a`** — 5/6 verified; `ribbon_trail` MI absent/binding failed; aggregate gate dishonestly ignored unresolved role | WS-07 (+ WS-08 if ribbon `create_spec`) |
 | B5 | User params for colour, scale, intensity | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B6 | System compiles; compile genuinely awaited | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -133,7 +135,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | Close POC A SKIPs (A1/A2/A5 MCP, A9 metrics, A10 lossy_areas) + aggregate CompleteRoundTrip marker | WS-06 + WS-11 | Slice partial; refuse overall POC-A |
-| P0 | Re-run fireball after direct binding fix `72241c2`; diagnose any remaining template user-param binding blockers | WS-07 + WS-11 | B2 path/manifest progress green; B4 unclaimed |
+| P0 | Create/resolve `ribbon_trail` MI, bind/re-read it, and make B4 gate require all requested roles; then re-run | WS-07 (+ WS-08 if `create_spec`) + WS-11 | Latest fireball 5/6; B4 FAIL |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |

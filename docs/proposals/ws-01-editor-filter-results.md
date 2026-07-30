@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `279f09a` (B4 direct-binding residual; awaiting fireball re-run)
+- **Current orchestration tip:** `b295549` (POC A slice note; B4 re-run was on `279f09a`)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** POC A slice on `d1eb1ea`→`279f09a`: A3/A4/A6/A7/A8/A11 PASS; A1/A2/A5/A9/A10 SKIP; no CompleteRoundTrip aggregate marker. **Overall POC A unclaimed.** B4 fix `72241c2` awaits fireball re-run. No B4 / overall POC-B claim.
+- **Status:** POC A remains partial and overall POC A unclaimed. Fireball on `279f09a` **FAILS full B4**: 5/6 roles verified, but `ribbon_trail` MI was not created and its binding failed. Aggregate B4 booleans incorrectly reported true for only five resolved roles. No B4 / overall POC-B claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: POC A slice partial (PASS A3/A4/A6/A7/A8/A11; SKIP A1/A2/A5/A9/A10); overall POC A unclaimed. Fireball B2 path/manifest progress is green. B4 direct-binding fix `72241c2` is landed but unproven pending re-run; template `MaterialUserParamBinding` remains a possible blocker. Material **PASS 14/14**.
+Residuals: POC A slice partial (PASS A3/A4/A6/A7/A8/A11; SKIP A1/A2/A5/A9/A10); overall POC A unclaimed. Fireball direct-binding re-run reached 5/6 roles. `ribbon_trail` MI is absent and B4 gate completeness is dishonest; WS-07 owns the gate/bind fix, with WS-08 if ribbon `create_spec` is responsible. Material **PASS 14/14**.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -70,6 +70,13 @@ WS-11 parsing fix is integrated as `674c439`. The ordered co-location stack is `
 |---|---|---|
 | Blueprint `PocA6Reread` | **PASS** | `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_052810.log`: test Success; editor exit 0. A6 runtime criterion only; not overall POC A. |
 | Fireball POC | **FAIL (B4)** | `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_052723.log`: six MIs under POC-root Materials and B2 manifest OK; only `flame_shell` binding verified, five roles failed. |
+
+## Fireball B4 re-run on tip `279f09a` (WS-11)
+
+| Proof | Result | Evidence / residual |
+|---|---|---|
+| Fireball POC | **FAIL (B4, 5/6)** | `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_053740.log`: `ribbon_trail` MI missing and binding re-read failed; other five roles verified. |
+| B4 aggregate honesty | **FAIL** | `B4_material_bindings_verified: true` and `validation.material_bindings_verified: true` covered only five resolved roles. Gate must require all six requested roles. |
 
 ## Templates editor result and handoff
 
@@ -277,10 +284,10 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | POC A slice: close A1/A2/A5 MCP gaps and A10 `lossy_areas` with WS-11. |
-| WS-07 | Direct sprite/ribbon B4 bind + UObject re-read fix landed as `72241c2`; stand by for fireball re-run and any template `MaterialUserParamBinding` residual. |
+| WS-07 | Fix missing `ribbon_trail` MI/binding and require all requested roles before either B4 aggregate boolean can be true. |
 | WS-08 | Material API landed as `58036dd`; Material remains **PASS 14/14**. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run fireball after `72241c2`. Close POC A SKIPs (A1/A2/A5/A9/A10) + CompleteRoundTrip marker. Keep overall POC-A/B4/POC-B unclaimed. |
+| WS-11 | Re-run fireball after WS-07 gate/binding fix. Close POC A SKIPs + CompleteRoundTrip marker. Keep overall POC-A/B4/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Material is green at 14/14. POC A is partial (not overall PASS). Fireball B2 path/manifest progress is green; B4 fix is landed but awaits re-proof. No overall POC-A / B4 / overall POC-B claims. No junction retarget.
+Material is green at 14/14. POC A is partial. Fireball B4 is 5/6 and aggregate honesty is open. No overall POC-A / B4 / overall POC-B claims. No junction retarget.
