@@ -143,6 +143,93 @@ bool FUeremcpPlanExecutorCompositionTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpPlanExecutorUsablePartialDependencyTest,
+	"UEREMCP.Protocol.PlanExecutor.UsablePartialDependency",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpPlanExecutorUsablePartialDependencyTest::RunTest(const FString& Parameters)
+{
+	using namespace UeremcpPlanExecutorTest;
+	Reset();
+	FString Error;
+	bool bCommit = false;
+	bool bRollback = false;
+	bool bReferenceResolved = false;
+
+	FUeremcpPlanTransactionCallbacks Transaction;
+	Transaction.Begin = [](FString&) { return true; };
+	Transaction.Commit = [&bCommit](FString&) { bCommit = true; return true; };
+	Transaction.Rollback = [&bRollback](FString&) { bRollback = true; return true; };
+	TestTrue(
+		TEXT("transaction callbacks register"),
+		FUeremcpPlanExecutor::SetTransactionCallbacks(MoveTemp(Transaction), Error));
+
+	TestTrue(
+		TEXT("partial producer registers"),
+		FUeremcpPlanExecutor::RegisterAction(
+			TEXT("create_partial_asset"),
+			[](const FString& RequestJson, FString& OutResponse, FString&)
+			{
+				const TSharedPtr<FJsonObject> Request = Parse(RequestJson);
+				if (Request->GetObjectField(TEXT("options"))->GetBoolField(TEXT("validate")))
+				{
+					return false;
+				}
+				OutResponse = MakeSuccess(
+					TEXT("partially_completed"),
+					TEXT("asset created; validation intentionally deferred"),
+					TEXT("/Game/MI_Partial"));
+				return true;
+			},
+			Error));
+	TestTrue(
+		TEXT("dependent consumer registers"),
+		FUeremcpPlanExecutor::RegisterAction(
+			TEXT("consume_partial_asset"),
+			[&bReferenceResolved](const FString& RequestJson, FString& OutResponse, FString&)
+			{
+				const TSharedPtr<FJsonObject> Request = Parse(RequestJson);
+				FString Asset;
+				bReferenceResolved =
+					Request->GetObjectField(TEXT("specification"))
+						->TryGetStringField(TEXT("asset"), Asset)
+					&& Asset == TEXT("/Game/MI_Partial");
+				OutResponse = MakeSuccess(
+					TEXT("created_and_validated"),
+					TEXT("dependent asset created"));
+				return bReferenceResolved;
+			},
+			Error));
+
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"plan-usable-partial",
+		"action":"execute_plan",
+		"specification":{
+			"transaction":{"validate_policy":"at_end"},
+			"operations":[
+				{"id":"material","action":"create_partial_asset"},
+				{"id":"effect","action":"consume_partial_asset","depends_on":["material"],
+				 "specification":{"asset":{"$ref":"material.result.primary_asset"}}}
+			]
+		}
+	})");
+	FString ResponseJson;
+	TestTrue(
+		TEXT("usable partial plan returns structured response"),
+		FUeremcpPlanExecutor::ExecuteRequest(Request, ResponseJson, Error));
+	TestTrue(TEXT("usable partial dependency resolves"), bReferenceResolved);
+	TestTrue(TEXT("usable partial plan commits"), bCommit);
+	TestFalse(TEXT("usable partial plan does not roll back"), bRollback);
+	TestEqual(
+		TEXT("aggregate remains honestly partial"),
+		Parse(ResponseJson)->GetStringField(TEXT("status")),
+		FString(TEXT("partially_completed")));
+	Reset();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpPlanExecutorRollbackBasicTest,
 	"UEREMCP.Protocol.PlanExecutor.RollbackBasic",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
@@ -186,6 +273,58 @@ bool FUeremcpPlanExecutorRollbackBasicTest::RunTest(const FString& Parameters)
 		TEXT("rollback status is honest"),
 		Parse(ResponseJson)->GetStringField(TEXT("status")),
 		FString(TEXT("rolled_back")));
+	Reset();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpPlanExecutorZeroSuccessTest,
+	"UEREMCP.Protocol.PlanExecutor.ZeroSuccess",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpPlanExecutorZeroSuccessTest::RunTest(const FString& Parameters)
+{
+	using namespace UeremcpPlanExecutorTest;
+	Reset();
+	FString Error;
+	TestTrue(
+		TEXT("incomplete handler registers"),
+		FUeremcpPlanExecutor::RegisterAction(
+			TEXT("incomplete_operation"),
+			[](const FString&, FString& OutResponse, FString&)
+			{
+				OutResponse = MakeSuccess(
+					TEXT("partially_completed"),
+					TEXT("operation did not reach validated completion"));
+				return true;
+			},
+			Error));
+
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"plan-zero-success",
+		"action":"execute_plan",
+		"specification":{
+			"transaction":{"atomic":false,"rollback_on_failure":false},
+			"operations":[{"id":"incomplete","action":"incomplete_operation"}]
+		}
+	})");
+	FString ResponseJson;
+	TestTrue(
+		TEXT("zero-success plan returns a structured response"),
+		FUeremcpPlanExecutor::ExecuteRequest(Request, ResponseJson, Error));
+	const TSharedPtr<FJsonObject> Response = Parse(ResponseJson);
+	TestTrue(TEXT("zero-success response parses"), Response.IsValid());
+	if (Response.IsValid())
+	{
+		TestEqual(
+			TEXT("zero-success aggregate reports failure"),
+			Response->GetStringField(TEXT("status")),
+			FString(TEXT("failed_validation")));
+		const TArray<TSharedPtr<FJsonValue>>& Operations =
+			Response->GetObjectField(TEXT("result"))->GetArrayField(TEXT("operations"));
+		TestEqual(TEXT("failed operation remains visible"), Operations.Num(), 1);
+	}
 	Reset();
 	return true;
 }

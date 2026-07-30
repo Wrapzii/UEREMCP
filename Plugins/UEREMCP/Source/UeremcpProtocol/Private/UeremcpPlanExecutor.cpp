@@ -92,6 +92,20 @@ namespace
 			|| Status == TEXT("no_change_required");
 	}
 
+	bool IsUsablePartial(
+		const FString& Status,
+		const TSharedPtr<FJsonObject>& Response)
+	{
+		const TSharedPtr<FJsonObject>* Result = nullptr;
+		FString PrimaryAsset;
+		return Status == TEXT("partially_completed")
+			&& Response.IsValid()
+			&& Response->TryGetObjectField(TEXT("result"), Result)
+			&& Result
+			&& (*Result)->TryGetStringField(TEXT("primary_asset"), PrimaryAsset)
+			&& !PrimaryAsset.IsEmpty();
+	}
+
 	bool ValidAction(const FString& Action)
 	{
 		if (Action.IsEmpty() || Action[0] < TEXT('a') || Action[0] > TEXT('z'))
@@ -543,6 +557,7 @@ bool FUeremcpPlanExecutor::ExecuteRequest(
 	int32 InternalOperations = 0;
 	bool bRequiredFailure = false;
 	bool bAnyFailure = false;
+	bool bAnyUsablePartial = false;
 	bool bStop = false;
 
 	for (int32 Index = 0; Index < Order.Num(); ++Index)
@@ -551,8 +566,7 @@ bool FUeremcpPlanExecutor::ExecuteRequest(
 		FString SkipReason;
 		for (const FString& Dependency : Operation.DependsOn)
 		{
-			const FString* Status = StatusById.Find(Dependency);
-			if (!Status || !IsSuccess(*Status))
+			if (!Completed.Contains(Dependency))
 			{
 				SkipReason = FString::Printf(
 					TEXT("dependency '%s' did not complete successfully"), *Dependency);
@@ -627,10 +641,12 @@ bool FUeremcpPlanExecutor::ExecuteRequest(
 
 		Results.Add(MakeShared<FJsonValueObject>(OperationResult(Operation, Status, Summary)));
 		StatusById.Add(Operation.Id, Status);
-		if (IsSuccess(Status))
+		const bool bUsablePartial = IsUsablePartial(Status, Response);
+		if (IsSuccess(Status) || bUsablePartial)
 		{
 			Completed.Add(Operation.Id, Response);
 			SuccessfulResponses.Add(Response);
+			bAnyUsablePartial |= bUsablePartial;
 		}
 		else
 		{
@@ -660,7 +676,11 @@ bool FUeremcpPlanExecutor::ExecuteRequest(
 	{
 		FinalStatus = TEXT("rolled_back");
 	}
-	else if (bAnyFailure)
+	else if (bAnyFailure && SuccessfulResponses.IsEmpty())
+	{
+		FinalStatus = TEXT("failed_validation");
+	}
+	else if (bAnyFailure || bAnyUsablePartial)
 	{
 		FinalStatus = TEXT("partially_completed");
 	}
@@ -682,6 +702,8 @@ bool FUeremcpPlanExecutor::ExecuteRequest(
 		TEXT("summary"),
 		bRolledBack
 			? TEXT("execute_plan failed and rolled back.")
+			: bAnyFailure && SuccessfulResponses.IsEmpty()
+				? TEXT("execute_plan failed before any operation completed successfully.")
 			: bAnyFailure
 				? TEXT("execute_plan completed only an independent subset.")
 				: FString::Printf(TEXT("execute_plan completed %d operation(s)."), Operations.Num()));
@@ -697,7 +719,7 @@ bool FUeremcpPlanExecutor::ExecuteRequest(
 	Final->SetObjectField(TEXT("understood"), Understood);
 	TSharedPtr<FJsonObject> Aggregate = MakeShared<FJsonObject>();
 	Aggregate->SetArrayField(TEXT("operations"), Results);
-	if (!bRolledBack)
+	if (!bRolledBack && !SuccessfulResponses.IsEmpty())
 	{
 		for (const FString& Field : {
 			TEXT("created_assets"), TEXT("modified_assets"), TEXT("deleted_assets"),
