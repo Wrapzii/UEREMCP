@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `7b2ed34` (WS-06 A6 selector/no-op fix)
+- **Orch tip at writing:** `c87b1db` (WS-06 A6 fix + residual readiness note)
 - **Date:** 2026-07-30
-- **Status:** Runtime acceptance follow-up on `d691316` **failed**. WS-06 selector/no-op fix is now on orch as `7b2ed34` (`90b8a6d`) and is ready for a `PocA6Reread` re-run; **A6 remains unproven**. The ordered MI co-location stack `58036dd` → `dc4f118` is ready for a WS-11 fireball re-run, but B4 / POC-B remain unproven. Material Toolset **PASS 14/14**. No A6 / POC A / B1 / B2 / B4 / overall POC-B claim.
+- **Status:** `PocA6Reread` **PASS** on `c87b1db`, proving the A6 runtime criterion; overall POC A remains open until A1–A11 are evidenced. Fireball re-run on the same tip created six MIs under `/Game/__UeremcpPoc/Materials/` and passed the B2 manifest checks, but **B4 remains false**: only `flame_shell` binding re-read verified. No overall POC A / B4 / overall POC-B claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -40,7 +40,7 @@ Recorded proof: `UeremcpBlueprint.Toolset` **PASS 4/4** on tip `35b4cab` (`docs/
 | `ReadGraphRoundTrip` | Retrieve + `content_hash`/`revision` alignment | No A4 external modify + A5 replace + A6 programmatic node/link assert |
 | `SubmitGraphValidation` | Unchanged replace → `no_change_required`; stale revision rejected; dry-run / validation paths | Not the full A4→A6 modify-then-reread assertion; not A7 `modified_and_validated` + `reread_after_write: true` as the POC A scenario |
 
-Filter-results already declines an A6 claim. That remains correct.
+Those Wave 2 tests alone do not prove A6. The later dedicated `PocA6Reread` PASS on `c87b1db` does; it still does not prove overall POC A.
 
 ### Missing A6 / POC A evidence (owners)
 
@@ -48,12 +48,12 @@ Filter-results already declines an A6 claim. That remains correct.
 |---|---|---|
 | **A6 code on orch** | WS-06 | Landed `13bf529` (`2a0b2cd`): programmatic reread-after-write validation + harness handoff `docs/proposals/ws-06-a6-ws11-harness.md`. **Not an A6 claim.** |
 | **A6 selector/no-op fix** | WS-06 | Landed `7b2ed34` (`90b8a6d`): multi-event endpoint IDs + hash-based no-op. **Ready for re-run; not an A6 claim.** |
-| Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **FAIL on `d691316`** — BeginPlay→Branch link missing; A8/A11 no-op failed. Log: `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_050942.log` |
+| Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **PASS on `c87b1db`** — `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_052810.log`; test Success, exit 0 |
 | End-to-end POC A (A1–A11) or A8 patch escape + A10 | WS-06 + WS-11 | Full scenario metrics under `/Game/__UeremcpPoc/` |
-| A7 / A8 / A11 fields on success path | WS-06 | Proven only after editor run |
+| A7 / A8 / A11 fields on success path | WS-06 | A6 filter is green; full A1–A11 scenario evidence remains open |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** WS-11 re-runs `PocA6Reread` with `7b2ed34`. Refuse A6/POC-A claims until PASS.
+**WS-01 next step:** retain the A6 runtime proof and complete the remaining A1–A11 evidence before any overall POC-A claim.
 
 ---
 
@@ -86,16 +86,16 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 
 Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Material rejected `/Game/__UeremcpPoc/`.
 
-**Runtime result on `d691316`:** Niagara system path was under `/Game/__UeremcpPoc/`, but generated MIs resolved under `/Game/__UeremcpTests/`; B4 was false. B2 also encountered a harness manifest-path issue. Parsing fix is at `674c439`; ordered co-location stack is `58036dd` → `dc4f118`. Log: `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_050816.log`. **WS-11 re-run required.**
+**Runtime result on `c87b1db`:** all six MIs were created under `/Game/__UeremcpPoc/Materials/`, and B2 manifest assertions passed. B4 remained false: only `flame_shell` binding verified; `core`, `sparks`, `smoke`, `ribbon_trail`, and `impact_burst` failed re-read verification. Log: `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_052723.log`.
 
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **Still open** — filter is one direct editor tool call, not MCP; live fireball MCP missing | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | **Fixes landed, not proven** — parser + MI co-location now on orch; awaiting WS-11 fireball re-run | WS-08 + WS-07 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | **Filter manifest/path slice PASS on `c87b1db`** — six MIs under POC root; not an overall POC-B claim | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **Partial scaffolding** — needs fireball acceptance run | WS-07 |
-| B4 | Renderers configured and bound to valid materials | **Stack landed, not proven** — `58036dd` → `dc4f118`; prior result `B4=false`; awaiting re-run | WS-07 + WS-08 |
+| B4 | Renderers configured and bound to valid materials | **FAIL on `c87b1db`** — only `flame_shell` verified; five role bindings failed re-read | WS-07 |
 | B5 | User params for colour, scale, intensity | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B6 | System compiles; compile genuinely awaited | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -112,13 +112,13 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | POC A scenario including explicit A6 programmatic re-read | WS-06 | Track; do not claim until WS-11 editor/MCP evidence lands |
-| P0 | Re-run `PocA6Reread` after selector/no-op fix `7b2ed34` | WS-11 | Fix ready; prior runtime result FAIL; refuse A6/POC-A until PASS |
-| P0 | Re-run fireball after MI co-location stack `58036dd` → `dc4f118` | WS-11 | Stack ready; prior result FAIL; refuse B1/B2/B4 until PASS |
+| P0 | Complete remaining POC A A1–A11 evidence | WS-06 + WS-11 | A6 runtime criterion PASS; no overall POC-A claim |
+| P0 | Fix five failed fireball renderer binding re-reads, then re-run | WS-07 + WS-11 | B2 path/manifest progress green; B4 FAIL |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after A6 + POC B |
 
-**Not claimed:** A6, overall POC A, overall POC B, A6/POC-B “essentially done.”
+**Not claimed:** overall POC A, B4, overall POC B, or POC-A/POC-B “essentially done.”
 
 **Junction:** RE and VisualTest must remain on `UEREMCP-ws01\Plugins\UEREMCP`.
