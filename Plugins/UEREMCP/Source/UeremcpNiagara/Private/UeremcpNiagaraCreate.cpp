@@ -16,6 +16,8 @@
 #include "NiagaraVariant.h"
 
 #include "Misc/PackageName.h"
+#include "Misc/App.h"
+#include "Containers/Ticker.h"
 #include "UObject/SavePackage.h"
 #include "UObject/SoftObjectPath.h"
 
@@ -173,8 +175,10 @@ namespace
 		System->RequestCompile(false);
 
 		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:449]
-		// PollForCompilationComplete is public; it drives compile completion per tick
-		// (QueryCompileComplete is private — NiagaraSystem.h:918).
+		// PollForCompilationComplete(bFlush=true) wraps QueryCompileComplete(false); pair with
+		// FTSTicker so unattended automation advances async compile work (NiagaraToolset_System.cpp:495-520).
+		// [VERIFIED: Engine/Source/Runtime/Core/Public/Containers/Ticker.h:81]
+		// Do not break on Poll's return value — true means one ActiveCompilation finished, not all.
 		const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
 		while (FPlatformTime::Seconds() < Deadline)
 		{
@@ -184,8 +188,9 @@ namespace
 				break;
 			}
 
-			System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
-			FPlatformProcess::Sleep(0.01f);
+			System->PollForCompilationComplete(/*bFlushRequestCompile=*/true);
+			FTSTicker::GetCoreTicker().Tick(FApp::GetDeltaTime());
+			FPlatformProcess::Sleep(0.001f);
 		}
 
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
