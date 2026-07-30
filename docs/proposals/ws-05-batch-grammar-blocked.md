@@ -82,3 +82,8 @@ Summary for WS-05:
 
 WS-05 should now choose object-form / `$`-string / both and update
 `schemas/batch/plan.schema.json` accordingly.
+
+### Update 2026-07-29 (resolved)
+
+**Superseded by** `docs/proposals/ws-05-batch-ref-grammar.md` (WS-05 `4ea413c`).
+WS-01 accepted dual grammar; batch `$ref` is final.

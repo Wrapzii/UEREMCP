@@ -38,7 +38,7 @@ they are, because all four can invalidate Phase 2 work.
 | Epic toolset inventory — the "do not rebuild" list | WS-02 | R-06 (partial — source audit landed; runtime schema dumps still needed) |
 | `FileSandbox` semantics; `Rollback.MultiAssetDiscard` | WS-11 | R-03 |
 | Blueprint graph **read** into `graph.schema.json` | WS-06 | R-01 (half) |
-| Envelope parse/serialise/validate in C++ | WS-05 | — |
+| Envelope parse/serialise/validate in C++ | WS-05 | — (landed on `ws-05-protocol`; batch `$ref` grammar final per accepted proposal) |
 | Test harness, one passing integration test | WS-11 | R-14 |
 | Transport capabilities and job model constraints | WS-04 | R-11 (partial — ADR-0009 accepted; modal companion still WS-12) |
 
