@@ -3,7 +3,7 @@
 - **From:** WS-08
 - **To:** WS-11 / orch junction
 - **Date:** 2026-07-30
-- **Status:** ready for runtime proof
+- **Status:** runtime proof blocked before automation discovery
 
 ## What to run
 
@@ -46,6 +46,49 @@ Scratch assets (auto-deleted by tests): `/Game/__UeremcpTests/Materials/MI_WS08_
 
 - Schema/unit tests pass without editor (`validate_schemas`, `test_specifications`, `test_element_presets`, `test_features`, `test_procedural_texture`).
 - Editor automation tests implemented but **not executed** in WS-08 worktree (RE junction compile required).
+
+## RE runtime attempt — 2026-07-30
+
+Preconditions were checked before launch:
+
+- RE `Plugins/UEREMCP` was a junction to `UEREMCP-ws01/Plugins/UEREMCP`.
+- Orch contained `CreateVfxMaterial` wiring as `acd75dc`, equivalent to WS-08
+  `4ade2ae`.
+- No Unreal Editor or Live Coding process was active.
+- A forced targeted build with `-Module=UeremcpMaterial -NoUBTMakefiles
+  -NoHotReloadFromIDE -WaitMutex` compiled and linked
+  `UnrealEditor-UeremcpMaterial.dll`.
+  `[VERIFIED-RUNTIME: RE UBT targeted build exited 0 on 2026-07-30]`
+
+The required command was launched twice. The first launch stopped during plugin load
+because `UeremcpMaterial` had no binary. After the successful forced targeted build,
+the second launch got past that module but stopped during plugin load because
+`UeremcpNiagara` had no loadable binary.
+`[VERIFIED-RUNTIME: tests/integration/_logs/editor_UeremcpMaterial_Toolset_20260730_012857.log]`
+
+No material automation test was discovered or executed:
+
+| Test | Result |
+|---|---|
+| `UeremcpMaterial.Toolset.Echo` | **NOT RUN** — UEREMCP plugin startup blocked |
+| `UeremcpMaterial.Toolset.Register` | **NOT RUN** — UEREMCP plugin startup blocked |
+| `UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileCore` | **NOT RUN** — UEREMCP plugin startup blocked |
+| `UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileTrail` | **NOT RUN** — UEREMCP plugin startup blocked |
+| `UeremcpMaterial.Toolset.CreateProceduralTexture.Noise` | **NOT RUN** — UEREMCP plugin startup blocked |
+| `UeremcpMaterial.Service.NiagaraExport.CoreMaterial` | **NOT RUN** — UEREMCP plugin startup blocked |
+
+Honest runtime status: **partially_completed**. The Material module itself compiled
+and linked, but `created_and_validated` remains unverified for both
+`CreateVfxMaterial` cases.
+
+### Blockers observed
+
+- Current orch cannot produce a complete loadable UEREMCP plugin. A full REEditor
+  build failed in non-WS-08 modules, including Gameplay, Niagara, and Templates.
+- Because UEREMCP declares all of those editor modules, one missing module prevents
+  automation discovery even when `UeremcpMaterial` is loadable.
+- Re-run the required command after the orch all-modules build is green; do not treat
+  this attempt as a failed material test.
 
 ## Not covered by runtime gate (still stubbed)
 
