@@ -5,11 +5,15 @@
 #include "Engine/Blueprint.h"
 #include "HAL/PlatformProcess.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Modules/ModuleManager.h"
 #include "ToolsetRegistry/ToolCallAsyncResultString.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 
 namespace
 {
+	static const FString EpicBlueprintToolsetName =
+		TEXT("editor_toolset.toolsets.blueprint.BlueprintTools");
+
 	static FString EscapeBlueprintBridgeJsonString(const FString& In)
 	{
 		FString Out;
@@ -28,6 +32,30 @@ namespace
 		}
 		return Out;
 	}
+
+	static bool EnsureEpicBlueprintToolsRegistered(FString& OutError)
+	{
+		if (UToolsetRegistry::IsToolsetRegistered(EpicBlueprintToolsetName))
+		{
+			return true;
+		}
+
+		// EditorToolset registers its Python-backed BlueprintTools from init_unreal.py.
+		// [VERIFIED: Engine/Plugins/Experimental/Toolsets/EditorToolset/Content/Python/init_unreal.py:3-9]
+		FModuleManager::Get().LoadModule(TEXT("PythonScriptPlugin"));
+
+		if (UToolsetRegistry::IsToolsetRegistered(EpicBlueprintToolsetName))
+		{
+			return true;
+		}
+
+		OutError = FString::Printf(
+			TEXT("Required Epic toolset '%s' is not registered after loading PythonScriptPlugin. ")
+			TEXT("The public MCP operation is toolset 'UeremcpBlueprint.UeremcpBlueprintToolset', ")
+			TEXT("tool 'SubmitGraph', with envelope action 'submit_graph' and mode 'replace'."),
+			*EpicBlueprintToolsetName);
+		return false;
+	}
 }
 
 bool FUeremcpBlueprintEpicBridge::ExecuteToolSync(
@@ -41,9 +69,13 @@ bool FUeremcpBlueprintEpicBridge::ExecuteToolSync(
 		OutError = TEXT("ToolsetRegistry is not available");
 		return false;
 	}
+	if (!EnsureEpicBlueprintToolsRegistered(OutError))
+	{
+		return false;
+	}
 
 	UToolCallAsyncResultString* AsyncResult = UToolsetRegistry::ExecuteTool(
-		TEXT("editor_toolset.toolsets.blueprint.BlueprintTools"),
+		EpicBlueprintToolsetName,
 		ToolName,
 		JsonInput);
 	if (!AsyncResult)

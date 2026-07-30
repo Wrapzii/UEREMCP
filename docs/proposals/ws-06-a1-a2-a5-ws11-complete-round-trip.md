@@ -3,7 +3,29 @@
 **Status:** Proposed  
 **From:** WS-06  
 **To:** WS-11  
-**Baseline:** orchestrator tip `279f09a` plus the WS-06 commit carrying this proposal
+**Baseline:** orchestrator tip `0dfb6b4` plus the WS-06 commit carrying this update
+
+## Exact public MCP names
+
+Call the UEREMCP semantic tool, not Epic `BlueprintTools` directly:
+
+- `toolset_name`: `UeremcpBlueprint.UeremcpBlueprintToolset`
+- `tool_name`: `SubmitGraph`
+- argument key: `requestJson`
+- request envelope: `action: "submit_graph"`, `mode: "replace"`
+
+For the initial read, use the same toolset with `tool_name: ReadGraph`,
+`requestJson`, and envelope `action: "read_graph"`.
+
+[VERIFIED-RUNTIME: `user-unreal-mcp list_toolsets`, 2026-07-30; WS-11 transport
+evidence `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`]
+
+`SubmitGraph` internally composes Epic
+`editor_toolset.toolsets.blueprint.BlueprintTools.write_graph_dsl` and
+`compile_blueprint`; those are implementation dependencies, not the public POC A
+tool names. The WS-06 bridge now loads `PythonScriptPlugin` and rechecks that
+official Epic toolset before dispatch, returning an actionable dependency error if
+it is still absent.
 
 ## What WS-06 now exposes
 

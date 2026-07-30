@@ -54,8 +54,11 @@ public:
 
 	/**
 	 * action=submit_graph — validates unchanged replace submissions and revision conflicts.
-	 * Changed replace and patch submissions are rejected without mutation until the
-	 * compile + re-read write backend is runtime-verified.
+	 *
+	 * MCP toolset: UeremcpBlueprint.UeremcpBlueprintToolset
+	 * MCP tool: SubmitGraph
+	 * Argument: requestJson containing action=submit_graph and mode=replace.
+	 * [VERIFIED-RUNTIME: user-unreal-mcp list_toolsets, 2026-07-30]
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
 	static FString SubmitGraph(const FString& RequestJson);
