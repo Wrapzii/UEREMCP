@@ -48,7 +48,8 @@ public:
 		const FString& ExpectedAssetPath,
 		const FString& ExpectedGraphId,
 		FString& OutError,
-		TArray<FString>& OutCapabilityNotes);
+		TArray<FString>& OutCapabilityNotes,
+		bool bRequireWriteDsl = true);
 
 	static bool ResolveWriteDsl(
 		const TSharedPtr<FJsonObject>& SubmittedGraph,

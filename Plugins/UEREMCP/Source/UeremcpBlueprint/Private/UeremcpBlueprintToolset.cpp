@@ -345,7 +345,8 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 			Request.TargetAssetPath,
 			TargetGraphId,
 			ValidateError,
-			ValidateNotes))
+			ValidateNotes,
+			false))
 	{
 		Response.Status = TEXT("failed_validation");
 		Response.Summary = ValidateError;

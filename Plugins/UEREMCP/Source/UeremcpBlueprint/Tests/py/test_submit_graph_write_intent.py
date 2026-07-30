@@ -34,12 +34,25 @@ class SubmitGraphWriteIntentTests(unittest.TestCase):
         body = WRITER_CPP.read_text(encoding="utf-8")
         self.assertIn("WriteIntentDiffers", body)
 
+    def test_untranslatable_equal_graphs_can_be_noop(self) -> None:
+        body = WRITER_CPP.read_text(encoding="utf-8")
+        self.assertIn("bSubmittedDslResolved != bCurrentDslResolved", body)
+        self.assertIn("ComputeContentHash(SubmittedGraph", body)
+        self.assertIn("ComputeContentHash(CurrentGraph", body)
+
     def test_toolset_checks_write_intent_before_no_change(self) -> None:
         body = TOOLSET_CPP.read_text(encoding="utf-8")
         self.assertIn("WriteIntentDiffers", body)
         anchor = "Submitted Blueprint graph already matches"
         self.assertIn(anchor, body)
         self.assertLess(body.index("WriteIntentDiffers"), body.index(anchor))
+
+    def test_toolset_defers_dsl_requirement_until_after_noop_check(self) -> None:
+        body = TOOLSET_CPP.read_text(encoding="utf-8")
+        validation_call = body.index("ValidateSubmittedGraphForReplace(")
+        validation_end = body.index("))", validation_call)
+        self.assertIn("false", body[validation_call:validation_end])
+        self.assertLess(validation_call, body.index("Submitted Blueprint graph already matches"))
 
     def test_extensions_dsl_only_change_is_write_intent_delta(self) -> None:
         base = load_fixture()

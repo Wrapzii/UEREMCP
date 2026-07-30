@@ -73,6 +73,17 @@ class SubmitGraphValidationTests(unittest.TestCase):
             )
         self.assertIn("submit_graph.dsl_required", ctx.exception.capability_notes)
 
+    def test_unresolvable_dsl_allowed_for_noop_preflight(self) -> None:
+        graph = load_fixture("translate_branch_if.fixture.json")
+        bare = {k: v for k, v in graph.items() if k != "extensions"}
+        bare["fidelity"] = {"round_trip_supported": False}
+        validate_submitted_graph_for_replace(
+            bare,
+            bare["asset_path"],
+            bare["graph_id"],
+            require_write_dsl=False,
+        )
+
     def test_missing_nodes_rejected(self) -> None:
         graph = load_fixture("submit_graph_replace.fixture.json")
         graph = copy.deepcopy(graph)

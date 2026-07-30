@@ -490,7 +490,7 @@ namespace UeremcpBlueprintGraphWriter
 			return false;
 		}
 
-		TMap<FString, FString> NodeIdByKey;
+		TMap<FString, TArray<FString>> NodeIdsByKey;
 		for (const TSharedPtr<FJsonValue>& SelectorValue : *ExpectedNodes)
 		{
 			const TSharedPtr<FJsonObject> Selector = SelectorValue->AsObject();
@@ -508,15 +508,14 @@ namespace UeremcpBlueprintGraphWriter
 					Matches.Add(NodeId);
 				}
 			}
-			if (Matches.Num() != 1)
+			if (Matches.Num() == 0)
 			{
 				OutError = FString::Printf(
-					TEXT("post-write node assertion '%s' matched %d nodes; expected exactly one"),
-					*Key,
-					Matches.Num());
+					TEXT("post-write node assertion '%s' matched no nodes"),
+					*Key);
 				return false;
 			}
-			NodeIdByKey.Add(Key, Matches[0]);
+			NodeIdsByKey.Add(Key, MoveTemp(Matches));
 		}
 
 		for (const TSharedPtr<FJsonValue>& ExpectedLinkValue : *ExpectedLinks)
@@ -530,6 +529,8 @@ namespace UeremcpBlueprintGraphWriter
 			ExpectedLink->TryGetStringField(TEXT("from_pin"), FromPin);
 			ExpectedLink->TryGetStringField(TEXT("to"), ToKey);
 			ExpectedLink->TryGetStringField(TEXT("to_pin"), ToPin);
+			const TArray<FString>* FromNodeIds = NodeIdsByKey.Find(FromKey);
+			const TArray<FString>* ToNodeIds = NodeIdsByKey.Find(ToKey);
 
 			bool bFound = false;
 			for (const TSharedPtr<FJsonValue>& ActualLinkValue : *ActualLinks)
@@ -544,9 +545,11 @@ namespace UeremcpBlueprintGraphWriter
 					&& ActualLink->TryGetStringField(TEXT("from_pin"), ActualFromPin)
 					&& ActualLink->TryGetStringField(TEXT("to_node"), ToNode)
 					&& ActualLink->TryGetStringField(TEXT("to_pin"), ActualToPin)
-					&& FromNode.Equals(NodeIdByKey[FromKey], ESearchCase::CaseSensitive)
+					&& FromNodeIds
+					&& FromNodeIds->Contains(FromNode)
 					&& ActualFromPin.Equals(FromPin, ESearchCase::CaseSensitive)
-					&& ToNode.Equals(NodeIdByKey[ToKey], ESearchCase::CaseSensitive)
+					&& ToNodeIds
+					&& ToNodeIds->Contains(ToNode)
 					&& ActualToPin.Equals(ToPin, ESearchCase::CaseSensitive))
 				{
 					bFound = true;
@@ -597,7 +600,8 @@ bool FUeremcpBlueprintGraphWriter::ValidateSubmittedGraphForReplace(
 	const FString& ExpectedAssetPath,
 	const FString& ExpectedGraphId,
 	FString& OutError,
-	TArray<FString>& OutCapabilityNotes)
+	TArray<FString>& OutCapabilityNotes,
+	bool bRequireWriteDsl)
 {
 	using namespace UeremcpBlueprintGraphWriterValidate;
 
@@ -671,18 +675,21 @@ bool FUeremcpBlueprintGraphWriter::ValidateSubmittedGraphForReplace(
 		return false;
 	}
 
-	FString Dsl;
-	TArray<FString> LossyNotes;
-	if (!ResolveWriteDsl(SubmittedGraph, Dsl, LossyNotes, OutError))
+	if (bRequireWriteDsl)
 	{
-		OutCapabilityNotes.Add(TEXT("submit_graph.dsl_required"));
-		return false;
-	}
-	if (Dsl.IsEmpty())
-	{
-		OutError = TEXT("resolved DSL is empty");
-		OutCapabilityNotes.Add(TEXT("submit_graph.dsl_required"));
-		return false;
+		FString Dsl;
+		TArray<FString> LossyNotes;
+		if (!ResolveWriteDsl(SubmittedGraph, Dsl, LossyNotes, OutError))
+		{
+			OutCapabilityNotes.Add(TEXT("submit_graph.dsl_required"));
+			return false;
+		}
+		if (Dsl.IsEmpty())
+		{
+			OutError = TEXT("resolved DSL is empty");
+			OutCapabilityNotes.Add(TEXT("submit_graph.dsl_required"));
+			return false;
+		}
 	}
 
 	return true;
@@ -744,12 +751,26 @@ bool FUeremcpBlueprintGraphWriter::WriteIntentDiffers(
 
 	FString SubmittedDsl;
 	FString CurrentDsl;
-	if (!ResolveDsl(SubmittedGraph, SubmittedDsl) || !ResolveDsl(CurrentGraph, CurrentDsl))
+	const bool bSubmittedDslResolved = ResolveDsl(SubmittedGraph, SubmittedDsl);
+	const bool bCurrentDslResolved = ResolveDsl(CurrentGraph, CurrentDsl);
+	if (bSubmittedDslResolved && bCurrentDslResolved)
+	{
+		return !SubmittedDsl.Equals(CurrentDsl, ESearchCase::CaseSensitive);
+	}
+	if (bSubmittedDslResolved != bCurrentDslResolved)
 	{
 		return true;
 	}
 
-	return !SubmittedDsl.Equals(CurrentDsl, ESearchCase::CaseSensitive);
+	FString SubmittedHashError;
+	FString CurrentHashError;
+	const FString SubmittedHash =
+		FUeremcpBlueprintGraphReader::ComputeContentHash(SubmittedGraph, &SubmittedHashError);
+	const FString CurrentHash =
+		FUeremcpBlueprintGraphReader::ComputeContentHash(CurrentGraph, &CurrentHashError);
+	return SubmittedHash.IsEmpty()
+		|| CurrentHash.IsEmpty()
+		|| !SubmittedHash.Equals(CurrentHash, ESearchCase::CaseSensitive);
 }
 
 bool FUeremcpBlueprintGraphWriter::ReplaceGraph(

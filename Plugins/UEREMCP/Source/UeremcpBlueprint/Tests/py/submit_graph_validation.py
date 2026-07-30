@@ -20,6 +20,8 @@ def validate_submitted_graph_for_replace(
     graph: dict[str, Any],
     expected_asset_path: str,
     expected_graph_id: str,
+    *,
+    require_write_dsl: bool = True,
 ) -> None:
     """Raise SubmitGraphValidationError when the submitted graph cannot be written."""
     notes: list[str] = []
@@ -63,12 +65,13 @@ def validate_submitted_graph_for_replace(
     if not isinstance(nodes, list):
         raise SubmitGraphValidationError("submitted graph missing required array 'nodes'")
 
-    try:
-        dsl, _lossy = resolve_write_dsl(graph)
-    except GraphJsonToDslError as exc:
-        notes.append("submit_graph.dsl_required")
-        raise SubmitGraphValidationError(str(exc), notes) from exc
+    if require_write_dsl:
+        try:
+            dsl, _lossy = resolve_write_dsl(graph)
+        except GraphJsonToDslError as exc:
+            notes.append("submit_graph.dsl_required")
+            raise SubmitGraphValidationError(str(exc), notes) from exc
 
-    if not isinstance(dsl, str) or not dsl.strip():
-        notes.append("submit_graph.dsl_required")
-        raise SubmitGraphValidationError("resolved DSL is empty", notes)
+        if not isinstance(dsl, str) or not dsl.strip():
+            notes.append("submit_graph.dsl_required")
+            raise SubmitGraphValidationError("resolved DSL is empty", notes)

@@ -597,7 +597,8 @@ bool FUeremcpBlueprintPocA6RereadTest::RunTest(const FString& Parameters)
 	const TArray<TSharedPtr<FJsonValue>>* Links = nullptr;
 	TestTrue(TEXT("A6 reread nodes"), AfterGraph->TryGetArrayField(TEXT("nodes"), Nodes) && Nodes);
 	TestTrue(TEXT("A6 reread links"), AfterGraph->TryGetArrayField(TEXT("links"), Links) && Links);
-	TMap<FString, FString> NodeIdByClass;
+	TMap<FString, FString> NodeClassById;
+	TSet<FString> NodeClasses;
 	if (Nodes)
 	{
 		for (const TSharedPtr<FJsonValue>& Value : *Nodes)
@@ -609,21 +610,22 @@ bool FUeremcpBlueprintPocA6RereadTest::RunTest(const FString& Parameters)
 				&& Node->TryGetStringField(TEXT("node_class"), NodeClass)
 				&& Node->TryGetStringField(TEXT("node_id"), NodeId))
 			{
-				NodeIdByClass.Add(NodeClass, NodeId);
+				NodeClassById.Add(NodeId, NodeClass);
+				NodeClasses.Add(NodeClass);
 			}
 		}
 	}
-	TestTrue(TEXT("A6 BeginPlay node exists"), NodeIdByClass.Contains(TEXT("K2Node_Event")));
-	TestTrue(TEXT("A6 Branch node exists"), NodeIdByClass.Contains(TEXT("K2Node_IfThenElse")));
-	TestTrue(TEXT("A6 function-call node exists"), NodeIdByClass.Contains(TEXT("K2Node_CallFunction")));
+	TestTrue(TEXT("A6 BeginPlay node exists"), NodeClasses.Contains(TEXT("K2Node_Event")));
+	TestTrue(TEXT("A6 Branch node exists"), NodeClasses.Contains(TEXT("K2Node_IfThenElse")));
+	TestTrue(TEXT("A6 function-call node exists"), NodeClasses.Contains(TEXT("K2Node_CallFunction")));
 
-	auto HasLink = [&NodeIdByClass, Links](
+	auto HasLink = [&NodeClassById, Links](
 		const TCHAR* FromClass,
 		const TCHAR* FromPin,
 		const TCHAR* ToClass,
 		const TCHAR* ToPin) -> bool
 	{
-		if (!Links || !NodeIdByClass.Contains(FromClass) || !NodeIdByClass.Contains(ToClass))
+		if (!Links)
 		{
 			return false;
 		}
@@ -639,9 +641,9 @@ bool FUeremcpBlueprintPocA6RereadTest::RunTest(const FString& Parameters)
 				&& Link->TryGetStringField(TEXT("from_pin"), ActualFromPin)
 				&& Link->TryGetStringField(TEXT("to_node"), ToNode)
 				&& Link->TryGetStringField(TEXT("to_pin"), ActualToPin)
-				&& FromNode == NodeIdByClass[FromClass]
+				&& NodeClassById.FindRef(FromNode) == FromClass
 				&& ActualFromPin == FromPin
-				&& ToNode == NodeIdByClass[ToClass]
+				&& NodeClassById.FindRef(ToNode) == ToClass
 				&& ActualToPin == ToPin)
 			{
 				return true;
