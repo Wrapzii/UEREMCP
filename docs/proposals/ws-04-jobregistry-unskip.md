@@ -28,8 +28,9 @@ remains blocked.
   Plugins/UEREMCP/Source/UeremcpCore/Public/UeremcpReferenceToolset.h:54-72]`.
 
 Poll and Cancel now execute direct registry lifecycle assertions plus the AICallable
-ReferenceToolset wrappers. They have no remaining SKIP. Timeout retains the
-production dispatcher/SSE residual SKIP.
+ReferenceToolset wrappers. Poll has no remaining SKIP; Cancel retains only the MCP
+`notifications/cancelled` mapping residual. Timeout retains the production
+dispatcher/SSE residual SKIP.
 
 ## Landed production surface
 
@@ -109,5 +110,6 @@ assertions once the dispatcher lands, then run the existing `UEREMCP.Transport`
 editor filter without retargeting the RE junction.
 
 The last recorded runtime evidence remains **5 PASS + 3 SKIP**. Current source has
-fully active Poll and Cancel wrapper tests and one timeout/SSE residual SKIP, but
-that is static inspection, not a claim of a new editor run.
+fully active Poll and Cancel wrapper assertions, one cancellation-notification
+residual SKIP, and one timeout/SSE residual SKIP, but that is static inspection,
+not a claim of a new editor run.

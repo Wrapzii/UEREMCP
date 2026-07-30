@@ -624,6 +624,10 @@ bool FUeremcpTransportJobRegistryCancelTest::RunTest(const FString& Parameters)
 			FString(TEXT("rejected")));
 	}
 	SharedRegistry.Clear();
+
+	AddInfo(TEXT(
+		"SKIP residual: MCP notifications/cancelled is not mapped to the UEREMCP "
+		"cooperative cancel wrapper; direct AICallable CancelJob coverage is active."));
 	return true;
 }
 
