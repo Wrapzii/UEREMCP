@@ -32,6 +32,7 @@ later agent reading the code does not "fix" a deliberate choice.
 | [0008](ADR-0008-template-substrate.md) | Template & pattern library substrate | **Accepted** |
 | [0009](ADR-0009-long-running-jobs.md) | Long-running job model (progress, cancellation, resumption) | **Accepted** |
 | [0010](ADR-0010-security-reliability.md) | Security, permissions, and reliability boundaries | **Accepted** |
+| [0011](ADR-0011-non-graph-asset-state.md) | Typed non-graph asset state in responses | Proposed |
 
 ADR-0007 is written from RB-03. ADR-0008 is written from RB-10. ADR-0009 is
 written from RB-04. ADR-0010 is written from RB-13. Further ADRs stay unwritten
