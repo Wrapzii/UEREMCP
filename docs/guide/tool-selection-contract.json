@@ -78,7 +78,7 @@
           "required_fields": [],
           "validation": "none — reachability only",
           "idempotency": "n/a",
-          "output_status": ["created_and_validated", "rejected", "error"],
+          "output_status": ["no_change_required", "rejected", "error"],
           "prefer_for": ["mcp_reachability"],
           "description_cues": ["Liveness probe", "registration"]
         },
@@ -96,11 +96,24 @@
           "description_cues": ["request envelope", "response envelope"]
         },
         {
+          "mcp_tool": "ExecutePlan",
+          "action": "execute_plan",
+          "mutates": true,
+          "destructive": false,
+          "status": "partial",
+          "required_fields": ["protocol_version", "action", "specification"],
+          "validation": "consolidated plan result + change manifest; prefer a template or domain goal tool when one covers the intent",
+          "idempotency": "idempotency_key recommended; durable Claim/Complete has documented crash caveats",
+          "output_status": ["created_and_validated", "modified_and_validated", "partially_completed", "failed_validation", "rolled_back", "rejected", "error"],
+          "prefer_for": ["multi_step_plan_fallback"],
+          "description_cues": ["action=execute_plan", "complete multi-operation plan", "change manifest"]
+        },
+        {
           "mcp_tool": "GetJobResult",
           "action": "get_job_result",
           "mutates": false,
           "destructive": false,
-          "status": "partial",
+          "status": "available",
           "required_fields": ["protocol_version", "action", "specification.job_id"],
           "validation": "returns job snapshot; does not re-validate domain work",
           "idempotency": "poll is read-only",
@@ -113,7 +126,7 @@
           "action": "cancel_job",
           "mutates": false,
           "destructive": false,
-          "status": "partial",
+          "status": "available",
           "required_fields": ["protocol_version", "action", "specification.job_id"],
           "validation": "cooperative cancel; not MCP notifications/cancelled",
           "idempotency": "safe to retry cancel",
@@ -139,7 +152,7 @@
           "required_fields": [],
           "validation": "none",
           "idempotency": "n/a",
-          "output_status": ["created_and_validated", "rejected", "error"],
+          "output_status": ["no_change_required", "rejected", "error"],
           "prefer_for": ["blueprint_module_reachability"],
           "description_cues": ["Liveness probe", "Blueprint"]
         },

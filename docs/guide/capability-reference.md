@@ -29,6 +29,13 @@ Published examples (valid minimal + complete shapes):
 Pass `tool_name` **without** the toolset prefix (`ReadGraph`, not
 `…Toolset.ReadGraph`). Envelope argument key is camelCase `requestJson`.
 
+These are **request-shape examples**, not proof that their sample target assets
+exist in the currently open project. Before a read/inspect/capture, use the
+policy-approved Epic `AssetTools.find_assets` read-only discovery call under the
+allowed scratch roots, then replace `target.asset_path`. A missing sample target
+must return an honest `rejected` response; it is not a reason to switch to
+primitive mutation tools. See [`examples/README.md`](examples/README.md).
+
 ---
 
 ## Blueprint — `read_graph` / `submit_graph`
@@ -110,6 +117,10 @@ arbitrary complex graphs. `mode: patch` is **planned** (unimplemented). See
 | Spec schemas | [`inspect_system.schema.json`](../../schemas/domains/niagara/inspect_system.schema.json), [`create_niagara_effect.schema.json`](../../schemas/domains/niagara/create_niagara_effect.schema.json) |
 
 ### Inspect
+
+The sample path is illustrative. Discover an existing scratch Niagara system
+first; `InspectSystem` is fail-soft and rejects a missing/wrong-type target
+without crashing the editor.
 
 ```json
 {

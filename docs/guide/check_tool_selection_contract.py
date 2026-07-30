@@ -25,11 +25,16 @@ POLICY_PATH = GUIDE_DIR / "tool-selection-policy.md"
 POLICY_REQUIRED_PHRASES = [
     "Prefer UEREMCP",
     "execute_plan",
+    "Registered AICallable",
     "InstantiateTemplate",
     "CaptureEffectFrames",
     "SetNameFilters",
     "expected_revision",
     "cannot guarantee",
+]
+
+POLICY_FORBIDDEN_PHRASES = [
+    "**Not** agent-facing AICallable",
 ]
 
 
@@ -77,6 +82,9 @@ def check_policy_doc(errors: list[str]) -> None:
     for phrase in POLICY_REQUIRED_PHRASES:
         if phrase not in collapsed:
             fail(errors, f"tool-selection-policy.md missing phrase: {phrase!r}")
+    for phrase in POLICY_FORBIDDEN_PHRASES:
+        if phrase in collapsed:
+            fail(errors, f"tool-selection-policy.md contradictory phrase: {phrase!r}")
 
 
 def check_examples(contract: dict, errors: list[str]) -> None:
@@ -90,6 +98,8 @@ def check_examples(contract: dict, errors: list[str]) -> None:
         if not path.is_dir():
             fail(errors, f"examples dir missing: {rel}")
             continue
+        if not (path.parent / "README.md").is_file():
+            fail(errors, f"examples usage note missing: {path.parent / 'README.md'}")
         jsons = list(path.glob("*.json"))
         if not jsons:
             fail(errors, f"no example JSON in {rel}")
@@ -116,6 +126,7 @@ def iter_tools(contract: dict):
 
 def check_tool_inventory(contract: dict, errors: list[str]) -> None:
     seen_actions: set[str] = set()
+    tools_by_action: dict[str, dict] = {}
     for ts, tool in iter_tools(contract):
         for field in (
             "mcp_tool",
@@ -140,6 +151,7 @@ def check_tool_inventory(contract: dict, errors: list[str]) -> None:
             # ping/echo may repeat across toolsets
             pass
         seen_actions.add(action or "")
+        tools_by_action[action or ""] = tool
 
         header = ts.get("header")
         if not header:
@@ -174,6 +186,19 @@ def check_tool_inventory(contract: dict, errors: list[str]) -> None:
                 f"{header}::{mcp_tool}: none of description_cues found in comment "
                 f"(cues={cues})",
             )
+
+    for action in ("execute_plan", "get_job_result", "cancel_job"):
+        if action not in tools_by_action:
+            fail(errors, f"registered Reference action missing from inventory: {action}")
+
+    ping = tools_by_action.get("ping") or {}
+    if "no_change_required" not in ping.get("output_status", []):
+        fail(errors, "Ping output_status must include live no_change_required")
+
+    for action in ("get_job_result", "cancel_job"):
+        tool = tools_by_action.get(action) or {}
+        if tool.get("status") != "available":
+            fail(errors, f"{action} must mirror catalog status available")
 
 
 def extract_method_comment(header_text: str, method: str) -> str | None:

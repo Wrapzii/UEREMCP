@@ -62,7 +62,7 @@ MCP tool name. Worked envelopes:
 
 | Selector | Choose |
 |---|---|
-| `execute_plan` | **Not** agent-facing AICallable. Use `InstantiateTemplate` or domain tools. |
+| `execute_plan` | Registered AICallable, but **not the preferred first choice**. Use `InstantiateTemplate` or domain tools when they cover the goal. |
 | Templates vs direct domain | Template when a library match exists; else domain create/submit. |
 | `read_graph` / `submit_graph` | Read complete → edit → submit with `expected_revision`. |
 | `cancel_job` | Cooperative UEREMCP cancel via Reference toolset. |

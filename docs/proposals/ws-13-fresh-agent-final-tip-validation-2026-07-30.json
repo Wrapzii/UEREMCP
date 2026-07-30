@@ -1,0 +1,101 @@
+{
+  "schema_version": "1.0",
+  "date": "2026-07-30",
+  "deploy_sha": "cb07277b759538893079ee6bd0b249997879ea3f",
+  "junction_retargeted": false,
+  "source_code_read": false,
+  "success_rate": {
+    "passed": 8,
+    "attempted": 8,
+    "rate": 1.0
+  },
+  "first_success": {
+    "operation": "UeremcpCore.UeremcpReferenceToolset.Ping",
+    "mcp_calls": 6,
+    "status": "no_change_required"
+  },
+  "total_live_mcp_calls": 18,
+  "tool_selection": {
+    "fresh_agent_should_prioritize_ueremcp": true,
+    "reason": "Policy, catalog, and machine contract explicitly route covered semantic intents to UEREMCP and reserve Epic tools for read-only discovery or gaps.",
+    "routing_benchmark": {
+      "passed": 12,
+      "attempted": 12
+    },
+    "inventory_tools_after_fix": 22,
+    "residuals": [
+      "list_toolsets alone includes competing Epic tools whose descriptions call themselves primary",
+      "UHT input schemas expose only requestJson string",
+      "published sample asset paths may not exist and require read-only discovery"
+    ]
+  },
+  "workflows": [
+    {
+      "id": "discovery_ping",
+      "mcp_calls": 6,
+      "status": "no_change_required",
+      "passed": true
+    },
+    {
+      "id": "routing_benchmark",
+      "mcp_calls": 0,
+      "status": "12/12 passed",
+      "passed": true
+    },
+    {
+      "id": "blueprint_read_recovery",
+      "mcp_calls": 3,
+      "statuses": ["rejected", "no_change_required"],
+      "asset": "/Game/__UeremcpPoc/Blueprint/BP_CompleteRoundTripTransport",
+      "passed": true
+    },
+    {
+      "id": "niagara_inspect_fail_soft",
+      "mcp_calls": 3,
+      "statuses": ["rejected", "partially_completed"],
+      "asset": "/Game/__UeremcpPoc/FreshAgent/NS_FreshAgent_Probe",
+      "editor_crashed": false,
+      "passed": true
+    },
+    {
+      "id": "visual_capture_cold_poll",
+      "mcp_calls": 2,
+      "statuses": ["partially_completed", "no_change_required"],
+      "job_cancellable": false,
+      "max_delta_lit_pixels": 1098,
+      "png": "$UEREMCP_LEGACY_PROJECT/Saved/UEREMCP/VfxCapture/NS_FreshAgent_Probe/final-fresh-capture-cb07277/age_01.png",
+      "png_bytes": 157982,
+      "png_signature_valid": true,
+      "passed": true
+    },
+    {
+      "id": "niagara_idempotency_retry",
+      "mcp_calls": 1,
+      "status": "no_change_required",
+      "internal_operations": 1,
+      "passed": true
+    },
+    {
+      "id": "expected_validation_failure",
+      "mcp_calls": 1,
+      "status": "rejected",
+      "summary": "capture_effect_frames requires options.validate=true",
+      "passed": true
+    },
+    {
+      "id": "cancel_job_semantics",
+      "mcp_calls": 1,
+      "status": "rejected",
+      "summary": "job not found",
+      "passed": true
+    }
+  ],
+  "docs_fixes": [
+    "Correct ExecutePlan AICallable/preference contradiction",
+    "Add ExecutePlan to machine tool inventory",
+    "Align Ping and job statuses with live/catalog behavior",
+    "Document sample target discovery recovery",
+    "Add contract regression checks"
+  ],
+  "ready_for_new_agent": true
+}
