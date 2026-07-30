@@ -98,8 +98,10 @@ every stored `expected_revision` and every template's recorded hash is invalidat
 
 - ~~Where does the idempotency store live, and does it survive editor restart?~~
   **Closed for v1:** in-memory, process-scoped, editor-session lifetime
-  (`docs/proposals/ws-05-idempotency-store.md`). Durable store deferred to
-  WS-03 lifecycle + WS-12 writable-root.
+  (`docs/proposals/ws-05-idempotency-store.md`). **Wave 2 durable root:**
+  `<ProjectSavedDir>/UEREMCP/idempotency/` (audit alongside under
+  `.../audit/`) — never under `Intermediate/Sandboxes/`
+  (`docs/proposals/ws-12-idempotency-store-root.md`, ADR-0010 §6).
 - ~~What is `content_hash` computed over?~~ **Closed for protocol v1:**
   `Plugins/UEREMCP/Source/UeremcpProtocol/Docs/CONTENT_HASH.md`. Ignores layout /
   GUIDs / retrieval metadata; sensitive to pin defaults, links, node properties.

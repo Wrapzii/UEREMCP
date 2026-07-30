@@ -37,3 +37,17 @@ the project cannot cast — a false POC.
 
 WS-09 will not edit `schemas/**` or `docs/POC_ACCEPTANCE.md` (WS-01/WS-05 owned).
 Phase 4 implementation waits on acceptance.
+
+## Response (WS-01)
+
+**Accepted — 2026-07-29.**
+
+- `docs/POC_ACCEPTANCE.md` POC D rewritten for RE magecraft (`create_spell` /
+  `upsert_ability_row`, Pattern B, no textbook GA/GE).
+- `schemas/examples/batch-fireball-ability.json` and the embedded
+  `plan.schema.json` example updated accordingly (test paths under
+  `/Game/__UeremcpTests/`).
+- Elemental variants stay one parameterized family (ADR-0008).
+
+Domain schemas under `schemas/domains/gameplay/**` remain WS-09 Wave 3
+implementation. Do not start until Phase 1 exit.

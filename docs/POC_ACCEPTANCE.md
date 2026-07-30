@@ -100,20 +100,32 @@ folder. Do not skip it.
 
 ---
 
-## POC D — Batched gameplay ability
+## POC D — Batched RE spell (magecraft, not textbook GAS)
 
 **Owner:** WS-09. Proves the architecture is not Niagara-only.
 
+RE does **not** use Epic GAS for player abilities. Abilities are `FREAbilityDef`
+rows in `DT_Abilities`, executed by `CastAbility` / `AuthorityCastAbility`
+`[VERIFIED: RB-12]`. POC D targets that system. Textbook
+`create_gameplay_ability` / `create_gameplay_effect` assets that the project
+cannot cast are a **false POC** and are out of scope for RE.
+
+Elemental variants (fire/frost/storm/nature/…) share **one** parameterized
+`create_spell` (inputs/modifiers), not per-element primitive tools (ADR-0008).
+
 | # | Criterion |
 |---|---|
-| D1 | One `execute_plan` request creates a gameplay ability plus its associated assets |
+| D1 | One `execute_plan` upserts an ability **row** (+ VFX / optional spell-VFX definition) under `/Game/__UeremcpTests/` via `create_spell` / `upsert_ability_row` |
 | D2 | Operations execute in dependency order derived from `depends_on` |
 | D3 | `$ref` substitution correctly passes earlier results into later operations |
-| D4 | Gameplay tags are assigned |
-| D5 | Replication is configured and **validated**, not merely set |
-| D6 | Everything compiles and saves |
-| D7 | A deliberately failed operation triggers rollback; no partial assets remain |
+| D4 | RE identity fields are set (`Element` / `EffectTag` / `ImpactStatus` as applicable). Gameplay-tag INI mutation is **not** required for RE POC D |
+| D5 | Replication follows RE Pattern B: static checklist + optional `pie_cast_and_capture`; multi-client net proof is RB-14 / WS-11, not a silent skip |
+| D6 | Everything compiles and saves; DataTable row is re-readable and matches the request |
+| D7 | A deliberately failed operation triggers rollback; no partial test assets remain |
 | D8 | One consolidated response with per-operation results |
+
+Production `DT_Abilities` rebuild scripts that delete-and-recreate the whole table
+are **unsafe** for agent upsert (ADR-0006) — tools must row-upsert under test paths.
 
 ---
 

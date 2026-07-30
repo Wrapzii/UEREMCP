@@ -31,11 +31,11 @@ later agent reading the code does not "fix" a deliberate choice.
 | [0007](ADR-0007-implementation-language.md) | Implementation language (C++ primary, Python exploratory) | **Accepted** |
 | [0008](ADR-0008-template-substrate.md) | Template & pattern library substrate | **Accepted** |
 | [0009](ADR-0009-long-running-jobs.md) | Long-running job model (progress, cancellation, resumption) | **Accepted** |
-| 0010 | Security model and permission tiers | **Unwritten** — needs RB-13 |
+| [0010](ADR-0010-security-reliability.md) | Security, permissions, and reliability boundaries | **Accepted** |
 
 ADR-0007 is written from RB-03. ADR-0008 is written from RB-10. ADR-0009 is
-written from RB-04. ADR-0010 stays unwritten until RB-13 lands — **WS-01 writes
-it then**; no other workstream should assume an answer in the meantime.
+written from RB-04. ADR-0010 is written from RB-13. Further ADRs stay unwritten
+until their blocking briefs land — **WS-01 writes them then**.
 
 ## Challenging a frozen ADR
 

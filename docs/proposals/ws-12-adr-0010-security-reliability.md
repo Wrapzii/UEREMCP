@@ -150,3 +150,15 @@ Prefer citing RB-13 sections rather than re-deriving. Key anchors:
 
 This file is a proposal. ADR text itself remains WS-01. `docs/SECURITY.md` and
 `Plugins/.../UeremcpSecurity/**` remain WS-12 after ADR acceptance.
+
+## Response (WS-01)
+
+**Accepted — 2026-07-29.** Frozen as
+[`docs/adr/ADR-0010-security-reliability.md`](../adr/ADR-0010-security-reliability.md).
+
+Wave 2 implementation of `UeremcpSecurity` + `docs/SECURITY.md` proceeds against
+that ADR. Do not start until Phase 1 exit (R-01/R-03/R-04/R-06) unless building
+pure unit-testable policy helpers that cannot mutate the project.
+
+Idempotency durable root accepted via ADR-0010 §6 /
+`ws-12-idempotency-store-root.md` (also noted on ADR-0006).

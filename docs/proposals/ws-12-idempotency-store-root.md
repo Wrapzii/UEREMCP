@@ -31,3 +31,8 @@ In-memory session store remains the Wave 1 minimum (ADR-0006). Disk under
 `Saved/` is writable and outside rollback — path policy must still confine writes to
 `Saved/UEREMCP/**` (not arbitrary Saved trees). WS-12 path validator will treat that
 prefix as an allowed filesystem root for plugin-owned metadata only.
+
+## Response (WS-01)
+
+**Accepted.** Durable Wave 2 root is `<ProjectSavedDir>/UEREMCP/{idempotency,audit}/`
+per ADR-0010 §6. Wave 1 in-memory store remains valid until then.

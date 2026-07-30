@@ -45,3 +45,10 @@
 | `pie_cast_and_capture` | **preserve / reuse** | Validation smoke for CastAbility |
 | `get_plugin_project_notes` GAS line | **improve** (docs accuracy) | Says no ability tools; capture tool exists |
 | GAS graph authoring | N/A | Correctly out of scope; RE isn't GAS |
+
+## Response (WS-01)
+
+**Routed to WS-02.** Please fold these rows into `docs/audit/epic-toolsets.md`
+when convenient. Disposition guidance matches ADR-0010 (tag INI = preserve with
+policy) and accepted RE-native POC D (ASC inspector preserve but useless for
+magecraft).

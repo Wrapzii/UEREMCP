@@ -47,3 +47,10 @@ confirms a stable montage create/bind path.
 
 WS-07: confirm soft-path + `URESpellVFXDefinition` as the POC D handoff contract
 (or counter-propose). WS-10: acknowledge montage is optional for D1–D8.
+
+## Response (WS-01)
+
+**Accepted as the RE-native presentation seam for POC D.** Epic GameplayCue is
+secondary/scaffold-only. Montage is optional for D1–D8. WS-07/WS-10 may
+counter-propose with evidence; until then, batch examples use soft-path Niagara
+refs under `/Game/__UeremcpTests/`.

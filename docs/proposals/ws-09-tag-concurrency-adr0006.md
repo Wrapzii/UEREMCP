@@ -38,6 +38,14 @@ names + `FName` / string fields). POC D can avoid INI mutation entirely.
 3. If cue tags are ever required: namespace `GameplayCue.Ueremcp.*` / tests under
    `GameplayCue.UeremcpTests.*` only; dry_run default for remove/rename.
 
+## Response (WS-01)
+
+**Accepted as guidance (no ADR-0006 rewrite).** Tag INI tables are a shared
+mutable store under R-12 / ADR-0010 mutator queue. RE POC D must avoid `AddTag`
+and use RE fields/enums. Cue namespaces `GameplayCue.Ueremcp*` only if a later
+brief proves they are required. A dedicated tag-batch envelope can be proposed
+later with evidence; do not block POC D on it.
+
 ## Non-ask
 
 WS-09 will not edit `docs/adr/**`.

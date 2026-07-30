@@ -1,6 +1,6 @@
 {
   "x-schema": "batch/plan.schema.json",
-  "$comment": "POC D shape: one request producing a material, a Niagara effect, and a gameplay ability with dependency ordering and $ref result chaining. Validated by tools/validate_schemas.py.",
+  "$comment": "POC D (RE-native): one plan producing materials, Niagara, and a DT_Abilities row via create_spell — not Epic GAS GA/GE assets. Validated by tools/validate_schemas.py. Evidence: docs/research/RB-12-gas-and-gameplay.md.",
 
   "transaction": {
     "atomic": true,
@@ -14,7 +14,7 @@
       "id": "core_material",
       "action": "create_vfx_material",
       "mode": "create_or_update",
-      "target": { "asset_path": "/Game/VFX/Materials/MI_Fireball_Core" },
+      "target": { "asset_path": "/Game/__UeremcpTests/VFX/Materials/MI_Fireball_Core" },
       "specification": {
         "purpose": "fireball_core",
         "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"]
@@ -25,6 +25,7 @@
       "action": "create_vfx_material",
       "mode": "create_or_update",
       "optional": true,
+      "target": { "asset_path": "/Game/__UeremcpTests/VFX/Materials/MI_Fireball_Trail" },
       "specification": {
         "purpose": "fireball_ribbon_trail",
         "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"]
@@ -34,7 +35,7 @@
       "id": "projectile_fx",
       "action": "create_niagara_effect",
       "depends_on": ["core_material", "trail_material"],
-      "target": { "asset_path": "/Game/VFX/Spells/NS_Fireball" },
+      "target": { "asset_path": "/Game/__UeremcpTests/VFX/Spells/NS_Fireball" },
       "specification": {
         "name": "Fireball",
         "effect_type": "projectile",
@@ -53,7 +54,7 @@
       "id": "impact_fx",
       "action": "create_niagara_effect",
       "depends_on": ["core_material"],
-      "target": { "asset_path": "/Game/VFX/Spells/NS_Fireball_Impact" },
+      "target": { "asset_path": "/Game/__UeremcpTests/VFX/Spells/NS_Fireball_Impact" },
       "specification": {
         "name": "FireballImpact",
         "effect_type": "impact",
@@ -62,53 +63,45 @@
       }
     },
     {
-      "id": "damage_effect",
-      "action": "create_gameplay_effect",
+      "id": "spell",
+      "action": "create_spell",
+      "depends_on": ["projectile_fx", "impact_fx"],
+      "target": {
+        "asset_path": "/Game/__UeremcpTests/Abilities/DT_Abilities_UeremcpTests"
+      },
       "specification": {
-        "name": "GE_FireballDamage",
-        "duration_policy": "instant",
-        "modifiers": [
-          { "attribute": "Health", "operation": "add", "magnitude": -45.0 }
-        ],
-        "granted_tags": ["Status.Burning"]
-      }
-    },
-    {
-      "id": "ability",
-      "action": "create_gameplay_ability",
-      "depends_on": ["projectile_fx", "impact_fx", "damage_effect"],
-      "target": { "asset_path": "/Game/Abilities/GA_Fireball" },
-      "specification": {
-        "name": "GA_Fireball",
-        "input_tag": "Input.Ability.Primary",
-        "cast_animation": "/Game/Animations/AM_Cast_Fireball",
-        "projectile_effect": { "$ref": "projectile_fx.result.primary_asset" },
-        "impact_effect": { "$ref": "impact_fx.result.primary_asset" },
-        "damage_effect": { "$ref": "damage_effect.result.primary_asset" },
+        "name": "Fireball_Ueremcp",
+        "row_name": "Fireball_Ueremcp",
+        "element": "Fire",
         "delivery": {
           "type": "projectile",
           "speed": 2400,
-          "damage_radius": 175
+          "damage_radius": 175,
+          "damage": 45.0
         },
+        "projectile_effect": { "$ref": "projectile_fx.result.primary_asset" },
+        "impact_effect": { "$ref": "impact_fx.result.primary_asset" },
+        "impact_status": "Burning",
         "networking": {
+          "pattern": "B",
           "authority": "server",
-          "replicated": true
+          "cast_path": "AuthorityCastAbility"
         }
       }
     },
     {
       "id": "smoke_test",
       "action": "validate_system",
-      "depends_on": ["ability"],
+      "depends_on": ["spell"],
       "condition": {
         "operation_status": {
-          "id": "ability",
+          "id": "spell",
           "is": ["created_and_validated", "modified_and_validated", "created_with_warnings"]
         }
       },
       "specification": {
-        "root_asset": { "$ref": "ability.result.primary_asset" },
-        "checks": ["dependencies_resolve", "replication_valid", "cues_bound", "compiles"]
+        "root_asset": { "$ref": "spell.result.primary_asset" },
+        "checks": ["dependencies_resolve", "row_readable", "pattern_b_checklist", "compiles"]
       }
     }
   ],
