@@ -139,25 +139,49 @@ FString UeremcpTransport::CapabilityFlagsToJson(const FUeremcpTransportCapabilit
 
 FString UeremcpTransport::ResolveHandoffJsonPath()
 {
-	const FString Relative = TEXT("Source/UeremcpTransport/constraints/transport_job_handoff.json");
-	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("UEREMCP")))
+	const TCHAR* Relative = TEXT("Source/UeremcpTransport/constraints/transport_job_handoff.json");
+
+	const auto TryCandidate = [](const FString& Candidate) -> FString
 	{
-		const FString Candidate = FPaths::Combine(Plugin->GetBaseDir(), Relative);
 		if (FPaths::FileExists(Candidate))
 		{
 			return FPaths::ConvertRelativePathToFull(Candidate);
+		}
+		return FString();
+	};
+
+	for (const FString& PluginName : { TEXT("UEREMCP"), TEXT("UEREMCPTransportTest") })
+	{
+		if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(PluginName))
+		{
+			const FString Resolved = TryCandidate(FPaths::Combine(Plugin->GetBaseDir(), Relative));
+			if (!Resolved.IsEmpty())
+			{
+				return Resolved;
+			}
+		}
+	}
+
+	for (const TSharedRef<IPlugin>& Plugin : IPluginManager::Get().GetEnabledPlugins())
+	{
+		const FString Resolved = TryCandidate(FPaths::Combine(Plugin->GetBaseDir(), Relative));
+		if (!Resolved.IsEmpty())
+		{
+			return Resolved;
 		}
 	}
 
 	const TArray<FString> Candidates = {
 		FPaths::Combine(FPaths::ProjectPluginsDir(), TEXT("UEREMCP"), Relative),
+		FPaths::Combine(FPaths::ProjectPluginsDir(), TEXT("UEREMCPTransportTest"), Relative),
 		FPaths::Combine(FPaths::ProjectDir(), TEXT("Plugins/UEREMCP"), Relative),
 	};
 	for (const FString& Candidate : Candidates)
 	{
-		if (FPaths::FileExists(Candidate))
+		const FString Resolved = TryCandidate(Candidate);
+		if (!Resolved.IsEmpty())
 		{
-			return FPaths::ConvertRelativePathToFull(Candidate);
+			return Resolved;
 		}
 	}
 	return FString();
