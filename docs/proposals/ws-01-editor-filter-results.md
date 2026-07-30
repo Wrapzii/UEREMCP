@@ -1,15 +1,15 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `0049153` (B10 harness now ticks/dark-backdrop; production fireball still FAIL)
+- **Current orchestration tip:** `5499f48` (WS-07 runtime emit landed as `20edf2f`; WS-14 metrics slice landed; B10 production warm signature still open pending post-emit rerun)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `2384112`
+- **Latest Niagara re-run tip:** `2384112` (runtime emit fix `20edf2f` / `8aae3b6` supersedes for particle spawn)
 - **Latest Material re-run tip:** `d691316` (**PASS 14/14**)
 - **Latest Templates re-run tip:** `f15ea96`
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). B10 harness methodology defect is closed on `0049153` (canary PASS). Production `/Game/__UeremcpPoc/NS_POCB_Fireball` still FAIL: particles spawn (`185`) but warm fire signature is absent (`0`). **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. B10 harness canary PASS on `0049153`. WS-07 runtime emit proved (717 spawned / 423 live). POC-B metrics **partial** in `docs/reviews/poc-metrics.md` (`mcp_round_trips=1`, `internal_operations=46`, server lower bound 2.319s; wall-clock / tokens / primitive timing still open). **No overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -528,8 +528,9 @@ Canonical gap list: [`ws-01-acceptance-gap-audit-2026-07-30.md`](./ws-01-accepta
 | Fact | Value |
 |---|---|
 | B10 harness canary | **PASS** on `0049153` |
-| B10 production fireball | **FAIL** (0 warm pixels; log `081341` / `poc_b10_fireball.png`) |
-| Tip lineage on `ws-11-poc-b10-render` | this commit (audit landed on `7b654f4`+) |
-| Concurrent WS-07 Niagara WIP | may exist uncommitted on `ws-07-niagara-runtime-spawn` — do not assume tip parity |
+| B10 production fireball | **FAIL** pending post-`20edf2f` rerun (prior: 0 warm / 185 particles on `081341`) |
+| WS-07 runtime emit | **Landed** `20edf2f` — 717 spawned / 423 live after 3s (WS-07 proof; not B10) |
+| POC-B metrics | **Partial** — [`docs/reviews/poc-metrics.md`](../reviews/poc-metrics.md) via `5499f48`; wall-clock / tokens / primitive timing still open |
+| Tip lineage on `ws-11-poc-b10-render` | `5499f48` |
 
-No overall POC-B claim.
+No overall POC-B claim. Metrics are not complete.
