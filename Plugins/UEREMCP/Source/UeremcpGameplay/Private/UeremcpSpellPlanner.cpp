@@ -513,8 +513,7 @@ bool FUeremcpSpellPlanner::BuildPlan(
 
 bool FUeremcpSpellPlanner::BuildTableWritePlan(
 	const FString& TargetPackagePath,
-	const FString& Mode,
-	bool bDryRun,
+	const FUeremcpAbilityTableWriteOptions& Options,
 	const FUeremcpSpellPlan& SpellPlan,
 	FUeremcpAbilityTableWritePlan& OutWritePlan,
 	FString& OutError)
@@ -532,7 +531,12 @@ bool FUeremcpSpellPlanner::BuildTableWritePlan(
 		OutError = TEXT("ability DataTable writes are restricted to /Game/__UeremcpTests/");
 		return false;
 	}
-	if (Mode != TEXT("create") && Mode != TEXT("create_or_update"))
+	if (Options.RequestId.IsEmpty())
+	{
+		OutError = TEXT("guarded ability DataTable writes require request_id for mutator ownership");
+		return false;
+	}
+	if (Options.Mode != TEXT("create") && Options.Mode != TEXT("create_or_update"))
 	{
 		OutError = TEXT("ability DataTable write plan supports create or create_or_update only");
 		return false;
@@ -555,19 +559,55 @@ bool FUeremcpSpellPlanner::BuildTableWritePlan(
 		FString::Printf(TEXT("%s.%s"), *TargetPackagePath, *AssetName);
 	OutWritePlan.RowStructPath = TEXT("/Script/RE.REAbilityDef");
 	OutWritePlan.RowName = SpellPlan.RowName;
-	OutWritePlan.Mode = Mode;
-	OutWritePlan.bDryRun = bDryRun;
+	OutWritePlan.RequestId = Options.RequestId;
+	OutWritePlan.Mode = Options.Mode;
+	OutWritePlan.bDryRun = Options.bDryRun;
+	OutWritePlan.bAtomic = Options.bAtomic;
+	OutWritePlan.bSave = Options.bSave;
+	OutWritePlan.bValidate = Options.bValidate;
+	OutWritePlan.bRollbackOnFailure = Options.bRollbackOnFailure;
+	OutWritePlan.TimeoutMs = Options.TimeoutMs;
+	OutWritePlan.OnRevisionConflict = Options.OnRevisionConflict;
+	OutWritePlan.ExpectedRevision = Options.ExpectedRevision;
+	OutWritePlan.bHasExpectedRevision = Options.bHasExpectedRevision;
+	OutWritePlan.IdempotencyKey = Options.IdempotencyKey;
+	OutWritePlan.bCanClaimValidatedMutation =
+		!Options.bDryRun && Options.bSave && Options.bValidate;
+	OutWritePlan.RequiredRuntimeGates = {
+		TEXT("UeremcpSecurity.mutator_queue"),
+	};
 	OutWritePlan.OrderedSteps = {
 		TEXT("acquire_shared_mutator"),
-		TEXT("enter_content_sandbox"),
-		TEXT("load_or_create_freabilitydef_table"),
-		TEXT("check_mode_and_expected_revision"),
-		TEXT("compare_existing_row"),
-		TEXT("upsert_single_row_if_changed"),
-		TEXT("save_table"),
-		TEXT("reread_and_compare_normalized_row"),
-		bDryRun ? TEXT("discard_dry_run") : TEXT("persist_sandbox"),
-		TEXT("release_shared_mutator"),
+		TEXT("reject_foreign_active_sandbox"),
 	};
+	if (!Options.IdempotencyKey.IsEmpty())
+	{
+		OutWritePlan.OrderedSteps.Add(TEXT("check_idempotency_replay"));
+	}
+	OutWritePlan.OrderedSteps.Add(
+		Options.bAtomic
+			? TEXT("enter_atomic_content_sandbox")
+			: TEXT("enter_best_effort_content_sandbox"));
+	OutWritePlan.OrderedSteps.Add(
+		Options.bRollbackOnFailure
+			? TEXT("configure_rollback_on_failure")
+			: TEXT("configure_no_rollback_on_failure"));
+	OutWritePlan.OrderedSteps.Add(TEXT("load_or_create_freabilitydef_table"));
+	OutWritePlan.OrderedSteps.Add(TEXT("check_mode_collision_policy"));
+	if (Options.bHasExpectedRevision)
+	{
+		OutWritePlan.OrderedSteps.Add(TEXT("check_expected_revision"));
+	}
+	OutWritePlan.OrderedSteps.Add(TEXT("compare_existing_row"));
+	OutWritePlan.OrderedSteps.Add(TEXT("upsert_single_row_if_changed"));
+	OutWritePlan.OrderedSteps.Add(
+		Options.bSave ? TEXT("save_table_to_sandbox") : TEXT("skip_save_requested"));
+	OutWritePlan.OrderedSteps.Add(
+		Options.bValidate
+			? TEXT("reread_and_compare_normalized_row")
+			: TEXT("skip_validation_requested"));
+	OutWritePlan.OrderedSteps.Add(
+		Options.bDryRun ? TEXT("discard_dry_run") : TEXT("persist_sandbox"));
+	OutWritePlan.OrderedSteps.Add(TEXT("release_shared_mutator"));
 	return true;
 }

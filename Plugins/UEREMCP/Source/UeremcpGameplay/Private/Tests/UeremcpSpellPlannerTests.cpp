@@ -92,13 +92,25 @@ bool FUeremcpSpellPlannerValidTest::RunTest(const FString& Parameters)
 	}
 	TestEqual(TEXT("both VFX dependencies returned"), Plan.DependencyAssetPaths.Num(), 2);
 
+	FUeremcpAbilityTableWriteOptions WriteOptions;
+	WriteOptions.RequestId = TEXT("ws09-write-plan");
+	WriteOptions.Mode = TEXT("create_or_update");
+	WriteOptions.bDryRun = true;
+	WriteOptions.bAtomic = true;
+	WriteOptions.bSave = true;
+	WriteOptions.bValidate = true;
+	WriteOptions.bRollbackOnFailure = true;
+	WriteOptions.TimeoutMs = 120000;
+	WriteOptions.OnRevisionConflict = TEXT("return_conflict");
+	WriteOptions.ExpectedRevision = TEXT("sha256:expected");
+	WriteOptions.bHasExpectedRevision = true;
+	WriteOptions.IdempotencyKey = TEXT("ws09-fireball");
 	FUeremcpAbilityTableWritePlan WritePlan;
 	TestTrue(
 		TEXT("guarded DataTable write plan builds"),
 		FUeremcpSpellPlanner::BuildTableWritePlan(
 			TEXT("/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities"),
-			TEXT("create_or_update"),
-			true,
+			WriteOptions,
 			Plan,
 			WritePlan,
 			Error));
@@ -117,6 +129,28 @@ bool FUeremcpSpellPlannerValidTest::RunTest(const FString& Parameters)
 	TestTrue(
 		TEXT("dry run includes discard before release"),
 		WritePlan.OrderedSteps.Contains(TEXT("discard_dry_run")));
+	TestTrue(
+		TEXT("expected revision is retained"),
+		WritePlan.bHasExpectedRevision
+			&& WritePlan.ExpectedRevision == TEXT("sha256:expected")
+			&& WritePlan.OrderedSteps.Contains(TEXT("check_expected_revision")));
+	TestTrue(
+		TEXT("idempotency key is retained"),
+		WritePlan.IdempotencyKey == TEXT("ws09-fireball")
+			&& WritePlan.OrderedSteps.Contains(TEXT("check_idempotency_replay")));
+	TestFalse(
+		TEXT("dry run is never eligible for validated mutation status"),
+		WritePlan.bCanClaimValidatedMutation);
+	TestTrue(
+		TEXT("queue and conflict controls are retained"),
+		WritePlan.TimeoutMs == 120000
+			&& WritePlan.OnRevisionConflict == TEXT("return_conflict")
+			&& WritePlan.bAtomic
+			&& WritePlan.bRollbackOnFailure);
+	TestTrue(
+		TEXT("only remaining runtime gate is shared mutator queue"),
+		WritePlan.RequiredRuntimeGates.Num() == 1
+			&& WritePlan.RequiredRuntimeGates[0] == TEXT("UeremcpSecurity.mutator_queue"));
 	return true;
 }
 
@@ -206,6 +240,87 @@ bool FUeremcpSpellPlannerDefaultsAndInvariantsTest::RunTest(const FString& Param
 		TEXT("wrong optional field type is rejected instead of defaulted"),
 		FUeremcpSpellPlanner::BuildPlan(Specification, Plan, Error));
 	TestTrue(TEXT("type rejection is actionable"), Error.Contains(TEXT("wrong JSON type")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpSpellWritePlanControlsTest,
+	"UEREMCP.Gameplay.SpellPlanner.WritePlanControls",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpSpellWritePlanControlsTest::RunTest(const FString& Parameters)
+{
+	FUeremcpSpellPlan SpellPlan;
+	FString Error;
+	TestTrue(
+		TEXT("valid spell plans before write controls"),
+		FUeremcpSpellPlanner::BuildPlan(
+			ParseObject(ValidSpecificationJson),
+			SpellPlan,
+			Error));
+
+	FUeremcpAbilityTableWriteOptions Options;
+	Options.Mode = TEXT("create");
+	Options.bDryRun = false;
+	Options.bAtomic = false;
+	Options.bSave = false;
+	Options.bValidate = true;
+	Options.bRollbackOnFailure = false;
+	Options.TimeoutMs = 5000;
+	Options.OnRevisionConflict = TEXT("reject");
+	FUeremcpAbilityTableWritePlan WritePlan;
+	TestFalse(
+		TEXT("request identity is mandatory for future queue ownership"),
+		FUeremcpSpellPlanner::BuildTableWritePlan(
+			TEXT("/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities"),
+			Options,
+			SpellPlan,
+			WritePlan,
+			Error));
+	TestTrue(TEXT("missing identity error is actionable"), Error.Contains(TEXT("request_id")));
+
+	Options.RequestId = TEXT("ws09-write-controls");
+	TestTrue(
+		TEXT("no-save write intent plans honestly"),
+		FUeremcpSpellPlanner::BuildTableWritePlan(
+			TEXT("/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities"),
+			Options,
+			SpellPlan,
+			WritePlan,
+			Error));
+	TestTrue(
+		TEXT("save=false is an explicit step"),
+		WritePlan.OrderedSteps.Contains(TEXT("skip_save_requested")));
+	TestTrue(
+		TEXT("non-dry intent still persists sandbox"),
+		WritePlan.OrderedSteps.Contains(TEXT("persist_sandbox")));
+	TestTrue(
+		TEXT("atomic and rollback controls are explicit"),
+		WritePlan.OrderedSteps.Contains(TEXT("enter_best_effort_content_sandbox"))
+			&& WritePlan.OrderedSteps.Contains(TEXT("configure_no_rollback_on_failure"))
+			&& WritePlan.TimeoutMs == 5000);
+	TestFalse(
+		TEXT("unsaved intent cannot claim validated mutation"),
+		WritePlan.bCanClaimValidatedMutation);
+
+	Options.bSave = true;
+	Options.bValidate = false;
+	TestTrue(
+		TEXT("no-validate write intent plans honestly"),
+		FUeremcpSpellPlanner::BuildTableWritePlan(
+			TEXT("/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities"),
+			Options,
+			SpellPlan,
+			WritePlan,
+			Error));
+	TestTrue(
+		TEXT("validate=false is an explicit step"),
+		WritePlan.OrderedSteps.Contains(TEXT("skip_validation_requested")));
+	TestFalse(
+		TEXT("unvalidated intent cannot claim validated mutation"),
+		WritePlan.bCanClaimValidatedMutation);
 	return true;
 }
 

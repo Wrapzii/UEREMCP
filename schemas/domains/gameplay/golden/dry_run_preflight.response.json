@@ -2,13 +2,13 @@
   "protocol_version": "1.0",
   "request_id": "ws09-dry-run-golden",
   "status": "partially_completed",
-  "summary": "Prepared and statically validated an RE spell row; no mutation was performed.",
+  "summary": "Prepared and statically validated an RE spell row; guarded DataTable mutation, save, and re-read were not performed.",
   "understood": {
     "action": "create_spell",
     "resolved_target": "/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities",
     "interpretation_notes": [
-      "row_name=Fireball_Ueremcp; AbilityId=Fireball_Ueremcp",
-      "mode=create_or_update; dry_run=true"
+      "row_name=Fireball_Ueremcp; AbilityId=Fireball_Ueremcp; deterministic target retained without auto-suffixing",
+      "table_object=/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities.DT_UeremcpAbilities; row_struct=/Script/RE.REAbilityDef; mode=create_or_update; dry_run=true; atomic=true; save=true; validate=true; rollback_on_failure=true; timeout_ms=0; on_revision_conflict=reject; expected_revision=<absent>; idempotency_key=<absent>"
     ]
   },
   "result": {
@@ -16,6 +16,10 @@
     "dependencies": [
       {
         "asset_path": "/Game/__UeremcpTests/VFX/NS_Fireball",
+        "role": "spell_presentation"
+      },
+      {
+        "asset_path": "/Game/__UeremcpTests/VFX/NS_Fireball_Impact",
         "role": "spell_presentation"
       }
     ]
@@ -51,7 +55,7 @@
       {
         "step": "plan_create_spell",
         "ok": true,
-        "detail": "Prepared guarded-write steps without executing them."
+        "detail": "Prepared ordered guarded-write steps for the deterministic table object without executing them."
       }
     ],
     "truncated": false
@@ -67,7 +71,9 @@
     "internal_operations": 2
   },
   "capability_notes": [
-    "DataTable upsert, save, and re-read were skipped.",
-    "Multi-client replication proof was not run."
+    "Specification-to-FREAbilityDef planning and Pattern B static checks completed.",
+    "DataTable upsert, save, and re-read skipped: guarded mutation is not implemented in this preflight slice.",
+    "No gameplay-tag INI mutation is performed; RE Element, EffectTag, and ImpactStatus fields are used.",
+    "Multi-client replication proof remains WS-11/RB-14; this response does not claim it."
   ]
 }

@@ -193,6 +193,57 @@ class GameplaySpecificationTests(unittest.TestCase):
         ):
             self.assertIn(evidence, toolset)
 
+    def test_gameplay_toolset_registers_on_post_engine_init(self) -> None:
+        module = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpGameplayModule.cpp"
+        ).read_text(encoding="utf-8")
+        for evidence in (
+            "GetOnPostEngineInit().AddRaw",
+            "RegisterToolsetClass(",
+            "UUeremcpGameplayToolset::StaticClass()",
+            "GetOnPostEngineInit().Remove(OnPostEngineInitHandle)",
+            "UnregisterToolsetClass(",
+        ):
+            self.assertIn(evidence, module)
+
+    def test_write_plan_captures_guarded_envelope_controls(self) -> None:
+        header = (
+            GAMEPLAY_SOURCE_DIR / "Public" / "UeremcpSpellPlanner.h"
+        ).read_text(encoding="utf-8")
+        planner = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpSpellPlanner.cpp"
+        ).read_text(encoding="utf-8")
+        for field in (
+            "RequestId",
+            "Mode",
+            "bDryRun",
+            "bAtomic",
+            "bSave",
+            "bValidate",
+            "bRollbackOnFailure",
+            "TimeoutMs",
+            "OnRevisionConflict",
+            "ExpectedRevision",
+            "bHasExpectedRevision",
+            "IdempotencyKey",
+        ):
+            self.assertIn(field, header)
+        for guarded_step in (
+            "acquire_shared_mutator",
+            "reject_foreign_active_sandbox",
+            "enter_atomic_content_sandbox",
+            "configure_rollback_on_failure",
+            "check_expected_revision",
+            "check_idempotency_replay",
+            "save_table_to_sandbox",
+            "reread_and_compare_normalized_row",
+            "discard_dry_run",
+            "release_shared_mutator",
+        ):
+            self.assertIn(guarded_step, planner)
+        self.assertIn('TEXT("UeremcpSecurity.mutator_queue")', planner)
+        self.assertNotIn("UeremcpGameplay.module_registration", planner)
+
     def test_dry_run_response_golden_is_complete_and_schema_valid(self) -> None:
         response_schema = json.loads(
             (SCHEMAS_DIR / "envelope" / "response.schema.json").read_text(
@@ -215,6 +266,22 @@ class GameplaySpecificationTests(unittest.TestCase):
         self.assertFalse(response["rollback"]["performed"])
         self.assertNotIn("created_assets", response["result"])
         self.assertNotIn("modified_assets", response["result"])
+        write_note = response["understood"]["interpretation_notes"][1]
+        for control in (
+            "row_struct=/Script/RE.REAbilityDef",
+            "mode=create_or_update",
+            "dry_run=true",
+            "atomic=true",
+            "save=true",
+            "validate=true",
+            "rollback_on_failure=true",
+            "timeout_ms=0",
+            "on_revision_conflict=reject",
+            "expected_revision=<absent>",
+            "idempotency_key=<absent>",
+        ):
+            self.assertIn(control, write_note)
+        self.assertEqual(2, len(response["result"]["dependencies"]))
 
 
 if __name__ == "__main__":

@@ -13,6 +13,23 @@ struct UEREMCPGAMEPLAY_API FUeremcpSpellPlan
 	TArray<FString> StaticChecks;
 };
 
+/** Envelope controls captured now so guarded mutation cannot reinterpret them later. */
+struct UEREMCPGAMEPLAY_API FUeremcpAbilityTableWriteOptions
+{
+	FString RequestId;
+	FString Mode;
+	bool bDryRun = false;
+	bool bAtomic = true;
+	bool bSave = true;
+	bool bValidate = true;
+	bool bRollbackOnFailure = true;
+	int32 TimeoutMs = 0;
+	FString OnRevisionConflict = TEXT("reject");
+	FString ExpectedRevision;
+	bool bHasExpectedRevision = false;
+	FString IdempotencyKey;
+};
+
 /** Ordered write intent prepared without loading or mutating editor assets. */
 struct UEREMCPGAMEPLAY_API FUeremcpAbilityTableWritePlan
 {
@@ -20,9 +37,21 @@ struct UEREMCPGAMEPLAY_API FUeremcpAbilityTableWritePlan
 	FString TableObjectPath;
 	FString RowStructPath;
 	FString RowName;
+	FString RequestId;
 	FString Mode;
 	bool bDryRun = false;
+	bool bAtomic = true;
+	bool bSave = true;
+	bool bValidate = true;
+	bool bRollbackOnFailure = true;
+	int32 TimeoutMs = 0;
+	FString OnRevisionConflict = TEXT("reject");
+	FString ExpectedRevision;
+	bool bHasExpectedRevision = false;
+	FString IdempotencyKey;
+	bool bCanClaimValidatedMutation = false;
 	TArray<FString> OrderedSteps;
+	TArray<FString> RequiredRuntimeGates;
 };
 
 /**
@@ -42,14 +71,13 @@ public:
 		FString& OutError);
 
 	/**
-	 * Prepare the exact DataTable write intent behind the WS-03/WS-12 gates.
+	 * Prepare the exact DataTable write intent behind the WS-12 queue gate.
 	 * Package-to-object naming uses FPackageName::GetLongPackageAssetName
 	 * [VERIFIED: PackageName.h:178-184]. This method performs no editor reads or writes.
 	 */
 	static bool BuildTableWritePlan(
 		const FString& TargetPackagePath,
-		const FString& Mode,
-		bool bDryRun,
+		const FUeremcpAbilityTableWriteOptions& Options,
 		const FUeremcpSpellPlan& SpellPlan,
 		FUeremcpAbilityTableWritePlan& OutWritePlan,
 		FString& OutError);

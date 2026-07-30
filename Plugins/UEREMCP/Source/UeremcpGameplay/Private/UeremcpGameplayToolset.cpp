@@ -56,6 +56,12 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 			Request.RequestId,
 			TEXT("create_spell requires target.asset_path naming the FREAbilityDef DataTable."));
 	}
+	if (Request.RequestId.IsEmpty())
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("create_spell requires request_id so the shared mutator queue can own and release the future write."));
+	}
 
 	// Shared ADR-0010 path gate; domains do not fork path policy.
 	const FUeremcpPathValidationResult PathResult =
@@ -94,11 +100,24 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		}
 	}
 
+	FUeremcpAbilityTableWriteOptions WriteOptions;
+	WriteOptions.RequestId = Request.RequestId;
+	WriteOptions.Mode = Request.Mode;
+	WriteOptions.bDryRun = Request.bDryRun;
+	WriteOptions.bAtomic = Request.bAtomic;
+	WriteOptions.bSave = Request.bSave;
+	WriteOptions.bValidate = Request.bValidate;
+	WriteOptions.bRollbackOnFailure = Request.bRollbackOnFailure;
+	WriteOptions.TimeoutMs = Request.TimeoutMs;
+	WriteOptions.OnRevisionConflict = Request.OnRevisionConflict;
+	WriteOptions.ExpectedRevision = Request.ExpectedRevision;
+	WriteOptions.bHasExpectedRevision = Request.bHasExpectedRevision;
+	WriteOptions.IdempotencyKey = Request.IdempotencyKey;
+
 	FUeremcpAbilityTableWritePlan WritePlan;
 	if (!FUeremcpSpellPlanner::BuildTableWritePlan(
 		Request.TargetAssetPath,
-		Request.Mode,
-		Request.bDryRun,
+		WriteOptions,
 		Plan,
 		WritePlan,
 		PlanError))
@@ -122,11 +141,19 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		*Plan.RowName,
 		*Plan.RowName));
 	Response.InterpretationNotes.Add(FString::Printf(
-		TEXT("table_object=%s; row_struct=%s; mode=%s; dry_run=%s"),
+		TEXT("table_object=%s; row_struct=%s; mode=%s; dry_run=%s; atomic=%s; save=%s; validate=%s; rollback_on_failure=%s; timeout_ms=%d; on_revision_conflict=%s; expected_revision=%s; idempotency_key=%s"),
 		*WritePlan.TableObjectPath,
 		*WritePlan.RowStructPath,
 		*WritePlan.Mode,
-		WritePlan.bDryRun ? TEXT("true") : TEXT("false")));
+		WritePlan.bDryRun ? TEXT("true") : TEXT("false"),
+		WritePlan.bAtomic ? TEXT("true") : TEXT("false"),
+		WritePlan.bSave ? TEXT("true") : TEXT("false"),
+		WritePlan.bValidate ? TEXT("true") : TEXT("false"),
+		WritePlan.bRollbackOnFailure ? TEXT("true") : TEXT("false"),
+		WritePlan.TimeoutMs,
+		*WritePlan.OnRevisionConflict,
+		WritePlan.bHasExpectedRevision ? *WritePlan.ExpectedRevision : TEXT("<absent>"),
+		WritePlan.IdempotencyKey.IsEmpty() ? TEXT("<absent>") : *WritePlan.IdempotencyKey));
 	Response.PrimaryAsset = Request.TargetAssetPath;
 	for (const FString& DependencyPath : Plan.DependencyAssetPaths)
 	{
