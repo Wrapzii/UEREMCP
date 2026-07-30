@@ -24,7 +24,7 @@ class UEREMCPNIAGARA_API UUeremcpNiagaraToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.3.0-create-probe"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.4.0-round-trip"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.

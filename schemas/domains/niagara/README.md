@@ -48,7 +48,7 @@ parameter bindings:
 |---|---|
 | Value modes (local, linked, DI, HLSL, dynamic chain) | `extensions.niagara.inputs[pin_id]` |
 | Renderer `propertyValues` JSON | `extensions.niagara.renderers[]` |
-| Event handler stacks (topology gap) | `extensions.niagara.event_handlers[]` |
+| Event handler stacks (topology gap) | `extensions.niagara.event_handlers[]` (inferred placeholders from `GetStackIssues` / compile `per_script`; modules empty) |
 | Inheritance metadata | `extensions.niagara.inheritance` |
 | Compile aggregate + per-script | `extensions.niagara.compile` |
 
@@ -85,13 +85,20 @@ UEREMCP does **not** re-expose NiagaraToolsets' 46 primitives. Internal batching
 
 | Gap | Severity | Mitigation |
 |---|---|---|
-| Event handler stacks omitted from `GetEmitterTopology` | High | `extensions.niagara.event_handlers`; document as lossy |
+| Event handler stacks omitted from `GetEmitterTopology` | High | `extensions.niagara.event_handlers[]` inferred placeholders; modules remain lossy |
 | No `ReorderModule` AICallable | High | remove+re-add or internal `MoveModule` proposal to WS-03 |
 | `CreateNiagaraSystem` requires template | By design | duplicate-and-modify |
 | No headless particle sim | Medium | compile + structure + save; optional place |
 | `NiagaraScriptGraph` authoring | Out of scope | compose Epic modules only |
 
 Full research: `docs/research/RB-07-niagara.md`.
+
+### Post-create inspect (`options.validate`)
+
+When `create_niagara_effect` runs with `options.validate: true` (default), `FUeremcpNiagaraRoundTrip`
+re-reads the saved asset via `inspect_system` and sets `validation.structurally_valid` when emitter
+names and `User.*` parameters match. This is **not** ADR-0004 content-hash round-trip; status stays
+`partially_completed`.
 
 ## Tests
 

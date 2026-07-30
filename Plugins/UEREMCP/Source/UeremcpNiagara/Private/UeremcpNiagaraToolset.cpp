@@ -6,6 +6,7 @@
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraCreate.h"
 #include "UeremcpNiagaraInspect.h"
+#include "UeremcpNiagaraRoundTrip.h"
 
 FString UUeremcpNiagaraToolset::Echo(const FString& RequestJson)
 {
@@ -226,6 +227,11 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 			CreateResult.Error.IsEmpty() ? TEXT("create_niagara_effect failed.") : CreateResult.Error);
 	}
 
+	FUeremcpNiagaraRoundTripResult RoundTripResult;
+	const bool bRanRoundTrip = Request.bValidate
+		&& !Request.bDryRun
+		&& FUeremcpNiagaraRoundTrip::ValidateCreateResult(Request, CreateResult, RoundTripResult);
+
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
 	Response.UnderstoodAction = Request.Action;
@@ -234,6 +240,10 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	Response.CapabilityNotes = UeremcpNiagaraCapability::DefaultCreateCapabilityNotes();
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
+	if (bRanRoundTrip)
+	{
+		Response.Metrics.InternalOperations += RoundTripResult.InternalOperations;
+	}
 
 	if (Request.bDryRun)
 	{
@@ -244,6 +254,10 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	{
 		Response.Status = TEXT("partially_completed");
 		Response.Summary = CreateResult.Summary;
+		if (bRanRoundTrip && !RoundTripResult.Summary.IsEmpty())
+		{
+			Response.Summary += FString::Printf(TEXT(" %s"), *RoundTripResult.Summary);
+		}
 	}
 
 	TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
@@ -254,12 +268,26 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	{
 		ChecksPerformed.Add(MakeShared<FJsonValueString>(Check));
 	}
+	if (bRanRoundTrip)
+	{
+		for (const FString& Check : RoundTripResult.ChecksPerformed)
+		{
+			ChecksPerformed.Add(MakeShared<FJsonValueString>(Check));
+		}
+	}
 	Validation->SetArrayField(TEXT("checks_performed"), ChecksPerformed);
 
 	TArray<TSharedPtr<FJsonValue>> ChecksSkipped;
 	for (const FString& Check : CreateResult.ChecksSkipped)
 	{
 		ChecksSkipped.Add(MakeShared<FJsonValueString>(Check));
+	}
+	if (bRanRoundTrip)
+	{
+		for (const FString& Check : RoundTripResult.ChecksSkipped)
+		{
+			ChecksSkipped.Add(MakeShared<FJsonValueString>(Check));
+		}
 	}
 	Validation->SetArrayField(TEXT("checks_skipped"), ChecksSkipped);
 
@@ -281,10 +309,33 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 		Validation->SetField(TEXT("saved"), MakeShared<FJsonValueNull>());
 	}
 
-	Validation->SetField(TEXT("structurally_valid"), MakeShared<FJsonValueNull>());
+	if (bRanRoundTrip && RoundTripResult.bInspectSucceeded)
+	{
+		Validation->SetBoolField(TEXT("structurally_valid"), RoundTripResult.bStructuralMatch);
+	}
+	else
+	{
+		Validation->SetField(TEXT("structurally_valid"), MakeShared<FJsonValueNull>());
+	}
 	Validation->SetField(TEXT("runtime_smoke_test"), MakeShared<FJsonValueNull>());
 
 	Extra->SetObjectField(TEXT("validation"), Validation);
+
+	if (bRanRoundTrip && RoundTripResult.InspectGraphs.Num() > 0)
+	{
+		TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
+		Diagnostics->SetArrayField(TEXT("post_create_inspect_graphs"), RoundTripResult.InspectGraphs);
+		if (RoundTripResult.Mismatches.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> MismatchValues;
+			for (const FString& Mismatch : RoundTripResult.Mismatches)
+			{
+				MismatchValues.Add(MakeShared<FJsonValueString>(Mismatch));
+			}
+			Diagnostics->SetArrayField(TEXT("structural_mismatches"), MismatchValues);
+		}
+		Extra->SetObjectField(TEXT("diagnostics"), Diagnostics);
+	}
 
 	if (!Request.bDryRun && CreateResult.EmittersAdded.Num() > 0)
 	{

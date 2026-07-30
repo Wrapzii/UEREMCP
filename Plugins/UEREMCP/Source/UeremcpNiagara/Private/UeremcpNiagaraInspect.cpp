@@ -3,6 +3,7 @@
 #include "UeremcpNiagaraInspect.h"
 
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraInspectMapping.h"
 #include "UeremcpNiagaraPaths.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
@@ -603,17 +604,31 @@ bool FUeremcpNiagaraInspect::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.system_dependencies"));
 	}
 
+	FNiagaraExt_SystemCompileState CompileState;
+	bool bHasCompileState = false;
 	if (Spec.bIncludeCompileState)
 	{
-		FNiagaraExt_SystemCompileState CompileState;
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, CompileState, Context);
 		++OutResult.InternalOperations;
 		OutResult.ChecksPerformed.Add(TEXT("niagara.compile_state"));
+		bHasCompileState = true;
 
 		TSharedPtr<FJsonObject> Compile = MakeShared<FJsonObject>();
 		Compile->SetStringField(TEXT("aggregate_status"), CompileStatusToString(CompileState.AggregateStatus));
 		Compile->SetBoolField(TEXT("bIsCompiling"), CompileState.bIsCompiling);
 		Compile->SetBoolField(TEXT("bHasErrors"), CompileState.bHasErrors);
+
+		TArray<TSharedPtr<FJsonValue>> PerScript;
+		for (const FNiagaraExt_ScriptCompileInfo& ScriptInfo : CompileState.Scripts)
+		{
+			TSharedPtr<FJsonObject> ScriptObj = MakeShared<FJsonObject>();
+			ScriptObj->SetStringField(TEXT("emitter_name"), ScriptInfo.EmitterName.ToString());
+			ScriptObj->SetStringField(TEXT("script_usage"), ScriptInfo.ScriptName.ToString());
+			ScriptObj->SetStringField(TEXT("status"), CompileStatusToString(ScriptInfo.LastCompileStatus));
+			PerScript.Add(MakeShared<FJsonValueObject>(ScriptObj));
+		}
+		Compile->SetArrayField(TEXT("per_script"), PerScript);
+
 		SystemExt->SetObjectField(TEXT("compile"), Compile);
 
 		const bool bUpToDate = CompileState.AggregateStatus == ENiagaraExt_ScriptCompileStatus::UpToDate;
@@ -624,26 +639,46 @@ bool FUeremcpNiagaraInspect::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.compile_state"));
 	}
 
+	FNiagaraExt_StackIssues StackIssues;
+	bool bHasStackIssues = false;
 	if (Spec.bIncludeStackIssues)
 	{
-		FNiagaraExt_StackIssues Issues;
-		UNiagaraExternalEditUtilities::GetStackIssues(System, Issues, Context);
+		UNiagaraExternalEditUtilities::GetStackIssues(System, StackIssues, Context);
 		++OutResult.InternalOperations;
 		OutResult.ChecksPerformed.Add(TEXT("niagara.stack_issues"));
-		SystemExt->SetNumberField(TEXT("stack_issue_count"), Issues.Issues.Num());
+		bHasStackIssues = true;
+		SystemExt->SetNumberField(TEXT("stack_issue_count"), StackIssues.Issues.Num());
 	}
 	else
 	{
 		OutResult.ChecksSkipped.Add(TEXT("niagara.stack_issues"));
 	}
 
+	if (bHasCompileState || bHasStackIssues)
+	{
+		FNiagaraExt_SystemCompileState EmptyCompile;
+		FNiagaraExt_StackIssues EmptyIssues;
+		const TArray<TSharedPtr<FJsonValue>> EventHandlers =
+			FUeremcpNiagaraInspectMapping::BuildEventHandlerPlaceholders(
+				bHasStackIssues ? StackIssues : EmptyIssues,
+				bHasCompileState ? CompileState : EmptyCompile);
+		SystemExt->SetArrayField(TEXT("event_handlers"), EventHandlers);
+		if (EventHandlers.Num() > 0)
+		{
+			SystemExt->SetStringField(
+				TEXT("event_handlers_fidelity"),
+				TEXT("inferred_from_GetStackIssues_and_GetSystemCompileState_per_script"));
+		}
+	}
+
 	SystemExtRoot->SetObjectField(TEXT("niagara"), SystemExt);
 	SystemGraph->SetObjectField(TEXT("extensions"), SystemExtRoot);
 
 	TSharedPtr<FJsonObject> SysDiag = MakeShared<FJsonObject>();
-	SysDiag->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{
-		MakeShared<FJsonValueString>(TEXT("event_handler_stacks not exposed by GetEmitterTopology"))
-	});
+	TArray<TSharedPtr<FJsonValue>> Warnings;
+	Warnings.Add(MakeShared<FJsonValueString>(
+		TEXT("event_handler module stacks not exposed by GetEmitterTopology; event_handlers[] are inferred placeholders only")));
+	SysDiag->SetArrayField(TEXT("warnings"), Warnings);
 	SystemGraph->SetObjectField(TEXT("diagnostics"), SysDiag);
 
 	OutResult.Graphs.Insert(MakeShared<FJsonValueObject>(SystemGraph), 0);

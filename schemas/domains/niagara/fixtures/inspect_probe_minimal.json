@@ -18,9 +18,21 @@
           { "name": "User.Color" },
           { "name": "User.Intensity" },
           { "name": "User.Scale" }
-        ]
+        ],
+        "event_handlers": [],
+        "compile": {
+          "per_script": []
+        }
       }
     }
+  },
+  "event_handler_placeholder_shape": {
+    "event_name": "Source: DeathEvent",
+    "source_emitter": "ProbeBurst",
+    "script_usage": "ParticleEventScript",
+    "inferred_from": "GetStackIssues",
+    "fidelity_note": "Modules empty: GetEmitterTopology omits ParticleEventScript stacks; placeholder only.",
+    "modules": []
   },
   "module_stack_example": {
     "graph_type": "NiagaraModuleStack",
@@ -37,5 +49,15 @@
         "semantic_id": "ProbeBurst/ParticleUpdateScript/ParticleState"
       }
     ]
+  },
+  "round_trip_offline_expectations": {
+    "create_emitters": ["Sparks", "ImpactBurst"],
+    "create_user_variables": ["User.Scale", "User.Intensity"],
+    "inspect_must_include_graph_types": [
+      "NiagaraSystemGraph",
+      "NiagaraEmitterGraph",
+      "NiagaraModuleStack"
+    ],
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"]
   }
 }

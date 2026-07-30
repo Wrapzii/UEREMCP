@@ -38,7 +38,12 @@ EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
     "material_bindings",
     "partially_completed",
     "POC B",
+    "post-create inspect",
 )
+
+
+def load_fixture(name: str) -> dict:
+    return json.loads((NIAGARA_DIR / "fixtures" / name).read_text(encoding="utf-8"))
 
 
 def load_registry() -> Registry:
@@ -114,6 +119,33 @@ class NiagaraSpecificationTests(unittest.TestCase):
             / "Plugins/UEREMCP/Source/UeremcpNiagara/Public/UeremcpNiagaraPaths.h"
         ).read_text(encoding="utf-8")
         self.assertIn("TestsContentRoot", paths_header)
+
+    def test_inspect_probe_fixture_shape(self) -> None:
+        fixture = load_fixture("inspect_probe_minimal.json")
+        system = fixture["system_graph"]
+        self.assertEqual(system["graph_type"], "NiagaraSystemGraph")
+        self.assertFalse(system["fidelity"]["round_trip_supported"])
+        self.assertEqual(set(system["fidelity"]["lossy_areas"]), EXPECTED_LOSSY_AREAS)
+
+        niagara = system["extensions"]["niagara"]
+        self.assertIn("event_handlers", niagara)
+        self.assertIsInstance(niagara["event_handlers"], list)
+        self.assertIn("user_parameters", niagara)
+
+        placeholder = fixture["event_handler_placeholder_shape"]
+        self.assertEqual(placeholder["script_usage"], "ParticleEventScript")
+        self.assertEqual(placeholder["modules"], [])
+        self.assertIn("fidelity_note", placeholder)
+
+    def test_round_trip_fixture_expectations(self) -> None:
+        fixture = load_fixture("inspect_probe_minimal.json")
+        expectations = fixture["round_trip_offline_expectations"]
+        self.assertGreater(len(expectations["create_emitters"]), 0)
+        self.assertIn("NiagaraSystemGraph", expectations["inspect_must_include_graph_types"])
+        self.assertEqual(
+            set(expectations["validation_never_claims"]),
+            {"created_and_validated", "modified_and_validated"},
+        )
 
 
 if __name__ == "__main__":

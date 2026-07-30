@@ -78,6 +78,19 @@ bool FUeremcpNiagaraInspectSystemRuntimeTest::RunTest(const FString& Parameters)
 		if (GraphType == TEXT("NiagaraSystemGraph"))
 		{
 			bFoundSystemGraph = true;
+
+			const TSharedPtr<FJsonObject>* Extensions = nullptr;
+			if (Graph->TryGetObjectField(TEXT("extensions"), Extensions) && Extensions && Extensions->IsValid())
+			{
+				const TSharedPtr<FJsonObject>* Niagara = nullptr;
+				if ((*Extensions)->TryGetObjectField(TEXT("niagara"), Niagara) && Niagara && Niagara->IsValid())
+				{
+					const TArray<TSharedPtr<FJsonValue>>* EventHandlers = nullptr;
+					TestTrue(
+						TEXT("event_handlers array present on system graph"),
+						(*Niagara)->TryGetArrayField(TEXT("event_handlers"), EventHandlers));
+				}
+			}
 		}
 		if (GraphType == TEXT("NiagaraModuleStack"))
 		{
