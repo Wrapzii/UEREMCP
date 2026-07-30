@@ -22,16 +22,21 @@ junction.
   editor startup failed because `UnrealEditor.modules` omitted `UeremcpMaterial`.
 - A prior module-only UBT run linked `UnrealEditor-UeremcpMaterial.dll`, but did not
   add it to `UnrealEditor.modules`.
-- Full `REEditor Win64 Development` rebuild had no mutex contention; it failed with
-  source compilation errors before regenerating the manifest:
-  - `UeremcpBlueprintEpicBridge.cpp(121)`: ambiguous `EscapeJsonString`.
+- Full `REEditor Win64 Development` rebuild had no mutex contention; UBT exited `6`
+  (`OtherCompilationError`) before regenerating the manifest:
+  - `UeremcpBlueprintEpicBridge.cpp(121)`: C2668 ambiguous `EscapeJsonString`,
+    followed by C2100 dereference failure.
   - `UeremcpBlueprintToolset.cpp`: incomplete
-    `FUeremcpBlueprintMutatingGate::FDispatchHolder` deleted through `TUniquePtr`.
-  - `UeremcpBlueprintGraphWriter.cpp`: UE 5.8 JSON shared-string key mismatch.
-  - `UeremcpGameplayToolset.cpp`: nonexistent `FJsonObject::SetNullField`.
-  - `UeremcpSpellPlanner.cpp`: UE 5.8 JSON shared-string key mismatch.
+    `FUeremcpBlueprintMutatingGate::FDispatchHolder` deleted through `TUniquePtr`
+    (C4150).
+  - `UeremcpBlueprintGraphWriter.cpp`: UE 5.8 JSON shared-string key mismatch in
+    `Values.GetKeys(TArray<FString>)` (C2672).
+  - `UeremcpGameplayToolset.cpp`: nonexistent `FJsonObject::SetNullField` at six
+    call sites (C2039).
+  - `UeremcpSpellPlanner.cpp(43)`: UE 5.8 JSON shared-string key mismatch in
+    `Values.Find(FString)` (C2665).
   - `UeremcpTemplatesModule.cpp`: transitive ToolsetRegistry header could not find
-    `Kismet/BlueprintFunctionLibrary.h`.
+    `Kismet/BlueprintFunctionLibrary.h` (C1083).
 
 Therefore Blueprint, Material, Niagara, and B7 editor filters are **blocked before
 Automation discovery** on this orch tip. No A6, B7, Material, Niagara, or POC B runtime
