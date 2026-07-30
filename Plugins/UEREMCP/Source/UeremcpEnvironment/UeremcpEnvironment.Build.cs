@@ -32,6 +32,9 @@ public class UeremcpEnvironment : ModuleRules
 			"LandscapeEditor",
 			"Foliage",
 			"Niagara",
+			"GeometryFramework",
+			"GeometryCore",
+			"GeometryScriptingCore",
 
 			"UeremcpCore",
 			"UeremcpSecurity",

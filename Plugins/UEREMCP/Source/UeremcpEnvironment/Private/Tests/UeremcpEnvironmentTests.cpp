@@ -42,6 +42,11 @@ bool FUeremcpEnvironmentHeightmapNonFlatTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("non_flat"), Metrics->GetBoolField(TEXT("non_flat")));
 	TestTrue(TEXT("valley samples"), Metrics->GetNumberField(TEXT("valley_samples")) > 0);
 	TestEqual(TEXT("height count"), Heights.Num(), Spec.SizeX * Spec.SizeY);
+	const FString Hash1 = Metrics->GetStringField(TEXT("heightmap_hash"));
+	TArray<uint16> Heights2;
+	TSharedPtr<FJsonObject> Metrics2;
+	FUeremcpEnvironmentService::GenerateHeightmap(Spec, River, Heights2, Metrics2);
+	TestEqual(TEXT("heightmap_hash stable"), Hash1, Metrics2->GetStringField(TEXT("heightmap_hash")));
 	return true;
 }
 

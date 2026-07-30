@@ -28,6 +28,8 @@ struct FUeremcpEnvironmentBuildSpec
 	bool bIncludeRain = true;
 	bool bIncludeLighting = true;
 	bool bCaptureScreenshot = true;
+	bool bIncludeStructures = false;
+	int32 StructureCount = 6;
 	FString DestinationLevelPath; // /Game/__UeremcpPoc/MountainRiverRain
 	FString FallbackPolicy = TEXT("prefer_real"); // prefer_real | allow_approximate
 };

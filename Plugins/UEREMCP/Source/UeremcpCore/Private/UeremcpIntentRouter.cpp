@@ -695,7 +695,9 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 		TEXT("spell"), TEXT("helix"), TEXT("capture"), TEXT("template"), TEXT("texture"),
 		TEXT("projectile"), TEXT("emitter"), TEXT("vfx"), TEXT("graph"), TEXT("ability"),
 		TEXT("gas"), TEXT("screenshot"), TEXT("viewport"), TEXT("job"), TEXT("plan"),
-		TEXT("ribbon"), TEXT("particle"), TEXT("shader")
+		TEXT("ribbon"), TEXT("particle"), TEXT("shader"),
+		TEXT("landscape"), TEXT("terrain"), TEXT("river"), TEXT("forest"), TEXT("foliage"),
+		TEXT("environment"), TEXT("weather"), TEXT("rain"), TEXT("mountain"), TEXT("biome")
 	};
 	bool bHasAnchor = false;
 	for (const FString& M : TopMatched)

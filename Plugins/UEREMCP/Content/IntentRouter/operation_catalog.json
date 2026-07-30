@@ -9,6 +9,36 @@
   ],
   "dependencies": [
     {
+      "action": "build_environment",
+      "depends_on_actions": [],
+      "why": "composite environment; prefer over staging primitives when building a full biome"
+    },
+    {
+      "action": "create_water_body",
+      "depends_on_actions": ["create_landscape"],
+      "why": "river usually conforms to terrain"
+    },
+    {
+      "action": "scatter_foliage",
+      "depends_on_actions": ["create_landscape", "create_water_body"],
+      "why": "bank forest needs terrain + river exclusion corridor"
+    },
+    {
+      "action": "attach_weather",
+      "depends_on_actions": ["create_landscape"],
+      "why": "weather follows after a world exists"
+    },
+    {
+      "action": "place_structures",
+      "depends_on_actions": ["create_landscape"],
+      "why": "structures sit on terrain / along river"
+    },
+    {
+      "action": "capture_world_frames",
+      "depends_on_actions": ["build_environment", "create_landscape"],
+      "why": "world capture after environment exists"
+    },
+    {
       "action": "create_niagara_effect",
       "depends_on_actions": ["create_vfx_material"],
       "why": "effects bind materials; create materials first when both are needed"
@@ -376,6 +406,43 @@
       "expected_statuses": [],
       "recovery": "Use when UeremcpVisualCaptureToolset is unavailable.",
       "example_request": null
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.BuildEnvironment",
+      "action": "build_environment",
+      "use_when": ["landscape", "mountains", "river", "forest", "rain", "environment", "new world", "biome"],
+      "do_not_use_for": ["Niagara VFX authoring", "Blueprint graphs"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "partially_completed", "failed_validation", "rejected"],
+      "recovery": "Dry-run first; then options.dry_run=false; ValidateEnvironment; CaptureWorldFrames.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "build_environment",
+        "request_id": "env-1",
+        "target": {"asset_path": "/Game/__UeremcpPoc/MountainRiverRain"},
+        "options": {"dry_run": true, "validate": true},
+        "specification": {"seed": 42}
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateLandscape",
+      "action": "create_landscape",
+      "use_when": ["heightmap", "terrain", "mountains", "valley"],
+      "do_not_use_for": ["sculpt brush strokes"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "rejected"],
+      "recovery": "Check heightmap_hash for determinism.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_landscape",
+        "target": {"asset_path": "/Game/__UeremcpPoc/MountainRiverRain"},
+        "options": {"dry_run": true},
+        "specification": {"seed": 4471}
+      }
     },
     {
       "qualified": "EditorToolset.LogsToolset.GetLog",
