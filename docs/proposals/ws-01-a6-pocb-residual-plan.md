@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `d7fe3b2` (WS-06 Python-free SubmitGraph; residual commit follows)
+- **Orch tip at writing:** `3756244` (Python-free A5 handoff; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** Python-free SubmitGraph landed as `d7fe3b2` (`e58466f`) and Blueprint rebuilt successfully. Fresh Material/Niagara DLLs remain ready for WS-11 fireball/B8 re-runs; CRT A5 must be re-run after this land. Prior `70cc348` failures remain historical evidence only. No POC claims.
+- **Status:** WS-11 fireball on fresh post-`886d09d` DLLs still **FAILS** on `ribbon_trail` (`editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_063745.log`); B8 was skipped. WS-08 trail graph remains the critical blocker. Python-free SubmitGraph `d7fe3b2` is built, so CRT A5 re-run is unblocked. No POC claims.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -151,18 +151,20 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 
 **Runtime result on `70cc348` (pre-`ee905ed`; has `dbb3638`→`7a417bb`):** fireball **FAIL** — B1/B4 FAIL on `ribbon_trail`; B3/B5/B6/B8_save/B9 **PASS**. B8 Create **FAIL** (same MI / ribbon path). Stacked cleanup `886d09d` (`ee905ed`) landed after this run. **No overall POC-B claim.**
 
+**Runtime result on fresh post-`886d09d` DLLs:** fireball **FAIL** — `ribbon_trail` remains absent/broken after both stale-master defenses. Evidence: `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_063745.log`. B8 was **SKIPPED**. WS-08 `FireballRibbonTrailPoc` / trail graph is the critical blocker. **No overall POC-B claim.**
+
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
-| B1 | One MCP request produces the complete effect — no follow-ups | **FAIL on `70cc348`** — blocked by `ribbon_trail` MI | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | `ribbon_trail` still missing on `70cc348`; re-run on `01b9320` after WS-08 `FireballRibbonTrailPoc` | WS-08 + WS-07 |
+| B1 | One MCP request produces the complete effect — no follow-ups | **FAIL on fresh DLLs** — blocked by `ribbon_trail` | WS-07 + WS-11 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | `ribbon_trail` still missing/broken on fresh DLLs; WS-08 trail graph blocker | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **PASS on `70cc348`** | WS-07 + WS-11 |
-| B4 | Renderers configured and bound to valid materials | **FAIL on `70cc348`** — `ribbon_trail`; re-run on `01b9320` after WS-08 confirm | WS-07 + WS-08 |
+| B4 | Renderers configured and bound to valid materials | **FAIL on fresh DLLs** — `ribbon_trail`; log `...063745.log` | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B6 | System compiles; compile genuinely awaited | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
-| B8 | Assets saved and survive editor restart | Create **FAIL on `70cc348`** (same MI); B8_save gate PASS on fireball create; restart Verify unproven | WS-11 |
+| B8 | Assets saved and survive editor restart | **SKIPPED after fresh-DLL fireball failure**; prior Create failed on same MI; restart Verify unproven | WS-11 |
 | B9 | One structured response with complete change manifest | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B10 | Visibly renders as fireball when placed — screenshot supplementary only | **Not required as validation**; optional after B1–B9 | WS-07 / WS-11 |
 
@@ -175,8 +177,8 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | Re-run CRT after Python-free SubmitGraph `d7fe3b2` | WS-11 | Prior A1–A4/A10 PASS; A5/A9 need fresh proof; refuse overall POC-A |
-| P0 | Re-run fireball on `01b9320` after WS-08 confirms `FireballRibbonTrailPoc` | WS-08 + WS-11 | `70cc348` B1/B4 FAIL; stacked defenses ready; refuse overall POC-B |
-| P0 | Re-run B8 Create→restart→Verify on `01b9320` after ribbon MI green | WS-11 | Create FAIL on `70cc348` (same MI); refuse B8/POC-B until PASS |
+| P0 | Fix/confirm WS-08 `FireballRibbonTrailPoc` trail graph, then re-run fireball | WS-08 + WS-11 | Fresh-DLL fireball still fails `ribbon_trail`; refuse overall POC-B |
+| P0 | Re-run B8 Create→restart→Verify after ribbon MI green | WS-11 | Fresh-DLL B8 skipped; refuse B8/POC-B until PASS |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after A6 + POC B |
