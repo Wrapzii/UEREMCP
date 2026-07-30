@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current integration tip:** `d033dd8`
+- **Current integration tip:** `2aab525`
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `268a102` (fresh fireball create **PASS**; production B10 **PASS**, 30,454 warm / 41,231 changed / 412 live / 705 spawned)
@@ -10,25 +10,40 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. The refreshed current-lineage bundle on `d033dd8` records **B1–B10 all PASS**, including B1 live MCP in one transport round trip with `4.7001219s` caller wall clock. The live response remains honestly `partially_completed`. Baseline fixture fix `866248a` has landed, but WS-14's clean measured primitive trial is still in flight. Tokens remain unavailable. **No overall POC-B claim** until the clean primitive baseline and any acceptance rule governing `partially_completed` versus validated completion are resolved.
+- **Status:** **Overall POC B CLAIMED** at `2aab525` for the demonstrated
+  goal-level Niagara fireball scenario: B1–B10 are all PASS in the current-lineage
+  evidence bundle, and the completed metrics record measures one UEREMCP MCP call
+  against 63 successful primitive operations in each of 3/3 trials. The live create
+  response remains honestly `partially_completed`, tokens are unavailable for the
+  precise Cursor caller reason recorded below, and scratch assets may remain
+  quarantined under `__BenchmarkCleanup/` until editor unload. This claim does not
+  claim POC C, D, or E.
 - **Junction:** Not changed.
 
-## Current-lineage POC-B bundle (`d033dd8`)
+## Overall POC B claim (`2aab525`)
 
 [`tests/integration/_logs/poc_b_current_lineage_e85da3e.json`](../../tests/integration/_logs/poc_b_current_lineage_e85da3e.json)
 records `bundle_status=criterion_evidence_complete_with_live_transport` and
-`overall_poc_b_claimed=false`.
+all B1–B10 criteria as PASS. Its `overall_poc_b_claimed=false` field predates this
+WS-01 acceptance decision and is pending a WS-11-owned refresh; the canonical claim
+record is
+[`ws-01-poc-b-acceptance-claim.md`](./ws-01-poc-b-acceptance-claim.md).
 
 - B1: **PASS** via one live streamable-HTTP MCP request. The response status
   remains honestly `partially_completed`.
 - B2–B10: **PASS** on the assembled current lineage.
-- Metrics: caller-measured `4.7001219s` wall clock; tokens unavailable; clean
-  measured primitive baseline pending after fixture fix `866248a`.
+- Metrics at `2aab525`: `mcp_round_trips=1`, `internal_operations=46`, live MCP
+  wall clock `4.7001219s`, and `primitive_call_equivalent=63` in 3/3 successful
+  trials. This is a measured **63:1 agent-facing call-count reduction**, exceeding
+  the approximately 5:1 baseline thesis in `docs/WHY.md`.
+- Tokens: **unavailable** because the Cursor MCP caller exposes no per-call agent
+  usage; `wire_bytes/4` is not total agent tokens.
 
-The refreshed bundle closes criterion evidence for B1–B10, but does not make an
-overall claim. A clean measured primitive baseline remains pending with WS-14, and
-acceptance must resolve whether a `partially_completed` response satisfies or
-precludes validated completion. **No overall POC-B claim.**
+Residual product work is explicit: WS-07 must remove the live response's
+`partially_completed` ceiling when structural, compile, material, and visible gates
+all pass. Five older loaded scratch systems may remain safely quarantined under
+`/Game/__UeremcpPoc/__BenchmarkCleanup/` until editor unload/restart. Neither
+residual changes the binary B1–B10 result, and neither is hidden by this claim.
 
 ## Post-bundle live B1 and primitive baseline (`fca736f`)
 
@@ -674,21 +689,21 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Overall POC A claimed via Python-free CRT on `3756244`; support only if regressions appear. |
-| WS-07 | Baseline fixture fix landed as `866248a`; support WS-14 if the clean measured trial finds a fixture residual. |
-| WS-08 | Own the remaining B10 blocker: generated materials are visually black despite approximately 412 live / 715 spawned particles and warm `Particles.Color`; diagnose the generated material output/binding per the WS-07 handoff. |
+| WS-07 | Remove the live create response's `partially_completed` ceiling when structural, compile, material, and visible gates pass; see `ws-01-niagara-created-and-validated-handoff.md`. |
+| WS-08 | Production B10 is PASS on the material lineage `268a102`; no remaining B10 material blocker in this claim. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Refreshed the current-lineage bundle on `d033dd8`; B1–B10 are all PASS, with B1's live response honestly `partially_completed`. |
-| WS-14 | Run the clean measured primitive trial against the fixed baseline fixture. |
+| WS-11 | Refresh the current-lineage bundle claim flag when convenient while preserving the honest `partially_completed`, token-unavailable, and quarantine caveats. |
+| WS-14 | Successful primitive metrics archived at `2aab525`: 63 operations in each of 3/3 usable trials. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
 **Current status supersedes this historical handoff:** overall POC A is claimed on
-CRT `3756244`. The refreshed `d033dd8` POC-B bundle records B1–B10 **PASS**,
-including live MCP B1 with a measured `4.7001219s` wall clock and an honestly
-preserved `partially_completed` response. Fixture fix `866248a` has landed; WS-14's
-clean measured primitive trial is still in flight. Tokens remain unavailable.
-**No overall POC-B claim** until the clean primitive baseline and any acceptance
-rule governing `partially_completed` versus validated completion are resolved. No
-junction retarget.
+CRT `3756244`, and **overall POC B is claimed** at `2aab525` for the demonstrated
+fireball scenario. The `d033dd8` bundle records B1–B10 **PASS**; the completed
+metrics record measures 63 primitive operations in each of 3/3 usable trials
+against one UEREMCP MCP call. The live response remains honestly
+`partially_completed`, tokens remain unavailable, and scratch assets may remain
+quarantined under `__BenchmarkCleanup/` until editor unload. No POC C, D, or E
+claim. No junction retarget.
 
 ---
 
