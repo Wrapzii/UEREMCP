@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `f295eb8` (Niagara timing metrics landed/rebuilt; B10 Validation build blocked)
+- **Current orchestration tip:** `2f40f24` (B10 Validation compile fixed; B10 executed and **FAILED**)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. Post-`d07f8f1` MCP proves B1 and B6 in one round trip. B10 filter `01b257e` landed but Validation fails to compile, so B10 runtime remains unproven; complete metrics/baseline also remain open — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. Post-`d07f8f1` MCP proves B1 and B6 in one round trip. B10 now compiles and **executed for the first time on `2f40f24`: FAIL** — the fireball renders no visible output. **No overall POC-B claim, and B3–B7 must now be read as structural proofs only.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -35,6 +35,57 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
 Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; post-`d07f8f1` MCP B1/B6 PASS. Remaining: B10 and complete metrics/baseline. No overall POC-B claim.
+
+## B10 visible render — first actual execution (WS-11, tip `2f40f24`): FAIL
+
+The B10 filter had never executed before this run. `01b257e` added it but `UeremcpValidation`
+would not compile: `NiagaraPocBVisibleRender.spec.cpp` used `GCurrentLevelEditingViewportClient`,
+which `Editor.h` only forward-declares
+(`extern UNREALED_API class FLevelEditorViewportClient*`
+[VERIFIED: `Engine/Source/Editor/UnrealEd/Public/Editor.h:948`]), without including the header
+that defines the class
+[VERIFIED: `Engine/Source/Editor/UnrealEd/Public/LevelEditorViewport.h:166`]. The incomplete type
+made the derived-to-base pointer conversion illegal (`C2440` at line 131) and `GetViewport`
+unresolvable (`C2039` at line 132). Adding `#include "LevelEditorViewport.h"` fixed it; `UnrealEd`
+was already a private dependency, so no `Build.cs` change was required.
+
+With a real (non-`NullRHI`) viewport, the gate ran and reported:
+
+```
+UEREMCP_POC_B10_EVIDENCE={"status":"fail","width":1530,"height":605,
+  "changed_pixels":5457,"warm_changed_pixels":0,"programmatic_pixel_validation":true}
+UEREMCP_POC_B10_OUTCOME=FAIL reason=visible_fire_signature_not_observed
+```
+
+Artifact: `tests/integration/_artifacts/poc_b10_fireball.png` (27,115 bytes, 1530×605). The image
+is a blank white viewport containing only the editor axis gizmo. No fireball is present.
+
+### Two independent defects, both real
+
+**1. The system emits nothing (substance, WS-07).** The engine log is unambiguous:
+
+```
+[11.55.19:239] LogNiagara: UNiagaraComponent> System /Game/__UeremcpPoc/NS_POCB_Fireball initialized.
+[11.55.19:301] LogNiagara: UNiagaraComponent> System /Game/__UeremcpPoc/NS_POCB_Fireball completed.
+```
+
+The system reported `completed` 62 ms after `initialized`, i.e. it found no work to simulate and
+shut itself down. `changed_pixels=5457` is consistent with the gizmo/actor billboard appearing,
+not with particles.
+
+**2. The harness cannot observe particles even in principle (methodology, WS-11).** The gate
+captures one frame via `Viewport.Draw()` before spawning and one after, with no world tick in
+between; the whole test completed in 236 ms (`11.55.19:130`→`11.55.19:366`). Niagara requires
+ticks to spawn and simulate, so a *working* fireball would also have failed this gate. The warm
+test (`B.R >= 80 && R*5 >= G*6 && R*3 >= B*4`) additionally cannot fire against the saturated
+white background this empty world renders, since additive fire clamps toward white.
+
+### Consequence for prior POC-B claims
+
+B3–B7 asserted emitter/renderer/user-parameter **structure** and material **binding**, and those
+assertions remain valid as structural proofs. They did not establish that the system produces
+particles. B10 is the first gate to test visible output, and it fails. Until it passes, the POC-B
+fireball is unproven as a rendering artifact.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -431,7 +482,8 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Fix/run B10; rerun MCP for `timing_ms`; execute the WS-07 primitive sequence with WS-14 metrics capture. |
+| WS-11 | B10 compile fixed and executed on `2f40f24`: **FAIL**. Next: make the gate tick the world so particles can spawn, and use a background against which a warm signature is detectable. Then rerun MCP for `timing_ms` and execute the WS-07 primitive sequence with WS-14 metrics capture. |
+| WS-07 | `NS_POCB_Fireball` reports `completed` 62 ms after `initialized` and emits no particles. Determine whether the generated emitters carry functional spawn/lifetime/velocity/renderer modules, or only structural scaffolding. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS. B10 filter is build-blocked; complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS as structural proofs. B10 executed for the first time on `2f40f24` and **FAILED**: the fireball renders no visible output, and the gate as written cannot observe particles because it never ticks the world. Complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
