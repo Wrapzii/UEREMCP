@@ -365,7 +365,7 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		FString MaterialError;
 		if (!FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
-			AssetName,
+			CreatedPath,
 			Spec.MaterialRequests,
 			Request.bCompile,
 			Request.bValidate,

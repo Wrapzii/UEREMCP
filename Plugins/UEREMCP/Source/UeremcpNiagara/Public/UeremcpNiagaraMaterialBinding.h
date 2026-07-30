@@ -79,7 +79,7 @@ public:
 
 	/** Resolve direct paths and inline create_spec via UeremcpMaterialNiagaraExport (probe root only). */
 	static bool ResolveMaterialPaths(
-		const FString& NiagaraAssetName,
+		const FString& NiagaraSystemPackagePath,
 		const TArray<FUeremcpNiagaraMaterialRequest>& Requests,
 		bool bCompile,
 		bool bValidate,

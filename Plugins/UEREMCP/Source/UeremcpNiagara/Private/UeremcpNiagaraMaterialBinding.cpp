@@ -319,7 +319,7 @@ bool FUeremcpNiagaraMaterialBinding::ResolveDirectMaterialPaths(
 }
 
 bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
-	const FString& NiagaraAssetName,
+	const FString& NiagaraSystemPackagePath,
 	const TArray<FUeremcpNiagaraMaterialRequest>& Requests,
 	bool bCompile,
 	bool bValidate,
@@ -339,9 +339,18 @@ bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
 	{
 		if (Request.CreateSpec.IsValid())
 		{
-			const FString TargetPath = UeremcpMaterialNiagaraExport::ResolveMaterialInstancePath(
-				NiagaraAssetName,
-				Request.Role);
+			const FString TargetPath =
+				UeremcpMaterialNiagaraExport::ResolveMaterialInstancePathForNiagaraSystem(
+					NiagaraSystemPackagePath,
+					Request.Role);
+			if (TargetPath.IsEmpty())
+			{
+				OutError = FString::Printf(
+					TEXT("materials.%s: could not resolve inline MI path from Niagara system '%s'."),
+					*Request.Role,
+					*NiagaraSystemPackagePath);
+				return false;
+			}
 			if (!IsAllowedMaterialProbePath(TargetPath))
 			{
 				OutError = FString::Printf(
@@ -384,8 +393,8 @@ bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
 			}
 
 			const FUeremcpMaterialCreateResult MatResult =
-				UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraRole(
-					NiagaraAssetName,
+				UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraSystem(
+					NiagaraSystemPackagePath,
 					Request.Role,
 					EffectiveCreateSpec,
 					bCompile,

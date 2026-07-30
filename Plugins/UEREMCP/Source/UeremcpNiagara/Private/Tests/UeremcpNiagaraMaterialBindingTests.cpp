@@ -6,7 +6,9 @@
 
 #include "UeremcpNiagaraMaterialBinding.h"
 #include "UeremcpNiagaraMaterialBindingDiagnostics.h"
+#include "UeremcpNiagaraPaths.h"
 #include "UeremcpNiagaraRoleNames.h"
+#include "UeremcpMaterialNiagaraExport.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -42,6 +44,38 @@ namespace UeremcpNiagaraMaterialBindingTest
 		const TSharedPtr<FJsonValue> Field = Entry->TryGetField(FieldName);
 		return Field.IsValid() && Field->Type == ExpectedType;
 	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraInlineMaterialPathCoLocationTest,
+	"UEREMCP.Niagara.Create.InlineMaterialPathCoLocation",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraInlineMaterialPathCoLocationTest::RunTest(const FString& Parameters)
+{
+	const FString PocSystem = TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball");
+	const FString TestsSystem = TEXT("/Game/__UeremcpTests/NS_WS07_Probe");
+
+	const FString PocCoreMi =
+		UeremcpMaterialNiagaraExport::ResolveMaterialInstancePathForNiagaraSystem(PocSystem, TEXT("core"));
+	TestEqual(
+		TEXT("poc inline MI co-locates with system scratch root"),
+		PocCoreMi,
+		FString(TEXT("/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_core")));
+
+	const FString TestsSparksMi =
+		UeremcpMaterialNiagaraExport::ResolveMaterialInstancePathForNiagaraSystem(TestsSystem, TEXT("sparks"));
+	TestEqual(
+		TEXT("tests inline MI stays under tests Materials"),
+		TestsSparksMi,
+		FString(TEXT("/Game/__UeremcpTests/Materials/MI_NS_WS07_Probe_sparks")));
+
+	TestTrue(TEXT("poc inline MI path passes Niagara probe guard"), UeremcpNiagaraPaths::IsAllowedProbePath(PocCoreMi));
+	TestFalse(
+		TEXT("user content MI path rejected"),
+		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/VFX/Materials/MI_Fireball_core")));
+
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
