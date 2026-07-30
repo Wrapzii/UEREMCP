@@ -1,14 +1,14 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `0f5b8bd` (WS-08 Material fixes plus filter-result records)
+- **Current orchestration tip:** `13ba97b` (WS-08 Material ValidateFalse fix integrated)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
 - **Latest Material re-run tip:** `0f5b8bd`
-- **Latest Templates re-run tip:** `b709b65`
+- **Latest Templates re-run tip:** `f15ea96`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Blueprint, Animation, and Niagara listed filters remain green on current-tip or unchanged-source proofs. Material is **FAIL 10/11** on `0f5b8bd`; `CreateVfxMaterial.ValidateFalse` is the sole failure, so benchmark T1a disk-save is not green. Templates is **FAIL 2/4** on `b709b65`. No A6 / overall POC-B completion claim.
+- **Status:** Blueprint, Animation, Niagara, and Templates listed filters are green on current-tip or unchanged-source proofs. Templates is **PASS 4/4** on `f15ea96`. Material was **FAIL 10/11** on `0f5b8bd`; the WS-08 ValidateFalse fix is integrated and module-build green on `13ba97b`, pending fresh editor re-proof. No A6 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -26,21 +26,22 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Filter / gate | Recorded result | Proof tip | Freshness / residual |
 |---|---:|---|---|
 | `UeremcpBlueprint.Toolset` | **PASS, 4/4** | `35b4cab` | Blueprint sources unchanged since proof. |
-| `UeremcpMaterial.Toolset` | **FAIL, 10/11** | `0f5b8bd` | `CreateVfxMaterial.ValidateFalse` fails: MI absent on disk and an unexpected master dependency remains. T1a disk-save is not green. |
+| `UeremcpMaterial.Toolset` | **FAIL, 10/11** | `0f5b8bd` | WS-08 fix is integrated and module-build green on `13ba97b`; fresh editor re-proof pending. |
 | `UEREMCP.Animation` | **PASS, 10/10** | `5ea9277` | Animation sources unchanged since proof. |
 | `UEREMCP.Niagara.Create` | **PASS, 10/10** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
-| `UeremcpTemplates.Toolset` | **FAIL, 2/4** | `b709b65` | PASS: Register, Instantiate.Validation. FAIL: Promote.Preview, Search. Owner: WS-15. |
+| `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: WS-15 is revising the two failing Templates cases. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
+Residuals: Material requires a fresh editor re-run after the ValidateFalse fix. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
 
 ## Templates editor result and handoff
 
 - **Owner:** WS-15 owns `Plugins/UEREMCP/Source/UeremcpTemplates/**` (`docs/WORK_ALLOCATION.md`, WS-15 row). WS-11 owns the shared harness and runs domain filters.
 - **Filter landed:** WS-15 commit `1480e7d` is integrated as `b709b65`, registering four `UeremcpTemplates.Toolset` editor tests.
 - **WS-11 result on `b709b65`:** **FAIL 2/4**. `Register` and `Instantiate.Validation` passed. `Promote.Preview` failed because the operation returned `failed_validation` where the test expected `partially_completed`. `Search` failed because the seeded projectile template was missing from results.
-- **Required WS-15 handoff:** revise the Search fixture/expectation and Promote.Preview status expectation or implementation, then return a new commit for module build and WS-11 editor re-proof. Templates is not green until that re-run passes.
+- **WS-15 revision:** plugin-local template seeds commit `2817832` is integrated as `f15ea96`.
+- **WS-11 result on `f15ea96`:** **PASS 4/4**. The Templates Search/Promote residual is closed.
 
 WS-01 did not edit WS-15-owned implementation paths.
 
@@ -199,9 +200,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-07 | B7 PASS on `825e4f4`; no remaining B7 failure in this filter record. |
-| WS-08 | Revise `CreateVfxMaterial.ValidateFalse`: current Material result is FAIL 10/11 on `0f5b8bd` because the MI is absent on disk and an unexpected master dependency remains. |
+| WS-08 | ValidateFalse fix is integrated and module-build green on `13ba97b`; return to WS-11 for fresh Material editor re-proof. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
 | WS-11 | Create/Inspect freshness closed on `2384112`; keep A6 / overall POC-B claims gated separately. |
-| WS-15 | Fix Templates `Search` and `Promote.Preview`, then return for WS-11 re-proof; current result is FAIL 2/4 on `b709b65`. |
+| WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Templates is not green: its registered editor filter is FAIL 2/4 on `b709b65`, pending WS-15 revision. Material is not green: its current editor result is FAIL 10/11 on `0f5b8bd`, pending WS-08 revision. A6 / overall POC-B remain separate criteria. No junction retarget.
+Templates is green: its registered editor filter is PASS 4/4 on `f15ea96`. Material's latest editor result remains FAIL 10/11 on `0f5b8bd`, but its ValidateFalse fix is integrated and module-build green on `13ba97b`, pending fresh WS-11 proof. A6 / overall POC-B remain separate criteria. No junction retarget.
