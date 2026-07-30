@@ -67,15 +67,29 @@ Rules:
 - Compilation must be **awaited**, not assumed. Blueprint, Niagara, and shader
   compilation are async, and R-10 is the flakiness that results from getting this wrong.
 
-### The three tests that gate architectural claims
+### The tests that gate architectural claims
 
-Named in the ADRs. Until each passes, the corresponding claim is not made:
+Named in the ADRs. Until each passes at runtime, the corresponding claim is not made:
 
-| Test | Gates | ADR |
-|---|---|---|
-| `Rollback.MultiAssetDiscard` | `rollback.available` reports `false` until this passes | ADR-0005 |
-| `Idempotency.RepeatedCreate` | Any create-or-update idempotency claim | ADR-0006 |
-| `Revision.StaleRejected` | Any optimistic-concurrency claim | ADR-0006 |
+| Automation path | Gates | ADR | Status (2026-07-30) |
+|---|---|---|---|
+| `UEREMCP.Validation.Rollback.MultiAssetDiscard` | `rollback.available` for Content/ adds | ADR-0005 | **PASS** (prior run) |
+| `UEREMCP.Validation.Rollback.DeletedAssetDiscard` | Deletion rollback (open q5) | ADR-0005 | **Implemented** — runtime blocked¹ |
+| `UEREMCP.Validation.Rollback.BlueprintCompileDiscard` | BP compile + Discard (open q4) | ADR-0005 | **Implemented** — runtime blocked¹ |
+| `UEREMCP.Validation.Idempotency.RepeatedCreate` | create_or_update idempotency | ADR-0006 | **Implemented** — runtime blocked¹ |
+| `UEREMCP.Validation.Revision.StaleRejected` | `expected_revision` reject | ADR-0006 | **Implemented** — runtime blocked¹ |
+
+¹ **2026-07-30:** `RE.uproject` junction → `UEREMCP-ws03`. `UEREMCP.uplugin` lists
+`UeremcpBlueprint` with no `Source/UeremcpBlueprint/` tree; UnrealEditor-Cmd and UBT abort
+before Automation. See `docs/proposals/ws-11-ws03-uplugin-build-blocker.md`. SoT for new
+tests: `Plugins/UEREMCP/Source/UeremcpValidation/Private/Tests/*.spec.cpp` in **ws-11**
+worktree; sync to ws03 junction after WS-03 fixes uplugin parity.
+
+Full filter:
+
+```powershell
+pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP"
+```
 
 Plus, per family, the ADR-0004 round-trip test: retrieve → replace unchanged → retrieve,
 asserting an identical `content_hash`. **A family that cannot pass it does not claim
@@ -110,4 +124,4 @@ returned without error.
 pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Protocol.Golden"
 ```
 
-2026-07-30: `ContentHash` **fail** (hash mismatch vs golden); `Envelope`, `Ref`, `Topo` **pass**. Not a C-3 gate; WS-05 owns parity.
+2026-07-30: Protocol goldens **pass** (`UEREMCP.Protocol.Golden`). Not a C-3 gate; WS-05 owns parity.
