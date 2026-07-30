@@ -51,6 +51,91 @@ namespace
 		}
 		InOut.Add(Ref);
 	}
+
+	void AppendAssetRefChange(
+		const FString& Kind,
+		const FUeremcpAssetRef& Ref,
+		const FString& Detail,
+		TArray<TSharedPtr<FJsonValue>>& InOutChanges)
+	{
+		if (Ref.AssetPath.IsEmpty())
+		{
+			return;
+		}
+		InOutChanges.Add(MakeShared<FJsonValueObject>(
+			MakeChangeEntry(Kind, Ref.AssetPath, Ref.AssetClass, Detail)));
+	}
+
+	bool IsMaterialAssetClass(const FString& AssetClass)
+	{
+		return AssetClass.Contains(TEXT("Material"));
+	}
+}
+
+void FUeremcpNiagaraChangeManifest::MergeInlineMaterialSubManifest(
+	const FUeremcpNiagaraInlineMaterialCreate& Inline,
+	FUeremcpNiagaraChangeManifestResult& InOutManifest)
+{
+	if (!Inline.bSuccess)
+	{
+		return;
+	}
+
+	const FString RoleDetail = FString::Printf(TEXT("material role %s"), *Inline.Role);
+
+	for (const FUeremcpAssetRef& Ref : Inline.CreatedAssets)
+	{
+		FUeremcpAssetRef AssetRef = Ref;
+		if (AssetRef.Role.IsEmpty())
+		{
+			AssetRef.Role = Inline.Role;
+		}
+		AppendUniqueAssetRef(InOutManifest.CreatedAssets, AssetRef);
+		AppendAssetRefChange(TEXT("created"), AssetRef, RoleDetail, InOutManifest.Changes);
+	}
+
+	for (const FUeremcpAssetRef& Ref : Inline.ModifiedAssets)
+	{
+		FUeremcpAssetRef AssetRef = Ref;
+		if (AssetRef.Role.IsEmpty())
+		{
+			AssetRef.Role = Inline.Role;
+		}
+		AppendUniqueAssetRef(InOutManifest.ModifiedAssets, AssetRef);
+		AppendAssetRefChange(TEXT("modified"), AssetRef, RoleDetail, InOutManifest.Changes);
+	}
+
+	for (const FUeremcpAssetRef& Ref : Inline.ReusedAssets)
+	{
+		FUeremcpAssetRef AssetRef = Ref;
+		if (AssetRef.Role.IsEmpty())
+		{
+			AssetRef.Role = Inline.Role;
+		}
+		AppendUniqueAssetRef(InOutManifest.ReusedAssets, AssetRef);
+		AppendAssetRefChange(TEXT("reused"), AssetRef, RoleDetail, InOutManifest.Changes);
+	}
+
+	if (Inline.CreatedAssets.Num() == 0
+		&& Inline.ModifiedAssets.Num() == 0
+		&& Inline.ReusedAssets.Num() == 0
+		&& !Inline.PrimaryAsset.IsEmpty())
+	{
+		const FString AssetClass = Inline.bShortCircuitedReuse
+			? TEXT("MaterialInterface")
+			: TEXT("MaterialInstanceConstant");
+		const FString Kind = Inline.bShortCircuitedReuse ? TEXT("reused") : TEXT("created");
+		const FUeremcpAssetRef PrimaryRef = MakeAssetRef(Inline.PrimaryAsset, AssetClass, Inline.Role);
+		if (Inline.bShortCircuitedReuse)
+		{
+			AppendUniqueAssetRef(InOutManifest.ReusedAssets, PrimaryRef);
+		}
+		else
+		{
+			AppendUniqueAssetRef(InOutManifest.CreatedAssets, PrimaryRef);
+		}
+		AppendAssetRefChange(Kind, PrimaryRef, RoleDetail, InOutManifest.Changes);
+	}
 }
 
 FUeremcpNiagaraChangeManifestResult FUeremcpNiagaraChangeManifest::BuildFromCreateResult(
@@ -88,49 +173,28 @@ FUeremcpNiagaraChangeManifestResult FUeremcpNiagaraChangeManifest::BuildFromCrea
 
 	for (const FUeremcpNiagaraInlineMaterialCreate& Inline : CreateResult.MaterialBindings.InlineMaterialCreates)
 	{
-		if (!Inline.bSuccess || Inline.PrimaryAsset.IsEmpty())
-		{
-			continue;
-		}
-
-		const FUeremcpAssetRef InlineRef = MakeAssetRef(
-			Inline.PrimaryAsset,
-			TEXT("MaterialInstanceConstant"),
-			Inline.Role);
-		AppendUniqueAssetRef(Out.CreatedAssets, InlineRef);
-		Out.Changes.Add(MakeShared<FJsonValueObject>(MakeChangeEntry(
-			TEXT("created"),
-			Inline.PrimaryAsset,
-			TEXT("MaterialInstanceConstant"),
-			FString::Printf(TEXT("inline create_spec for role %s"), *Inline.Role))));
-
-		for (const FUeremcpAssetRef& Nested : Inline.CreatedAssets)
-		{
-			if (Nested.AssetPath.IsEmpty())
-			{
-				continue;
-			}
-			AppendUniqueAssetRef(Out.CreatedAssets, Nested);
-			Out.Changes.Add(MakeShared<FJsonValueObject>(MakeChangeEntry(
-				TEXT("created"),
-				Nested.AssetPath,
-				Nested.AssetClass,
-				FString::Printf(TEXT("dependency of inline material role %s"), *Inline.Role))));
-		}
+		MergeInlineMaterialSubManifest(Inline, Out);
 	}
 
-	TSet<FString> InlinePrimaryPaths;
-	for (const FUeremcpNiagaraInlineMaterialCreate& Inline : CreateResult.MaterialBindings.InlineMaterialCreates)
+	TSet<FString> MaterialManifestPaths;
+	for (const FUeremcpAssetRef& Ref : Out.CreatedAssets)
 	{
-		if (Inline.bSuccess && !Inline.PrimaryAsset.IsEmpty())
+		if (IsMaterialAssetClass(Ref.AssetClass))
 		{
-			InlinePrimaryPaths.Add(Inline.PrimaryAsset);
+			MaterialManifestPaths.Add(Ref.AssetPath);
+		}
+	}
+	for (const FUeremcpAssetRef& Ref : Out.ReusedAssets)
+	{
+		if (IsMaterialAssetClass(Ref.AssetClass))
+		{
+			MaterialManifestPaths.Add(Ref.AssetPath);
 		}
 	}
 
 	for (const TPair<FString, FString>& Pair : CreateResult.MaterialBindings.ResolvedMaterialPaths)
 	{
-		if (Pair.Value.IsEmpty() || InlinePrimaryPaths.Contains(Pair.Value))
+		if (Pair.Value.IsEmpty() || MaterialManifestPaths.Contains(Pair.Value))
 		{
 			continue;
 		}

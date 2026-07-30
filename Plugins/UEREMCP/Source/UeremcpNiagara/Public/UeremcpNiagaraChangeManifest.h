@@ -25,4 +25,9 @@ public:
 	static FUeremcpNiagaraChangeManifestResult BuildFromCreateResult(
 		const FUeremcpNiagaraCreateResult& CreateResult,
 		bool bDryRun);
+
+	/** Merge one inline material sub-result into a Niagara response manifest. */
+	static void MergeInlineMaterialSubManifest(
+		const FUeremcpNiagaraInlineMaterialCreate& Inline,
+		FUeremcpNiagaraChangeManifestResult& InOutManifest);
 };

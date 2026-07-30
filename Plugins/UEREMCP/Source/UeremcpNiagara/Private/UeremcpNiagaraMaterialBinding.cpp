@@ -3,6 +3,7 @@
 #include "UeremcpNiagaraMaterialBinding.h"
 
 #include "UeremcpNiagaraPaths.h"
+#include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraRendererResolve.h"
 #include "UeremcpNiagaraRoleNames.h"
 #include "UeremcpMaterialNiagaraExport.h"
@@ -176,6 +177,39 @@ namespace
 
 		return true;
 	}
+
+	TSharedPtr<FJsonObject> MergeDefaultPurposeIntoCreateSpec(
+		const FString& Role,
+		const TSharedPtr<FJsonObject>& CreateSpec)
+	{
+		if (!CreateSpec.IsValid())
+		{
+			return nullptr;
+		}
+		if (CreateSpec->HasField(TEXT("purpose")))
+		{
+			return CreateSpec;
+		}
+
+		const FString Purpose = UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(Role);
+		if (Purpose.IsEmpty())
+		{
+			return CreateSpec;
+		}
+
+		TSharedPtr<FJsonObject> Merged = MakeShared<FJsonObject>(*CreateSpec);
+		Merged->SetStringField(TEXT("purpose"), Purpose);
+		return Merged;
+	}
+
+	void CopyMaterialSubManifest(
+		const FUeremcpMaterialCreateResult& MatResult,
+		FUeremcpNiagaraInlineMaterialCreate& InlineRecord)
+	{
+		InlineRecord.CreatedAssets = MatResult.CreatedAssets;
+		InlineRecord.ModifiedAssets = MatResult.ModifiedAssets;
+		InlineRecord.ReusedAssets = MatResult.ReusedAssets;
+	}
 }
 
 bool FUeremcpNiagaraMaterialBinding::ParseMaterialRequests(
@@ -319,24 +353,52 @@ bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
 				return false;
 			}
 
+			const TSharedPtr<FJsonObject> EffectiveCreateSpec =
+				MergeDefaultPurposeIntoCreateSpec(Request.Role, Request.CreateSpec);
+
+			FUeremcpNiagaraInlineMaterialCreate InlineRecord;
+			InlineRecord.Role = Request.Role;
+
+			if (Request.bReuseIfPresent)
+			{
+				FString CanonicalPath;
+				if (UMaterialInterface* ExistingMaterial = LoadMaterialInterface(TargetPath, CanonicalPath))
+				{
+					InlineRecord.bSuccess = true;
+					InlineRecord.bShortCircuitedReuse = true;
+					InlineRecord.Status = TEXT("no_change_required");
+					InlineRecord.Summary =
+						TEXT("reuse_if_present: loaded existing MI without invoking create_vfx_material.");
+					InlineRecord.PrimaryAsset = CanonicalPath;
+
+					FUeremcpAssetRef ReusedMi;
+					ReusedMi.AssetPath = CanonicalPath;
+					ReusedMi.AssetClass = ExistingMaterial->GetClass()->GetName();
+					ReusedMi.Role = Request.Role;
+					InlineRecord.ReusedAssets.Add(ReusedMi);
+
+					OutInlineCreates.Add(InlineRecord);
+					OutRoleToCanonicalPath.Add(Request.Role, CanonicalPath);
+					continue;
+				}
+			}
+
 			const FUeremcpMaterialCreateResult MatResult =
 				UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraRole(
 					NiagaraAssetName,
 					Request.Role,
-					Request.CreateSpec,
+					EffectiveCreateSpec,
 					bCompile,
 					bValidate,
 					bSave);
 			InOutInternalOperations += MatResult.InternalOperations;
 
-			FUeremcpNiagaraInlineMaterialCreate InlineRecord;
-			InlineRecord.Role = Request.Role;
 			InlineRecord.bSuccess = MatResult.bSuccess;
 			InlineRecord.Status = MatResult.Status;
 			InlineRecord.Summary = MatResult.Summary;
 			InlineRecord.PrimaryAsset = MatResult.PrimaryAsset;
-			InlineRecord.CreatedAssets = MatResult.CreatedAssets;
 			InlineRecord.CapabilityNotes = MatResult.CapabilityNotes;
+			CopyMaterialSubManifest(MatResult, InlineRecord);
 			OutInlineCreates.Add(InlineRecord);
 
 			if (!MatResult.bSuccess || MatResult.PrimaryAsset.IsEmpty())

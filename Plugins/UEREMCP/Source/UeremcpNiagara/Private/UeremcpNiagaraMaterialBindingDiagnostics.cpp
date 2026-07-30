@@ -14,6 +14,29 @@ namespace
 		return Values;
 	}
 
+	TArray<TSharedPtr<FJsonValue>> BuildAssetRefArray(const TArray<FUeremcpAssetRef>& Assets)
+	{
+		TArray<TSharedPtr<FJsonValue>> Values;
+		for (const FUeremcpAssetRef& Asset : Assets)
+		{
+			TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+			if (!Asset.AssetPath.IsEmpty())
+			{
+				AssetObj->SetStringField(TEXT("asset_path"), Asset.AssetPath);
+			}
+			if (!Asset.AssetClass.IsEmpty())
+			{
+				AssetObj->SetStringField(TEXT("asset_class"), Asset.AssetClass);
+			}
+			if (!Asset.Role.IsEmpty())
+			{
+				AssetObj->SetStringField(TEXT("role"), Asset.Role);
+			}
+			Values.Add(MakeShared<FJsonValueObject>(AssetObj));
+		}
+		return Values;
+	}
+
 	TArray<TSharedPtr<FJsonValue>> BuildInlineMaterialCreatesArray(
 		const TArray<FUeremcpNiagaraInlineMaterialCreate>& InlineCreates)
 	{
@@ -23,6 +46,10 @@ namespace
 			TSharedPtr<FJsonObject> InlineObj = MakeShared<FJsonObject>();
 			InlineObj->SetStringField(TEXT("role"), Inline.Role);
 			InlineObj->SetBoolField(TEXT("success"), Inline.bSuccess);
+			if (Inline.bShortCircuitedReuse)
+			{
+				InlineObj->SetBoolField(TEXT("short_circuited_reuse"), true);
+			}
 			if (!Inline.Status.IsEmpty())
 			{
 				InlineObj->SetStringField(TEXT("status"), Inline.Status);
@@ -41,21 +68,15 @@ namespace
 			}
 			if (Inline.CreatedAssets.Num() > 0)
 			{
-				TArray<TSharedPtr<FJsonValue>> CreatedValues;
-				for (const FUeremcpAssetRef& Asset : Inline.CreatedAssets)
-				{
-					TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
-					if (!Asset.AssetPath.IsEmpty())
-					{
-						AssetObj->SetStringField(TEXT("asset_path"), Asset.AssetPath);
-					}
-					if (!Asset.AssetClass.IsEmpty())
-					{
-						AssetObj->SetStringField(TEXT("asset_class"), Asset.AssetClass);
-					}
-					CreatedValues.Add(MakeShared<FJsonValueObject>(AssetObj));
-				}
-				InlineObj->SetArrayField(TEXT("created_assets"), CreatedValues);
+				InlineObj->SetArrayField(TEXT("created_assets"), BuildAssetRefArray(Inline.CreatedAssets));
+			}
+			if (Inline.ModifiedAssets.Num() > 0)
+			{
+				InlineObj->SetArrayField(TEXT("modified_assets"), BuildAssetRefArray(Inline.ModifiedAssets));
+			}
+			if (Inline.ReusedAssets.Num() > 0)
+			{
+				InlineObj->SetArrayField(TEXT("reused_assets"), BuildAssetRefArray(Inline.ReusedAssets));
 			}
 			InlineValues.Add(MakeShared<FJsonValueObject>(InlineObj));
 		}

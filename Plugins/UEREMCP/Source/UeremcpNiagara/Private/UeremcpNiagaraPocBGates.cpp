@@ -63,6 +63,42 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B4_material_bindings"));
 	}
 
+	const bool bMaterialsRequested = CreateResult.MaterialBindings.bAttempted
+		|| CreateResult.MaterialBindings.InlineMaterialCreates.Num() > 0
+		|| CreateResult.MaterialBindings.ResolvedMaterialPaths.Num() > 0;
+	if (Manifest && bMaterialsRequested)
+	{
+		Out.bB2MaterialsManifestEvaluated = true;
+		for (const FUeremcpAssetRef& Ref : Manifest->ReusedAssets)
+		{
+			if (Ref.AssetClass.Contains(TEXT("Material")))
+			{
+				Out.bB2ReusedAssetsReported = true;
+				break;
+			}
+		}
+		for (const FUeremcpAssetRef& Ref : Manifest->CreatedAssets)
+		{
+			if (Ref.AssetClass.Contains(TEXT("Material")))
+			{
+				Out.bB2CreatedAssetsReported = true;
+				break;
+			}
+		}
+		if (Out.bB2ReusedAssetsReported || Out.bB2CreatedAssetsReported)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B2_material_manifest"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B2_material_manifest"));
+		}
+	}
+	else if (bMaterialsRequested)
+	{
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B2_material_manifest"));
+	}
+
 	if (CreateResult.UserVariablesAdded.Num() > 0)
 	{
 		Out.bB5UserParametersEvaluated = true;
@@ -206,6 +242,17 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	else
 	{
 		Gates->SetField(TEXT("B3_six_emitters_present"), MakeShared<FJsonValueNull>());
+	}
+
+	if (Result.bB2MaterialsManifestEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B2_reused_assets_reported"), Result.bB2ReusedAssetsReported);
+		Gates->SetBoolField(TEXT("B2_created_assets_reported"), Result.bB2CreatedAssetsReported);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B2_reused_assets_reported"), MakeShared<FJsonValueNull>());
+		Gates->SetField(TEXT("B2_created_assets_reported"), MakeShared<FJsonValueNull>());
 	}
 
 	if (Result.bB4Attempted)

@@ -2,6 +2,8 @@
 
 #include "UeremcpNiagaraRoleNames.h"
 
+#include "Dom/JsonObject.h"
+
 FString UeremcpNiagaraRoles::RoleToEmitterName(const FString& Role)
 {
 	FString Out;
@@ -46,4 +48,60 @@ TArray<FString> UeremcpNiagaraRoles::DefaultPocBComponentRoles()
 		TEXT("ribbon_trail"),
 		TEXT("impact_burst"),
 	};
+}
+
+FString UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(const FString& Role)
+{
+	const FString Key = Role.ToLower();
+	if (Key == TEXT("ribbon_trail") || Key == TEXT("trail") || Key == TEXT("trail_material"))
+	{
+		return TEXT("elemental_projectile_trail");
+	}
+	if (Key == TEXT("core")
+		|| Key == TEXT("core_material")
+		|| Key == TEXT("flame_shell")
+		|| Key == TEXT("sparks")
+		|| Key == TEXT("smoke")
+		|| Key == TEXT("impact_burst"))
+	{
+		return TEXT("elemental_projectile_core");
+	}
+	return FString();
+}
+
+TSharedPtr<FJsonObject> UeremcpNiagaraRoles::BuildDefaultFireballMaterialCreateSpec(
+	const FString& Role,
+	const FString& Element)
+{
+	const FString Purpose = DefaultPurposeForMaterialRole(Role);
+	if (Purpose.IsEmpty())
+	{
+		return nullptr;
+	}
+
+	TSharedPtr<FJsonObject> CreateSpec = MakeShared<FJsonObject>();
+	CreateSpec->SetStringField(TEXT("purpose"), Purpose);
+	CreateSpec->SetStringField(TEXT("element"), Element);
+
+	if (Purpose == TEXT("elemental_projectile_trail"))
+	{
+		TArray<TSharedPtr<FJsonValue>> Features;
+		Features.Add(MakeShared<FJsonValueString>(TEXT("panning_textures")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("erosion")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("depth_fade")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_color")));
+		CreateSpec->SetArrayField(TEXT("features"), Features);
+	}
+	else
+	{
+		TArray<TSharedPtr<FJsonValue>> Features;
+		Features.Add(MakeShared<FJsonValueString>(TEXT("radial_falloff")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("animated_noise")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("fresnel")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_color")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_intensity")));
+		CreateSpec->SetArrayField(TEXT("features"), Features);
+	}
+
+	return CreateSpec;
 }

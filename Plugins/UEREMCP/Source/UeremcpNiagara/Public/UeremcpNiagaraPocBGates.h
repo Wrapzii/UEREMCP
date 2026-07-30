@@ -20,6 +20,10 @@ struct FUeremcpNiagaraPocBGateResult
 	bool bB4Attempted = false;
 	bool bB4MaterialBindingsVerified = false;
 
+	bool bB2MaterialsManifestEvaluated = false;
+	bool bB2ReusedAssetsReported = false;
+	bool bB2CreatedAssetsReported = false;
+
 	bool bB5UserParametersPresent = false;
 	bool bB5UserParametersEvaluated = false;
 

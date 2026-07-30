@@ -1,0 +1,56 @@
+{
+  "$comment": "WS-07 offline contract for POC B fireball inline materials (B2/B4). Not runtime proof.",
+  "owner": "WS-07",
+  "materials": {
+    "core": {
+      "reuse_if_present": true,
+      "create_spec": {
+        "purpose": "elemental_projectile_core",
+        "element": "fire",
+        "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"]
+      }
+    },
+    "flame_shell": {
+      "reuse_if_present": true,
+      "create_spec": {
+        "purpose": "elemental_projectile_core",
+        "element": "fire"
+      }
+    },
+    "sparks": {
+      "reuse_if_present": true,
+      "create_spec": {
+        "purpose": "elemental_projectile_core",
+        "element": "fire"
+      }
+    },
+    "smoke": {
+      "reuse_if_present": true,
+      "create_spec": {
+        "purpose": "elemental_projectile_core",
+        "element": "fire"
+      }
+    },
+    "ribbon_trail": {
+      "reuse_if_present": true,
+      "create_spec": {
+        "purpose": "elemental_projectile_trail",
+        "element": "fire",
+        "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"]
+      }
+    },
+    "impact_burst": {
+      "reuse_if_present": true,
+      "create_spec": {
+        "purpose": "elemental_projectile_core",
+        "element": "fire"
+      }
+    }
+  },
+  "deterministic_mi_path_pattern": "/Game/__UeremcpTests/Materials/MI_<NiagaraName>_<Role>",
+  "notes": [
+    "WS-07 merges each inline create_vfx_material sub-manifest into create_niagara_effect result.",
+    "reuse_if_present short-circuits when MI already exists on disk.",
+    "Overall POC-B/B2 not claimed until single fireball MCP response proof on orch."
+  ]
+}

@@ -45,10 +45,15 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	FUeremcpNiagaraChangeManifestResult Manifest;
 	Manifest.bPopulated = true;
 	Manifest.Changes.Add(MakeShared<FJsonValueObject>(MakeShared<FJsonObject>()));
+	FUeremcpAssetRef MaterialCreated;
+	MaterialCreated.AssetPath = TEXT("/Game/__UeremcpTests/Materials/MI_Core.MI_Core");
+	MaterialCreated.AssetClass = TEXT("MaterialInstanceConstant");
+	Manifest.CreatedAssets.Add(MaterialCreated);
 
 	const FUeremcpNiagaraPocBGateResult Gates =
 		FUeremcpNiagaraPocBGates::Evaluate(CreateResult, &RoundTrip, &Manifest);
 
+	TestTrue(TEXT("B2 created assets reported"), Gates.bB2CreatedAssetsReported);
 	TestTrue(TEXT("B3 six emitters"), Gates.bB3SixEmittersPresent);
 	TestTrue(TEXT("B4 verified"), Gates.bB4MaterialBindingsVerified);
 	TestTrue(TEXT("B5 user parameters"), Gates.bB5UserParametersPresent);

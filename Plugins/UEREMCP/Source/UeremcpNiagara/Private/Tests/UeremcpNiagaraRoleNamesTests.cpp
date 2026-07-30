@@ -62,6 +62,22 @@ bool FUeremcpNiagaraPocBEmitterPlanOfflineTest::RunTest(const FString& Parameter
 		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("unknown_role")),
 		ExpectedTemplates.FindRef(TEXT("sparks")));
 
+	TestEqual(
+		TEXT("ribbon_trail material purpose"),
+		UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(TEXT("ribbon_trail")),
+		FString(TEXT("elemental_projectile_trail")));
+	TestEqual(
+		TEXT("flame_shell material purpose"),
+		UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(TEXT("flame_shell")),
+		FString(TEXT("elemental_projectile_core")));
+
+	const TSharedPtr<FJsonObject> CoreSpec =
+		UeremcpNiagaraRoles::BuildDefaultFireballMaterialCreateSpec(TEXT("core"));
+	TestTrue(TEXT("core create_spec"), CoreSpec.IsValid());
+	FString Purpose;
+	TestTrue(TEXT("core purpose field"), CoreSpec->TryGetStringField(TEXT("purpose"), Purpose));
+	TestEqual(TEXT("core purpose value"), Purpose, FString(TEXT("elemental_projectile_core")));
+
 	return true;
 }
 

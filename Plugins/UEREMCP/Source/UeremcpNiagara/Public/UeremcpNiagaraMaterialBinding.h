@@ -27,10 +27,13 @@ struct FUeremcpNiagaraInlineMaterialCreate
 {
 	FString Role;
 	bool bSuccess = false;
+	bool bShortCircuitedReuse = false;
 	FString Status;
 	FString Summary;
 	FString PrimaryAsset;
 	TArray<FUeremcpAssetRef> CreatedAssets;
+	TArray<FUeremcpAssetRef> ModifiedAssets;
+	TArray<FUeremcpAssetRef> ReusedAssets;
 	TArray<FString> CapabilityNotes;
 };
 
