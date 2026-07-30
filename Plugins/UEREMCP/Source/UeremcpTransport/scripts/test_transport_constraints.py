@@ -7,6 +7,7 @@ Runs without Unreal. C++ parity: UeremcpTransport::CapabilityFlagsToJson.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -14,6 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 HANDOFF = ROOT / "constraints" / "transport_job_handoff.json"
 PLUGIN_SOURCE = ROOT.parent
 REGISTRY_HEADER = PLUGIN_SOURCE / "UeremcpProtocol" / "Public" / "UeremcpJobRegistry.h"
+REFERENCE_TOOLSET_HEADER = (
+    PLUGIN_SOURCE / "UeremcpCore" / "Public" / "UeremcpReferenceToolset.h"
+)
 BUILD_RULES = ROOT / "UeremcpTransport.Build.cs"
 AUTOMATION_TESTS = ROOT / "Private" / "Tests" / "UeremcpTransportAutomationTests.cpp"
 
@@ -176,7 +180,53 @@ def validate_unskip_gate(errors: list[str]) -> str:
             "callable FUeremcpJobRegistry surface is present but Transport still has "
             f"{skip_count} explicit JobRegistry SKIP bodies"
         )
-    return "ready (registry callable and no explicit SKIPs)"
+
+    validate_wrapper_and_residual_scope(automation_source, errors)
+    return "ready (wrappers active; notification + timeout residuals tracked)"
+
+
+def validate_wrapper_and_residual_scope(
+    automation_source: str, errors: list[str]
+) -> None:
+    """Keep active wrapper coverage and remaining transport limitations explicit."""
+    if not REFERENCE_TOOLSET_HEADER.is_file():
+        errors.append(f"missing AICallable wrapper header: {REFERENCE_TOOLSET_HEADER}")
+        return
+
+    wrapper_source = REFERENCE_TOOLSET_HEADER.read_text(encoding="utf-8")
+    for wrapper in ("GetJobResult", "CancelJob"):
+        pattern = (
+            r"UFUNCTION\(meta\s*=\s*\(AICallable\).*?\)\s*"
+            rf"static\s+FString\s+{wrapper}\s*\("
+        )
+        if not re.search(pattern, wrapper_source, re.DOTALL):
+            errors.append(f"{wrapper} must remain an AICallable ReferenceToolset wrapper")
+
+        invocation = f"UUeremcpReferenceToolset::{wrapper}("
+        if invocation not in automation_source:
+            errors.append(f"Transport tests must invoke active wrapper: {invocation}")
+
+    residual_markers = {
+        "MCP notifications/cancelled is not mapped": "cancellation notification",
+        "no production timeout scheduler": "production timeout/SSE",
+    }
+    for marker, residual_name in residual_markers.items():
+        if marker not in automation_source:
+            errors.append(f"missing honest {residual_name} residual marker")
+
+    residual_count = automation_source.count("SKIP residual:")
+    if residual_count != len(residual_markers):
+        errors.append(
+            "Transport must carry exactly the two verified residual SKIPs "
+            f"(notification cancellation and timeout/SSE); found {residual_count}"
+        )
+
+    poll_start = automation_source.find("bool FUeremcpTransportJobRegistryPollTest::RunTest")
+    cancel_start = automation_source.find("bool FUeremcpTransportJobRegistryCancelTest::RunTest")
+    if poll_start < 0 or cancel_start < 0:
+        errors.append("cannot locate active Poll/Cancel Transport test bodies")
+    elif "SKIP residual:" in automation_source[poll_start:cancel_start]:
+        errors.append("JobRegistry.Poll must remain fully active with no residual SKIP")
 
 
 if __name__ == "__main__":
