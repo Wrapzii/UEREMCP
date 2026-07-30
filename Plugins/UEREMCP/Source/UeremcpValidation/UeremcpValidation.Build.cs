@@ -49,6 +49,9 @@ public class UeremcpValidation : ModuleRules
 			"UeremcpNiagara",
 			"Niagara",
 
+			// Domain Material E3/E4 gates.
+			"UeremcpMaterial",
+
 			// E1 restart seed creates and validates POC C gameplay-bound variations.
 			"UeremcpTemplates",
 

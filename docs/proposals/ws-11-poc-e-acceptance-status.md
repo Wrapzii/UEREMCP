@@ -15,8 +15,8 @@
 |---|---|---|---|
 | E1 | **PASS (full A–D)** | Two-process Validation.PocE.Restart Create/Verify checkpointed every accepted A–D result plus scratch. `full_ad_results_claimed=true`; all assets survived, and both `DT_POCC_Variations` rows matched their pre-restart snapshots. | — |
 | E2 | **PASS** | `Rollback.MultiAssetDiscard` | Scoped to Content package-add full Discard (ADR-0005 residuals unchanged) |
-| E3 | **PASS (scoped)** | `Idempotency.RepeatedCreate` + Blueprint domain gate live | Niagara/Material domain pipelines not gated |
-| E4 | **PASS (scoped)** | `Revision.StaleRejected` + Blueprint domain gate live | Niagara/Material residuals |
+| E3 | **PASS** | `Idempotency.RepeatedCreate` + Blueprint + Niagara + Material domain gates live | Protocol CurveFloat harness may flake; domain gates are authoritative |
+| E4 | **PASS** | `Revision.StaleRejected` + Blueprint + Niagara + Material domain gates live | — |
 | E5 | **PASS** | `ValidateFalseForbidsValidated` live | — |
 | E6 | **PASS** | `BrokenRequestFailedValidation` live | — |
 | E7 | **PASS (rows recorded)** | A/B/C/D/E cells in `docs/reviews/poc-metrics.md` + `poc_e7_metrics_20260730.json` | Tokens/`internal_operations`/wall/primitive often `unavailable` with machine-checkable reasons (same honesty as POC B). |
@@ -42,10 +42,9 @@ asset `[VERIFIED: docs/POC_ACCEPTANCE.md:123-130]`.
 
 ## Scoped limitations
 
-E3/E4 remain scoped to their named protocol gates plus the Blueprint domain
-gates. Niagara and Material domain-specific idempotency/revision pipelines are
-not gated. This limitation is explicit but does not add an unstated
-all-domains requirement to E3/E4 `[VERIFIED: docs/POC_ACCEPTANCE.md:143-151]`.
+E3/E4 domain coverage now includes Blueprint, Niagara, and Material
+(`[VERIFIED-RUNTIME: UEREMCP.Validation.Domain 6/6 Success 2026-07-30]`).
+See `ws-11-poc-e-domain-gates-closed-2026-07-30.md`.
 
 ## Destructive dry_run default
 

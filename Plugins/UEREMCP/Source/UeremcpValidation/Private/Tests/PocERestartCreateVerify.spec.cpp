@@ -391,7 +391,7 @@ bool FUeremcpPocERestartCreate::RunTest(const FString& Parameters)
 	TSharedPtr<FJsonObject> Residuals = MakeShared<FJsonObject>();
 	Residuals->SetStringField(
 		TEXT("E3_E4"),
-		TEXT("Named protocol and Blueprint gates pass; Niagara/Material domain pipelines remain scoped residuals."));
+		TEXT("Named protocol + Blueprint + Niagara + Material domain idempotency/revision gates pass under NullRHI."));
 
 	TSharedPtr<FJsonObject> Checkpoint = MakeShared<FJsonObject>();
 	Checkpoint->SetStringField(TEXT("id"), CheckpointId);
