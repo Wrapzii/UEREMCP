@@ -508,6 +508,11 @@ bool FUeremcpNiagaraCreate::Run(
 
 	OutResult.ChecksPerformed.Add(TEXT("niagara.add_emitters_from_roles"));
 
+	FUeremcpNiagaraMaterialBinding::NormalizeMeshRendererOverrideFlags(
+		System,
+		Context,
+		OutResult.InternalOperations);
+
 	ApplySpecificationParameters(
 		System,
 		Context,
@@ -674,6 +679,8 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.Summary += FUeremcpNiagaraMaterialBindingDiagnostics::BuildOrphanPartialFailureSummarySuffix(
 			OrphanedRoles.Num());
 	}
+
+	UeremcpNiagaraProbeAssets::ReleaseExternalReferences(System);
 
 	return true;
 }

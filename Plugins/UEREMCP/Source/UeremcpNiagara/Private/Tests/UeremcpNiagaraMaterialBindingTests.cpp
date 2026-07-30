@@ -116,6 +116,29 @@ bool FUeremcpNiagaraMaterialBindingOfflineTest::RunTest(const FString& Parameter
 			TEXT("/Game/__UeremcpTests/Materials/MI_Core.MI_Core"),
 			Conflict));
 
+	TSharedPtr<FJsonObject> MeshValues = MakeShared<FJsonObject>();
+	TArray<TSharedPtr<FJsonValue>> OverrideSlots;
+	TSharedPtr<FJsonObject> Slot = MakeShared<FJsonObject>();
+	OverrideSlots.Add(MakeShared<FJsonValueObject>(Slot));
+	MeshValues->SetArrayField(TEXT("OverrideMaterials"), OverrideSlots);
+
+	TestFalse(
+		TEXT("mesh patch blocked until overrides enabled"),
+		FUeremcpNiagaraMaterialBinding::PatchMeshRendererMaterial(
+			MeshValues,
+			TEXT("/Game/__UeremcpTests/Materials/MI_Core.MI_Core"),
+			Conflict));
+
+	TestTrue(
+		TEXT("enable mesh overrides"),
+		FUeremcpNiagaraMaterialBinding::EnableMeshMaterialOverrides(MeshValues));
+	TestTrue(
+		TEXT("mesh patch after enable"),
+		FUeremcpNiagaraMaterialBinding::PatchMeshRendererMaterial(
+			MeshValues,
+			TEXT("/Game/__UeremcpTests/Materials/MI_Core.MI_Core"),
+			Conflict));
+
 	TMap<FString, FString> Resolved;
 	TArray<FString> Unresolved;
 	FUeremcpNiagaraMaterialRequest BadRequest;

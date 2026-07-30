@@ -403,6 +403,33 @@ bool FUeremcpNiagaraMaterialBinding::PatchSpriteOrRibbonMaterial(
 	return true;
 }
 
+bool FUeremcpNiagaraMaterialBinding::EnableMeshMaterialOverrides(
+	TSharedPtr<FJsonObject>& PropertyValues)
+{
+	if (!PropertyValues.IsValid())
+	{
+		return false;
+	}
+
+	bool bAlreadyEnabled = false;
+	PropertyValues->TryGetBoolField(TEXT("bOverrideMaterials"), bAlreadyEnabled);
+	if (bAlreadyEnabled)
+	{
+		return true;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* Overrides = nullptr;
+	if (!PropertyValues->TryGetArrayField(TEXT("OverrideMaterials"), Overrides)
+		|| !Overrides
+		|| Overrides->Num() == 0)
+	{
+		return false;
+	}
+
+	PropertyValues->SetBoolField(TEXT("bOverrideMaterials"), true);
+	return true;
+}
+
 bool FUeremcpNiagaraMaterialBinding::PatchMeshRendererMaterial(
 	TSharedPtr<FJsonObject>& PropertyValues,
 	const FString& CanonicalMaterialPath,
@@ -424,7 +451,13 @@ bool FUeremcpNiagaraMaterialBinding::PatchMeshRendererMaterial(
 		return false;
 	}
 
-	PropertyValues->SetBoolField(TEXT("bOverrideMaterials"), true);
+	bool bOverrideEnabled = false;
+	PropertyValues->TryGetBoolField(TEXT("bOverrideMaterials"), bOverrideEnabled);
+	if (!bOverrideEnabled)
+	{
+		OutConflictReason = TEXT("mesh renderer bOverrideMaterials must be enabled before patching ExplicitMat");
+		return false;
+	}
 
 	TArray<TSharedPtr<FJsonValue>> NewOverrides;
 	for (const TSharedPtr<FJsonValue>& Entry : *Overrides)
@@ -596,6 +629,37 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			}
 			else
 			{
+				// Enable overrides in a separate SetRendererData call so ExplicitMat edit conditions
+				// evaluate against UNiagaraMeshRendererProperties, not FNiagaraMeshMaterialOverride
+				// (NiagaraMeshRendererProperties.h:70-74,227).
+				TSharedPtr<FJsonObject> EnableOverrides = MakeShared<FJsonObject>();
+				EnableOverrides->SetBoolField(TEXT("bOverrideMaterials"), true);
+				FNiagaraExt_RendererData EnableData;
+				EnableData.PropertyValues = SerializePropertyValuesJson(EnableOverrides);
+				UNiagaraExternalEditUtilities::SetRendererData(RendererRef, EnableData, Context);
+				++InOutInternalOperations;
+
+				if (Context.HasErrors())
+				{
+					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
+						TEXT("%s: failed enabling mesh material overrides on renderer %d"),
+						*Role,
+						Renderer.RendererIndex));
+					continue;
+				}
+
+				UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
+				++InOutInternalOperations;
+				PropertyValues = ParsePropertyValuesJson(RendererData.PropertyValues);
+				if (!PropertyValues.IsValid())
+				{
+					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
+						TEXT("%s: renderer %d PropertyValues unreadable after enabling overrides"),
+						*Role,
+						Renderer.RendererIndex));
+					continue;
+				}
+
 				bPatched = PatchMeshRendererMaterial(PropertyValues, CanonicalMaterialPath, Conflict);
 			}
 
@@ -673,4 +737,70 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 		&& !OutResult.bAnyBindingFailedReread;
 
 	return !OutResult.bAnyBindingFailedReread;
+}
+
+void FUeremcpNiagaraMaterialBinding::NormalizeMeshRendererOverrideFlags(
+	UNiagaraSystem* System,
+	FNiagaraExternalEditContext& Context,
+	int32& InOutInternalOperations)
+{
+	if (!System)
+	{
+		return;
+	}
+
+	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+	{
+		const FName EmitterName = Handle.GetName();
+		FNiagaraExt_StackItemReference EmitterRef(System, EmitterName);
+		FNiagaraExt_EmitterTopology Topology;
+		UNiagaraExternalEditUtilities::GetEmitterTopology(EmitterRef, Topology, Context);
+		++InOutInternalOperations;
+
+		for (const FNiagaraExt_RendererRef& Renderer : Topology.Renderers)
+		{
+			const FString RendererClassPath = Renderer.RendererClass
+				? Renderer.RendererClass->GetPathName()
+				: FString();
+			if (ClassifyRenderer(RendererClassPath) != EUeremcpNiagaraRendererMaterialKind::Mesh)
+			{
+				continue;
+			}
+
+			FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
+			RendererRef.RendererIndex = Renderer.RendererIndex;
+
+			FNiagaraExt_RendererData RendererData;
+			UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
+			++InOutInternalOperations;
+
+			TSharedPtr<FJsonObject> PropertyValues = ParsePropertyValuesJson(RendererData.PropertyValues);
+			if (!PropertyValues.IsValid())
+			{
+				continue;
+			}
+
+			bool bAlreadyEnabled = false;
+			PropertyValues->TryGetBoolField(TEXT("bOverrideMaterials"), bAlreadyEnabled);
+			if (bAlreadyEnabled)
+			{
+				continue;
+			}
+
+			const TArray<TSharedPtr<FJsonValue>>* Overrides = nullptr;
+			if (!PropertyValues->TryGetArrayField(TEXT("OverrideMaterials"), Overrides)
+				|| !Overrides
+				|| Overrides->Num() == 0)
+			{
+				continue;
+			}
+
+			FNiagaraExt_RendererData EnableOnly;
+			TSharedPtr<FJsonObject> EnableJson = MakeShared<FJsonObject>();
+			EnableJson->SetBoolField(TEXT("bOverrideMaterials"), true);
+			EnableOnly.PropertyValues = SerializePropertyValuesJson(EnableJson);
+			UNiagaraExternalEditUtilities::SetRendererData(RendererRef, EnableOnly, Context);
+			++InOutInternalOperations;
+		}
+	}
 }

@@ -99,10 +99,19 @@ public:
 		const FString& CanonicalMaterialPath,
 		FString& OutConflictReason);
 
+	static bool EnableMeshMaterialOverrides(
+		TSharedPtr<FJsonObject>& PropertyValues);
+
 	static bool PatchMeshRendererMaterial(
 		TSharedPtr<FJsonObject>& PropertyValues,
 		const FString& CanonicalMaterialPath,
 		FString& OutConflictReason);
+
+	/** Enable bOverrideMaterials on mesh renderers whose templates ship OverrideMaterials slots. */
+	static void NormalizeMeshRendererOverrideFlags(
+		UNiagaraSystem* System,
+		FNiagaraExternalEditContext& Context,
+		int32& InOutInternalOperations);
 
 	static bool MaterialMatchesExpectedAfterReread(
 		const FString& PropertyValuesJson,

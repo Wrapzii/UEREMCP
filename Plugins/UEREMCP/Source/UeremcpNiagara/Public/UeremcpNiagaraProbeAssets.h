@@ -6,6 +6,8 @@
 
 #include "CoreMinimal.h"
 
+class UNiagaraSystem;
+
 namespace UeremcpNiagaraProbeAssets
 {
 	/** True when Mode is replace (case-insensitive). */
@@ -13,6 +15,12 @@ namespace UeremcpNiagaraProbeAssets
 
 	/** True when asset registry reports an object at AssetPath. */
 	bool AssetExistsAtPath(const FString& AssetPath);
+
+	/**
+	 * Drop transient compile-time referencers (e.g. mesh renderer info DIs) before probe delete.
+	 * Safe to call while the system asset remains on disk.
+	 */
+	void ReleaseExternalReferences(UNiagaraSystem* System);
 
 	/**
 	 * Delete a Niagara system at AssetPath. Refuses paths outside TestsContentRoot.

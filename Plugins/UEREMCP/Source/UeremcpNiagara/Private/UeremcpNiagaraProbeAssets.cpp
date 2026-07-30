@@ -5,10 +5,13 @@
 #include "UeremcpNiagaraPaths.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "NiagaraDataInterfaceMeshRendererInfo.h"
+#include "NiagaraMeshRendererProperties.h"
 #include "NiagaraSystem.h"
 #include "ObjectTools.h"
 #include "UObject/GarbageCollection.h"
 #include "UObject/SoftObjectPath.h"
+#include "UObject/UObjectIterator.h"
 
 namespace
 {
@@ -19,6 +22,49 @@ namespace
 		const FSoftObjectPath ObjectPath(
 			FString::Printf(TEXT("%s/%s.%s"), *PackagePath, *AssetName, *AssetName));
 		return ObjectPath.TryLoad();
+	}
+
+	bool RendererBelongsToSystem(UNiagaraMeshRendererProperties* Renderer, UNiagaraSystem* System)
+	{
+		if (!Renderer || !System)
+		{
+			return false;
+		}
+
+		for (UObject* Outer = Renderer; Outer; Outer = Outer->GetOuter())
+		{
+			if (Outer == System)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void ReleaseMeshRendererInfoReferences(UNiagaraSystem* System)
+	{
+#if WITH_EDITOR
+		if (!System)
+		{
+			return;
+		}
+
+		for (TObjectIterator<UNiagaraDataInterfaceMeshRendererInfo> It; It; ++It)
+		{
+			UNiagaraDataInterfaceMeshRendererInfo* DI = *It;
+			if (!DI || !DI->GetMeshRenderer())
+			{
+				continue;
+			}
+
+			if (RendererBelongsToSystem(DI->GetMeshRenderer(), System))
+			{
+				// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceMeshRendererInfo.h:38]
+				DI->OnMeshRendererChanged(nullptr);
+				DI->MarkAsGarbage();
+			}
+		}
+#endif
 	}
 }
 
@@ -36,6 +82,21 @@ bool UeremcpNiagaraProbeAssets::AssetExistsAtPath(const FString& AssetPath)
 	const FSoftObjectPath ObjectPath(
 		FString::Printf(TEXT("%s/%s.%s"), *PackagePath, *AssetName, *AssetName));
 	return AssetRegistry.Get().GetAssetByObjectPath(ObjectPath).IsValid();
+}
+
+void UeremcpNiagaraProbeAssets::ReleaseExternalReferences(UNiagaraSystem* System)
+{
+	if (!System)
+	{
+		return;
+	}
+
+	// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:457]
+	System->KillAllActiveCompilations();
+	// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:461]
+	System->InvalidateActiveCompiles();
+	ReleaseMeshRendererInfoReferences(System);
+	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 }
 
 bool UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath(const FString& AssetPath, FString& OutError)
@@ -57,10 +118,18 @@ bool UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath(const FString& AssetPath,
 		return true;
 	}
 
+	if (UNiagaraSystem* System = Cast<UNiagaraSystem>(Existing))
+	{
+		ReleaseExternalReferences(System);
+	}
+
 	TArray<UObject*> ToDelete;
 	ToDelete.Add(Existing);
+	Existing = nullptr;
 
 	const int32 DeletedCount = ObjectTools::DeleteObjectsUnchecked(ToDelete);
+	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+
 	if (DeletedCount != 1)
 	{
 		OutError = FString::Printf(
@@ -70,6 +139,5 @@ bool UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath(const FString& AssetPath,
 		return false;
 	}
 
-	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 	return true;
 }
