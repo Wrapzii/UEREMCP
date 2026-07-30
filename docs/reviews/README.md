@@ -58,6 +58,9 @@ Run against every deliverable claiming completion:
 | File | Contents |
 |---|---|
 | `poc-metrics.md` | Measured metrics for every POC — calls, tokens, wall clock, completion rate |
+| `wave-1-2026-07-29.md` | Wave 1 integration review |
+| `wave-1b-2026-07-30.md` | Wave 1b integration review |
+| `wave-2-2026-07-30.md` | Wave 2 landings review (Validation 6/6, Transport, Material, domains) |
 | `<ws-nn>-<date>.md` | Review of a specific deliverable |
 | `integration-log.md` | Running log of cross-workstream conflicts found and resolved |
 
