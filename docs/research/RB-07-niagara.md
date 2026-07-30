@@ -508,3 +508,36 @@ validator green, WS-11 harness can run one editor test.
   `UEREMCP.Niagara.Inspect.NS_WS07_Probe` were not run: no binary containing the
   target Inspect implementation was produced. RE's plugin junction was restored to
   `UEREMCP-ws01/Plugins/UEREMCP`.
+
+## RE Create automation verification attempt (2026-07-30)
+
+- Orch contains Create commit `ad2d517` as patch-equivalent cherry-pick `4e48fd0`
+  (stable patch ID `a38ffd7c7311f5cc28178a7e32f4f043a977a62b`). The RE plugin
+  junction targeted `UEREMCP-ws01/Plugins/UEREMCP` throughout the final build and
+  automation attempts. No Live Coding console process was active, so no Live Coding
+  shutdown was required.
+- `REEditor Win64 Development -Module=UeremcpNiagara -WaitMutex
+  -NoHotReloadFromIDE` succeeded after the UE 5.8 compile/link corrections
+  `01d121e` and `6ade91c`
+  `[VERIFIED-RUNTIME: UBT Result: Succeeded, 2026-07-30]`.
+- `UEREMCP.Niagara.Inspect` was launched through the RE shipping harness, but the
+  editor exited before test discovery because registered module `UeremcpMaterial`
+  had no loadable binary
+  `[VERIFIED-RUNTIME: editor_UEREMCP_Niagara_Inspect_20260730_013028.log]`.
+- Rebuilding that prerequisite reached a new cross-workstream Core compile failure:
+  `UeremcpMutatingDispatchTests.cpp` calls nonexistent
+  `FString::ReplaceCharWith` and supplies too few arguments to `FString::Printf`
+  `[VERIFIED-RUNTIME: UBT C2039/C7595, 2026-07-30]`.
+
+| Filter / test | Result | Evidence |
+|---|---|---|
+| `UEREMCP.Niagara.Inspect` | **BLOCKED — 0 tests run** | Editor plugin load stopped at missing `UeremcpMaterial` binary |
+| `UEREMCP.Niagara.Inspect.PathGuard` | **NOT RUN** | Filter did not reach automation discovery |
+| `UEREMCP.Niagara.Inspect.NS_WS07_Probe` | **NOT RUN** | Filter did not reach automation discovery |
+| `UEREMCP.Niagara.Create` | **BLOCKED — 0 tests run** | Same full-plugin load prerequisite; not launched after deterministic Core compile failure |
+| `UEREMCP.Niagara.Create.PathGuard` | **NOT RUN** | No loadable full plugin binary |
+| `UEREMCP.Niagara.Create.DryRun` | **NOT RUN** | No loadable full plugin binary |
+
+No Create mutation ran and no asset-validation status is claimed. The honest outcome
+for this tip is **failed validation gate / runtime verification blocked**, not
+`created_and_validated`.
