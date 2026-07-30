@@ -272,7 +272,7 @@ namespace UeremcpIntentRouterInternal
 					{
 						for (const auto& Pair : (*Props)->Values)
 						{
-							Doc.Properties.Add(Pair.Key);
+							Doc.Properties.Add(FString(Pair.Key));
 						}
 					}
 					const TArray<TSharedPtr<FJsonValue>>* Req = nullptr;
