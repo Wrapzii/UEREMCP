@@ -28,7 +28,7 @@ Unowned path? It is WS-01's until assigned. Propose, do not squat.
 | **WS-05** | JSON & Protocol Architect | `Plugins/UEREMCP/Source/UeremcpProtocol/**`, `schemas/batch/**`, `schemas/domains/_shared/**`, `tools/validate_schemas.py` | 1 |
 | **WS-06** | Blueprint Specialist | `Plugins/UEREMCP/Source/UeremcpBlueprint/**`, `schemas/domains/blueprints/**` | 2 |
 | **WS-07** | Niagara Specialist | `Plugins/UEREMCP/Source/UeremcpNiagara/**`, `schemas/domains/niagara/**` | 2 |
-| **WS-08** | Material & VFX Assets | `Plugins/UEREMCP/Source/UeremcpMaterial/**`, `schemas/domains/materials/**` | 2 |
+| **WS-08** | Material & VFX Assets | `Plugins/UEREMCP/Source/UeremcpMaterial/**`, `Plugins/UEREMCP/Resources/Materials/**`, `schemas/domains/materials/**` | 2 |
 | **WS-09** | Gameplay & GAS | `Plugins/UEREMCP/Source/UeremcpGameplay/**`, `schemas/domains/gameplay/**` | 3 |
 | **WS-10** | Animation & Control Rig | `Plugins/UEREMCP/Source/UeremcpAnimation/**`, `schemas/domains/animation/**` | 3 |
 | **WS-11** | Validation & Testing | `Plugins/UEREMCP/Source/UeremcpValidation/**`, `tests/**` | 1 |
