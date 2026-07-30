@@ -4,6 +4,7 @@
 
 #include "UeremcpNiagaraPaths.h"
 #include "UeremcpNiagaraRoleNames.h"
+#include "UeremcpMaterialNiagaraExport.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraSystem.h"
@@ -165,21 +166,141 @@ bool FUeremcpNiagaraMaterialBinding::ResolveDirectMaterialPaths(
 	const TArray<FUeremcpNiagaraMaterialRequest>& Requests,
 	TMap<FString, FString>& OutRoleToCanonicalPath,
 	TArray<FString>& OutUnresolved,
-	TArray<FString>& OutPendingWs08,
 	FString& OutError)
 {
 	OutRoleToCanonicalPath.Reset();
 	OutUnresolved.Reset();
-	OutPendingWs08.Reset();
 	OutError.Reset();
 
 	for (const FUeremcpNiagaraMaterialRequest& Request : Requests)
 	{
 		if (Request.CreateSpec.IsValid())
 		{
-			OutPendingWs08.Add(FString::Printf(
-				TEXT("%s: inline create_spec blocked until WS-08 exports UeremcpMaterialService with UEREMCPMATERIAL_API"),
-				*Request.Role));
+			continue;
+		}
+
+		if (Request.ExistingAssetPath.IsEmpty())
+		{
+			OutUnresolved.Add(FString::Printf(TEXT("%s: empty material path"), *Request.Role));
+			continue;
+		}
+
+		if (!IsAllowedMaterialProbePath(Request.ExistingAssetPath))
+		{
+			OutError = FString::Printf(
+				TEXT("materials.%s path '%s' must be under %s or %s."),
+				*Request.Role,
+				*Request.ExistingAssetPath,
+				GMaterialsProbeRoot,
+				UeremcpNiagaraPaths::TestsContentRoot);
+			return false;
+		}
+
+		FString CanonicalPath;
+		UMaterialInterface* Material = LoadMaterialInterface(Request.ExistingAssetPath, CanonicalPath);
+		if (!Material || CanonicalPath.IsEmpty())
+		{
+			OutUnresolved.Add(FString::Printf(
+				TEXT("%s: could not load UMaterialInterface at '%s'"),
+				*Request.Role,
+				*Request.ExistingAssetPath));
+			continue;
+		}
+
+		OutRoleToCanonicalPath.Add(Request.Role, CanonicalPath);
+	}
+
+	return true;
+}
+
+bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
+	const FString& NiagaraAssetName,
+	const TArray<FUeremcpNiagaraMaterialRequest>& Requests,
+	bool bCompile,
+	bool bValidate,
+	bool bSave,
+	TMap<FString, FString>& OutRoleToCanonicalPath,
+	TArray<FUeremcpNiagaraInlineMaterialCreate>& OutInlineCreates,
+	TArray<FString>& OutUnresolved,
+	int32& InOutInternalOperations,
+	FString& OutError)
+{
+	OutRoleToCanonicalPath.Reset();
+	OutInlineCreates.Reset();
+	OutUnresolved.Reset();
+	OutError.Reset();
+
+	for (const FUeremcpNiagaraMaterialRequest& Request : Requests)
+	{
+		if (Request.CreateSpec.IsValid())
+		{
+			const FString TargetPath = UeremcpMaterialNiagaraExport::ResolveMaterialInstancePath(
+				NiagaraAssetName,
+				Request.Role);
+			if (!IsAllowedMaterialProbePath(TargetPath))
+			{
+				OutError = FString::Printf(
+					TEXT("materials.%s inline create target '%s' must be under %s or %s."),
+					*Request.Role,
+					*TargetPath,
+					GMaterialsProbeRoot,
+					UeremcpNiagaraPaths::TestsContentRoot);
+				return false;
+			}
+
+			const FUeremcpMaterialCreateResult MatResult =
+				UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraRole(
+					NiagaraAssetName,
+					Request.Role,
+					Request.CreateSpec,
+					bCompile,
+					bValidate,
+					bSave);
+			InOutInternalOperations += MatResult.InternalOperations;
+
+			FUeremcpNiagaraInlineMaterialCreate InlineRecord;
+			InlineRecord.Role = Request.Role;
+			InlineRecord.bSuccess = MatResult.bSuccess;
+			InlineRecord.Status = MatResult.Status;
+			InlineRecord.Summary = MatResult.Summary;
+			InlineRecord.PrimaryAsset = MatResult.PrimaryAsset;
+			InlineRecord.CreatedAssets = MatResult.CreatedAssets;
+			InlineRecord.CapabilityNotes = MatResult.CapabilityNotes;
+			OutInlineCreates.Add(InlineRecord);
+
+			if (!MatResult.bSuccess || MatResult.PrimaryAsset.IsEmpty())
+			{
+				OutUnresolved.Add(FString::Printf(
+					TEXT("%s: inline create_spec failed (status=%s)"),
+					*Request.Role,
+					MatResult.Status.IsEmpty() ? TEXT("unknown") : *MatResult.Status));
+				continue;
+			}
+
+			FString VerifyError;
+			if (!UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(
+				MatResult.PrimaryAsset,
+				VerifyError))
+			{
+				OutUnresolved.Add(FString::Printf(
+					TEXT("%s: PrimaryAsset verification failed — %s"),
+					*Request.Role,
+					*VerifyError));
+				continue;
+			}
+
+			FString CanonicalPath;
+			UMaterialInterface* Material = LoadMaterialInterface(MatResult.PrimaryAsset, CanonicalPath);
+			if (!Material || CanonicalPath.IsEmpty())
+			{
+				OutUnresolved.Add(FString::Printf(
+					TEXT("%s: could not load canonical UMaterialInterface from '%s'"),
+					*Request.Role,
+					*MatResult.PrimaryAsset));
+				continue;
+			}
+
+			OutRoleToCanonicalPath.Add(Request.Role, CanonicalPath);
 			continue;
 		}
 

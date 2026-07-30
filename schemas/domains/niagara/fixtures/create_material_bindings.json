@@ -22,7 +22,7 @@
   },
   "expectations": {
     "allowed_material_root": "/Game/__UeremcpTests/Materials",
-    "ws08_handoff_field": "ws08_create_spec_pending",
+    "inline_material_field": "inline_material_creates",
     "checks_when_all_verified": ["niagara.material_bindings"],
     "validation_never_claims": ["created_and_validated", "modified_and_validated"]
   }

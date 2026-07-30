@@ -1,12 +1,13 @@
 // UEREMCP — Niagara renderer material binding (WS-07).
 //
 // Composes GetRendererData / SetRendererData on UNiagaraExternalEditUtilities.
-// Inline create_spec delegation blocked until WS-08 exports UeremcpMaterialService.
+// Inline create_spec delegates to UeremcpMaterialNiagaraExport (WS-08).
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "UeremcpEnvelope.h"
 
 struct FNiagaraExternalEditContext;
 class UNiagaraSystem;
@@ -20,6 +21,18 @@ struct FUeremcpNiagaraMaterialRequest
 	bool bReuseIfPresent = true;
 };
 
+/** WS-08 inline create_spec outcome for one materials.<role> entry. */
+struct FUeremcpNiagaraInlineMaterialCreate
+{
+	FString Role;
+	bool bSuccess = false;
+	FString Status;
+	FString Summary;
+	FString PrimaryAsset;
+	TArray<FUeremcpAssetRef> CreatedAssets;
+	TArray<FString> CapabilityNotes;
+};
+
 /** Outcome of material resolution + renderer binding. */
 struct FUeremcpNiagaraMaterialBindingResult
 {
@@ -31,7 +44,7 @@ struct FUeremcpNiagaraMaterialBindingResult
 	TArray<FString> RendererBindingsApplied;
 	TArray<FString> RendererBindingsVerified;
 	TArray<FString> UnresolvedMaterialBindings;
-	TArray<FString> CreatedMaterialAssetsPendingWs08;
+	TArray<FUeremcpNiagaraInlineMaterialCreate> InlineMaterialCreates;
 
 	FString Error;
 };
@@ -58,7 +71,19 @@ public:
 		const TArray<FUeremcpNiagaraMaterialRequest>& Requests,
 		TMap<FString, FString>& OutRoleToCanonicalPath,
 		TArray<FString>& OutUnresolved,
-		TArray<FString>& OutPendingWs08,
+		FString& OutError);
+
+	/** Resolve direct paths and inline create_spec via UeremcpMaterialNiagaraExport (probe root only). */
+	static bool ResolveMaterialPaths(
+		const FString& NiagaraAssetName,
+		const TArray<FUeremcpNiagaraMaterialRequest>& Requests,
+		bool bCompile,
+		bool bValidate,
+		bool bSave,
+		TMap<FString, FString>& OutRoleToCanonicalPath,
+		TArray<FUeremcpNiagaraInlineMaterialCreate>& OutInlineCreates,
+		TArray<FString>& OutUnresolved,
+		int32& InOutInternalOperations,
 		FString& OutError);
 
 	static EUeremcpNiagaraRendererMaterialKind ClassifyRenderer(

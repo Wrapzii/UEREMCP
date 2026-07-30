@@ -357,7 +357,7 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 
 	if (CreateResult.MaterialBindings.ResolvedMaterialPaths.Num() > 0
 		|| CreateResult.MaterialBindings.UnresolvedMaterialBindings.Num() > 0
-		|| CreateResult.MaterialBindings.CreatedMaterialAssetsPendingWs08.Num() > 0)
+		|| CreateResult.MaterialBindings.InlineMaterialCreates.Num() > 0)
 	{
 		TSharedPtr<FJsonObject> Materials = MakeShared<FJsonObject>();
 		TSharedPtr<FJsonObject> Resolved = MakeShared<FJsonObject>();
@@ -394,11 +394,51 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 				TEXT("unresolved"),
 				StringArray(CreateResult.MaterialBindings.UnresolvedMaterialBindings));
 		}
-		if (CreateResult.MaterialBindings.CreatedMaterialAssetsPendingWs08.Num() > 0)
+		if (CreateResult.MaterialBindings.InlineMaterialCreates.Num() > 0)
 		{
-			Materials->SetArrayField(
-				TEXT("ws08_create_spec_pending"),
-				StringArray(CreateResult.MaterialBindings.CreatedMaterialAssetsPendingWs08));
+			TArray<TSharedPtr<FJsonValue>> InlineValues;
+			for (const FUeremcpNiagaraInlineMaterialCreate& Inline : CreateResult.MaterialBindings.InlineMaterialCreates)
+			{
+				TSharedPtr<FJsonObject> InlineObj = MakeShared<FJsonObject>();
+				InlineObj->SetStringField(TEXT("role"), Inline.Role);
+				InlineObj->SetBoolField(TEXT("success"), Inline.bSuccess);
+				if (!Inline.Status.IsEmpty())
+				{
+					InlineObj->SetStringField(TEXT("status"), Inline.Status);
+				}
+				if (!Inline.Summary.IsEmpty())
+				{
+					InlineObj->SetStringField(TEXT("summary"), Inline.Summary);
+				}
+				if (!Inline.PrimaryAsset.IsEmpty())
+				{
+					InlineObj->SetStringField(TEXT("primary_asset"), Inline.PrimaryAsset);
+				}
+				if (Inline.CapabilityNotes.Num() > 0)
+				{
+					InlineObj->SetArrayField(TEXT("capability_notes"), StringArray(Inline.CapabilityNotes));
+				}
+				if (Inline.CreatedAssets.Num() > 0)
+				{
+					TArray<TSharedPtr<FJsonValue>> CreatedValues;
+					for (const FUeremcpAssetRef& Asset : Inline.CreatedAssets)
+					{
+						TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+						if (!Asset.AssetPath.IsEmpty())
+						{
+							AssetObj->SetStringField(TEXT("asset_path"), Asset.AssetPath);
+						}
+						if (!Asset.AssetClass.IsEmpty())
+						{
+							AssetObj->SetStringField(TEXT("asset_class"), Asset.AssetClass);
+						}
+						CreatedValues.Add(MakeShared<FJsonValueObject>(AssetObj));
+					}
+					InlineObj->SetArrayField(TEXT("created_assets"), CreatedValues);
+				}
+				InlineValues.Add(MakeShared<FJsonValueObject>(InlineObj));
+			}
+			Materials->SetArrayField(TEXT("inline_material_creates"), InlineValues);
 		}
 
 		Extra->SetObjectField(TEXT("material_bindings"), Materials);

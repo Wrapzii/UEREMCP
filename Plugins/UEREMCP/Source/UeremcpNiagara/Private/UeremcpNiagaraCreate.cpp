@@ -327,16 +327,21 @@ bool FUeremcpNiagaraCreate::Run(
 	const bool bAssetExists = AssetExistsAtPath(CreatedPath);
 
 	TMap<FString, FString> ResolvedMaterialPaths;
-	TArray<FString> PendingMaterialCreates;
+	TArray<FUeremcpNiagaraInlineMaterialCreate> InlineMaterialCreates;
 	TArray<FString> UnresolvedMaterialPaths;
 	if (Spec.MaterialRequests.Num() > 0 && !Request.bDryRun)
 	{
 		FString MaterialError;
-		if (!FUeremcpNiagaraMaterialBinding::ResolveDirectMaterialPaths(
+		if (!FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
+			AssetName,
 			Spec.MaterialRequests,
+			Request.bCompile,
+			Request.bValidate,
+			Request.bSave,
 			ResolvedMaterialPaths,
+			InlineMaterialCreates,
 			UnresolvedMaterialPaths,
-			PendingMaterialCreates,
+			OutResult.InternalOperations,
 			MaterialError))
 		{
 			OutResult.Error = MaterialError;
@@ -483,10 +488,10 @@ bool FUeremcpNiagaraCreate::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.add_user_variables"));
 	}
 
-	if (ResolvedMaterialPaths.Num() > 0 || PendingMaterialCreates.Num() > 0 || UnresolvedMaterialPaths.Num() > 0)
+	if (ResolvedMaterialPaths.Num() > 0 || InlineMaterialCreates.Num() > 0 || UnresolvedMaterialPaths.Num() > 0)
 	{
 		OutResult.MaterialBindings.ResolvedMaterialPaths = ResolvedMaterialPaths;
-		OutResult.MaterialBindings.CreatedMaterialAssetsPendingWs08 = PendingMaterialCreates;
+		OutResult.MaterialBindings.InlineMaterialCreates = InlineMaterialCreates;
 		OutResult.MaterialBindings.UnresolvedMaterialBindings = UnresolvedMaterialPaths;
 	}
 
@@ -591,11 +596,22 @@ bool FUeremcpNiagaraCreate::Run(
 			OutResult.MaterialBindings.RendererBindingsVerified.Num());
 	}
 
-	if (PendingMaterialCreates.Num() > 0)
+	if (InlineMaterialCreates.Num() > 0)
 	{
-		OutResult.Summary += FString::Printf(
-			TEXT(" WS-08 handoff: %d create_spec material(s) not inlined."),
-			PendingMaterialCreates.Num());
+		int32 FailedInline = 0;
+		for (const FUeremcpNiagaraInlineMaterialCreate& Inline : InlineMaterialCreates)
+		{
+			if (!Inline.bSuccess)
+			{
+				++FailedInline;
+			}
+		}
+		if (FailedInline > 0)
+		{
+			OutResult.Summary += FString::Printf(
+				TEXT(" %d inline create_spec material(s) failed or unverified."),
+				FailedInline);
+		}
 	}
 
 	return true;

@@ -32,6 +32,9 @@ public class UeremcpNiagara : ModuleRules
 
 			"UeremcpProtocol",
 
+			// WS-08 create_vfx_material export for inline materials.<role>.create_spec (probe paths only).
+			"UeremcpMaterial",
+
 			// Epic Niagara editor surface — used when inspect/create is implemented.
 			// NiagaraToolsets plugin must be enabled in the target project.
 			"Niagara",

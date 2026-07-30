@@ -65,7 +65,6 @@ bool FUeremcpNiagaraMaterialBindingOfflineTest::RunTest(const FString& Parameter
 
 	TMap<FString, FString> Resolved;
 	TArray<FString> Unresolved;
-	TArray<FString> Pending;
 	FUeremcpNiagaraMaterialRequest BadRequest;
 	BadRequest.Role = TEXT("core");
 	BadRequest.ExistingAssetPath = TEXT("/Game/VFX/M_Bad");
@@ -76,7 +75,6 @@ bool FUeremcpNiagaraMaterialBindingOfflineTest::RunTest(const FString& Parameter
 			BadRequests,
 			Resolved,
 			Unresolved,
-			Pending,
 			Error));
 
 	return true;
