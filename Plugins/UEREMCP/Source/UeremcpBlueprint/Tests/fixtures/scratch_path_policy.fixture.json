@@ -1,0 +1,38 @@
+{
+  "$comment": "Table-driven scratch-path policy cases for Blueprint submit_graph (WS-06).",
+  "blueprint_submit_allow": [
+    "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch.BP_ReadGraph_Scratch",
+    "/Game/__UeremcpTests/Foo/Bar/BP_Test.BP_Test",
+    "/Game/__UeremcpTests/_suite/nested/asset"
+  ],
+  "blueprint_submit_deny": [
+    "/Game/Characters/BP_Hero.BP_Hero",
+    "/Game/__UeremcpPoc/Fireball/BP_Fireball.BP_Fireball",
+    "/Game/__UeremcpTests",
+    "/Game/__UeremcpTestsFake/BP_X.BP_X",
+    "",
+    "/Engine/EditorResources/EmptyActor"
+  ],
+  "ws11_safe_allow": [
+    "/Game/__UeremcpTests/foo",
+    "/Game/__UeremcpTests",
+    "/Game/__UeremcpTests/Rollback_MultiAssetDiscard/DiscardAsset_0"
+  ],
+  "ws11_safe_deny": [
+    "/Game/__UeremcpPoc/Fireball",
+    "/Game/Characters/Hero",
+    "/Game/__UeremcpTestsFake/foo"
+  ],
+  "make_path_examples": [
+    {
+      "suite": "Blueprint_ReadGraph",
+      "name": "BP_Scratch",
+      "expected": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_Scratch"
+    },
+    {
+      "suite": "",
+      "name": "LooseAsset",
+      "expected": "/Game/__UeremcpTests/LooseAsset"
+    }
+  ]
+}

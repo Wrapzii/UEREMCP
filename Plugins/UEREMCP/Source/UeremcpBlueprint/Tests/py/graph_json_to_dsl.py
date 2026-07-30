@@ -8,6 +8,9 @@ from __future__ import annotations
 from typing import Any
 
 
+from scratch_path_policy import is_unsupported_control_flow_type_id
+
+
 LOSSY_TRANSLATOR_NOTES = (
     "graph_json_to_dsl_minimal_translator",
     "exotic_nodes_require_extensions_blueprint_dsl",
@@ -95,6 +98,12 @@ def _build_call_inner(node: dict[str, Any]) -> str:
     type_id = properties.get("type_id")
     if not isinstance(type_id, str) or not type_id:
         raise GraphJsonToDslError("call node missing properties.type_id")
+
+    if is_unsupported_control_flow_type_id(type_id):
+        raise GraphJsonToDslError(
+            f"graph JSON translator does not support control-flow node '{type_id}'; "
+            "provide extensions.blueprint.dsl"
+        )
 
     args = [type_id]
     defaults = node.get("defaults")

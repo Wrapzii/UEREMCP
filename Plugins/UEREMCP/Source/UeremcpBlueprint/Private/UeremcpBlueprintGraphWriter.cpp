@@ -167,6 +167,15 @@ namespace UeremcpBlueprintGraphWriter
 		return TEXT("");
 	}
 
+	static bool IsUnsupportedControlFlowTypeId(const FString& TypeId)
+	{
+		return TypeId.Contains(TEXT("FlowControl|Branch"))
+			|| TypeId.Contains(TEXT("FlowControl|IfThenElse"))
+			|| TypeId.Contains(TEXT("|Switch"))
+			|| TypeId.Contains(TEXT("MultiGate"))
+			|| TypeId.Contains(TEXT("FlowControl|Sequence"));
+	}
+
 	static bool BuildCallInner(const TSharedPtr<FJsonObject>& Node, FString& OutInner, FString& OutError)
 	{
 		const TSharedPtr<FJsonObject>* Properties = nullptr;
@@ -180,6 +189,14 @@ namespace UeremcpBlueprintGraphWriter
 		if (!(*Properties)->TryGetStringField(TEXT("type_id"), TypeId) || TypeId.IsEmpty())
 		{
 			OutError = TEXT("call node missing properties.type_id");
+			return false;
+		}
+
+		if (IsUnsupportedControlFlowTypeId(TypeId))
+		{
+			OutError = FString::Printf(
+				TEXT("graph JSON translator does not support control-flow node '%s'; provide extensions.blueprint.dsl"),
+				*TypeId);
 			return false;
 		}
 

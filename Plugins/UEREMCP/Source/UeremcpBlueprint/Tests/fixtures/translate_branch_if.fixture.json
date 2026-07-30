@@ -1,0 +1,94 @@
+{
+  "$comment": "Branch node in exec chain — translator must reject (C++ does not support if/branch JSON→DSL).",
+  "asset_path": "/Game/__UeremcpTests/Blueprint_Translate/BP_Branch_Scratch.BP_Branch_Scratch",
+  "graph_id": "EventGraph",
+  "graph_name": "EventGraph",
+  "graph_type": "BlueprintEventGraph",
+  "schema_version": "1.0",
+  "engine_version": "5.8.0",
+  "content_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "entry_points": ["n_event"],
+  "nodes": [
+    {
+      "node_id": "n_event",
+      "semantic_type": "event:EventBeginPlay",
+      "node_class": "K2Node_Event",
+      "properties": { "type_id": "Event|ReceiveBeginPlay" },
+      "input_pins": [],
+      "output_pins": [
+        {
+          "pin_id": "p_then",
+          "name": "then",
+          "direction": "output",
+          "pin_type": { "category": "exec", "container": "none" },
+          "links": [{ "node_id": "n_branch", "pin_id": "p_exec" }]
+        }
+      ]
+    },
+    {
+      "node_id": "n_branch",
+      "semantic_type": "branch",
+      "node_class": "K2Node_IfThenElse",
+      "properties": { "type_id": "Utilities|FlowControl|Branch" },
+      "input_pins": [
+        {
+          "pin_id": "p_exec",
+          "name": "execute",
+          "direction": "input",
+          "pin_type": { "category": "exec", "container": "none" },
+          "links": [{ "node_id": "n_event", "pin_id": "p_then" }]
+        }
+      ],
+      "output_pins": [
+        {
+          "pin_id": "p_then_branch",
+          "name": "then",
+          "direction": "output",
+          "pin_type": { "category": "exec", "container": "none" },
+          "links": [{ "node_id": "n_print", "pin_id": "p_exec_print" }]
+        }
+      ]
+    },
+    {
+      "node_id": "n_print",
+      "semantic_type": "call_function",
+      "node_class": "K2Node_CallFunction",
+      "properties": { "type_id": "Development|PrintString" },
+      "defaults": { "InString": "then branch" },
+      "input_pins": [
+        {
+          "pin_id": "p_exec_print",
+          "name": "execute",
+          "direction": "input",
+          "pin_type": { "category": "exec", "container": "none" },
+          "links": [{ "node_id": "n_branch", "pin_id": "p_then_branch" }]
+        }
+      ],
+      "output_pins": []
+    }
+  ],
+  "links": [
+    {
+      "from_node": "n_event",
+      "from_pin": "then",
+      "to_node": "n_branch",
+      "to_pin": "execute",
+      "kind": "exec",
+      "valid": true
+    },
+    {
+      "from_node": "n_branch",
+      "from_pin": "then",
+      "to_node": "n_print",
+      "to_pin": "execute",
+      "kind": "exec",
+      "valid": true
+    }
+  ],
+  "extensions": {
+    "blueprint": {
+      "dsl": "(event EventBeginPlay\n  (if true\n    (Development|PrintString :InString \"then branch\")))"
+    }
+  }
+}

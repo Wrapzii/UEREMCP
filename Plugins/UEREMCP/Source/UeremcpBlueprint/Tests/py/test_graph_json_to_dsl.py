@@ -88,6 +88,19 @@ class GraphJsonToDslTests(unittest.TestCase):
                 node.setdefault("defaults", {})["InString"] = "changed"
         self.assertNotEqual(content_hash(a), content_hash(b))
 
+    def test_branch_if_rejected_without_extensions(self) -> None:
+        graph = load_fixture("translate_branch_if.fixture.json")
+        bare = {k: v for k, v in graph.items() if k != "extensions"}
+        with self.assertRaises(GraphJsonToDslError) as ctx:
+            translate_graph_json_to_dsl(bare)
+        self.assertIn("control-flow", str(ctx.exception).lower())
+
+    def test_branch_if_dsl_via_extensions_preferred(self) -> None:
+        graph = load_fixture("translate_branch_if.fixture.json")
+        dsl, lossy = resolve_write_dsl(graph)
+        self.assertIn("(if ", dsl)
+        self.assertEqual(lossy, [])
+
 
 if __name__ == "__main__":
     unittest.main()

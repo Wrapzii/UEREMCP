@@ -9,13 +9,15 @@ from pathlib import Path
 from schema_registry import graph_schema_validator
 
 
+from scratch_path_policy import is_blueprint_submit_scratch_path
+
+
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures"
-SCRATCH_PREFIX = "/Game/__UeremcpTests/"
 
 
 def is_scratch_asset_path(asset_path: str) -> bool:
     """Mirror FUeremcpBlueprintGraphWriter::IsScratchAssetPath."""
-    return asset_path.startswith(SCRATCH_PREFIX)
+    return is_blueprint_submit_scratch_path(asset_path)
 
 
 def resolve_dsl_from_graph(graph: dict) -> str | None:
