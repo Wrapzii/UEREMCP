@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `62a1107` (VisualTest T1a freshness PASS record)
+- **Current orchestration tip:** `8bc166e` (VisualTest T1a freshness PASS; A6/POC-B residual plan next)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: optional live VisualTest MCP `BENCHMARK_PROTOCOL` T1a freshness is no longer blocked — **PASS** after editor restart (see below). Material editor-filter PASS 11/11 on `7535e6c` remains the primary filter proof. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
+Residuals: optional live VisualTest MCP `BENCHMARK_PROTOCOL` T1a freshness is no longer blocked — **PASS** after editor restart (see below). Material editor-filter PASS 11/11 on `7535e6c` remains the primary filter proof. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. **A6 and overall POC-B remain unclaimed** — exact remaining checklist and owners: `docs/proposals/ws-01-a6-pocb-residual-plan.md`. No A6 / overall POC-B claim.
 
 ## Templates editor result and handoff
 
@@ -241,10 +241,11 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-07 | B7 PASS on `825e4f4`; no remaining B7 failure in this filter record. |
-| WS-08 | Material Toolset PASS 11/11 on `7535e6c`; no remaining Material editor-filter failure in this record. |
+| WS-06 | POC A / A6: deliver programmatic modify→re-read proof; Wave 2 Blueprint 4/4 is not A6. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`. |
+| WS-07 | B7 scaffold PASS on `825e4f4`; overall POC-B still requires B1–B10 fireball end-to-end. |
+| WS-08 | Material Toolset PASS 11/11 on `7535e6c`; no remaining Material editor-filter failure in this record. Support POC B material reuse/bind (B2/B4). |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Listed editor filters are green. Optional live VisualTest MCP T1a freshness is PASS after editor restart. Keep A6 / overall POC-B claims gated separately. |
+| WS-11 | Listed editor filters are green. Optional live VisualTest MCP T1a freshness is PASS after editor restart. Run/prove A6 and POC-B acceptance scenarios when WS-06/WS-07 ready. Keep A6 / overall POC-B claims gated separately. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Wave 2 listed editor filters are green: Material PASS 11/11 on `7535e6c`, Templates PASS 4/4 on `f15ea96`, and Niagara Create/Inspect/B7 green on their recorded proof tips. Optional live VisualTest MCP T1a freshness is also PASS (disk packages present). Remaining open items are acceptance gates outside this filter record: A6 and overall POC-B. No junction retarget.
+Wave 2 listed editor filters are green: Material PASS 11/11 on `7535e6c`, Templates PASS 4/4 on `f15ea96`, and Niagara Create/Inspect/B7 green on their recorded proof tips. Optional live VisualTest MCP T1a freshness is also PASS (disk packages present). Remaining acceptance gates: A6 (POC A criterion) and overall POC-B (B1–B10 beyond B7 scaffold) — see `docs/proposals/ws-01-a6-pocb-residual-plan.md`. No junction retarget.
