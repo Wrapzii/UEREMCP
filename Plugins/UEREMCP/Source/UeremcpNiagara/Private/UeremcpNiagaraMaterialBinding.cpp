@@ -7,6 +7,7 @@
 #include "UeremcpMaterialNiagaraExport.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
+#include "NiagaraMeshRendererProperties.h"
 #include "NiagaraSystem.h"
 
 #include "Materials/MaterialInterface.h"
@@ -101,6 +102,78 @@ namespace
 			OutCanonicalPath = Material->GetPathName();
 		}
 		return Material;
+	}
+
+	bool HasValidUserMaterialBindingCpp(const FNiagaraUserParameterBinding& Binding)
+	{
+		return Binding.Parameter.IsValid() && !Binding.Parameter.GetName().IsNone();
+	}
+
+	bool TryEnableMeshMaterialOverridesDirect(UNiagaraMeshRendererProperties* MeshProps)
+	{
+		if (!MeshProps || MeshProps->OverrideMaterials.Num() == 0)
+		{
+			return false;
+		}
+
+		if (MeshProps->bOverrideMaterials)
+		{
+			return true;
+		}
+
+		MeshProps->Modify();
+		MeshProps->bOverrideMaterials = true;
+		return true;
+	}
+
+	bool TrySetMeshExplicitMaterialDirect(
+		UNiagaraMeshRendererProperties* MeshProps,
+		UMaterialInterface* Material,
+		FString& OutConflict)
+	{
+		OutConflict.Reset();
+		if (!MeshProps || !Material)
+		{
+			OutConflict = TEXT("missing mesh renderer or material");
+			return false;
+		}
+
+		if (MeshProps->OverrideMaterials.Num() == 0)
+		{
+			OutConflict = TEXT("mesh renderer has no OverrideMaterials slots");
+			return false;
+		}
+
+		if (!MeshProps->bOverrideMaterials)
+		{
+			OutConflict = TEXT("mesh renderer bOverrideMaterials must be enabled before patching ExplicitMat");
+			return false;
+		}
+
+		for (const FNiagaraMeshMaterialOverride& Override : MeshProps->OverrideMaterials)
+		{
+			if (HasValidUserMaterialBindingCpp(Override.UserParamBinding))
+			{
+				OutConflict = TEXT("OverrideMaterials UserParamBinding wins over ExplicitMat");
+				return false;
+			}
+		}
+
+		MeshProps->Modify();
+		int32 PatchedSlots = 0;
+		for (FNiagaraMeshMaterialOverride& Override : MeshProps->OverrideMaterials)
+		{
+			Override.ExplicitMat = Material;
+			++PatchedSlots;
+		}
+
+		if (PatchedSlots == 0)
+		{
+			OutConflict = TEXT("no mesh override slots patched");
+			return false;
+		}
+
+		return true;
 	}
 }
 
@@ -629,17 +702,18 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			}
 			else
 			{
-				// Enable overrides in a separate SetRendererData call so ExplicitMat edit conditions
-				// evaluate against UNiagaraMeshRendererProperties, not FNiagaraMeshMaterialOverride
-				// (NiagaraMeshRendererProperties.h:70-74,227).
-				TSharedPtr<FJsonObject> EnableOverrides = MakeShared<FJsonObject>();
-				EnableOverrides->SetBoolField(TEXT("bOverrideMaterials"), true);
-				FNiagaraExt_RendererData EnableData;
-				EnableData.PropertyValues = SerializePropertyValuesJson(EnableOverrides);
-				UNiagaraExternalEditUtilities::SetRendererData(RendererRef, EnableData, Context);
-				++InOutInternalOperations;
+				UNiagaraRendererProperties* RendererProps = RendererRef.GetRenderer(Context, false);
+				UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(RendererProps);
+				if (!MeshProps)
+				{
+					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
+						TEXT("%s: renderer %d is not a mesh renderer"),
+						*Role,
+						Renderer.RendererIndex));
+					continue;
+				}
 
-				if (Context.HasErrors())
+				if (!TryEnableMeshMaterialOverridesDirect(MeshProps))
 				{
 					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
 						TEXT("%s: failed enabling mesh material overrides on renderer %d"),
@@ -647,20 +721,21 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 						Renderer.RendererIndex));
 					continue;
 				}
-
-				UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
 				++InOutInternalOperations;
-				PropertyValues = ParsePropertyValuesJson(RendererData.PropertyValues);
-				if (!PropertyValues.IsValid())
+
+				UMaterialInterface* Material = Cast<UMaterialInterface>(
+					FSoftObjectPath(CanonicalMaterialPath).TryLoad());
+				if (!Material)
 				{
 					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
-						TEXT("%s: renderer %d PropertyValues unreadable after enabling overrides"),
+						TEXT("%s: could not load material '%s' for renderer %d"),
 						*Role,
+						*CanonicalMaterialPath,
 						Renderer.RendererIndex));
 					continue;
 				}
 
-				bPatched = PatchMeshRendererMaterial(PropertyValues, CanonicalMaterialPath, Conflict);
+				bPatched = TrySetMeshExplicitMaterialDirect(MeshProps, Material, Conflict);
 			}
 
 			if (!bPatched)
@@ -673,19 +748,23 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 				continue;
 			}
 
-			FNiagaraExt_RendererData PatchedData;
-			PatchedData.PropertyValues = SerializePropertyValuesJson(PropertyValues);
-			UNiagaraExternalEditUtilities::SetRendererData(RendererRef, PatchedData, Context);
-			++InOutInternalOperations;
-
-			if (Context.HasErrors())
+			if (Kind == EUeremcpNiagaraRendererMaterialKind::Sprite
+				|| Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
 			{
-				OutResult.bAnyBindingFailedReread = true;
-				OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
-					TEXT("%s: SetRendererData failed for renderer %d"),
-					*Role,
-					Renderer.RendererIndex));
-				continue;
+				FNiagaraExt_RendererData PatchedData;
+				PatchedData.PropertyValues = SerializePropertyValuesJson(PropertyValues);
+				UNiagaraExternalEditUtilities::SetRendererData(RendererRef, PatchedData, Context);
+				++InOutInternalOperations;
+
+				if (Context.HasErrors())
+				{
+					OutResult.bAnyBindingFailedReread = true;
+					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
+						TEXT("%s: SetRendererData failed for renderer %d"),
+						*Role,
+						Renderer.RendererIndex));
+					continue;
+				}
 			}
 
 			const FString BindingKey = FString::Printf(
@@ -694,11 +773,25 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 				Renderer.RendererIndex);
 			OutResult.RendererBindingsApplied.Add(BindingKey);
 
-			FNiagaraExt_RendererData RereadData;
-			UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RereadData, Context);
-			++InOutInternalOperations;
+			bool bVerified = false;
+			if (Kind == EUeremcpNiagaraRendererMaterialKind::Mesh)
+			{
+				UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(
+					RendererRef.GetRenderer(Context, false));
+				bVerified = MeshRendererMaterialMatchesExpected(MeshProps, CanonicalMaterialPath);
+			}
+			else
+			{
+				FNiagaraExt_RendererData RereadData;
+				UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RereadData, Context);
+				++InOutInternalOperations;
+				bVerified = MaterialMatchesExpectedAfterReread(
+					RereadData.PropertyValues,
+					Kind,
+					CanonicalMaterialPath);
+			}
 
-			if (MaterialMatchesExpectedAfterReread(RereadData.PropertyValues, Kind, CanonicalMaterialPath))
+			if (bVerified)
 			{
 				OutResult.RendererBindingsVerified.Add(BindingKey);
 				bRoleVerified = true;
@@ -770,37 +863,94 @@ void FUeremcpNiagaraMaterialBinding::NormalizeMeshRendererOverrideFlags(
 			FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
 			RendererRef.RendererIndex = Renderer.RendererIndex;
 
-			FNiagaraExt_RendererData RendererData;
-			UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
-			++InOutInternalOperations;
-
-			TSharedPtr<FJsonObject> PropertyValues = ParsePropertyValuesJson(RendererData.PropertyValues);
-			if (!PropertyValues.IsValid())
+			UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(
+				RendererRef.GetRenderer(Context, false));
+			if (!MeshProps || MeshProps->bOverrideMaterials || MeshProps->OverrideMaterials.Num() == 0)
 			{
 				continue;
 			}
 
-			bool bAlreadyEnabled = false;
-			PropertyValues->TryGetBoolField(TEXT("bOverrideMaterials"), bAlreadyEnabled);
-			if (bAlreadyEnabled)
+			if (TryEnableMeshMaterialOverridesDirect(MeshProps))
 			{
-				continue;
+				++InOutInternalOperations;
 			}
-
-			const TArray<TSharedPtr<FJsonValue>>* Overrides = nullptr;
-			if (!PropertyValues->TryGetArrayField(TEXT("OverrideMaterials"), Overrides)
-				|| !Overrides
-				|| Overrides->Num() == 0)
-			{
-				continue;
-			}
-
-			FNiagaraExt_RendererData EnableOnly;
-			TSharedPtr<FJsonObject> EnableJson = MakeShared<FJsonObject>();
-			EnableJson->SetBoolField(TEXT("bOverrideMaterials"), true);
-			EnableOnly.PropertyValues = SerializePropertyValuesJson(EnableJson);
-			UNiagaraExternalEditUtilities::SetRendererData(RendererRef, EnableOnly, Context);
-			++InOutInternalOperations;
 		}
 	}
+}
+
+TSharedPtr<FJsonObject> FUeremcpNiagaraMaterialBinding::BuildMeshRendererObservabilityPropertyValues(
+	UNiagaraMeshRendererProperties* MeshProps)
+{
+	if (!MeshProps)
+	{
+		return nullptr;
+	}
+
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+	Root->SetBoolField(TEXT("bOverrideMaterials"), MeshProps->bOverrideMaterials != 0);
+
+	TArray<TSharedPtr<FJsonValue>> Overrides;
+	for (const FNiagaraMeshMaterialOverride& Override : MeshProps->OverrideMaterials)
+	{
+		TSharedPtr<FJsonObject> Slot = MakeShared<FJsonObject>();
+		if (Override.ExplicitMat)
+		{
+			Slot->SetObjectField(TEXT("ExplicitMat"), MakeMaterialRefObject(Override.ExplicitMat->GetPathName()));
+		}
+
+		if (HasValidUserMaterialBindingCpp(Override.UserParamBinding))
+		{
+			TSharedPtr<FJsonObject> Binding = MakeShared<FJsonObject>();
+			TSharedPtr<FJsonObject> Parameter = MakeShared<FJsonObject>();
+			Parameter->SetStringField(
+				TEXT("Name"),
+				Override.UserParamBinding.Parameter.GetName().ToString());
+			Binding->SetObjectField(TEXT("Parameter"), Parameter);
+			Slot->SetObjectField(TEXT("UserParamBinding"), Binding);
+		}
+
+		Overrides.Add(MakeShared<FJsonValueObject>(Slot));
+	}
+
+	Root->SetArrayField(TEXT("OverrideMaterials"), Overrides);
+	return Root;
+}
+
+FString FUeremcpNiagaraMaterialBinding::ExtractMaterialPathFromMeshRenderer(
+	UNiagaraMeshRendererProperties* MeshProps)
+{
+	if (!MeshProps)
+	{
+		return FString();
+	}
+
+	for (const FNiagaraMeshMaterialOverride& Override : MeshProps->OverrideMaterials)
+	{
+		if (Override.ExplicitMat)
+		{
+			return Override.ExplicitMat->GetPathName();
+		}
+	}
+
+	return FString();
+}
+
+bool FUeremcpNiagaraMaterialBinding::MeshRendererMaterialMatchesExpected(
+	UNiagaraMeshRendererProperties* MeshProps,
+	const FString& ExpectedCanonicalPath)
+{
+	if (!MeshProps)
+	{
+		return false;
+	}
+
+	for (const FNiagaraMeshMaterialOverride& Override : MeshProps->OverrideMaterials)
+	{
+		if (Override.ExplicitMat && Override.ExplicitMat->GetPathName() == ExpectedCanonicalPath)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

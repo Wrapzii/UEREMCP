@@ -10,6 +10,7 @@
 #include "UeremcpEnvelope.h"
 
 struct FNiagaraExternalEditContext;
+class UNiagaraMeshRendererProperties;
 class UNiagaraSystem;
 
 /** One specification.materials entry. */
@@ -112,6 +113,22 @@ public:
 		UNiagaraSystem* System,
 		FNiagaraExternalEditContext& Context,
 		int32& InOutInternalOperations);
+
+	/**
+	 * Mesh renderer inspect/bind path that avoids GetRendererData/SetRendererData.
+	 * GetAllObjectProperties evaluates FNiagaraMeshMaterialOverride::ExplicitMat edit
+	 * conditions in struct scope and LogErrors on bOverrideMaterials
+	 * [VERIFIED: NiagaraMeshRendererProperties.h:70-74,227,273-274].
+	 */
+	static TSharedPtr<FJsonObject> BuildMeshRendererObservabilityPropertyValues(
+		UNiagaraMeshRendererProperties* MeshProps);
+
+	static FString ExtractMaterialPathFromMeshRenderer(
+		UNiagaraMeshRendererProperties* MeshProps);
+
+	static bool MeshRendererMaterialMatchesExpected(
+		UNiagaraMeshRendererProperties* MeshProps,
+		const FString& ExpectedCanonicalPath);
 
 	static bool MaterialMatchesExpectedAfterReread(
 		const FString& PropertyValuesJson,

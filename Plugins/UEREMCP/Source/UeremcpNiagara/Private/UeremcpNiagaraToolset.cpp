@@ -9,7 +9,11 @@
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraMaterialBindingDiagnostics.h"
 #include "UeremcpNiagaraPocBGates.h"
+#include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraRoundTrip.h"
+
+#include "NiagaraSystem.h"
+#include "UObject/SoftObjectPath.h"
 
 FString UUeremcpNiagaraToolset::Echo(const FString& RequestJson)
 {
@@ -247,6 +251,17 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	const bool bRanRoundTrip = Request.bValidate
 		&& !Request.bDryRun
 		&& FUeremcpNiagaraRoundTrip::ValidateCreateResult(Request, CreateResult, RoundTripResult);
+
+	if (!Request.bDryRun && !CreateResult.CreatedAssetPath.IsEmpty())
+	{
+		// Post-create inspect (validate:true) still needs live MeshRendererInfo DIs; release
+		// transient referencers before the caller deletes the probe asset.
+		if (UNiagaraSystem* CreatedSystem = Cast<UNiagaraSystem>(
+			FSoftObjectPath(CreateResult.CreatedAssetPath).TryLoad()))
+		{
+			UeremcpNiagaraProbeAssets::ReleaseExternalReferences(CreatedSystem);
+		}
+	}
 
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;

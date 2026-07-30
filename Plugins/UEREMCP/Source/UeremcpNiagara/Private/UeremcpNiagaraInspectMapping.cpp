@@ -3,7 +3,9 @@
 #include "UeremcpNiagaraInspectMapping.h"
 
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraMaterialBinding.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
+#include "NiagaraMeshRendererProperties.h"
 #include "NiagaraSystem.h"
 
 #include "Serialization/JsonReader.h"
@@ -164,31 +166,67 @@ TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererExten
 		FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
 		RendererRef.RendererIndex = Renderer.RendererIndex;
 
-		FNiagaraExt_RendererData RendererData;
-		UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
-		++InOutInternalOperations;
-		bOutFetchedPropertyValues = true;
+		const FString RendererClassPath = Renderer.RendererClass
+			? Renderer.RendererClass->GetPathName()
+			: FString();
+		const EUeremcpNiagaraRendererMaterialKind Kind =
+			FUeremcpNiagaraMaterialBinding::ClassifyRenderer(RendererClassPath);
 
-		if (!RendererData.PropertyValues.IsEmpty())
+		if (Kind == EUeremcpNiagaraRendererMaterialKind::Mesh)
 		{
-			TSharedPtr<FJsonObject> ParsedValues;
-			const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(RendererData.PropertyValues);
-			if (FJsonSerializer::Deserialize(Reader, ParsedValues) && ParsedValues.IsValid())
+			UNiagaraMeshRendererProperties* MeshProps = Cast<UNiagaraMeshRendererProperties>(
+				RendererRef.GetRenderer(Context, false));
+			if (MeshProps)
 			{
-				RendererObj->SetObjectField(TEXT("property_values"), ParsedValues);
-			}
-			else
-			{
-				RendererObj->SetStringField(TEXT("property_values_json"), RendererData.PropertyValues);
-			}
+				++InOutInternalOperations;
+				bOutFetchedPropertyValues = true;
 
-			const FString MaterialPath = TryExtractMaterialPath(RendererData.PropertyValues);
-			if (!MaterialPath.IsEmpty())
+				const TSharedPtr<FJsonObject> PropertyValues =
+					FUeremcpNiagaraMaterialBinding::BuildMeshRendererObservabilityPropertyValues(MeshProps);
+				if (PropertyValues.IsValid())
+				{
+					RendererObj->SetObjectField(TEXT("property_values"), PropertyValues);
+				}
+
+				const FString MaterialPath =
+					FUeremcpNiagaraMaterialBinding::ExtractMaterialPathFromMeshRenderer(MeshProps);
+				if (!MaterialPath.IsEmpty())
+				{
+					RendererObj->SetStringField(TEXT("material_path"), MaterialPath);
+					RendererObj->SetStringField(
+						TEXT("material_path_fidelity"),
+						TEXT("extracted_from_mesh_renderer_fields_not_validated"));
+				}
+			}
+		}
+		else
+		{
+			FNiagaraExt_RendererData RendererData;
+			UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
+			++InOutInternalOperations;
+			bOutFetchedPropertyValues = true;
+
+			if (!RendererData.PropertyValues.IsEmpty())
 			{
-				RendererObj->SetStringField(TEXT("material_path"), MaterialPath);
-				RendererObj->SetStringField(
-					TEXT("material_path_fidelity"),
-					TEXT("extracted_from_property_values_not_validated"));
+				TSharedPtr<FJsonObject> ParsedValues;
+				const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(RendererData.PropertyValues);
+				if (FJsonSerializer::Deserialize(Reader, ParsedValues) && ParsedValues.IsValid())
+				{
+					RendererObj->SetObjectField(TEXT("property_values"), ParsedValues);
+				}
+				else
+				{
+					RendererObj->SetStringField(TEXT("property_values_json"), RendererData.PropertyValues);
+				}
+
+				const FString MaterialPath = TryExtractMaterialPath(RendererData.PropertyValues);
+				if (!MaterialPath.IsEmpty())
+				{
+					RendererObj->SetStringField(TEXT("material_path"), MaterialPath);
+					RendererObj->SetStringField(
+						TEXT("material_path_fidelity"),
+						TEXT("extracted_from_property_values_not_validated"));
+				}
 			}
 		}
 

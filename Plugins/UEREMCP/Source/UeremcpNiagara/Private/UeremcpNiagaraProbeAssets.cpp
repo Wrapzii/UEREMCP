@@ -11,6 +11,7 @@
 #include "ObjectTools.h"
 #include "UObject/GarbageCollection.h"
 #include "UObject/SoftObjectPath.h"
+#include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
 
 namespace
@@ -61,8 +62,15 @@ namespace
 			{
 				// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceMeshRendererInfo.h:38]
 				DI->OnMeshRendererChanged(nullptr);
-				// Delete-only: destroy transient DIs so probe packages can unload. Do not call
-				// during create — emitter scripts still reference these until inspect finishes.
+				// OnMeshRendererChanged(nullptr) removes delegates but leaves MeshRenderer set;
+				// clear the property so ForceDeleteObjects does not see an external referencer.
+				// [VERIFIED: NiagaraDataInterfaceMeshRendererInfo.h:72, NiagaraDataInterfaceMeshRendererInfo.cpp:122-137]
+				if (FObjectProperty* MeshRendererProp = FindFProperty<FObjectProperty>(
+					UNiagaraDataInterfaceMeshRendererInfo::StaticClass(),
+					TEXT("MeshRenderer")))
+				{
+					MeshRendererProp->SetObjectPropertyValue_InContainer(DI, nullptr);
+				}
 				DI->ConditionalBeginDestroy();
 			}
 		}
