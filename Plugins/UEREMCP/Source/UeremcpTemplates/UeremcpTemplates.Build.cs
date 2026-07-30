@@ -17,6 +17,7 @@ public class UeremcpTemplates : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			"Engine",
 			"JsonUtilities",
 			"Projects",
 			"ToolsetRegistry",
