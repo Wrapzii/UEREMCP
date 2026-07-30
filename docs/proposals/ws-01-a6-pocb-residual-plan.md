@@ -1,6 +1,6 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `41f4f82` (WS-11 reproducible metrics-gap handoff landed; residual commit follows)
+- **Orch tip at writing:** `f295eb8` (WS-07 timing metrics + primitive sequence landed; residual commit follows)
 - **Date:** 2026-07-30
 - **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11. Post-UV editor fireball B2–B9 and B8 restart PASS. Post-`d07f8f1` MCP fireball proves **B1** and **B6**. WS-11 B10 proof `01b257e` landed, but Validation does not compile on UE 5.8 (`FLevelEditorViewportClient*` assigned to unrelated `FEditorViewportClient*`; `GetViewport` absent there) `[VERIFIED-RUNTIME: UeremcpValidation build on 2026-07-30]`, so no B10 runtime proof exists. Complete metrics/baseline also remain open. **No overall POC-B claim.**
 
@@ -164,6 +164,7 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Trail MainTexture UV + master package release | `cf7e6d3` (`2187d69`) | WS-08 UV pin fix; Material rebuilt; post-UV fireball and B8 later passed |
 | Ribbon_trail proposal closed | `5ec7e02` (`ff648ab`) | Documents WS-08 `2187d69` as the durable trail fix; not a POC-B claim |
 | MCP B1 fixture + B10 honesty/handoffs | `40cb2a5` (`07f81f5`) | Canonical `poc_b_mcp_fireball_request.json`; `B10_visible_render: null`; WS-11 B1/B10 work remains |
+| Niagara `metrics.timing_ms` + primitive baseline sequence | `f295eb8` (`b623084`) | Timing stages built; proposal defines sequence only and invents no baseline count; MCP/baseline reruns pending |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
@@ -268,7 +269,8 @@ Remaining blockers for an **overall** claim:
    runtime; B10 remains unproven
 2. **Global POC metrics** — wall-clock, total tokens, and equivalent primitive-call
    baseline not fully recorded (round trips, internal ops, and the 2.319s
-   server-side lower bound are insufficient)
+   server-side lower bound are insufficient). Timing instrumentation is now built,
+   but has not yet been rerun through MCP.
 
 No other B1–B9 gap is currently open. Do not claim overall POC B until both
 remainders pass.
@@ -297,7 +299,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | Fix B10 filter's UE 5.8 viewport-client compile errors; rebuild and run | WS-11 | Harness unit tests PASS 3/3; runtime filter unavailable until Validation compiles |
-| P0 | Complete POC-B metrics: wall time, tokens, equivalent primitive-call baseline | WS-07 + WS-11 / WS-14 | `41f4f82` records 1 round trip, 46 ops, and a 2.319s server lower bound; fresh equivalent trials still required |
+| P0 | Rerun MCP to capture `metrics.timing_ms`, then run equivalent baseline trials | WS-11 + WS-07 / WS-14 | `f295eb8` adds timing instrumentation and a sequence only (no invented count); Niagara rebuilt |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; POC-B entry still open |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
 

@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `41f4f82` (metrics-gap handoff landed; B10 Validation build blocked)
+- **Current orchestration tip:** `f295eb8` (Niagara timing metrics landed/rebuilt; B10 Validation build blocked)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -198,7 +198,10 @@ B10 remains unproven; WS-11's fix/rebuild/run is in flight. Metrics handoff
 `41f4f82` records MCP round trips=1, internal operations=46, and a reproducible
 2.319s server-side lower bound that must **not** be reported as wall time. Client
 wall-clock, total tokens, and the measured equivalent primitive baseline remain
-open for the WS-07/WS-11/WS-14 rerun handoff.
+open for the WS-07/WS-11/WS-14 rerun handoff. WS-07 `b623084` landed as
+`f295eb8`, adding `metrics.timing_ms` stages and a primitive baseline **sequence**
+without inventing counts. Niagara rebuilt successfully; the MCP timing and
+equivalent baseline trials have not yet run.
 
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
@@ -428,7 +431,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Fix the B10 UE 5.8 compile errors, rebuild Validation, run the filter, then complete metrics/baseline. |
+| WS-11 | Fix/run B10; rerun MCP for `timing_ms`; execute the WS-07 primitive sequence with WS-14 metrics capture. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
 **Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS. B10 filter is build-blocked; complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
