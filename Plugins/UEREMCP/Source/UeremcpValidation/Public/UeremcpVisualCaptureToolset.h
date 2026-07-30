@@ -8,8 +8,10 @@
 
 /**
  * Captures an existing Niagara system; it does not author or compile assets.
- * Scene-capture and simulation primitives remain internal so one MCP call returns
- * the complete frame series and machine-readable pixel evidence.
+ *
+ * Use when: "show me what it looks like", visual proof, pixel evidence frames.
+ * Prefer this over ad-hoc screenshots when the UEREMCP validation toolset is registered.
+ * Do not use for: creating Niagara/materials — author first, then capture.
  */
 UCLASS()
 class UEREMCPVALIDATION_API UUeremcpVisualCaptureToolset : public UToolsetDefinition
@@ -17,15 +19,20 @@ class UEREMCPVALIDATION_API UUeremcpVisualCaptureToolset : public UToolsetDefini
 	GENERATED_BODY()
 
 public:
-	virtual FString GetToolsetVersion() const override { return TEXT("0.1.0"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.1.1-intent-vocab"); }
 
 	/**
-	 * Build a transient stage in the editor world, deterministically step the
-	 * target Niagara system, export PNG frames under Saved/UEREMCP/VfxCapture,
-	 * reread every exported file, and remove all spawned actors.
+	 * Capture deterministic PNG frames of an existing Niagara system for visual review.
+	 *
+	 * Use when: show me what the effect looks like; pixel deltas vs empty stage.
+	 * Inputs: action=capture_effect_frames, target.asset_path, options.validate=true;
+	 * specification.frame_count optional.
+	 * Outputs: frame paths under Saved/UEREMCP/VfxCapture + numeric deltas.
+	 * Do not use for: authoring assets; HighResShot-only workflows when this tool exists.
+	 * Next tool: GetJobResult once if cold renderer returns partially_completed.
 	 *
 	 * This verifies that pixels changed against the empty-stage baseline. It does
-	 * not judge appearance or prove that the source Niagara asset compiles.
+	 * not judge appearance quality or prove that the source Niagara asset compiles.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Validation")
 	static FString CaptureEffectFrames(const FString& RequestJson);

@@ -13,8 +13,9 @@
 /**
  * Blueprint-domain UEREMCP toolset (ADR-0002).
  *
- * One UToolsetDefinition subclass hosting static AICallable UFUNCTIONs. Registration is
- * explicit via UToolsetRegistry::RegisterToolsetClass
+ * Prefer ReadGraph / SubmitGraph over Epic BlueprintTools pin/node loops.
+ * Use ResolveIntent if unsure which tool. Registration via
+ * UToolsetRegistry::RegisterToolsetClass
  * [VERIFIED: $TR/.../Public/ToolsetRegistry/UToolsetRegistry.h:28]
  */
 UCLASS(BlueprintType)
@@ -24,10 +25,12 @@ class UEREMCPBLUEPRINT_API UUeremcpBlueprintToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.1.0"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.1.1-intent-vocab"); }
 
 	/**
 	 * Liveness probe for the Blueprint domain module.
+	 * Use when: confirming Blueprint toolset registration.
+	 * Do not use for: reading or writing graphs.
 	 * @return Response envelope JSON (protocol_version, status, summary, metrics).
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
@@ -35,7 +38,8 @@ public:
 
 	/**
 	 * Parses a request envelope and echoes understood fields inside a response envelope.
-	 * Exercises the single FString parameter path (RB-03 q6) without touching assets.
+	 * Use when: validating envelope shape without touching assets.
+	 * Do not use for: production graph work.
 	 *
 	 * @param RequestJson Request envelope JSON (schemas/envelope/request.schema.json).
 	 * @return Response envelope JSON. Malformed input yields status "rejected".
@@ -44,7 +48,14 @@ public:
 	static FString Echo(const FString& RequestJson);
 
 	/**
-	 * action=read_graph — one MCP call returns graph JSON (ADR-0004) + diagnostics.
+	 * Read a complete Blueprint graph (ADR-0004) + diagnostics in one call.
+	 *
+	 * Use when: inspect EventGraph / function graphs; capture revision before edits;
+	 * "add logic" discovery step.
+	 * Inputs: action=read_graph, target.asset_path; options.response_detail=complete.
+	 * Outputs: graph JSON + diagnostics + revision.
+	 * Do not use for: pin-by-pin BlueprintTools loops.
+	 * Next tool: SubmitGraph with expected_revision after editing the JSON.
 	 *
 	 * @param RequestJson Request envelope; target.asset_path required.
 	 * @return Response envelope with diagnostics.graphs at response_detail complete.
@@ -53,12 +64,16 @@ public:
 	static FString ReadGraph(const FString& RequestJson);
 
 	/**
-	 * action=submit_graph — validates unchanged replace submissions and revision conflicts.
+	 * Replace a Blueprint graph from complete JSON (action=submit_graph, mode=replace).
+	 *
+	 * Use when: write blueprint logic (e.g. when the spell hits) from complete graph state.
+	 * Inputs: action=submit_graph, mode=replace, target.asset_path, expected_revision,
+	 * specification.graph; prefer options.dry_run first; idempotency_key recommended.
+	 * Outputs: modified_and_validated only after compile/save/re-read evidence.
+	 * Do not use for: create_node/connect_pins chains.
+	 * Next tool: ReadGraph to verify; on revision conflict re-read then resubmit.
 	 *
 	 * MCP toolset: UeremcpBlueprint.UeremcpBlueprintToolset
-	 * MCP tool: SubmitGraph
-	 * Argument: requestJson containing action=submit_graph and mode=replace.
-	 * Changed replace is native C++ and does not require PythonScriptPlugin.
 	 * [VERIFIED-RUNTIME: user-unreal-mcp list_toolsets, 2026-07-30]
 	 * [VERIFIED: UeremcpBlueprintEpicBridge.cpp:194-323]
 	 */

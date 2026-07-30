@@ -13,9 +13,8 @@
 /**
  * Agent-facing material operations for UEREMCP.
  *
- * Per ADR-0002 one UToolsetDefinition per domain. Primitives from MaterialTools.*
- * are internalised via execute_tool_script batching; agents see goal-level actions
- * such as create_vfx_material.
+ * Prefer CreateVfxMaterial / CreateProceduralTexture over Epic MaterialTools
+ * expression graphs for VFX materials. Use ResolveIntent if unsure.
  */
 UCLASS()
 class UEREMCPMATERIAL_API UUeremcpMaterialToolset : public UToolsetDefinition
@@ -24,10 +23,13 @@ class UEREMCPMATERIAL_API UUeremcpMaterialToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.2.1-plan-handler"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.2.2-intent-vocab"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.
+	 *
+	 * Use when: validating the Material module envelope path.
+	 * Do not use for: creating materials or textures.
 	 *
 	 * @param RequestJson  Request envelope (schemas/envelope/request.schema.json).
 	 */
@@ -35,11 +37,14 @@ public:
 	static FString Echo(const FString& RequestJson);
 
 	/**
-	 * Create or update a VFX material instance from element templates.
+	 * Create or update a VFX material (elemental projectile core/trail, fresnel, color).
 	 *
-	 * Wave 2 slice: elemental_projectile_core|trail (+ fireball aliases) under
-	 * /Game/__UeremcpTests/. Ensures minimal master, creates MI, applies element
-	 * defaults + modifiers, recompiles parent, re-reads parameters for validation.
+	 * Use when: make a VFX/shader material, change fireball color/orange tint, translucent FX mats.
+	 * Inputs: action=create_vfx_material, target.asset_path, specification element/role;
+	 * prefer options.dry_run + validate=true; idempotency_key recommended.
+	 * Outputs: created/modified statuses with parameter re-read when validate=true.
+	 * Do not use for: MaterialTools expression graphs; MaterialInstanceConstant authoring gaps.
+	 * Next tool: CreateNiagaraEffect to bind the material into an effect.
 	 *
 	 * @param RequestJson  Request with action create_vfx_material and target.asset_path set.
 	 */
@@ -47,7 +52,11 @@ public:
 	static FString CreateVfxMaterial(const FString& RequestJson);
 
 	/**
-	 * Generate a procedural Texture2D under /Game/__UeremcpTests/ via FImageUtils::CreateTexture2D.
+	 * Generate a procedural Texture2D (noise, dissolve masks) under /Game/__UeremcpTests/.
+	 *
+	 * Use when: tileable noise/mask textures for VFX materials.
+	 * Do not use for: full material graphs — use CreateVfxMaterial.
+	 * Next tool: CreateVfxMaterial referencing the texture path.
 	 *
 	 * @param RequestJson  Request with action create_procedural_texture and target.asset_path set.
 	 */
