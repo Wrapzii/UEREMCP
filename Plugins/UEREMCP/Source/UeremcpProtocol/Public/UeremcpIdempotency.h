@@ -18,6 +18,12 @@ public:
 	/** Look up a stored response. Returns true if present. */
 	bool TryGet(const FString& Key, FString& OutResponseJson) const;
 
+	/**
+	 * Replay path (ADR-0006): stored response JSON with metrics.replayed=true and
+	 * request_id reflecting the current attempt. Performs no domain work.
+	 */
+	bool TryGetReplay(const FString& Key, const FString& RequestId, FString& OutResponseJson) const;
+
 	/** Record a completed response. Empty keys are ignored. */
 	void Put(const FString& Key, const FString& ResponseJson);
 
