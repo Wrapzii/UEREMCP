@@ -9,8 +9,8 @@
   "properties": {
     "generate": {
       "type": "string",
-      "enum": ["noise", "gradient", "voronoi", "ring_mask", "flow_map"],
-      "description": "Procedural generator kind. flow_map uses TC_VectorDisplacementmap; noise/voronoi use TC_Grayscale."
+      "enum": ["noise", "gradient", "voronoi", "ring_mask", "flow_map", "flipbook_atlas"],
+      "description": "Procedural generator kind. flow_map uses TC_VectorDisplacementmap; noise/voronoi use TC_Grayscale. flipbook_atlas is a scaffold — assembly returns partially_completed until grid slice fill is implemented."
     },
     "dimensions": {
       "type": "array",
@@ -23,6 +23,17 @@
     "seed": {
       "type": "integer",
       "description": "Deterministic seed. When omitted, defaults to CRC32 of target.asset_path."
+    },
+    "flipbook": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Required when generate is flipbook_atlas. Grid layout for future atlas assembly.",
+      "properties": {
+        "columns": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "rows": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "frame_count": { "type": "integer", "minimum": 1, "description": "Active frames; defaults to columns * rows when omitted." }
+      },
+      "required": ["columns", "rows"]
     }
   },
   "examples": [
@@ -38,6 +49,11 @@
     {
       "generate": "ring_mask",
       "dimensions": [512, 512]
+    },
+    {
+      "generate": "flipbook_atlas",
+      "dimensions": [512, 512],
+      "flipbook": { "columns": 4, "rows": 4, "frame_count": 16 }
     }
   ]
 }

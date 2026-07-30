@@ -66,9 +66,9 @@ Elemental VFX materials use **one tooling surface** (`create_vfx_material`) with
 Masters are named `{M_Ueremcp_ProjCore|ProjTrail}_{FeatureSignature}` so graph variants do not collide.
 Purpose defaults live in `element_presets.v1.json` → `purpose_default_features` (loaded at runtime with C++ fallback).
 
-Not yet wired: engine MaterialFunctions.
+Not yet wired: engine MaterialFunctions (see `docs/proposals/ws-08-material-function-composition.md`).
 
-`textures.generate` slots (`noise`, `gradient`, `voronoi`, `ring_mask`, `flow_map`) execute via `create_procedural_texture` and bind to MI texture parameters (`MainTexture`, `NoiseTexture`, `FlowMap`, `MaskTexture`).
+`textures.generate` slots (`noise`, `gradient`, `voronoi`, `ring_mask`, `flow_map`) execute via `create_procedural_texture` and bind to MI texture parameters (`MainTexture`, `NoiseTexture`, `FlowMap`, `MaskTexture`). `flipbook_atlas` is a **scaffold** — parses grid spec, returns `partially_completed` (no pixel assembly yet).
 
 ## Epic tool composition (implementation note)
 

@@ -31,6 +31,15 @@ SUPPORTED_GENERATE_KINDS = frozenset({
     "voronoi",
     "ring_mask",
     "flow_map",
+    "flipbook_atlas",
+})
+
+IMPLEMENTED_GENERATE_KINDS = frozenset({
+    "noise",
+    "gradient",
+    "voronoi",
+    "ring_mask",
+    "flow_map",
 })
 
 
@@ -64,6 +73,24 @@ class ProceduralTextureSchemaTests(unittest.TestCase):
     def test_generate_enum_matches_cpp_surface(self) -> None:
         enum_values = frozenset(self.schema["properties"]["generate"]["enum"])
         self.assertEqual(enum_values, SUPPORTED_GENERATE_KINDS)
+
+    def test_implemented_kinds_are_cpp_subset(self) -> None:
+        cpp = (
+            REPO_ROOT
+            / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpProceduralTextureService.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("IsImplementedGenerateKind", cpp)
+        self.assertIn("flipbook_atlas", cpp)
+        self.assertTrue(IMPLEMENTED_GENERATE_KINDS <= SUPPORTED_GENERATE_KINDS)
+        self.assertNotIn("flipbook_atlas", IMPLEMENTED_GENERATE_KINDS)
+
+    def test_flipbook_atlas_example_validates(self) -> None:
+        example = {
+            "generate": "flipbook_atlas",
+            "dimensions": [512, 512],
+            "flipbook": {"columns": 4, "rows": 4, "frame_count": 16},
+        }
+        self.validator.validate(example)
 
     def test_create_vfx_material_flow_map_slot_validates(self) -> None:
         vfx_schema = json.loads(

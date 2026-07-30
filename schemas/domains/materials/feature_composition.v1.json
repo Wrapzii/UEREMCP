@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/materials/feature_composition.v1.json",
+  "title": "Material feature composition strategies (WS-08)",
+  "description": "Maps specification.features tokens to composition strategy. Phase A skeleton — engine MaterialFunction paths are placeholders until WS-02 AssetRegistry audit fills them. See docs/proposals/ws-08-material-function-composition.md.",
+  "version": "1.0",
+  "strategies": {
+    "engine_material_function": "Compose via UMaterialExpressionMaterialFunctionCall when audit confirms MF path",
+    "project_material_function": "Compose via /Game/__UeremcpTests/Materials/Functions/MF_Ueremcp_*",
+    "expression_fallback": "UeremcpMaterialFeatureGraph raw expression wiring (current)",
+    "unimplemented": "Surface capability_notes; partially_completed on modify"
+  },
+  "features": {
+    "radial_falloff": { "strategy": "expression_fallback", "notes": "SphereMask expression wired in feature_graph_v1" },
+    "animated_noise": { "strategy": "expression_fallback", "notes": "MaterialExpressionNoise wired in feature_graph_v1" },
+    "fresnel": { "strategy": "expression_fallback", "engine_material_function_path": null },
+    "erosion": { "strategy": "expression_fallback" },
+    "depth_fade": { "strategy": "expression_fallback", "engine_material_function_path": null },
+    "distortion": { "strategy": "expression_fallback", "notes": "BumpOffset UV parallax — not engine MF refraction" },
+    "panning_textures": { "strategy": "expression_fallback" },
+    "flow_maps": { "strategy": "expression_fallback" },
+    "flipbook_subuv": { "strategy": "expression_fallback", "notes": "SubUV sample wired; atlas assembly separate" },
+    "dynamic_color": { "strategy": "expression_fallback" },
+    "dynamic_intensity": { "strategy": "expression_fallback" }
+  }
+}
