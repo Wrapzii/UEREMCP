@@ -1,9 +1,9 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `d57f09d` (`[WS-07] Resolve mesh renderers via exported Niagara APIs`)
+- **Current orchestration tip:** `81d11dc` (`[WS-07] Stop GetSystemDependencies from serializing mesh DI inputs`)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `d57f09d`
+- **Latest Niagara re-run tip:** `81d11dc`
 - **Latest Material re-run tip:** `c881742`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
@@ -29,6 +29,14 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Revision-hash mismatch / hash alignment | **PASS** | `UeremcpBlueprint.Toolset.ReadGraphRoundTrip`, same log: `Test Completed. Result={Success}` at line 2999. The test asserts graph `content_hash == revision` and summary revision equals complete revision. |
 
 No additional rerun was needed because the exact proof tip remains an ancestor of the current lineage and the Blueprint module/test sources are unchanged since that proof.
+
+## Update on tip `81d11dc` (WS-11 Niagara B7 re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **FAIL, assertion_failure** | WS-07 | The dependency-survey replacement was insufficient: the same `bOverrideMaterials` EditCondition `LogError` remains the sole failure. Not a B7 / POC-B completion claim. |
+
+Standing by for the next WS-07 fix.
 
 ## Update on tip `d57f09d` (WS-11 Niagara B7 re-run)
 
@@ -144,4 +152,4 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
 | WS-11 | Re-run B7 after WS-07 fix; keep POC-B claims gated to their own criteria. |
 
-Standing by on orch for the final WS-07 B7 EditCondition fix. No junction retarget.
+Standing by on orch for the next WS-07 B7 EditCondition fix. No junction retarget.
