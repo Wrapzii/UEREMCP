@@ -1,6 +1,7 @@
 #include "UeremcpSpellPlanner.h"
 
 #include "Dom/JsonValue.h"
+#include "Misc/PackageName.h"
 
 namespace
 {
@@ -20,6 +21,32 @@ bool RejectUnknownFields(
 		if (!Allowed.Contains(Pair.Key))
 		{
 			OutError = FString::Printf(TEXT("%s contains unknown field '%s'"), *Context, *Pair.Key);
+			return false;
+		}
+	}
+	return true;
+}
+
+bool ValidateFieldTypes(
+	const TSharedPtr<FJsonObject>& Object,
+	const TMap<FString, EJson>& ExpectedTypes,
+	const FString& Context,
+	FString& OutError)
+{
+	if (!Object.IsValid())
+	{
+		return true;
+	}
+
+	for (const TPair<FString, EJson>& Expected : ExpectedTypes)
+	{
+		const TSharedPtr<FJsonValue>* Value = Object->Values.Find(Expected.Key);
+		if (Value && (!Value->IsValid() || (*Value)->Type != Expected.Value))
+		{
+			OutError = FString::Printf(
+				TEXT("%s.%s has the wrong JSON type"),
+				*Context,
+				*Expected.Key);
 			return false;
 		}
 	}
@@ -90,6 +117,30 @@ bool IsStableName(const FString& Value)
 	return true;
 }
 
+FString StableLineIdFromElement(const FString& Element)
+{
+	FString Result;
+	bool bPreviousUnderscore = false;
+	for (const TCHAR Character : Element)
+	{
+		const bool bIsNameCharacter = FChar::IsAlnum(Character);
+		const TCHAR Output = bIsNameCharacter ? FChar::ToLower(Character) : TEXT('_');
+		if (Output != TEXT('_') || !bPreviousUnderscore)
+		{
+			Result.AppendChar(Output);
+		}
+		bPreviousUnderscore = Output == TEXT('_');
+	}
+	while (Result.RemoveFromEnd(TEXT("_")))
+	{
+	}
+	if (Result.IsEmpty() || !FChar::IsAlpha(Result[0]))
+	{
+		Result = TEXT("element_") + Result;
+	}
+	return Result.Left(64);
+}
+
 void AddDependencyIfPresent(
 	const TSharedPtr<FJsonObject>& Presentation,
 	const TCHAR* Field,
@@ -126,7 +177,25 @@ bool FUeremcpSpellPlanner::BuildPlan(
 		TEXT("timing"), TEXT("delivery"), TEXT("impact"), TEXT("effect_tag"),
 		TEXT("presentation"), TEXT("progression"), TEXT("networking"),
 	};
-	if (!RejectUnknownFields(Specification, TopLevelFields, TEXT("specification"), OutError))
+	static const TMap<FString, EJson> TopLevelTypes = {
+		{TEXT("name"), EJson::String},
+		{TEXT("row_name"), EJson::String},
+		{TEXT("element"), EJson::String},
+		{TEXT("line_id"), EJson::String},
+		{TEXT("element_color"), EJson::Array},
+		{TEXT("tier"), EJson::String},
+		{TEXT("wheel"), EJson::String},
+		{TEXT("circle_tier"), EJson::String},
+		{TEXT("timing"), EJson::Object},
+		{TEXT("delivery"), EJson::Object},
+		{TEXT("impact"), EJson::Object},
+		{TEXT("effect_tag"), EJson::String},
+		{TEXT("presentation"), EJson::Object},
+		{TEXT("progression"), EJson::Object},
+		{TEXT("networking"), EJson::Object},
+	};
+	if (!RejectUnknownFields(Specification, TopLevelFields, TEXT("specification"), OutError)
+		|| !ValidateFieldTypes(Specification, TopLevelTypes, TEXT("specification"), OutError))
 	{
 		return false;
 	}
@@ -141,6 +210,11 @@ bool FUeremcpSpellPlanner::BuildPlan(
 	if (!IsStableName(RowName))
 	{
 		OutError = TEXT("specification.row_name must match ^[A-Za-z][A-Za-z0-9_]{0,63}$");
+		return false;
+	}
+	if (Element.Len() > 64)
+	{
+		OutError = TEXT("specification.element must not exceed 64 characters");
 		return false;
 	}
 
@@ -178,8 +252,27 @@ bool FUeremcpSpellPlanner::BuildPlan(
 	static const TSet<FString> NetworkingFields = {
 		TEXT("pattern"), TEXT("authority"), TEXT("cast_path"),
 	};
+	static const TMap<FString, EJson> DeliveryTypes = {
+		{TEXT("type"), EJson::String},
+		{TEXT("speed"), EJson::Number},
+		{TEXT("range"), EJson::Number},
+		{TEXT("projectile_radius"), EJson::Number},
+		{TEXT("gravity_scale"), EJson::Number},
+		{TEXT("homing"), EJson::Number},
+		{TEXT("spawn_entity"), EJson::String},
+		{TEXT("entity_length_cm"), EJson::Number},
+		{TEXT("entity_thickness_cm"), EJson::Number},
+		{TEXT("entity_height_cm"), EJson::Number},
+	};
+	static const TMap<FString, EJson> NetworkingTypes = {
+		{TEXT("pattern"), EJson::String},
+		{TEXT("authority"), EJson::String},
+		{TEXT("cast_path"), EJson::String},
+	};
 	if (!RejectUnknownFields(Delivery, DeliveryFields, TEXT("specification.delivery"), OutError)
-		|| !RejectUnknownFields(Networking, NetworkingFields, TEXT("specification.networking"), OutError))
+		|| !RejectUnknownFields(Networking, NetworkingFields, TEXT("specification.networking"), OutError)
+		|| !ValidateFieldTypes(Delivery, DeliveryTypes, TEXT("specification.delivery"), OutError)
+		|| !ValidateFieldTypes(Networking, NetworkingTypes, TEXT("specification.networking"), OutError))
 	{
 		return false;
 	}
@@ -247,10 +340,43 @@ bool FUeremcpSpellPlanner::BuildPlan(
 	static const TSet<FString> ProgressionFields = {
 		TEXT("unlock_skill_node"), TEXT("min_classification"),
 	};
+	static const TMap<FString, EJson> TimingTypes = {
+		{TEXT("cast_time_sec"), EJson::Number},
+		{TEXT("cooldown_sec"), EJson::Number},
+		{TEXT("stamina_cost"), EJson::Number},
+		{TEXT("duration_sec"), EJson::Number},
+	};
+	static const TMap<FString, EJson> ImpactTypes = {
+		{TEXT("damage"), EJson::Number},
+		{TEXT("aoe_radius"), EJson::Number},
+		{TEXT("status"), EJson::String},
+		{TEXT("status_duration"), EJson::Number},
+		{TEXT("escalate_to"), EJson::String},
+	};
+	static const TMap<FString, EJson> PresentationTypes = {
+		{TEXT("cast_effect"), EJson::String},
+		{TEXT("projectile_effect"), EJson::String},
+		{TEXT("impact_effect"), EJson::String},
+		{TEXT("circle_material"), EJson::String},
+		{TEXT("vfx_definition"), EJson::String},
+		{TEXT("circle_diameter_cm"), EJson::Number},
+		{TEXT("audio_cast"), EJson::String},
+		{TEXT("audio_travel"), EJson::String},
+		{TEXT("audio_impact"), EJson::String},
+		{TEXT("audio_fail"), EJson::String},
+	};
+	static const TMap<FString, EJson> ProgressionTypes = {
+		{TEXT("unlock_skill_node"), EJson::String},
+		{TEXT("min_classification"), EJson::String},
+	};
 	if (!RejectUnknownFields(Timing, TimingFields, TEXT("specification.timing"), OutError)
 		|| !RejectUnknownFields(Impact, ImpactFields, TEXT("specification.impact"), OutError)
 		|| !RejectUnknownFields(Presentation, PresentationFields, TEXT("specification.presentation"), OutError)
-		|| !RejectUnknownFields(Progression, ProgressionFields, TEXT("specification.progression"), OutError))
+		|| !RejectUnknownFields(Progression, ProgressionFields, TEXT("specification.progression"), OutError)
+		|| !ValidateFieldTypes(Timing, TimingTypes, TEXT("specification.timing"), OutError)
+		|| !ValidateFieldTypes(Impact, ImpactTypes, TEXT("specification.impact"), OutError)
+		|| !ValidateFieldTypes(Presentation, PresentationTypes, TEXT("specification.presentation"), OutError)
+		|| !ValidateFieldTypes(Progression, ProgressionTypes, TEXT("specification.progression"), OutError))
 	{
 		return false;
 	}
@@ -272,6 +398,40 @@ bool FUeremcpSpellPlanner::BuildPlan(
 		return false;
 	}
 
+	const double CastTimeSec = OptionalNumber(Timing, TEXT("cast_time_sec"), 0.0);
+	const double CooldownSec = OptionalNumber(Timing, TEXT("cooldown_sec"), 0.5);
+	const double StaminaCost = OptionalNumber(Timing, TEXT("stamina_cost"), 10.0);
+	const double DurationSec = OptionalNumber(Timing, TEXT("duration_sec"), 0.0);
+	const double ImpactDamage = OptionalNumber(Impact, TEXT("damage"), 12.0);
+	const double AoeRadius = OptionalNumber(Impact, TEXT("aoe_radius"), 0.0);
+	const double EntityLengthCm = OptionalNumber(Delivery, TEXT("entity_length_cm"), 800.0);
+	const double EntityThicknessCm = OptionalNumber(Delivery, TEXT("entity_thickness_cm"), 60.0);
+	const double EntityHeightCm = OptionalNumber(Delivery, TEXT("entity_height_cm"), 300.0);
+	const double CircleDiameterCm = OptionalNumber(Presentation, TEXT("circle_diameter_cm"), 60.0);
+	if (CastTimeSec < 0.0 || CooldownSec < 0.0 || StaminaCost < 0.0 || DurationSec < 0.0
+		|| ImpactDamage < 0.0 || AoeRadius < 0.0
+		|| EntityLengthCm < 50.0 || EntityThicknessCm < 20.0 || EntityHeightCm < 50.0
+		|| CircleDiameterCm <= 0.0)
+	{
+		OutError = TEXT("timing, impact, entity dimensions, or circle diameter violates create_spell numeric bounds");
+		return false;
+	}
+
+	const FString EscalateTo = OptionalString(Impact, TEXT("escalate_to"), FString());
+	const FString UnlockSkillNode =
+		OptionalString(Progression, TEXT("unlock_skill_node"), FString());
+	if ((!EscalateTo.IsEmpty() && !IsStableName(EscalateTo))
+		|| (!UnlockSkillNode.IsEmpty() && !IsStableName(UnlockSkillNode)))
+	{
+		OutError = TEXT("impact.escalate_to and progression.unlock_skill_node must be stable RE identifiers");
+		return false;
+	}
+	if (OptionalString(Specification, TEXT("effect_tag"), FString()).Len() > 64)
+	{
+		OutError = TEXT("specification.effect_tag must not exceed 64 characters");
+		return false;
+	}
+
 	const FString Tier = OptionalString(Specification, TEXT("tier"), TEXT("S"));
 	const FString Wheel = OptionalString(Specification, TEXT("wheel"), TEXT("Q"));
 	const FString CircleTier = OptionalString(Specification, TEXT("circle_tier"), TEXT("circle_hand"));
@@ -287,7 +447,8 @@ bool FUeremcpSpellPlanner::BuildPlan(
 		return false;
 	}
 
-	const FString LineId = OptionalString(Specification, TEXT("line_id"), Element.ToLower());
+	const FString LineId =
+		OptionalString(Specification, TEXT("line_id"), StableLineIdFromElement(Element));
 	if (!IsStableName(LineId))
 	{
 		OutError = TEXT("specification.line_id must match ^[A-Za-z][A-Za-z0-9_]{0,63}$");
@@ -304,27 +465,27 @@ bool FUeremcpSpellPlanner::BuildPlan(
 	Row->SetStringField(TEXT("CastType"), *CastType);
 	Row->SetStringField(TEXT("CircleTier"), CircleTier);
 	Row->SetArrayField(TEXT("ElementColor"), NormalizedColor);
-	Row->SetNumberField(TEXT("CastTimeSec"), OptionalNumber(Timing, TEXT("cast_time_sec"), 0.0));
-	Row->SetNumberField(TEXT("CooldownSec"), OptionalNumber(Timing, TEXT("cooldown_sec"), 0.5));
-	Row->SetNumberField(TEXT("StaminaCost"), OptionalNumber(Timing, TEXT("stamina_cost"), 10.0));
-	Row->SetNumberField(TEXT("DurationSec"), OptionalNumber(Timing, TEXT("duration_sec"), 0.0));
+	Row->SetNumberField(TEXT("CastTimeSec"), CastTimeSec);
+	Row->SetNumberField(TEXT("CooldownSec"), CooldownSec);
+	Row->SetNumberField(TEXT("StaminaCost"), StaminaCost);
+	Row->SetNumberField(TEXT("DurationSec"), DurationSec);
 	Row->SetStringField(TEXT("EffectTag"), OptionalString(Specification, TEXT("effect_tag"), FString()));
 	Row->SetNumberField(TEXT("Speed"), Speed);
 	Row->SetNumberField(TEXT("Range"), Range);
 	Row->SetNumberField(TEXT("ProjRadius"), ProjectileRadius);
 	Row->SetNumberField(TEXT("GravityScale"), OptionalNumber(Delivery, TEXT("gravity_scale"), 0.0));
 	Row->SetNumberField(TEXT("Homing"), Homing);
-	Row->SetNumberField(TEXT("ImpactDamage"), OptionalNumber(Impact, TEXT("damage"), 12.0));
+	Row->SetNumberField(TEXT("ImpactDamage"), ImpactDamage);
 	Row->SetStringField(TEXT("ImpactStatus"), Status);
 	Row->SetNumberField(TEXT("StatusDuration"), StatusDuration);
-	Row->SetNumberField(TEXT("AoeRadius"), OptionalNumber(Impact, TEXT("aoe_radius"), 0.0));
-	Row->SetStringField(TEXT("EscalateTo"), OptionalString(Impact, TEXT("escalate_to"), FString()));
+	Row->SetNumberField(TEXT("AoeRadius"), AoeRadius);
+	Row->SetStringField(TEXT("EscalateTo"), EscalateTo);
 	Row->SetStringField(TEXT("SpawnEntity"), SpawnEntity);
-	Row->SetNumberField(TEXT("EntityLengthCm"), OptionalNumber(Delivery, TEXT("entity_length_cm"), 800.0));
-	Row->SetNumberField(TEXT("EntityThicknessCm"), OptionalNumber(Delivery, TEXT("entity_thickness_cm"), 60.0));
-	Row->SetNumberField(TEXT("EntityHeightCm"), OptionalNumber(Delivery, TEXT("entity_height_cm"), 300.0));
-	Row->SetNumberField(TEXT("CircleDiameterCm"), OptionalNumber(Presentation, TEXT("circle_diameter_cm"), 60.0));
-	Row->SetStringField(TEXT("UnlockSkillNode"), OptionalString(Progression, TEXT("unlock_skill_node"), FString()));
+	Row->SetNumberField(TEXT("EntityLengthCm"), EntityLengthCm);
+	Row->SetNumberField(TEXT("EntityThicknessCm"), EntityThicknessCm);
+	Row->SetNumberField(TEXT("EntityHeightCm"), EntityHeightCm);
+	Row->SetNumberField(TEXT("CircleDiameterCm"), CircleDiameterCm);
+	Row->SetStringField(TEXT("UnlockSkillNode"), UnlockSkillNode);
 	Row->SetStringField(TEXT("MinClassification"), OptionalString(Progression, TEXT("min_classification"), TEXT("Learner")));
 
 	AddDependencyIfPresent(Presentation, TEXT("cast_effect"), TEXT("CastNS"), Row, OutPlan.DependencyAssetPaths);
@@ -346,6 +507,67 @@ bool FUeremcpSpellPlanner::BuildPlan(
 		TEXT("delivery_parameters_valid"),
 		TEXT("impact_status_duration_consistent"),
 		TEXT("gameplay_tag_ini_untouched"),
+	};
+	return true;
+}
+
+bool FUeremcpSpellPlanner::BuildTableWritePlan(
+	const FString& TargetPackagePath,
+	const FString& Mode,
+	bool bDryRun,
+	const FUeremcpSpellPlan& SpellPlan,
+	FUeremcpAbilityTableWritePlan& OutWritePlan,
+	FString& OutError)
+{
+	OutWritePlan = FUeremcpAbilityTableWritePlan();
+	OutError.Reset();
+
+	if (!FPackageName::IsValidLongPackageName(TargetPackagePath))
+	{
+		OutError = TEXT("target.asset_path must be a valid long package name");
+		return false;
+	}
+	if (!TargetPackagePath.StartsWith(TEXT("/Game/__UeremcpTests/")))
+	{
+		OutError = TEXT("ability DataTable writes are restricted to /Game/__UeremcpTests/");
+		return false;
+	}
+	if (Mode != TEXT("create") && Mode != TEXT("create_or_update"))
+	{
+		OutError = TEXT("ability DataTable write plan supports create or create_or_update only");
+		return false;
+	}
+	if (SpellPlan.RowName.IsEmpty() || !SpellPlan.RowPayload.IsValid())
+	{
+		OutError = TEXT("ability DataTable write plan requires a valid spell row plan");
+		return false;
+	}
+
+	const FString AssetName = FPackageName::GetLongPackageAssetName(TargetPackagePath);
+	if (AssetName.IsEmpty())
+	{
+		OutError = TEXT("target.asset_path must end in a DataTable asset name");
+		return false;
+	}
+
+	OutWritePlan.TablePackagePath = TargetPackagePath;
+	OutWritePlan.TableObjectPath =
+		FString::Printf(TEXT("%s.%s"), *TargetPackagePath, *AssetName);
+	OutWritePlan.RowStructPath = TEXT("/Script/RE.REAbilityDef");
+	OutWritePlan.RowName = SpellPlan.RowName;
+	OutWritePlan.Mode = Mode;
+	OutWritePlan.bDryRun = bDryRun;
+	OutWritePlan.OrderedSteps = {
+		TEXT("acquire_shared_mutator"),
+		TEXT("enter_content_sandbox"),
+		TEXT("load_or_create_freabilitydef_table"),
+		TEXT("check_mode_and_expected_revision"),
+		TEXT("compare_existing_row"),
+		TEXT("upsert_single_row_if_changed"),
+		TEXT("save_table"),
+		TEXT("reread_and_compare_normalized_row"),
+		bDryRun ? TEXT("discard_dry_run") : TEXT("persist_sandbox"),
+		TEXT("release_shared_mutator"),
 	};
 	return true;
 }

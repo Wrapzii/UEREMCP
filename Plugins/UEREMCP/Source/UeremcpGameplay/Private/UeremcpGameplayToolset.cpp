@@ -79,6 +79,34 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 			Request.RequestId,
 			FString::Printf(TEXT("Invalid create_spell specification: %s"), *PlanError));
 	}
+	for (const FString& DependencyPath : Plan.DependencyAssetPaths)
+	{
+		const FUeremcpPathValidationResult DependencyPathResult =
+			FUeremcpPathPolicy::ValidateSoftPath(DependencyPath, false);
+		if (!DependencyPathResult.bAllowed)
+		{
+			return FUeremcpEnvelope::MakeRejection(
+				Request.RequestId,
+				FString::Printf(
+					TEXT("Invalid presentation dependency '%s': %s"),
+					*DependencyPath,
+					*DependencyPathResult.Reason));
+		}
+	}
+
+	FUeremcpAbilityTableWritePlan WritePlan;
+	if (!FUeremcpSpellPlanner::BuildTableWritePlan(
+		Request.TargetAssetPath,
+		Request.Mode,
+		Request.bDryRun,
+		Plan,
+		WritePlan,
+		PlanError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(TEXT("Invalid ability-table write plan: %s"), *PlanError));
+	}
 
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
@@ -93,6 +121,12 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		TEXT("row_name=%s; AbilityId=%s; deterministic target retained without auto-suffixing"),
 		*Plan.RowName,
 		*Plan.RowName));
+	Response.InterpretationNotes.Add(FString::Printf(
+		TEXT("table_object=%s; row_struct=%s; mode=%s; dry_run=%s"),
+		*WritePlan.TableObjectPath,
+		*WritePlan.RowStructPath,
+		*WritePlan.Mode,
+		WritePlan.bDryRun ? TEXT("true") : TEXT("false")));
 	Response.PrimaryAsset = Request.TargetAssetPath;
 	for (const FString& DependencyPath : Plan.DependencyAssetPaths)
 	{
@@ -102,7 +136,7 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		Response.Dependencies.Add(MoveTemp(Dependency));
 	}
 	Response.Metrics.McpRoundTrips = 1;
-	Response.Metrics.InternalOperations = 1;
+	Response.Metrics.InternalOperations = 2;
 	Response.CapabilityNotes = {
 		TEXT("Specification-to-FREAbilityDef planning and Pattern B static checks completed."),
 		TEXT("DataTable upsert, save, and re-read skipped: guarded mutation is not implemented in this preflight slice."),
@@ -118,7 +152,9 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	Validation->SetNullField(TEXT("reread_after_write"));
 	Validation->SetNullField(TEXT("runtime_smoke_test"));
 	Validation->SetNullField(TEXT("editor_validation_run"));
-	Validation->SetArrayField(TEXT("checks_performed"), StringValues(Plan.StaticChecks));
+	TArray<FString> ChecksPerformed = Plan.StaticChecks;
+	ChecksPerformed.Add(TEXT("deterministic_datatable_write_plan_prepared"));
+	Validation->SetArrayField(TEXT("checks_performed"), StringValues(ChecksPerformed));
 	Validation->SetArrayField(TEXT("checks_skipped"), StringValues({
 		TEXT("datatable_upsert: ADR-0010 mutator queue not implemented"),
 		TEXT("save: no mutation performed"),
@@ -127,8 +163,38 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		TEXT("runtime_smoke_test: WS-11/RB-14"),
 	}));
 
+	TSharedPtr<FJsonObject> Rollback = MakeShared<FJsonObject>();
+	Rollback->SetBoolField(TEXT("available"), false);
+	Rollback->SetBoolField(TEXT("performed"), false);
+	Rollback->SetStringField(TEXT("scope"), TEXT("none"));
+	Rollback->SetStringField(
+		TEXT("detail"),
+		Request.bDryRun
+			? TEXT("Dry-run preflight performed no mutation; nothing required discard.")
+			: TEXT("Preflight performed no mutation; rollback was not entered."));
+
+	TSharedPtr<FJsonObject> TraceStep = MakeShared<FJsonObject>();
+	TraceStep->SetStringField(TEXT("step"), TEXT("plan_create_spell"));
+	TraceStep->SetBoolField(TEXT("ok"), true);
+	TraceStep->SetStringField(
+		TEXT("detail"),
+		FString::Printf(
+			TEXT("Prepared %d ordered guarded-write steps for %s without executing them."),
+			WritePlan.OrderedSteps.Num(),
+			*WritePlan.TableObjectPath));
+	TArray<TSharedPtr<FJsonValue>> ExecutionTrace;
+	ExecutionTrace.Add(MakeShared<FJsonValueObject>(TraceStep));
+	TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
+	Diagnostics->SetArrayField(TEXT("execution_trace"), ExecutionTrace);
+	Diagnostics->SetBoolField(TEXT("truncated"), false);
+
 	Response.ExtraFields = MakeShared<FJsonObject>();
 	Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
+	Response.ExtraFields->SetArrayField(
+		TEXT("changes"),
+		TArray<TSharedPtr<FJsonValue>>());
+	Response.ExtraFields->SetObjectField(TEXT("rollback"), Rollback);
+	Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
 
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }

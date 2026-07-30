@@ -411,7 +411,11 @@ implemented the largest independently executable owned slice:
 - deterministic specification-to-`FREAbilityDef` row planning;
 - static Pattern B validation;
 - an envelope-shaped `AICallable` `CreateSpell` preflight;
-- schema and C++ automation tests.
+- strict optional-field type/bounds validation;
+- deterministic guarded DataTable write planning without mutation;
+- complete dry-run response evidence (empty changes, null write checks, rollback
+  not performed, execution trace);
+- schema/local-header drift tests and C++ automation tests.
 
 The preflight returns `partially_completed` and performs no mutation. Two upstream
 gates are recorded precisely in
@@ -440,6 +444,8 @@ module `Editor` `[VERIFIED-RUNTIME: Build.bat REEditor -Module=UeremcpGameplay,
 - [x] Written description of RE's actual ability architecture (this brief §Q1)
 - [x] `schemas/domains/gameplay/create_spell.schema.json`
 - [x] deterministic `FREAbilityDef` row planner + static Pattern B validation
+- [x] offline 40-field `FREAbilityDef` header drift guard + dry-run response golden
+- [x] guarded DataTable write plan (no mutation or success claim)
 - [ ] guarded DataTable row upsert / save / re-read — upstream gates documented
 - [ ] POC D batch — blocked on guarded mutation and WS-07/WS-08 execution
 - [x] Replication validation checklist — §Q8

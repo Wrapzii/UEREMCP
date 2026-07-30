@@ -1,0 +1,73 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ws09-dry-run-golden",
+  "status": "partially_completed",
+  "summary": "Prepared and statically validated an RE spell row; no mutation was performed.",
+  "understood": {
+    "action": "create_spell",
+    "resolved_target": "/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities",
+    "interpretation_notes": [
+      "row_name=Fireball_Ueremcp; AbilityId=Fireball_Ueremcp",
+      "mode=create_or_update; dry_run=true"
+    ]
+  },
+  "result": {
+    "primary_asset": "/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities",
+    "dependencies": [
+      {
+        "asset_path": "/Game/__UeremcpTests/VFX/NS_Fireball",
+        "role": "spell_presentation"
+      }
+    ]
+  },
+  "validation": {
+    "compiled": null,
+    "saved": null,
+    "structurally_valid": true,
+    "dependencies_resolved": null,
+    "reread_after_write": null,
+    "runtime_smoke_test": null,
+    "editor_validation_run": null,
+    "checks_performed": [
+      "row_identity_matches_ability_id",
+      "pattern_b_declared",
+      "authority_cast_path_declared",
+      "delivery_parameters_valid",
+      "impact_status_duration_consistent",
+      "gameplay_tag_ini_untouched",
+      "deterministic_datatable_write_plan_prepared"
+    ],
+    "checks_skipped": [
+      "datatable_upsert: ADR-0010 mutator queue not implemented",
+      "save: no mutation performed",
+      "reread_after_write: no mutation performed",
+      "dependency_resolution: requires editor asset load",
+      "runtime_smoke_test: WS-11/RB-14"
+    ]
+  },
+  "changes": [],
+  "diagnostics": {
+    "execution_trace": [
+      {
+        "step": "plan_create_spell",
+        "ok": true,
+        "detail": "Prepared guarded-write steps without executing them."
+      }
+    ],
+    "truncated": false
+  },
+  "rollback": {
+    "available": false,
+    "performed": false,
+    "scope": "none",
+    "detail": "Dry-run preflight performed no mutation; nothing required discard."
+  },
+  "metrics": {
+    "mcp_round_trips": 1,
+    "internal_operations": 2
+  },
+  "capability_notes": [
+    "DataTable upsert, save, and re-read were skipped.",
+    "Multi-client replication proof was not run."
+  ]
+}

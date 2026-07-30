@@ -159,6 +159,31 @@
       "description": "Declaration checked against RE Pattern B. It does not create or modify RPCs."
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["impact"],
+        "properties": {
+          "impact": {
+            "required": ["status"],
+            "properties": {
+              "status": { "not": { "const": "None" } }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "impact": {
+            "required": ["status_duration"],
+            "properties": {
+              "status_duration": { "exclusiveMinimum": 0 }
+            }
+          }
+        }
+      }
+    }
+  ],
   "examples": [
     {
       "name": "Fireball UEREMCP",

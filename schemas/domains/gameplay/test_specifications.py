@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -19,6 +20,53 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMAS_DIR = REPO_ROOT / "schemas"
 GAMEPLAY_DIR = SCHEMAS_DIR / "domains" / "gameplay"
+GAMEPLAY_SOURCE_DIR = (
+    REPO_ROOT / "Plugins" / "UEREMCP" / "Source" / "UeremcpGameplay"
+)
+EXPECTED_FRE_ABILITY_FIELDS = frozenset(
+    {
+        "AbilityId",
+        "DisplayName",
+        "LineId",
+        "Element",
+        "Tier",
+        "Wheel",
+        "CastType",
+        "CircleTier",
+        "ElementColor",
+        "CastTimeSec",
+        "CooldownSec",
+        "StaminaCost",
+        "DurationSec",
+        "EffectTag",
+        "Speed",
+        "Range",
+        "ProjRadius",
+        "GravityScale",
+        "Homing",
+        "ImpactDamage",
+        "ImpactStatus",
+        "StatusDuration",
+        "AoeRadius",
+        "EscalateTo",
+        "SpawnEntity",
+        "EntityLengthCm",
+        "EntityThicknessCm",
+        "EntityHeightCm",
+        "CastNS",
+        "ProjectileNS",
+        "ImpactNS",
+        "CircleMaterial",
+        "VFXDefinition",
+        "CircleDiameterCm",
+        "AudioCueCast",
+        "AudioCueTravel",
+        "AudioCueImpact",
+        "AudioCueFail",
+        "UnlockSkillNode",
+        "MinClassification",
+    }
+)
 
 
 def load_registry() -> Registry:
@@ -61,11 +109,112 @@ class GameplaySpecificationTests(unittest.TestCase):
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(bad)
 
+    def test_status_requires_positive_duration(self) -> None:
+        for invalid_duration in (None, 0):
+            bad = json.loads(json.dumps(self.example))
+            if invalid_duration is None:
+                bad["impact"].pop("status_duration")
+            else:
+                bad["impact"]["status_duration"] = invalid_duration
+            with self.subTest(duration=invalid_duration):
+                with self.assertRaises(jsonschema.ValidationError):
+                    self.validator.validate(bad)
+
     def test_unknown_primitive_is_rejected(self) -> None:
         bad = json.loads(json.dumps(self.example))
         bad["create_gameplay_effect"] = {}
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(bad)
+
+    def test_optional_types_and_bounds_are_strict(self) -> None:
+        mutations = (
+            ("speed string", lambda spec: spec["delivery"].update(speed="fast")),
+            ("negative cooldown", lambda spec: spec.setdefault("timing", {}).update(cooldown_sec=-1)),
+            ("short wall", lambda spec: spec["delivery"].update(entity_height_cm=49)),
+            ("zero circle", lambda spec: spec.setdefault("presentation", {}).update(circle_diameter_cm=0)),
+        )
+        for label, mutate in mutations:
+            bad = json.loads(json.dumps(self.example))
+            mutate(bad)
+            with self.subTest(case=label):
+                with self.assertRaises(jsonschema.ValidationError):
+                    self.validator.validate(bad)
+
+    def test_cpp_planner_maps_exact_verified_row_surface(self) -> None:
+        planner = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpSpellPlanner.cpp"
+        ).read_text(encoding="utf-8")
+        direct_fields = set(
+            re.findall(r'Row->Set(?:String|Number|Array)Field\(TEXT\("([^"]+)"\)', planner)
+        )
+        dependency_fields = set(
+            re.findall(
+                r'AddDependencyIfPresent\(\s*Presentation,\s*TEXT\("[^"]+"\),'
+                r'\s*TEXT\("([^"]+)"\)',
+                planner,
+            )
+        )
+        mapped_fields = frozenset(direct_fields | dependency_fields)
+        self.assertEqual(EXPECTED_FRE_ABILITY_FIELDS, mapped_fields)
+
+        re_header = (
+            Path.home()
+            / "Documents"
+            / "Unreal Projects"
+            / "RE"
+            / "Source"
+            / "RE"
+            / "Public"
+            / "REAbilityTypes.h"
+        )
+        if not re_header.is_file():
+            self.skipTest("local REAbilityTypes.h unavailable for API drift check")
+        header_text = re_header.read_text(encoding="utf-8")
+        missing = sorted(
+            field
+            for field in EXPECTED_FRE_ABILITY_FIELDS
+            if re.search(rf"\b{re.escape(field)}\b\s*(?:=|;)", header_text) is None
+        )
+        self.assertEqual([], missing, f"planner fields missing from FREAbilityDef: {missing}")
+
+    def test_preflight_source_cannot_claim_mutation_success(self) -> None:
+        toolset = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpGameplayToolset.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn('Response.Status = TEXT("partially_completed")', toolset)
+        self.assertNotIn("created_and_validated", toolset)
+        self.assertNotIn("modified_and_validated", toolset)
+        for evidence in (
+            'SetNullField(TEXT("saved"))',
+            'SetNullField(TEXT("reread_after_write"))',
+            'SetArrayField(\n\t\tTEXT("changes")',
+            'SetObjectField(TEXT("rollback")',
+            'SetObjectField(TEXT("diagnostics")',
+        ):
+            self.assertIn(evidence, toolset)
+
+    def test_dry_run_response_golden_is_complete_and_schema_valid(self) -> None:
+        response_schema = json.loads(
+            (SCHEMAS_DIR / "envelope" / "response.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        response = json.loads(
+            (
+                GAMEPLAY_DIR / "golden" / "dry_run_preflight.response.json"
+            ).read_text(encoding="utf-8")
+        )
+        Draft202012Validator(
+            response_schema, registry=load_registry()
+        ).validate(response)
+        self.assertEqual("partially_completed", response["status"])
+        self.assertEqual([], response["changes"])
+        self.assertIsNone(response["validation"]["saved"])
+        self.assertIsNone(response["validation"]["reread_after_write"])
+        self.assertFalse(response["rollback"]["available"])
+        self.assertFalse(response["rollback"]["performed"])
+        self.assertNotIn("created_assets", response["result"])
+        self.assertNotIn("modified_assets", response["result"])
 
 
 if __name__ == "__main__":

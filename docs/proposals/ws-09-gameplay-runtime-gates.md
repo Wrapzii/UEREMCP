@@ -13,13 +13,18 @@ WS-09 now owns an independently testable `create_spell` preflight:
 - strict `schemas/domains/gameplay/create_spell.schema.json`;
 - deterministic semantic-to-`FREAbilityDef` row planning;
 - RE Pattern B static validation;
+- exact guarded DataTable write planning (package/object/row-struct identity and
+  ordered acquire→sandbox→upsert→save→re-read→persist/discard steps);
 - one envelope-shaped `AICallable` entry point;
-- schema and C++ automation tests;
+- schema, local-header drift, and C++ automation tests;
 - no Epic GAS/DataTable/Niagara/material primitives re-exposed.
 
 The planner maps only fields read from the RE row definition
 `[VERIFIED: REAbilityTypes.h:85-247]`. The tool returns
 `partially_completed` and does not mutate assets while either gate below is open.
+Dry-run preflight explicitly returns empty `changes`, null write-validation fields,
+rollback unavailable/not performed, and a planning execution trace. It never emits
+`created_and_validated` or `modified_and_validated`.
 
 ## Gate 1 — WS-03: module descriptor
 
