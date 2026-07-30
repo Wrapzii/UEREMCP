@@ -1,0 +1,811 @@
+{
+  "schema_version": 1,
+  "scenario_id": "poc-b-fireball-primitive-baseline",
+  "arm": "epic_reagenttools_primitives",
+  "transport": "streamable_http_mcp",
+  "endpoint": "http://127.0.0.1:8001/mcp",
+  "outer_mcp_round_trips_per_trial": 1,
+  "timer": "time.perf_counter immediately around execute_tool_script",
+  "fixture": "schemas\\domains\\niagara\\fixtures\\poc_b_primitive_baseline.py",
+  "trials_requested": 3,
+  "trials_usable": 0,
+  "trials": [
+    {
+      "trial": 1,
+      "started_utc": "2026-07-30T14:25:35.711389+00:00",
+      "clean_state_removed": [
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+      ],
+      "wall_clock_seconds": 12.5921178,
+      "usable": false,
+      "acceptance_failures": [
+        "status",
+        "completed",
+        "emitters",
+        "user_variables",
+        "renderer_bindings_verified",
+        "compile_state.bIsCompiling",
+        "compile_state.bIsStale",
+        "compile_state.bHasErrors"
+      ],
+      "primitive_ops_executed": 42,
+      "result": {
+        "status": "failed_validation",
+        "completed": false,
+        "error": "'ExplicitMat'",
+        "created_before_failure": [
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst",
+          "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline"
+        ],
+        "primitive_ops_executed": 42,
+        "primitive_trace": [
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 343.99999998277053
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 344.00000001187436
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 47.0000000204891
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 500.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 342.99999999348074
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 296.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 391.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddUserVariables",
+            "ok": true,
+            "elapsed_ms": 546.9999999913853
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 109.0000000258442
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 437.9999999946449
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 202.9999999795109
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 343.99999998277053
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 343.99999998277053
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState",
+            "ok": true,
+            "elapsed_ms": 343.99999998277053
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.save_assets",
+            "ok": true,
+            "elapsed_ms": 625.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 296.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 671.9999999913853
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          }
+        ],
+        "inner_elapsed_ms": 12233.99999999674
+      },
+      "raw_mcp_response": {
+        "jsonrpc": "2.0",
+        "id": 1785421529751451402,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"returnValue\":\"{\\\"status\\\": \\\"failed_validation\\\", \\\"completed\\\": false, \\\"error\\\": \\\"'ExplicitMat'\\\", \\\"created_before_failure\\\": [\\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst\\\", \\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline\\\"], \\\"primitive_ops_executed\\\": 42, \\\"primitive_trace\\\": [{\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 343.99999998277053}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 344.00000001187436}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.RemoveEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 47.0000000204891}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 500.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 342.99999999348074}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 296.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 391.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddUserVariables\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 546.9999999913853}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.0000000258442}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 437.9999999946449}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 202.9999999795109}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 343.99999998277053}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 343.99999998277053}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 343.99999998277053}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.save_assets\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 625.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 296.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 671.9999999913853}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}], \\\"inner_elapsed_ms\\\": 12233.99999999674}\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "trial": 2,
+      "started_utc": "2026-07-30T14:25:58.577173+00:00",
+      "clean_state_removed": [
+        "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+      ],
+      "wall_clock_seconds": 13.514041600000002,
+      "usable": false,
+      "acceptance_failures": [
+        "status",
+        "completed",
+        "emitters",
+        "user_variables",
+        "renderer_bindings_verified",
+        "compile_state.bIsCompiling",
+        "compile_state.bIsStale",
+        "compile_state.bHasErrors"
+      ],
+      "primitive_ops_executed": 42,
+      "result": {
+        "status": "failed_validation",
+        "completed": false,
+        "error": "'ExplicitMat'",
+        "created_before_failure": [
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst",
+          "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline"
+        ],
+        "primitive_ops_executed": 42,
+        "primitive_trace": [
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 344.00000001187436
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 344.00000001187436
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem",
+            "ok": true,
+            "elapsed_ms": 312.0000000053551
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 46.999999991385266
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 343.99999998277053
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 250.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 312.0000000053551
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 360.000000015134
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddUserVariables",
+            "ok": true,
+            "elapsed_ms": 530.9999999881256
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 344.00000001187436
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 405.99999998812564
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 562.0000000053551
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 344.00000001187436
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.9999999979045
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 342.99999999348074
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 328.9999999979045
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 671.0000000020955
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 344.00000001187436
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.save_assets",
+            "ok": true,
+            "elapsed_ms": 594.0000000118744
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 296.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 656.0000000172295
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 671.9999999913853
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 328.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 343.99999998277053
+          }
+        ],
+        "inner_elapsed_ms": 13171.999999991385
+      },
+      "raw_mcp_response": {
+        "jsonrpc": "2.0",
+        "id": 1785421529751451404,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"returnValue\":\"{\\\"status\\\": \\\"failed_validation\\\", \\\"completed\\\": false, \\\"error\\\": \\\"'ExplicitMat'\\\", \\\"created_before_failure\\\": [\\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst\\\", \\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline\\\"], \\\"primitive_ops_executed\\\": 42, \\\"primitive_trace\\\": [{\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 344.00000001187436}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 344.00000001187436}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 312.0000000053551}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.RemoveEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 46.999999991385266}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 343.99999998277053}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 250.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 312.0000000053551}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 360.000000015134}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddUserVariables\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 530.9999999881256}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 344.00000001187436}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 405.99999998812564}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 562.0000000053551}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 344.00000001187436}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.9999999979045}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 342.99999999348074}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.9999999979045}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 671.0000000020955}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 344.00000001187436}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.save_assets\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 594.0000000118744}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 296.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 656.0000000172295}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 671.9999999913853}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 328.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 343.99999998277053}], \\\"inner_elapsed_ms\\\": 13171.999999991385}\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "trial": 3,
+      "started_utc": "2026-07-30T14:26:19.120422+00:00",
+      "clean_state_removed": [
+        "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+        "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst"
+      ],
+      "wall_clock_seconds": 5.522780999999995,
+      "usable": false,
+      "acceptance_failures": [
+        "status",
+        "completed",
+        "emitters",
+        "user_variables",
+        "renderer_bindings_verified",
+        "compile_state.bIsCompiling",
+        "compile_state.bIsStale",
+        "compile_state.bHasErrors"
+      ],
+      "primitive_ops_executed": 42,
+      "result": {
+        "status": "failed_validation",
+        "completed": false,
+        "error": "'ExplicitMat'",
+        "created_before_failure": [
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail",
+          "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst",
+          "/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline"
+        ],
+        "primitive_ops_executed": 42,
+        "primitive_trace": [
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.exists",
+            "ok": true,
+            "elapsed_ms": 14.999999984866008
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 16.00000000325963
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.material_instance.MaterialInstanceTools.create",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem",
+            "ok": true,
+            "elapsed_ms": 15.999999974155799
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 0.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.RemoveEmitter",
+            "ok": true,
+            "elapsed_ms": 15.000000013969839
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 62.999999994644895
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 171.99999999138527
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 234.0000000258442
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 327.9999999795109
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddEmitter",
+            "ok": true,
+            "elapsed_ms": 407.00000000651926
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.AddUserVariables",
+            "ok": true,
+            "elapsed_ms": 578.0000000086147
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 405.99999998812564
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 141.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 171.00000000209548
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 141.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 203.00000000861473
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 155.99999998812564
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 187.9999999946449
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 141.00000000325963
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.SetRendererData",
+            "ok": true,
+            "elapsed_ms": 171.00000000209548
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "editor_toolset.toolsets.asset.AssetTools.save_assets",
+            "ok": true,
+            "elapsed_ms": 641.0000000032596
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetSystemSummary",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 108.99999999674037
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology",
+            "ok": true,
+            "elapsed_ms": 125.0
+          },
+          {
+            "tool": "NiagaraToolsets.NiagaraToolset_System.GetRendererData",
+            "ok": true,
+            "elapsed_ms": 109.99999998603016
+          }
+        ],
+        "inner_elapsed_ms": 5484.99999998603
+      },
+      "raw_mcp_response": {
+        "jsonrpc": "2.0",
+        "id": 1785421529751451406,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"returnValue\":\"{\\\"status\\\": \\\"failed_validation\\\", \\\"completed\\\": false, \\\"error\\\": \\\"'ExplicitMat'\\\", \\\"created_before_failure\\\": [\\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_core\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_flame_shell\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_sparks\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_smoke\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_ribbon_trail\\\", \\\"/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_Baseline_impact_burst\\\", \\\"/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline\\\"], \\\"primitive_ops_executed\\\": 42, \\\"primitive_trace\\\": [{\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.exists\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 14.999999984866008}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 16.00000000325963}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.material_instance.MaterialInstanceTools.create\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.CreateNiagaraSystem\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.999999974155799}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 0.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.RemoveEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 15.000000013969839}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 62.999999994644895}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 171.99999999138527}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 234.0000000258442}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 327.9999999795109}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddEmitter\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 407.00000000651926}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.AddUserVariables\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 578.0000000086147}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 405.99999998812564}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 141.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 171.00000000209548}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 141.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 203.00000000861473}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 155.99999998812564}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 187.9999999946449}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 141.00000000325963}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.SetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 171.00000000209548}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemCompileState\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"editor_toolset.toolsets.asset.AssetTools.save_assets\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 641.0000000032596}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetSystemSummary\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 108.99999999674037}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetEmitterTopology\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 125.0}, {\\\"tool\\\": \\\"NiagaraToolsets.NiagaraToolset_System.GetRendererData\\\", \\\"ok\\\": true, \\\"elapsed_ms\\\": 109.99999998603016}], \\\"inner_elapsed_ms\\\": 5484.99999998603}\"}"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

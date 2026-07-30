@@ -28,7 +28,9 @@ class McpClient:
     def __init__(self, endpoint: str) -> None:
         self.endpoint = endpoint
         self.session_id = ""
-        self.next_id = 1
+        # The live bridge can replay a prior response when a new session reuses
+        # the same JSON-RPC id. Seed ids uniquely so retries remain independent.
+        self.next_id = time.time_ns()
 
     def _post(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         headers = {
@@ -126,7 +128,7 @@ def extract_wrapper(response: dict[str, Any]) -> dict[str, Any]:
                 continue
         if isinstance(candidate, dict) and "returnValue" in candidate:
             return candidate
-    raise ValueError("MCP result has no call_tool returnValue")
+    raise ValueError(f"MCP result has no call_tool returnValue: {response!r}")
 
 
 def return_value(response: dict[str, Any]) -> Any:
@@ -139,28 +141,83 @@ def return_value(response: dict[str, Any]) -> Any:
     return value
 
 
-def clean_outputs(client: McpClient) -> list[str]:
-    removed: list[str] = []
-    for package in OUTPUT_PACKAGES:
-        exists = return_value(
-            client.call_tool(
-                "editor_toolset.toolsets.asset.AssetTools",
-                "exists",
-                {"path": package},
-            )
+def clean_outputs(client: McpClient, execute_cleanup: bool) -> list[str]:
+    packages_json = json.dumps(OUTPUT_PACKAGES)
+    cleanup_nonce = time.time_ns()
+    cleanup_script = f"""
+import json
+
+OUTPUT_PACKAGES = {packages_json}
+
+def call(tool_name, arguments):
+    return execute_tool(tool_name, json.dumps(arguments))["returnValue"]
+
+def run():
+    existing = [
+        package
+        for package in OUTPUT_PACKAGES
+        if call("editor_toolset.toolsets.asset.AssetTools.exists", {{"path": package}})
+    ]
+    if existing and not {execute_cleanup!r}:
+        return {{"status": "dry_run", "existing": existing, "removed": []}}
+    dirty = [
+        package
+        for package in existing
+        if call(
+            "editor_toolset.toolsets.asset.AssetTools.is_dirty",
+            {{"asset_path": package}},
         )
-        if exists:
-            deleted = return_value(
-                client.call_tool(
-                    "editor_toolset.toolsets.asset.AssetTools",
-                    "delete",
-                    {"path": package},
-                )
+    ]
+    if dirty:
+        if not call(
+            "editor_toolset.toolsets.asset.AssetTools.save_assets",
+            {{"asset_paths": dirty}},
+        ):
+            raise RuntimeError("failed to save dirty controlled outputs")
+    removed = []
+    for package in existing:
+        if not call("editor_toolset.toolsets.asset.AssetTools.delete", {{"path": package}}):
+            fallback = (
+                "/Game/__UeremcpPoc/__BenchmarkCleanup/"
+                + package.rsplit("/", 1)[-1]
+                + "_{cleanup_nonce}"
             )
-            if not deleted:
-                raise RuntimeError(f"failed to delete controlled output {package}")
-            removed.append(package)
-    return removed
+            if not call(
+                "editor_toolset.toolsets.asset.AssetTools.move",
+                {{"path": package, "new_path": fallback}},
+            ):
+                raise RuntimeError("failed to move controlled output " + package)
+            if not call(
+                "editor_toolset.toolsets.asset.AssetTools.delete",
+                {{"path": fallback}},
+            ):
+                raise RuntimeError("failed to delete moved controlled output " + fallback)
+        removed.append(package)
+    remaining = [
+        package
+        for package in OUTPUT_PACKAGES
+        if call("editor_toolset.toolsets.asset.AssetTools.exists", {{"path": package}})
+    ]
+    if remaining:
+        raise RuntimeError("controlled outputs remain after cleanup: " + json.dumps(remaining))
+    return {{"status": "clean", "existing": existing, "removed": removed}}
+
+# Unique outer request avoids transport replay of destructive calls.
+# cleanup nonce: {cleanup_nonce}
+"""
+    cleanup = return_value(
+        client.call_tool(
+            "editor_toolset.toolsets.programmatic.ProgrammaticToolset",
+            "execute_tool_script",
+            {"script": cleanup_script},
+        )
+    )
+    if cleanup.get("status") == "dry_run":
+        raise RuntimeError(
+            "controlled outputs exist; rerun with --execute-cleanup: "
+            + json.dumps(cleanup["existing"])
+        )
+    return cleanup["removed"]
 
 
 def trial_is_usable(value: Any) -> tuple[bool, list[str]]:
@@ -211,6 +268,11 @@ def main() -> int:
     parser.add_argument("--fixture", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--trials", type=int, default=3)
+    parser.add_argument(
+        "--execute-cleanup",
+        action="store_true",
+        help="Delete only the seven controlled POC-B baseline outputs before each trial.",
+    )
     args = parser.parse_args()
 
     script = args.fixture.read_text(encoding="utf-8-sig")
@@ -219,13 +281,19 @@ def main() -> int:
     trials: list[dict[str, Any]] = []
 
     for index in range(1, args.trials + 1):
-        removed = clean_outputs(client)
+        removed = clean_outputs(client, args.execute_cleanup)
         started_utc = datetime.now(timezone.utc).isoformat()
         started = time.perf_counter()
         raw = client.call_tool(
             "editor_toolset.toolsets.programmatic.ProgrammaticToolset",
             "execute_tool_script",
-            {"script": script},
+            {
+                "script": (
+                    script
+                    + f"\n# Unique outer request avoids transport replay.\n"
+                    + f"# trial nonce: {time.time_ns()}\n"
+                )
+            },
         )
         wall_clock_seconds = time.perf_counter() - started
         value = return_value(raw)
