@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/blueprints/submit_graph.schema.json",
+  "title": "submit_graph specification",
+  "description": "specification payload for action=submit_graph (Blueprint domain, WS-06). P0 stub — full graph/patch shapes land in P1/P2.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "graph_id": {
+      "type": "string",
+      "description": "Target graph within the Blueprint asset. Required for replace/patch on existing assets."
+    },
+    "graph": {
+      "$ref": "../../graph/graph.schema.json",
+      "description": "Complete graph document for mode=replace (ADR-0004)."
+    },
+    "patch": {
+      "type": "object",
+      "description": "Semantic patch document when mode=patch (see ws-06-patch-mode-and-impl-plan.md).",
+      "additionalProperties": false,
+      "properties": {
+        "base_revision": {
+          "type": "string",
+          "description": "content_hash the patch applies against (ADR-0006)."
+        },
+        "ops": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["op"],
+            "additionalProperties": true,
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [
+                  "upsert_node",
+                  "remove_node",
+                  "set_link",
+                  "break_link",
+                  "set_variable",
+                  "ensure_entry"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "blueprint_class": {
+      "type": "string",
+      "description": "Parent class path for mode=create, e.g. /Script/Engine.Actor."
+    },
+    "asset_name": {
+      "type": "string",
+      "description": "Short name for mode=create / create_or_update when target.asset_path is a folder."
+    }
+  },
+  "examples": [
+    {
+      "graph_id": "EventGraph",
+      "patch": {
+        "base_revision": "sha256:placeholder",
+        "ops": [
+          {
+            "op": "ensure_entry",
+            "entry_kind": "event",
+            "name": "EventBeginPlay"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/blueprints/read_graph.schema.json",
+  "title": "read_graph specification",
+  "description": "specification payload for action=read_graph (Blueprint domain, WS-06). P0 stub — shape will grow in P1.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "graph_id": {
+      "type": "string",
+      "description": "Graph within the target Blueprint asset, e.g. EventGraph or a function graph name. When omitted, the primary event graph is read."
+    },
+    "include_dsl": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, attach extensions.blueprint.dsl from Epic read_graph_dsl for debug only — not the agent contract."
+    },
+    "response_detail_hint": {
+      "type": "string",
+      "enum": ["minimal", "summary", "diagnostic", "complete"],
+      "description": "Optional hint; authoritative gating is request.options.response_detail."
+    }
+  },
+  "examples": [
+    {
+      "graph_id": "EventGraph"
+    }
+  ]
+}
