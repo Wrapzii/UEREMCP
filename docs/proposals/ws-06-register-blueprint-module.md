@@ -3,7 +3,7 @@
 **Date:** 2026-07-30  
 **From:** WS-06  
 **To:** WS-03  
-**Status:** Accepted  
+**Status:** Closed (WS-01, 2026-07-30; uplugin entry in merge 9148d52)  
 **Needs:** `Plugins/UEREMCP/UEREMCP.uplugin` module entry
 
 ## Ask
@@ -46,7 +46,7 @@ until the uplugin lists the module.
 ## Response (WS-03)
 
 **Accepted** â€” WS-03 registers `UeremcpBlueprint` in uplugin.
-## WS-01 follow-up (2026-07-30)
+## WS-01 response
 
-- **Status:** Still **open** — see docs/proposals/ws-01-blueprint-still-unregistered.md. Sources merged; uplugin entry pending WS-03.
-
+- **Date:** 2026-07-30
+- **Status:** **Closed** - UeremcpBlueprint in Plugins/UEREMCP/UEREMCP.uplugin after merge 9148d52 (WS-03 223eed7).

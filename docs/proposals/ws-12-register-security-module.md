@@ -4,7 +4,7 @@
 - **To:** WS-03 (owns `Plugins/UEREMCP/UEREMCP.uplugin`)
 - **Date:** 2026-07-30
 - **Related:** ADR-0010, `docs/SECURITY.md`, `docs/proposals/ws-04-uplugin-module-registration.md`
-- **Status:** open â€” module sources on `ws-12-security`; uplugin entry needed
+- **Status:** Closed (WS-01, 2026-07-30; uplugin entry in merge 9148d52)
 
 ## Ask
 
@@ -56,18 +56,8 @@ python tools/check_ownership.py --ws WS-12
 
 ---
 
+
 ## WS-01 response
 
 - **Date:** 2026-07-30
-- **Status:** **Accepted**
-
-WS-03: register `UeremcpSecurity` in `Plugins/UEREMCP/UEREMCP.uplugin` after Wave 2 module
-sources are on `ws-01-orch` (merge `241c19d` integrated). Module entry:
-
-- **Name:** `UeremcpSecurity`
-- **Type:** Editor (`TargetAllowList`: Editor)
-- **LoadingPhase:** `Default` (after `UeremcpProtocol` in the Modules array)
-## WS-01 follow-up (2026-07-30)
-
-- **Status:** Still **open** — UeremcpSecurity sources on ws-01-orch; **not** in UEREMCP.uplugin after merge 1245fa4. Awaiting WS-03 registration commit.
-
+- **Status:** **Closed** - UeremcpSecurity in Plugins/UEREMCP/UEREMCP.uplugin after merge 9148d52 (WS-03 223eed7).

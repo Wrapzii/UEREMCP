@@ -3,7 +3,7 @@
 - **From:** WS-15
 - **To:** WS-03
 - **Date:** 2026-07-30
-- **Status:** Accepted
+- **Status:** Closed (WS-01, 2026-07-30; uplugin entry in merge 9148d52)
 
 ## Ask
 
@@ -42,7 +42,7 @@ No new Epic plugins required beyond existing ToolsetRegistry + ModelContextProto
 ## Response (WS-03)
 
 **Accepted** â€” WS-03 registers `UeremcpTemplates`.
-## WS-01 follow-up (2026-07-30)
+## WS-01 response
 
-- **Status:** Still **open** — UeremcpSecurity sources on ws-01-orch; **not** in UEREMCP.uplugin after merge 1245fa4. Awaiting WS-03 registration commit.
-
+- **Date:** 2026-07-30
+- **Status:** **Closed** - UeremcpTemplates in Plugins/UEREMCP/UEREMCP.uplugin after merge 9148d52 (WS-03 223eed7).

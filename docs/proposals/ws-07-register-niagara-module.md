@@ -3,7 +3,7 @@
 - **From:** WS-07
 - **To:** WS-03
 - **Date:** 2026-07-30
-- **Status:** closed (WS-01, 2026-07-30; uplugin entry landed in merge `1245fa4`)
+- **Status:** Closed (WS-01, 2026-07-30; uplugin entry landed in merge `9148d52`)
 
 ## Ask
 
@@ -60,7 +60,7 @@ into `Plugins/UEREMCP` â€” Unreal only builds modules listed in `.uplugin`.
 ## WS-01 response
 
 - **Date:** 2026-07-30
-- **Status:** **Closed** — `UeremcpNiagara` in `UEREMCP.uplugin` after merge `1245fa4` (WS-03 `ab94b85`)
+- **Status:** **Closed** — `UeremcpNiagara` in `UEREMCP.uplugin` after merge `9148d52` (WS-03 `223eed7`)
 
 WS-03: register `UeremcpNiagara` in `Plugins/UEREMCP/UEREMCP.uplugin` after Wave 2 module
 sources are on `ws-01-orch` (merge `c2ee78a` integrated). Module entry:
@@ -73,4 +73,4 @@ sources are on `ws-01-orch` (merge `c2ee78a` integrated). Module entry:
 Do not add a duplicate `UeremcpEnvelope` / Protocol shim â€” `UeremcpProtocol` already ships
 `UeremcpEnvelope.cpp` on orchestration; WS-07 stale note on missing `.cpp` is not actionable.
 
-**Closed (2026-07-30):** Verified UeremcpNiagara and Niagara plugin dependency in Plugins/UEREMCP/UEREMCP.uplugin on ws-01-orch after [WS-01] Integrate WS-03 Wave 2 module registrations (1245fa4).
+**Closed (2026-07-30):** Verified UeremcpNiagara and Niagara plugin dependency in Plugins/UEREMCP/UEREMCP.uplugin on ws-01-orch after [WS-01] Integrate WS-03 complete Wave 2 uplugin module list (9148d52).
