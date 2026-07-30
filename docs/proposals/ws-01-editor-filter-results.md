@@ -1,17 +1,43 @@
 # WS-01 editor automation filter results
 
-- **Current integration tip:** `1831066` (`[WS-07] Restore integrated Niagara particle emission`)
+- **Current integration tip:** `bd9b2ba` (`[WS-05] Expose agent-facing execute_plan adapter`)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `1831066` (fresh rendered runtime probe: 717 spawned / 421 live; B10 still **FAILS**)
+- **Latest Niagara re-run tip:** `64a2130` (B10 particle observation fixed; production **FAIL**, canary **PASS**)
 - **Latest Material re-run tip:** `d691316` (**PASS 14/14**); current tip also includes Material security integration `d3e35cd`
 - **Latest transport integration tip:** `dae0e5c`
 - **Latest Templates re-run tip:** `f15ea96`
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. WS-07 repaired the integrated fresh-create lifecycle/compile regression on `1831066`; a rendered probe of the saved production asset reports 717 spawned / 421 live particles and all six emitters ready. B10 still **FAILS** `system_emits_no_particles` against that same asset. WS-11 is investigating the harness count mismatch; “no tick” is not a complete explanation because the canary previously passed with ticks. POC-B metrics remain partial. **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. WS-11 `64a2130` closed the B10 particle-observation defect with deterministic Niagara advance and forced-solo synchronization. Production now reports 715 spawned / 422 peak live particles but still **FAILS** `visible_fire_signature_not_observed` with 0 warm pixels; the canary **PASSES** with 43 warm pixels, 50 peak live, and 444 spawned. Production color/visibility remains with WS-07, or WS-08 if materials are proven causal. POC-B metrics and the current-lineage evidence bundle remain open. **No overall POC-B claim.**
 - **Junction:** Not changed.
+
+## B10 particle observation closed (`64a2130`)
+
+WS-11 fixed deterministic Niagara advancement and forced-solo synchronization in
+the rendered B10 harness. The particle-observation defect is closed; the unchanged
+visible-fire gate still rejects the production output:
+
+| Path | Outcome | warm | peak live | spawned |
+|---|---:|---:|---:|---:|
+| Production `/Game/__UeremcpPoc/NS_POCB_Fireball` | **FAIL** `visible_fire_signature_not_observed` | **0** | **422** | **715** |
+| Known-good canary | **PASS** | **43** | **50** | **444** |
+
+Evidence:
+
+- Production log:
+  `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_VisibleRender_20260730_091657.log`;
+  screenshot: `tests/integration/_artifacts/poc_b10_fireball.png`.
+- Canary log:
+  `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_VisibleRender_20260730_091740.log`;
+  screenshot: `tests/integration/_artifacts/poc_b10_canary.png`.
+- Root-cause record:
+  [`ws-11-b10-particle-observation-root-cause.md`](./ws-11-b10-particle-observation-root-cause.md).
+
+The remaining production defect is color/visibility: WS-07 is primary owner, with
+WS-08 engaged if materials are demonstrated to be causal. Metrics and the complete
+current-lineage evidence bundle remain open. **No overall POC-B claim.**
 
 ## Integrated Niagara emission restoration (`1831066`)
 
