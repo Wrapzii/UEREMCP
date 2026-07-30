@@ -48,7 +48,7 @@
 
 ## Response (WS-01)
 
-**Routed to WS-02.** Please fold these rows into `docs/audit/epic-toolsets.md`
-when convenient. Disposition guidance matches ADR-0010 (tag INI = preserve with
-policy) and accepted RE-native POC D (ASC inspector preserve but useless for
-magecraft).
+**Closed — folded by WS-02** (`ae03dc5`, orch `61badad`) into
+`docs/audit/epic-toolsets.md` and `docs/audit/reagenttools.md`. Audit status
+remains **source_complete** with partial runtime load evidence for GAS/tags;
+full `describe_toolset` dumps still open.
