@@ -362,6 +362,18 @@ class NiagaraSpecificationTests(unittest.TestCase):
             {"created_and_validated", "modified_and_validated"},
         )
 
+    def test_poc_b8_restart_handoff_fixture(self) -> None:
+        fixture = load_fixture("poc_b8_restart_handoff.json")
+        self.assertEqual(
+            fixture["filters"]["create"],
+            "UEREMCP.Niagara.POCB.Restart.Create",
+        )
+        self.assertEqual(
+            fixture["filters"]["verify"],
+            "UEREMCP.Niagara.POCB.Restart.Verify",
+        )
+        self.assertEqual(fixture["checkpoint"]["id"], "poc-b8-fireball")
+
     def test_poc_b_editor_gate_scaffold_fixture(self) -> None:
         fixture = load_fixture("poc_b_editor_gate_scaffold.json")
         honesty = fixture["expected_response_honesty"]

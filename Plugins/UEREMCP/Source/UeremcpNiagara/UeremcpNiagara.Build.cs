@@ -21,6 +21,7 @@ public class UeremcpNiagara : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"UnrealEd",
+			"EditorScriptingUtilities",
 			"AssetRegistry",
 			"Json",
 			"JsonUtilities",

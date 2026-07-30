@@ -1,0 +1,26 @@
+{
+  "$comment": "WS-07 B8 restart filter handoff for tests/run_poc_acceptance.ps1 -Scenario B8.",
+  "owner": "WS-07",
+  "filters": {
+    "create": "UEREMCP.Niagara.POCB.Restart.Create",
+    "verify": "UEREMCP.Niagara.POCB.Restart.Verify"
+  },
+  "checkpoint": {
+    "path_relative_to_saved": "UEREMCP/poc_b8_restart_checkpoint.json",
+    "id": "poc-b8-fireball"
+  },
+  "probe_paths": {
+    "system": "/Game/__UeremcpPoc/NS_POCB_Fireball",
+    "materials_glob": "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_*"
+  },
+  "evidence_markers": {
+    "prefix": "UEREMCP_POC_EVIDENCE=",
+    "create_scenario": "poc_b8_create",
+    "verify_scenario": "poc_b8_verify"
+  },
+  "notes": [
+    "Create writes checkpoint; Verify reads it in a fresh UnrealEditor-Cmd process.",
+    "Inline fireball request is embedded when -UeremcpPocBScaffold is omitted.",
+    "poc_b_gates.B8_restart_survival stays null on create responses; B8 pass is verify evidence only."
+  ]
+}

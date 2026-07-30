@@ -1,10 +1,22 @@
 # WS-07 → WS-11: POC B B8 editor-restart harness
 
-**Status:** Open  
-**Owner:** WS-11 (`tests/**`, `UeremcpValidation/**`)  
-**WS-07 deliverable:** `B8_assets_saved` gate only (disk save verified in-process)
+**Status:** Create/Verify filters landed on WS-07 (`UeremcpNiagaraPocBRestartTests.cpp`)  
+**Owner:** WS-11 orchestrates two-process `run_poc_acceptance.ps1 -Scenario B8`
 
-## What WS-07 surfaces now
+## WS-07 filters (landed)
+
+| Filter | Role |
+|---|---|
+| `UEREMCP.Niagara.POCB.Restart.Create` | Full fireball create under `/Game/__UeremcpPoc/`, writes `Saved/UEREMCP/poc_b8_restart_checkpoint.json`, emits `poc_b8_create` evidence |
+| `UEREMCP.Niagara.POCB.Restart.Verify` | Fresh editor process: reloads checkpoint assets from registry, emits `poc_b8_verify` with `B8.status=pass`, cleans POC assets |
+
+Fixture handoff: `schemas/domains/niagara/fixtures/poc_b8_restart_handoff.json`
+
+Create embeds the fireball request inline when `-UeremcpPocBScaffold` is omitted (RE plugin junction has no repo schemas). Optional fixture args still supported.
+
+`poc_b_gates.B8_restart_survival` remains **null** on create responses — restart proof lives only in verify evidence.
+
+## WS-11 orchestration (still required)
 
 `extra.poc_b_gates` on mutating `create_niagara_effect`:
 
@@ -29,15 +41,6 @@ Extend `tests/run_poc_acceptance.ps1` / `poc_evidence.py` fireball path (or add 
 
 Reference: `docs/proposals/ws-11-poc-evidence-handoff.md`, `tests/poc_evidence.py`.
 
-## Related: extend FireballInlineMaterials filter
+## Related: FireballInlineMaterials B3/B5/B6/B9
 
-Current filter (`UEREMCP.Niagara.POCB.FireballInlineMaterials`) asserts **B2/B4 only**. After this WS-07 gate land, extend it (or add `POCB.FireballAcceptanceGates`) to assert from one create response:
-
-- `B1_single_request_complete`
-- `B3_six_emitters_present`
-- `B5_user_parameters_present`
-- `B6_compile_awaited`
-- `B9_change_manifest_complete`
-- `validation.single_request_pipeline`
-
-Still **not** overall POC-B until B8 restart + MCP transport proof (B1 MCP) are green.
+Owned by WS-11 (`UeremcpValidation/.../NiagaraPocBFireballMaterials.spec.cpp`). WS-07 surfaces the gate fields on `poc_b_gates`; extending filter assertions is WS-11 follow-up.
