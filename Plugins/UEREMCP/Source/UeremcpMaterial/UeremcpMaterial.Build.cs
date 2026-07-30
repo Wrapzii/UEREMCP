@@ -19,6 +19,9 @@ public class UeremcpMaterial : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			// GEditor, Editor.h, EditorAssetSubsystem [VERIFIED: UnrealEd module].
+			// Do NOT add module "Editor" — UBT 5.8 has no such module
+			// [VERIFIED-RUNTIME: UBT 2026-07-30, "Could not find definition for module 'Editor'"].
 			"UnrealEd",
 			"AssetTools",
 			"AssetRegistry",
