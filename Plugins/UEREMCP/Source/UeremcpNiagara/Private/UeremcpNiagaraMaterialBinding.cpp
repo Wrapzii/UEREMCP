@@ -8,6 +8,9 @@
 #include "UeremcpNiagaraRoleNames.h"
 #include "UeremcpMaterialNiagaraExport.h"
 
+#include "EditorAssetLibrary.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraMeshRendererProperties.h"
 #include "NiagaraRibbonRendererProperties.h"
@@ -316,6 +319,65 @@ namespace
 		return Merged;
 	}
 
+	FString ScratchContentRootFromSystemPath(const FString& NiagaraSystemPackagePath)
+	{
+		if (NiagaraSystemPackagePath.StartsWith(UeremcpNiagaraPaths::PocContentRoot))
+		{
+			return UeremcpNiagaraPaths::PocContentRoot;
+		}
+		if (NiagaraSystemPackagePath.StartsWith(UeremcpNiagaraPaths::TestsContentRoot))
+		{
+			return UeremcpNiagaraPaths::TestsContentRoot;
+		}
+		return FString();
+	}
+
+	void ClearStaleTrailMasterIfMiAbsent(
+		const FString& NiagaraSystemPackagePath,
+		const FString& TargetMiPath,
+		const FString& Role)
+	{
+		if (!Role.Equals(TEXT("ribbon_trail"), ESearchCase::CaseSensitive) || TargetMiPath.IsEmpty())
+		{
+			return;
+		}
+		if (UEditorAssetLibrary::DoesAssetExist(TargetMiPath))
+		{
+			return;
+		}
+
+		const FString ScratchRoot = ScratchContentRootFromSystemPath(NiagaraSystemPackagePath);
+		if (ScratchRoot.IsEmpty())
+		{
+			return;
+		}
+
+		const FString MastersFolder = ScratchRoot + TEXT("/Materials/Masters");
+		const TArray<FString> MasterAssets = UEditorAssetLibrary::ListAssets(MastersFolder, false);
+		for (const FString& MasterPath : MasterAssets)
+		{
+			if (FPaths::GetBaseFilename(MasterPath).StartsWith(TEXT("M_Ueremcp_ProjTrail")))
+			{
+				UEditorAssetLibrary::DeleteAsset(MasterPath);
+			}
+		}
+
+		const FString MastersDir = FPackageName::LongPackageNameToFilename(
+			MastersFolder,
+			TEXT(""));
+		if (MastersDir.IsEmpty() || !FPaths::DirectoryExists(MastersDir))
+		{
+			return;
+		}
+
+		TArray<FString> OrphanFiles;
+		IFileManager::Get().FindFiles(OrphanFiles, *(MastersDir / TEXT("M_Ueremcp_ProjTrail*.uasset")), true, false);
+		for (const FString& OrphanFile : OrphanFiles)
+		{
+			IFileManager::Get().Delete(*(MastersDir / OrphanFile));
+		}
+	}
+
 	TSharedPtr<FJsonObject> MergeDefaultTrailTexturesIntoCreateSpec(
 		const TSharedPtr<FJsonObject>& CreateSpec)
 	{
@@ -533,6 +595,11 @@ bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
 
 			const TSharedPtr<FJsonObject> EffectiveCreateSpec =
 				PrepareInlineCreateSpec(Request.Role, Request.CreateSpec);
+
+			ClearStaleTrailMasterIfMiAbsent(
+				NiagaraSystemPackagePath,
+				TargetPath,
+				Request.Role);
 
 			FUeremcpNiagaraInlineMaterialCreate InlineRecord;
 			InlineRecord.Role = Request.Role;
