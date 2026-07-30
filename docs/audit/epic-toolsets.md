@@ -1,19 +1,28 @@
 # Capability Matrix — Epic Engine Toolsets (UE 5.8)
 
 - **Owner:** WS-02
-- **Status:** **source_complete** — tool names and dispositions verified from source; **runtime enumeration not done** (see checklist below)
+- **Status:** **runtime_partial** — priority Epic + UEREMCP toolsets have `describe_toolset` JSON dumps; full 73-toolset matrix not schema-complete
 - **Brief:** [RB-02](../research/RB-02-epic-toolset-inventory.md)
-- **Last verified:** 2026-07-29
+- **Last verified:** 2026-07-30 (runtime schemas for priority matrix)
 
 ## Enumeration method
 
 | Layer | Result | Tag |
 |---|---|---|
-| Runtime `list_toolsets` / `describe_toolset` | **Partial** — full schema dump still blocked (editor MCP on `127.0.0.1:8000` not reachable; proxy on `:8001` returns transport WinError 10061). WS-09 confirmed `GASToolsets` + `GameplayTagsToolset` in `list_toolsets` when MCP is up | [VERIFIED-RUNTIME: `docs/audit/raw/runtime-negative-findings.json`; WS-09 `list_toolsets` 2026-07-29] |
+| Runtime `list_toolsets` / `describe_toolset` | **Partial** — full registry dump + 12 priority `describe_toolset` schemas on 2026-07-30; 61 toolsets still schema-only | [VERIFIED-RUNTIME: `docs/audit/raw/runtime/list_toolsets.json`, `docs/audit/raw/schemas/`, `capture-metadata.json` 2026-07-30] |
 | Static source scan | **875 AICallable tools** across 25 toolset plugins (599 Python `@tool_call`, 274 C++ `UFUNCTION(meta=(AICallable))`) | [VERIFIED: `docs/audit/raw/source-scan-summary.json`] |
 | Per-plugin dumps | `docs/audit/raw/plugins/<PluginName>.json` | [VERIFIED: generated from scan 2026-07-29] |
 
-> **Do not cite JSON Schema shapes from this file** — runtime `describe_toolset` dumps were not obtained. Tool *names* and class structure are verified from source; parameter schemas need a live editor pass.
+> **Cite JSON Schema shapes** from `docs/audit/raw/schemas/<toolset>.json` for the 12
+> priority toolsets listed in `docs/audit/raw/runtime/capture-metadata.json`
+> `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`. Other toolsets: tool *names* from
+> source scan; schemas still need runtime dumps.
+
+**Runtime MCP naming (verified):** Python EditorToolset classes register as
+`editor_toolset.toolsets.<module>.<Class>` (e.g.
+`editor_toolset.toolsets.blueprint.BlueprintTools`), not `EditorToolset.BlueprintTools`
+`[VERIFIED-RUNTIME: list_toolsets 2026-07-30]`. C++ plugin toolsets use
+`PluginName.ClassName` (e.g. `GASToolsets.GameplayCueToolset`).
 
 ---
 
@@ -33,7 +42,13 @@
 | No AICallable tools found | `MCPClientToolset` — editor MCP *client* subsystem/settings only `[VERIFIED: MCPClientToolset headers — no AICallable UFUNCTION]` |
 | ToolsetRegistry reference | `UAgentSkillToolset` — ListSkills, GetSkills, CreateSkill, UpdateSkill `[VERIFIED: AgentSkill.h:69-103]` |
 
-**Runtime confirmation pending** for full registry + schemas. **Partial (WS-09):** `GASToolsets` and `GameplayTagsToolset` are not named in `RE.uproject` but load via `AllToolsets` and were visible in live `list_toolsets` `[VERIFIED: RE.uproject]` `[VERIFIED: AllToolsets.uplugin:50-56]` `[VERIFIED-RUNTIME: unreal-mcp list_toolsets 2026-07-29]`.
+**Runtime confirmation (2026-07-30):** `list_toolsets` returns **73** registered toolsets on
+live RE — Epic AllToolsets members, C++ plugins, Python `editor_toolset.toolsets.*`, 15
+REAgentTools workflow toolsets, `UeremcpCore.UeremcpReferenceToolset`, and extras (MetaHuman,
+SequencerAnimMixer, MVVM, Conversation, AIModule BT) `[VERIFIED-RUNTIME: list_toolsets.json]`.
+Priority `describe_toolset` schemas captured for Blueprint, Niagara System/Assets, GAS,
+GameplayTags, Materials, ControlRig sample, Programmatic, and UEREMCP reference
+`[VERIFIED-RUNTIME: docs/audit/raw/schemas/ 2026-07-30]`.
 
 ---
 
@@ -346,34 +361,35 @@ Planned UEREMCP surface must **cover every `supersede` row** above (envelope gra
 
 ## Runtime verification checklist
 
-This file is **`source_complete`, not audit-complete.** The following require a live RE
-editor with ModelContextProtocol on `127.0.0.1:8000/mcp` before the Epic audit can be
-marked runtime-verified:
+Epic audit is **`runtime_partial`** for R-06 (priority matrix schema-complete; full matrix open).
 
-- [ ] `list_toolsets` — dump to `docs/audit/raw/runtime-list_toolsets.json`
-- [ ] `describe_toolset` for each loaded class — schemas to `docs/audit/raw/schemas/`
-- [x] Confirm `GASToolsets` + `GameplayTagsToolset` in `list_toolsets` when MCP up (WS-09, 2026-07-29)
-- [ ] Confirm full load set matches `AllToolsets` inference (remaining toolsets)
-- [ ] Verify dotted toolset names match source scan (Python module paths vs MCP names)
-- [ ] Classify async tools (confirm `execute_tool_script` async; sample others)
-- [ ] Sample result payload sizes for composite tools (token budget calibration)
-- [ ] Negative findings log updated or closed — `docs/audit/raw/runtime-negative-findings.json`
+- [x] `list_toolsets` — dump to `docs/audit/raw/runtime/list_toolsets.json` (73 toolsets, 2026-07-30)
+- [x] `describe_toolset` for priority disposition toolsets — `docs/audit/raw/schemas/` (12 files)
+- [x] Confirm `GASToolsets` + `GameplayTagsToolset` in `list_toolsets` (2026-07-30)
+- [x] Confirm `UeremcpCore.UeremcpReferenceToolset` present with Ping/Echo schemas
+- [ ] Confirm full load set matches `AllToolsets` inference — **partial** (73 enumerated; HairModeling not seen)
+- [x] Verify dotted toolset names: Python `editor_toolset.toolsets.*` vs C++ `Plugin.Class` (documented above)
+- [ ] Classify async tools per tool — **partial** (`execute_tool_script` string return only)
+- [ ] Sample result payload sizes for composite tools
+- [x] Negative findings log updated — `docs/audit/raw/runtime-negative-findings.json` (success entry 2026-07-30)
 
-Until all checked: cite tool **names** from this file with `[VERIFIED: source scan]`; cite
-**schemas and load state** only from runtime dumps once they exist.
+Until all checked: cite **schemas** only for toolsets in `capture-metadata.json`;
+other toolsets remain `[VERIFIED: source scan]` for names only.
 
 ---
 
 ## Open blockers
 
-1. **Editor MCP offline** — re-run `list_toolsets` + `describe_toolset` for every loaded class; store verbatim schemas in `docs/audit/raw/schemas/`.
-2. **Runtime load set** — confirm registry matches AllToolsets inference when RE editor runs.
-3. **JSON Schema dumps** — q7/q8 input schemas are from Python annotations, not registry-generated schemas (RB-03 q6 coupling).
+1. **Remaining schema dumps** — `describe_toolset` for ~61 non-priority toolsets (PCG, UMG, Sequencer*, REAgentTools 15, etc.).
+2. **Payload / async calibration** — live read-only calls for token budget and async classification.
+3. **Blueprint tool count** — runtime 53 vs source scan 52; reconcile on next source scan.
 
 ---
 
 ## Unverified claims — do not propagate
 
-- Exact dotted toolset names at MCP discovery (e.g. `EditorToolset.AssetTools` vs `editor_toolset.toolsets.asset.AssetTools`) — needs runtime `list_toolsets`.
+- Exact dotted toolset names at MCP discovery — **resolved for EditorToolset Python classes**
+  (`editor_toolset.toolsets.*`) and C++ plugins (`GASToolsets.*`, etc.)
+  `[VERIFIED-RUNTIME: list_toolsets 2026-07-30]`.
 - Async vs sync classification per tool — `execute_tool_script` is async `[VERIFIED: return type]`; others need runtime or header read per tool.
 - Result payload sizes — need live calls.

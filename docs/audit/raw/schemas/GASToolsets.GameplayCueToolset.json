@@ -1,0 +1,345 @@
+{
+  "name": "GASToolsets.GameplayCueToolset",
+  "version": "1.0",
+  "description": "Provides tools for inspecting, executing, and managing gameplay cues and their notify assets.",
+  "tools": [
+    {
+      "description": "Removes a gameplay cue tag from the project.\nThis should ONLY be called after getting explicit direction or permission from the user.",
+      "name": "GASToolsets.GameplayCueToolset.RemoveCueTag",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cueTag": {
+            "type": "string",
+            "description": "The fully-qualified cue tag to remove (e.g. \"GameplayCue.Character.Death\")."
+          }
+        },
+        "required": [
+          "cueTag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the tag was removed successfully."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns gameplay cue tags registered in the project.",
+      "name": "GASToolsets.GameplayCueToolset.ListCues",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parentTag": {
+            "type": "string",
+            "description": "If non-empty, only cues descending from this tag are returned. For example, passing \"GameplayCue.Character\" returns all cues under that namespace. Pass an empty string to return all tags under the \"GameplayCue\" root."
+          }
+        },
+        "required": [
+          "parentTag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A sorted list of fully-qualified gameplay cue tag names."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns information about a specific gameplay cue, including its notify asset.",
+      "name": "GASToolsets.GameplayCueToolset.GetCueInfo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cueTag": {
+            "type": "string",
+            "description": "The fully-qualified gameplay cue tag, e.g. \"GameplayCue.Character.Death\"."
+          }
+        },
+        "required": [
+          "cueTag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "GameplayCueInfo",
+            "description": "The cue's notify asset path and type (\"Static\", \"Actor\", or \"None\"). Raises a script error if the tag does not exist.",
+            "type": "object",
+            "properties": {
+              "tag": {
+                "type": "string",
+                "description": "The fully-qualified gameplay cue tag (e.g. \"GameplayCue.Character.Death\")."
+              },
+              "notifyAssetPath": {
+                "type": "string",
+                "description": "The object path to the associated GameplayCueNotify asset.\nEmpty if no notify has been found for this tag in the asset registry."
+              },
+              "notifyType": {
+                "type": "string",
+                "description": "The notify base class: \"Static\", \"Actor\", or \"None\" if no notify is found."
+              }
+            },
+            "required": [
+              "tag",
+              "notifyAssetPath",
+              "notifyType"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns gameplay cue tags that have no corresponding GameplayCueNotify asset in the project.\nTags without notifies produce no visible effect when triggered at runtime.",
+      "name": "GASToolsets.GameplayCueToolset.FindCueTagsWithoutNotifies",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A sorted list of gameplay cue tag names with no associated notify assets."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all GameplayCueNotify assets found in the project via the asset registry.",
+      "name": "GASToolsets.GameplayCueToolset.FindCueNotifyAssets",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "parentTag": {
+            "type": "string",
+            "description": "If non-empty, only notifies whose cue tag descends from this tag are returned. Pass an empty string to return all notify assets in the project."
+          }
+        },
+        "required": [
+          "parentTag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "GameplayCueNotifyInfo",
+              "type": "object",
+              "properties": {
+                "cueTag": {
+                  "type": "string",
+                  "description": "The gameplay cue tag this notify responds to."
+                },
+                "assetPath": {
+                  "type": "string",
+                  "description": "The full object path to the asset (e.g. \"/Game/Effects/GCN_Death.GCN_Death\")."
+                },
+                "assetName": {
+                  "type": "string",
+                  "description": "The asset name without the package path (e.g. \"GCN_Death\")."
+                },
+                "notifyType": {
+                  "type": "string",
+                  "description": "\"Static\" for UGameplayCueNotify_Static subclasses, \"Actor\" for AGameplayCueNotify_Actor subclasses."
+                }
+              },
+              "required": [
+                "cueTag",
+                "assetPath",
+                "assetName",
+                "notifyType"
+              ]
+            },
+            "description": "A list of notify descriptors, sorted by cue tag."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Executes a gameplay cue non-replicated on the currently selected actor in the editor.\nUseful for previewing cue effects without network replication.\nRequires a PIE session or a configured GameplayCueManager to produce visible results.",
+      "name": "GASToolsets.GameplayCueToolset.ExecuteCueOnSelectedActor",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cueTag": {
+            "type": "string",
+            "description": "The fully-qualified tag of the cue to execute, e.g. \"GameplayCue.Character.Death\"."
+          },
+          "normalizedMagnitude": {
+            "type": "number",
+            "description": "A normalized (0.0-1.0) magnitude value passed to the cue."
+          },
+          "location": {
+            "title": "Vector",
+            "description": "World-space location parameter passed to the cue.",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "normal": {
+            "title": "Vector",
+            "description": "World-space direction parameter passed to the cue.",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          }
+        },
+        "required": [
+          "cueTag",
+          "normalizedMagnitude",
+          "location",
+          "normal"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the cue was dispatched. Raises a script error if no actor is selected or the tag does not exist."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new GameplayCueNotify Blueprint asset at the specified content browser location.\nThis should ONLY be called after getting explicit direction or permission from the user.",
+      "name": "GASToolsets.GameplayCueToolset.CreateCueNotifyAsset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cueTag": {
+            "type": "string",
+            "description": "The gameplay cue tag the notify should respond to. The tag must already exist; create it first with AddCueTag if needed."
+          },
+          "packagePath": {
+            "type": "string",
+            "description": "The content browser folder for the asset, e.g. \"/Game/Effects/Cues\"."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "The file name for the new asset, e.g. \"GCN_CharacterDeath\"."
+          },
+          "bIsActor": {
+            "type": "boolean",
+            "description": "If true, creates a GameplayCueNotify_Actor (spawned actor in the world). If false, creates a GameplayCueNotify_Static (instant effect, no spawned actor)."
+          }
+        },
+        "required": [
+          "cueTag",
+          "packagePath",
+          "assetName",
+          "bIsActor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The object path of the created asset, or an empty string on failure."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a new gameplay cue tag to the project.\nThis should ONLY be called after getting explicit direction or permission from the user.",
+      "name": "GASToolsets.GameplayCueToolset.AddCueTag",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cueTag": {
+            "type": "string",
+            "description": "The fully-qualified tag to add. Must begin with \"GameplayCue.\" (e.g. \"GameplayCue.Character.Death\")."
+          },
+          "comment": {
+            "type": "string",
+            "description": "An optional developer comment describing the cue's purpose.",
+            "default": "/**\n\t * Adds a new gameplay cue tag to the project.\n\t * This should ONLY be called after getting explicit direction or permission from the user.\n\t * @param CueTag The fully-qualified tag to add. Must begin with \"GameplayCue.\"\n\t *   (e.g. \"GameplayCue.Character.Death\").\n\t * @param Comment An optional developer comment describing the cue's purpose.\n\t * @return True if the tag was added successfully.\n\t */"
+          }
+        },
+        "required": [
+          "cueTag"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the tag was added successfully."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

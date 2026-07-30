@@ -1,0 +1,296 @@
+{
+  "name": "NiagaraToolsets.NiagaraToolset_Assets",
+  "version": "1.0",
+  "description": "Niagara Toolset for discovery of Niagara script assets.\n\nProvides:\n- GetAssetDiscoveryInfo: project-configured asset discovery groups\n- FindNiagaraScripts: asset registry search filtered by usage, visibility, name, and module usage bitmask\n- GetNiagaraScriptDigest: decoded asset-registry tags for a single script\n\nAll functions read from the asset registry without LoadObject. Pair with\nNiagaraToolset_System.AddModule to drop discovered modules into a stack.\n\nNote: FAssetData JSON serialization does not include the TagsAndValues map (it\nis not a UPROPERTY), so callers wanting decoded metadata for a result row from\nFindNiagaraScripts must round-trip through GetNiagaraScriptDigest.",
+  "tools": [
+    {
+      "description": "Returns the decoded asset-registry tag metadata for a Niagara script asset.\n\nLooks up the asset by object path in the asset registry and reads its tags;\nno LoadObject is performed. Returned fields reflect the exposed (published)\nversion when the script uses FVersionedNiagaraScriptData versioning - the\nregistry never carries non-exposed-version metadata.",
+      "name": "NiagaraToolsets.NiagaraToolset_Assets.GetNiagaraScriptDigest",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "objectPath": {
+            "type": "string",
+            "description": "Full object path of the script (e.g. \"/Niagara/Modules/Spawn/Initialize Particle.Initialize Particle\")."
+          }
+        },
+        "required": [
+          "objectPath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "NiagaraExt_ScriptDigest",
+            "description": "Decoded digest. If the path is invalid or not a UNiagaraScript, an error is raised and a default-initialized digest is returned.",
+            "type": "object",
+            "properties": {
+              "objectPath": {
+                "type": "string",
+                "description": "Full object path: /Path/To/Package.AssetName"
+              },
+              "packageName": {
+                "type": "string",
+                "description": "Long package name: /Path/To/Package"
+              },
+              "assetName": {
+                "type": "string",
+                "description": "Asset name without package"
+              },
+              "usage": {
+                "type": "string",
+                "title": "ENiagaraScriptUsage",
+                "enum": [
+                  "Function",
+                  "Module",
+                  "DynamicInput",
+                  "ParticleSpawnScript",
+                  "ParticleSpawnScriptInterpolated",
+                  "ParticleUpdateScript",
+                  "ParticleEventScript",
+                  "ParticleSimulationStageScript",
+                  "ParticleGPUComputeScript",
+                  "EmitterSpawnScript",
+                  "EmitterUpdateScript",
+                  "SystemSpawnScript",
+                  "SystemUpdateScript"
+                ],
+                "description": "Script kind: Module, DynamicInput, Function, or one of the stage scripts"
+              },
+              "libraryVisibility": {
+                "type": "string",
+                "title": "ENiagaraScriptLibraryVisibility",
+                "enum": [
+                  "Invalid",
+                  "Unexposed",
+                  "Library",
+                  "Hidden"
+                ],
+                "description": "Library visibility: Unexposed, Library (= \"Exposed\" in editor UI), or Hidden"
+              },
+              "moduleUsageBitmask": {
+                "type": "integer",
+                "description": "Bitmask of stack contexts a Module is compatible with. 0 for non-Module scripts."
+              },
+              "category": {
+                "type": "string",
+                "description": "Library category text (empty if unset)"
+              },
+              "description": {
+                "type": "string",
+                "description": "Library description text (empty if unset)"
+              },
+              "keywords": {
+                "type": "string",
+                "description": "Library search keywords (empty if unset)"
+              },
+              "bDeprecated": {
+                "type": "boolean",
+                "description": "True if the script is marked deprecated"
+              },
+              "bSuggested": {
+                "type": "boolean",
+                "description": "True if the script is marked suggested"
+              }
+            },
+            "required": [
+              "objectPath",
+              "packageName",
+              "assetName",
+              "usage",
+              "libraryVisibility",
+              "moduleUsageBitmask",
+              "category",
+              "description",
+              "keywords",
+              "bDeprecated",
+              "bSuggested"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the project's configured asset discovery groups.\nEach group describes a content directory's purpose and paths.",
+      "name": "NiagaraToolsets.NiagaraToolset_Assets.GetAssetDiscoveryInfo",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "NiagaraToolsetAssetDiscoveryGroup",
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "description": "Description of what types of assets are in these paths and when to use them"
+                },
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Content directory paths containing assets for this group"
+                }
+              },
+              "required": [
+                "description",
+                "paths"
+              ]
+            },
+            "description": "Configured asset discovery groups, or an empty array if none are configured in NiagaraToolsetsSettings."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Searches for UNiagaraScript assets matching the given filters.\n\nReads filterable metadata from asset registry tags only - no LoadObject required.\n\nTags reflect the exposed (published) version of versioned scripts; this\nfunction does not need a version filter and there is no way to discover\nnon-exposed versions through the asset registry.",
+      "name": "NiagaraToolsets.NiagaraToolset_Assets.FindNiagaraScripts",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folderPath": {
+            "type": "string",
+            "description": "The folder to search within. Pass an empty string to search the entire project."
+          },
+          "name": {
+            "type": "string",
+            "description": "If non-empty, only return assets whose name contains this substring (case-insensitive)."
+          },
+          "usages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "title": "ENiagaraScriptUsage",
+              "enum": [
+                "Function",
+                "Module",
+                "DynamicInput",
+                "ParticleSpawnScript",
+                "ParticleSpawnScriptInterpolated",
+                "ParticleUpdateScript",
+                "ParticleEventScript",
+                "ParticleSimulationStageScript",
+                "ParticleGPUComputeScript",
+                "EmitterSpawnScript",
+                "EmitterUpdateScript",
+                "SystemSpawnScript",
+                "SystemUpdateScript"
+              ]
+            },
+            "description": "If non-empty, only return assets whose Usage matches one of the listed values. Empty array = all usages allowed."
+          },
+          "visibilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "title": "ENiagaraScriptLibraryVisibility",
+              "enum": [
+                "Invalid",
+                "Unexposed",
+                "Library",
+                "Hidden"
+              ]
+            },
+            "description": "If non-empty, only return assets whose LibraryVisibility matches one of the listed values. Empty array defaults to {Library} (the editor's \"Exposed\") - explicit override required to surface Unexposed or Hidden scripts."
+          },
+          "moduleUsageBitmask": {
+            "type": "integer",
+            "description": "If non-zero, restricts results to Module scripts whose ModuleUsageBitmask shares at least one bit with this argument (any-match). Non-Module scripts are excluded when this is non-zero. Pass 0 to disable the bitmask gate."
+          },
+          "bRecursive": {
+            "type": "boolean",
+            "description": "Whether to search subfolders. Ignored when FolderPath is empty (whole-project scan is always exhaustive)."
+          },
+          "bIncludeDeprecated": {
+            "type": "boolean",
+            "description": "If false (default usage), assets whose exposed version has bDeprecated=true are excluded. Pass true only when the caller explicitly wants to surface deprecated assets (e.g. searching for the canonical replacement of a known deprecated module)."
+          }
+        },
+        "required": [
+          "folderPath",
+          "name",
+          "usages",
+          "visibilities",
+          "moduleUsageBitmask",
+          "bRecursive",
+          "bIncludeDeprecated"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "AssetData",
+              "type": "object",
+              "properties": {
+                "objectPath": {
+                  "type": "string"
+                },
+                "packageName": {
+                  "type": "string",
+                  "description": "The name of the package in which the asset is found, this is the full long package name such as /Game/Path/Package"
+                },
+                "packagePath": {
+                  "type": "string",
+                  "description": "The path to the package in which the asset is found, this is /Game/Path with the Package stripped off"
+                },
+                "assetName": {
+                  "type": "string",
+                  "description": "The name of the asset without the package"
+                },
+                "assetClass": {
+                  "type": "string"
+                },
+                "assetClassPath": {
+                  "title": "TopLevelAssetPath",
+                  "description": "The path of the asset's class, e.g. /Script/Engine.StaticMesh",
+                  "type": "object",
+                  "properties": {
+                    "packageName": {
+                      "type": "string",
+                      "description": "Name of the package containing the asset e.g. /Path/To/Package"
+                    },
+                    "assetName": {
+                      "type": "string",
+                      "description": "Name of the asset within the package e.g. 'AssetName'"
+                    }
+                  },
+                  "required": [
+                    "packageName",
+                    "assetName"
+                  ]
+                }
+              },
+              "required": [
+                "objectPath",
+                "packageName",
+                "packagePath",
+                "assetName",
+                "assetClass",
+                "assetClassPath"
+              ]
+            },
+            "description": "Array of AssetData entries for matching scripts. Use GetNiagaraScriptDigest to decode tag metadata for any row."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

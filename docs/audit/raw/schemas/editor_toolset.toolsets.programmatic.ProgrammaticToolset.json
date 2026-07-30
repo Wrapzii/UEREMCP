@@ -1,0 +1,85 @@
+{
+  "name": "editor_toolset.toolsets.programmatic.ProgrammaticToolset",
+  "version": "1.0",
+  "description": "Batches calls to other registered tools through a small sandboxed Python\n    script that glues them together with custom logic. The script's purpose is\n    tool orchestration, not general Python execution.",
+  "tools": [
+    {
+      "description": "Execute a Python script against the toolset APIs.\n\n        Use this to batch multiple tool calls into a single script execution,\n        reducing round-trips and context usage.\n\n        IMPORTANT: Available modules and usage instructions are described by the\n        value returned by `get_execution_environment`. You MUST call\n        `get_execution_environment` once in the conversation before using this\n        tool. Read the value in the `instructions` field in the returned\n        environment info prior to calling this function, so that you understand\n        what APIs are available and how to use them.\n\n        Before writing a script that calls multiple tools, look up the output\n        schemas (if available) for any tools you plan to use. This returns the\n        JSON schema describing each tool's return value, so you know how to\n        parse results and pass data between calls.\n\n        Args:\n            script: Python script to execute. Must define a `run()` function\n                that returns a `Dict[str, Any]`.\n\n        Returns:\n            JSON-encoded dict returned by the script's `run()` function.\n\n        Raises:\n            SyntaxError: If the script has invalid syntax.\n            ValueError: If the script imports a disallowed module or does not\n                define a `run()` function.\n            TypeError: If `run()` does not return a dict.\n            Exception: Any unhandled exception raised by the script.",
+      "name": "editor_toolset.toolsets.programmatic.ProgrammaticToolset.execute_tool_script",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "script"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Value of the result."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get details about execution environment.\n\n        This includes instructions on how to write scripts, and constraints,\n        such as what modules may be imported and the script entrypoint and\n        function signature.\n\n        Returns:\n            Returns the current execution environment.",
+      "name": "editor_toolset.toolsets.programmatic.ProgrammaticToolset.get_execution_environment",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "ProgrammaticApiExecutionEnvironmentInfo",
+            "type": "object",
+            "properties": {
+              "instructions": {
+                "type": "string"
+              },
+              "supported_modules": {
+                "type": "array",
+                "items": {
+                  "title": "ProgrammaticApiSupportedModule",
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "description",
+                    "name"
+                  ]
+                }
+              },
+              "language": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "instructions",
+              "supported_modules",
+              "language"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

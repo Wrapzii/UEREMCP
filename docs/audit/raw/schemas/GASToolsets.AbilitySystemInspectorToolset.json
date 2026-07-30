@@ -1,0 +1,254 @@
+{
+  "name": "GASToolsets.AbilitySystemInspectorToolset",
+  "version": "1.0",
+  "description": "Provides tools for inspecting the runtime state of an AbilitySystemComponent.\nEach function takes a direct actor pointer and raises a script error if the\nactor is null or has no AbilitySystemComponent.",
+  "tools": [
+    {
+      "description": "Returns all abilities granted to the actor's AbilitySystemComponent.",
+      "name": "GASToolsets.AbilitySystemInspectorToolset.GetGrantedAbilities",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "The target actor.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "GrantedAbilityInfo",
+              "type": "object",
+              "properties": {
+                "abilityName": {
+                  "type": "string",
+                  "description": "The name of the ability class (e.g. \"GA_Sprint\")."
+                },
+                "level": {
+                  "type": "integer",
+                  "description": "The level at which this ability was granted."
+                },
+                "bIsActive": {
+                  "type": "boolean",
+                  "description": "True if the ability is currently executing (at least one active instance)."
+                }
+              },
+              "required": [
+                "abilityName",
+                "level",
+                "bIsActive"
+              ]
+            },
+            "description": "A list of granted ability summaries sorted by ability name. Raises a script error if Actor is null or has no ASC."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the current base and modified values of all gameplay attributes\non the actor's AbilitySystemComponent.",
+      "name": "GASToolsets.AbilitySystemInspectorToolset.GetAttributeValues",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "The target actor.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RuntimeAttributeValue",
+              "type": "object",
+              "properties": {
+                "attributeName": {
+                  "type": "string",
+                  "description": "The short attribute name (e.g. \"Health\")."
+                },
+                "fullName": {
+                  "type": "string",
+                  "description": "The fully-qualified name including the owning set (e.g. \"UMyHealthSet.Health\")."
+                },
+                "setClassName": {
+                  "type": "string",
+                  "description": "The name of the AttributeSet class that owns this attribute (e.g. \"UMyHealthSet\")."
+                },
+                "baseValue": {
+                  "type": "number",
+                  "description": "The permanent base value, unaffected by temporary modifiers."
+                },
+                "currentValue": {
+                  "type": "number",
+                  "description": "The current value after all active modifiers are applied."
+                }
+              },
+              "required": [
+                "attributeName",
+                "fullName",
+                "setClassName",
+                "baseValue",
+                "currentValue"
+              ]
+            },
+            "description": "A list of attribute values sorted by full name. Raises a script error if Actor is null or has no ASC."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the gameplay tags currently owned by the actor's\nAbilitySystemComponent (includes loose tags, effect-granted tags, etc.).",
+      "name": "GASToolsets.AbilitySystemInspectorToolset.GetActiveTags",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "The target actor.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A sorted list of gameplay tag name strings. Raises a script error if Actor is null or has no ASC."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all gameplay effects currently active on the actor's\nAbilitySystemComponent.",
+      "name": "GASToolsets.AbilitySystemInspectorToolset.GetActiveEffects",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "The target actor.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "ActiveEffectInfo",
+              "type": "object",
+              "properties": {
+                "effectName": {
+                  "type": "string",
+                  "description": "The name of the GameplayEffect class (e.g. \"GE_Burning\")."
+                },
+                "stackCount": {
+                  "type": "integer",
+                  "description": "Current stack count. 1 for non-stacking effects."
+                },
+                "totalDuration": {
+                  "type": "number",
+                  "description": "Total duration in seconds. -1 means infinite."
+                },
+                "remainingDuration": {
+                  "type": "number",
+                  "description": "Remaining duration in seconds. -1 means infinite."
+                },
+                "grantedTags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Tags granted to the owner by this effect."
+                }
+              },
+              "required": [
+                "effectName",
+                "stackCount",
+                "totalDuration",
+                "remainingDuration",
+                "grantedTags"
+              ]
+            },
+            "description": "A list of active effect summaries sorted by effect name. Raises a script error if Actor is null or has no ASC."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

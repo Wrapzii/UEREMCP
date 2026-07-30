@@ -1,7 +1,7 @@
 # Capability Matrix — REAgentTools
 
 - **Owner:** WS-02
-- **Status:** **source_complete** — 15-toolset disposition from source; coexistence/cutover and runtime Epic cross-check still open
+- **Status:** **runtime_partial** — source disposition complete; all 15 RE toolsets confirmed in live `list_toolsets`; schema dumps and cutover still open
 - **Source:** repository inspection of `$RAT` on 2026-07-29, plus the project's own
   `Docs/CAPABILITY_MATRIX.md` (**self-reported — treat as claims to verify**).
 - **Brief:** [RB-15](../research/RB-15-reagenttools-migration.md)
@@ -118,8 +118,8 @@ Source scan: `$RAT/Content/Python/re_agent_tools/toolsets/*_tools.py`
 `[VERIFIED: grep @tool_call 2026-07-29]`. Inventory:
 `docs/audit/raw/reagenttools-tool-inventory.json`.
 
-One row per **toolset** (not per tool). Runtime behaviour not exercised — dispositions
-from source read + `$RAT/Docs/CAPABILITY_MATRIX.md` cross-check where noted.
+One row per **toolset** (not per tool). Runtime registry confirmed 2026-07-30; per-toolset
+`describe_toolset` schemas not yet dumped (see `docs/proposals/ws-02-r06-runtime-status.md`).
 
 | Toolset | Class | Tools (n) | Purpose | Limitations | Altitude | Disposition | Superseded by | Tag |
 |---|---|---|---|---|---|---|---|---|
@@ -187,11 +187,12 @@ Accepted from `docs/proposals/ws-09-audit-gas-toolsets.md` (WS-09, 2026-07-29).
 | **retire** | project |
 | **internalise** | asset (overlap with Epic AssetTools during migration) |
 
-### Still open (not source_complete)
+### Still open (not runtime_complete)
 
-- Coexistence: simultaneous registry with UEREMCP without name collisions (RB-15 q15)
+- Coexistence: simultaneous registry with UEREMCP without name collisions — **no collisions observed** in 73-toolset `list_toolsets` dump `[VERIFIED-RUNTIME: 2026-07-30]`
 - Cutover bar: what must work before REAgentTools disabled (RB-15 q16)
-- Runtime confirmation that REAgentTools tools register when both plugins enabled
+- Runtime `describe_toolset` for all 15 RE workflow toolsets (names only confirmed via `list_toolsets`)
+- Cross-check `execute_editor_batch` schema against live dump vs `q-reagenttools-execute-editor-batch.json`
 
 ---
 
