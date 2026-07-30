@@ -22,8 +22,20 @@
   },
   "expectations": {
     "allowed_material_root": "/Game/__UeremcpTests/Materials",
+    "mixed_material_roles": {
+      "direct_path": "sparks",
+      "create_spec": "ribbon_trail"
+    },
     "inline_material_field": "inline_material_creates",
+    "inline_material_create_required_fields": ["role", "success"],
+    "inline_material_create_when_success": [
+      "status",
+      "primary_asset",
+      "created_assets"
+    ],
+    "orphaned_inline_field": "orphaned_inline_creates",
     "checks_when_all_verified": ["niagara.material_bindings"],
-    "validation_never_claims": ["created_and_validated", "modified_and_validated"]
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"],
+    "response_status": "partially_completed"
   }
 }
