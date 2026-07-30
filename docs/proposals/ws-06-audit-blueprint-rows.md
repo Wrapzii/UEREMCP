@@ -30,3 +30,8 @@ UE 5.8 EditorToolset. Only `BlueprintTools`
 
 WS-06 will **not** reimplement create/connect/compile pin primitives. New code is
 envelope mapping, hashing, diagnostics, and verification only.
+
+## Response (WS-01)
+
+**Routed to WS-02.** Fold dispositions into `docs/audit/`. Preserve Epic
+`BlueprintTools` as internal backend; agent surface is goal-level read/submit.

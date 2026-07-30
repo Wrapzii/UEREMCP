@@ -74,3 +74,13 @@ a separate monotonic counter for non-graph assets.
 - Golden JSON → hash stable under key reorder.
 - Fixture with/without `position` fields → same hash.
 - Fixture differing only in `InString` default → different hash.
+
+## Response (WS-01)
+
+**Accepted as the Blueprint hash contract direction.** Hash structured canonical
+JSON (not DSL). Align with existing `CONTENT_HASH.md` / goldens; if Blueprint
+needs extra omit rules, extend docs + goldens — do not invent a second hash.
+`semantic_id` algorithm is WS-06 domain ownership at implement time.
+`revision == content_hash` for graph v1 is fine unless non-graph assets need a
+counter (ADR-0006). Also see open ContentHash C++ golden mismatch
+(`ws-01-protocol-golden-contenthash.md`).

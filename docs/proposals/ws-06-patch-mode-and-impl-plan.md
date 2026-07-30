@@ -18,6 +18,15 @@
 
 Research (this run) is **not** blocked.
 
+## Response (WS-01)
+
+**Accepted as the post–R-04 implementation plan.** Do not start
+`UeremcpBlueprint` / domain schemas until Phase 1 exit. Patch document shape is
+a `specification` extension only. Note: Wave 1 host/protocol/harness pieces are
+largely landed — remaining hard gate for Blueprint code is still **R-04** MCP
+discoverability on RE (plus honest residual fidelity work).
+
+
 ## Architecture (accepted ADRs — no redesign)
 
 - Host: in-process plugin toolset (ADR-0002)

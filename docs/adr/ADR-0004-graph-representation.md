@@ -98,9 +98,12 @@ every stored template's `construction_plan`.
 
 Assigned, not forgotten:
 
-- Can a Blueprint event graph be fully reconstructed from this representation, and
-  where does fidelity break — delegates, latent nodes, custom K2 nodes, macro
-  instances? (`RB-05`)
+- ~~Can a Blueprint event graph be fully reconstructed from this representation?~~
+  **Partial close (RB-05):** Epic DSL round-trips simple/latent/switch graphs;
+  MultiGate decompile hard-fails on exec chains; Timeline uses special spawn
+  syntax; `NodeGuid`/`PinID` do not survive rebuild → use `semantic_id`. Hash
+  structured canonical JSON, not DSL text (`ws-06-content-hash-semantic-id.md`).
+  Full `graph.schema.json` bridge + complex RE character ceiling still Wave 2.
 - ~~Niagara module stacks: are they expressible as `nodes`/`links`, or do they need a
   first-class stack extension?~~ **Closed (RB-07):** no ADR fork —
   `NiagaraModuleStack` / related `graph_type`s + `extensions.niagara`. Lossy:

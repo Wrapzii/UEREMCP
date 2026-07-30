@@ -34,6 +34,13 @@ This is the make-or-break deliverable. If it passes, the thesis holds. If it fai
 architecture degrades to inspection-plus-patching and the roadmap changes — which we
 need to know in week one, not week six.
 
+**Architecture (RB-05):** compose Epic `BlueprintTools` DSL/primitives under
+`blueprints.read_graph` / `blueprints.submit_graph` — do **not** rebuild pin
+authoring. `content_hash` is over structured canonical JSON (`semantic_id`), not
+DSL text. Documented lossy: MultiGate decompile-on-exec, Timeline spawn syntax,
+bind elision. Patch mode is the A8 escape hatch (`ws-06-patch-mode-and-impl-plan.md`).
+Implementation waits on Phase 1 exit (especially R-04).
+
 | # | Criterion |
 |---|---|
 | A1 | Retrieve a complete Blueprint graph as JSON conforming to `schemas/graph/graph.schema.json` in **one** MCP call |
