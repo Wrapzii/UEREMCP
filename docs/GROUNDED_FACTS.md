@@ -353,6 +353,7 @@ High-leverage preserve findings (do not rebuild):
 |---|---|
 | `ProgrammaticToolset.execute_tool_script` — Python `script` with `run()` → dict; in-script `execute_tool(...)`; transactional | `[VERIFIED: programmatic.py:887-953]` / `docs/audit/raw/q7-*.json` |
 | `BlueprintTools` (52) including `read_graph_dsl` / `write_graph_dsl` — **no** separate `BlueprintNodeTools` | `[VERIFIED: blueprint.py]` / `docs/audit/raw/q8-*.json` |
+| `MaterialTools` + `MaterialInstanceTools` — graph CRUD/compile; blend/shading via `set_editor_property` | `[VERIFIED: material.py / material_instance.py]` / RB-08 |
 | `AllToolsets` pulls Niagara/GAS/GameplayTags/PCG/etc. even when not listed individually in `RE.uproject` | `[VERIFIED: AllToolsets.uplugin]` |
 
 > `AllToolsets` is an aggregator. `MCPClientToolset` lets the editor act as an MCP
