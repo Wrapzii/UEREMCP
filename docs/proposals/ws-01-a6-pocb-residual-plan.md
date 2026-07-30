@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `931f41a` (WS-11 stable editor-log parsing)
+- **Orch tip at writing:** `886d09d` (WS-07 stale trail-master pre-create cleanup)
 - **Date:** 2026-07-30
-- **Status:** Stable `UEREMCP_EDITOR_LOG=` parsing landed as `931f41a` (`ff6c69b`). The stale ProjTrail fix remains at `7a417bb`, and BlueprintTools bootstrap at `809f863`; Material and Blueprint rebuilt successfully. **WS-11 next:** re-run fireball, re-run A5 CRT, and run B8 Create → restart → Verify. No B8 / overall POC-A / overall POC-B claim.
+- **Status:** WS-08 stale-master verify/rebuild remains at `7a417bb` (`dbb3638`); WS-07 pre-create cleanup landed as `886d09d` (`ee905ed`) for defense in depth. Niagara rebuild succeeded. **WS-11 fireball re-run is in flight on the `dbb3638` tip;** `ee905ed` strengthens the next run. A5 CRT and B8 Create → restart → Verify remain open. No B8 / overall POC-A / overall POC-B claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -122,6 +122,7 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | B8 Restart.Create/Verify filters | `163b272` (`5c6422f`) | Filters + handoff fixture landed; stable log parsing `931f41a` landed; restart proof still required |
 | Expanded fireball B-gate assertions | `3b39dd3` (`0474e4e`) | Filter asserts B1/B3/B5/B6/B9 fields; runtime proof pending; ribbon_trail regression under diagnosis |
 | Stale ProjTrail master verify/rebuild | `7a417bb` (`dbb3638`) | Ribbon-trail regression fix landed; Material rebuilt; fireball runtime re-run required |
+| Stale ProjTrail pre-create cleanup | `886d09d` (`ee905ed`) | Clears stale masters when ribbon MI is absent; defense in depth with `7a417bb`; Niagara rebuilt |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
@@ -139,9 +140,9 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **Gate scaffolding landed** at `0e79641`; editor single-create path only until MCP proof | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | Prior editor PASS on `a6ca454`; ribbon fix `7a417bb` landed; **fireball re-run required** | WS-08 + WS-07 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | WS-11 fireball re-run in flight on `7a417bb`; pre-create cleanup `886d09d` strengthens next run | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **Assertions expanded** at `3b39dd3`; WS-11 must re-run fireball / B8 create | WS-07 + WS-11 |
-| B4 | Renderers configured and bound to valid materials | Prior editor PASS on `a6ca454`; ribbon fix `7a417bb` landed; **fireball re-run required** | WS-07 + WS-08 |
+| B4 | Renderers configured and bound to valid materials | WS-11 fireball re-run in flight on `7a417bb`; no fresh result yet; `886d09d` adds defense in depth | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **Assertions expanded** at `3b39dd3`; runtime pending | WS-07 + WS-11 |
 | B6 | System compiles; compile genuinely awaited | **Assertions expanded** at `3b39dd3`; runtime pending | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -158,7 +159,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | Re-run CRT after BlueprintTools bootstrap `809f863` and selector correction `eccc282` | WS-11 | Prior A1/A2/A10 PASS; A5/A9 need fresh proof; refuse overall POC-A |
-| P0 | Re-run fireball after ribbon fix `7a417bb` with expanded assertions `3b39dd3` | WS-11 | Fix and assertions landed; refuse overall POC-B |
+| P0 | Complete in-flight fireball re-run on `7a417bb`; re-run with `886d09d` if needed | WS-11 | Both ribbon defenses landed; refuse overall POC-B |
 | P0 | Run `run_poc_acceptance.ps1 -Scenario B8` (Create → restart → Verify) after `163b272` | WS-11 | Filters ready; refuse B8/POC-B until PASS |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
