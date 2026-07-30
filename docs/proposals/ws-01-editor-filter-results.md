@@ -1,14 +1,14 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `5471eb8` (WS-08 Material package save/path fixes integrated)
+- **Current orchestration tip:** `0f5b8bd` (WS-08 Material fixes plus filter-result records)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
-- **Latest Material re-run tip:** `c881742`
+- **Latest Material re-run tip:** `0f5b8bd`
 - **Latest Templates re-run tip:** `b709b65`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Blueprint, Animation, and Niagara listed filters remain green on current-tip or unchanged-source proofs. Material was PASS 10/10 on `c881742`; the later benchmark package save/path fixes are module-build green but have not received a fresh editor filter run in this record. Templates is **FAIL 2/4** on `b709b65`. No A6 / overall POC-B completion claim.
+- **Status:** Blueprint, Animation, and Niagara listed filters remain green on current-tip or unchanged-source proofs. Material is **FAIL 10/11** on `0f5b8bd`; `CreateVfxMaterial.ValidateFalse` is the sole failure, so benchmark T1a disk-save is not green. Templates is **FAIL 2/4** on `b709b65`. No A6 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -26,7 +26,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Filter / gate | Recorded result | Proof tip | Freshness / residual |
 |---|---:|---|---|
 | `UeremcpBlueprint.Toolset` | **PASS, 4/4** | `35b4cab` | Blueprint sources unchanged since proof. |
-| `UeremcpMaterial.Toolset` | **PASS, 10/10** | `c881742` | Superseded source freshness: WS-08 benchmark package save/path fixes landed and module-build green on `5471eb8`; editor filter not re-run here. |
+| `UeremcpMaterial.Toolset` | **FAIL, 10/11** | `0f5b8bd` | `CreateVfxMaterial.ValidateFalse` fails: MI absent on disk and an unexpected master dependency remains. T1a disk-save is not green. |
 | `UEREMCP.Animation` | **PASS, 10/10** | `5ea9277` | Animation sources unchanged since proof. |
 | `UEREMCP.Niagara.Create` | **PASS, 10/10** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `2384112` | Current-tip freshness re-run closed. |
@@ -128,6 +128,14 @@ Standing by for the WS-07 B7 fix on the `e4ea58d` lineage.
 
 Standing by for a deeper WS-07 fix before another Inspect/B7 re-run.
 
+## Update on tip `0f5b8bd` (WS-11 Material re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UeremcpMaterial.Toolset` | **FAIL, 10/11** | WS-08 | Sole failure: `CreateVfxMaterial.ValidateFalse`. The MI is not present on disk and an unexpected master dependency remains; benchmark T1a disk-save is not green. |
+
+Standing by for the WS-08 revision and a fresh editor re-run.
+
 ## Update on tip `c881742` (WS-11 Material re-run)
 
 | Filter | Result | Owner | Notes |
@@ -191,9 +199,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-07 | B7 PASS on `825e4f4`; no remaining B7 failure in this filter record. |
-| WS-08 | Material Toolset PASS on `c881742`; benchmark package save/path fixes integrated and module-build green on `5471eb8`. Fresh editor filter proof is not recorded after those source changes. |
+| WS-08 | Revise `CreateVfxMaterial.ValidateFalse`: current Material result is FAIL 10/11 on `0f5b8bd` because the MI is absent on disk and an unexpected master dependency remains. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
 | WS-11 | Create/Inspect freshness closed on `2384112`; keep A6 / overall POC-B claims gated separately. |
 | WS-15 | Fix Templates `Search` and `Promote.Preview`, then return for WS-11 re-proof; current result is FAIL 2/4 on `b709b65`. |
 
-Templates is not green: its registered editor filter is FAIL 2/4 on `b709b65`, pending WS-15 revision. Material benchmark fixes are module-build green but do not yet have a fresh editor filter result in this record. A6 / overall POC-B remain separate criteria. No junction retarget.
+Templates is not green: its registered editor filter is FAIL 2/4 on `b709b65`, pending WS-15 revision. Material is not green: its current editor result is FAIL 10/11 on `0f5b8bd`, pending WS-08 revision. A6 / overall POC-B remain separate criteria. No junction retarget.
