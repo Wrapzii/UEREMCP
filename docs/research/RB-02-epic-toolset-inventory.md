@@ -1,7 +1,7 @@
 # RB-02: Actual tool inventory of Epic's 27 toolsets
 
 - **Owner:** WS-02
-- **Status:** complete (source-verified; runtime enumeration blocked — see `docs/audit/raw/runtime-negative-findings.json`)
+- **Status:** source_complete — runtime Epic enumeration still blocked; see `epic-toolsets.md` checklist
 - **Blocks:** every domain workstream
 - **Priority:** highest — start immediately
 

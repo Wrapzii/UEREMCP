@@ -1,0 +1,174 @@
+{
+  "audit_date": "2026-07-29",
+  "total_tools": 62,
+  "toolsets": {
+    "actor_workflow": {
+      "class": "REActorWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\actor_workflow_tools.py",
+      "tool_count": 8,
+      "tools": [
+        "set_actor_properties_and_verify",
+        "set_component_properties_and_verify",
+        "spawn_configure_attach_and_verify",
+        "batch_transform_actors",
+        "delete_actors_validated",
+        "organize_actors",
+        "place_from_asset_and_verify",
+        "rotate_actors_and_verify"
+      ]
+    },
+    "anim_workflow": {
+      "class": "REAnimWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\anim_workflow_tools.py",
+      "tool_count": 6,
+      "tools": [
+        "list_pose_presets",
+        "get_animation_pipeline_notes",
+        "author_controlrig_pose_timeline",
+        "export_sequence_to_anim_and_montage",
+        "create_montage_from_anim",
+        "author_clip_from_pose_timeline"
+      ]
+    },
+    "asset_workflow": {
+      "class": "REAssetWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\asset_workflow_tools.py",
+      "tool_count": 3,
+      "tools": [
+        "find_assets_compact",
+        "bulk_edit_asset_properties_and_save",
+        "save_assets"
+      ]
+    },
+    "batch_workflow": {
+      "class": "REBatchWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\batch_workflow_tools.py",
+      "tool_count": 1,
+      "tools": [
+        "execute_editor_batch"
+      ]
+    },
+    "blueprint_workflow": {
+      "class": "REBlueprintWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\blueprint_workflow_tools.py",
+      "tool_count": 5,
+      "tools": [
+        "inspect_blueprint_compact",
+        "create_blueprint_from_class",
+        "set_class_defaults_compile_save",
+        "compile_blueprints",
+        "create_or_update_blueprint"
+      ]
+    },
+    "capture_workflow": {
+      "class": "RECaptureWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\capture_workflow_tools.py",
+      "tool_count": 7,
+      "tools": [
+        "capture_viewport_to_disk",
+        "render_material_preview_to_disk",
+        "get_recent_log_entries_compact",
+        "pie_cast_and_capture",
+        "capture_viewport_gif",
+        "make_gif_from_frames",
+        "visual_loop_tool_notes"
+      ]
+    },
+    "character_workflow": {
+      "class": "RECharacterWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\character_workflow_tools.py",
+      "tool_count": 4,
+      "tools": [
+        "inspect_character_compact",
+        "set_character_mesh_and_verify",
+        "set_visual_combat_montages",
+        "list_mesh_sockets_compact"
+      ]
+    },
+    "context": {
+      "class": "REContextTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\context_tools.py",
+      "tool_count": 4,
+      "tools": [
+        "get_plugin_capabilities",
+        "get_editor_context",
+        "resolve_targets",
+        "inspect_targets_compact"
+      ]
+    },
+    "dress_workflow": {
+      "class": "REDressWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\dress_workflow_tools.py",
+      "tool_count": 4,
+      "tools": [
+        "place_static_mesh_and_verify",
+        "batch_place_static_meshes",
+        "scatter_static_meshes_ring",
+        "snap_actors_to_floor"
+      ]
+    },
+    "level_workflow": {
+      "class": "RELevelWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\level_workflow_tools.py",
+      "tool_count": 3,
+      "tools": [
+        "open_or_create_level",
+        "place_configure_save_actors",
+        "run_map_check"
+      ]
+    },
+    "lighting_workflow": {
+      "class": "RELightingWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\lighting_workflow_tools.py",
+      "tool_count": 4,
+      "tools": [
+        "get_environment_lights_compact",
+        "list_mood_presets",
+        "apply_mood_lighting",
+        "set_light_properties_and_verify"
+      ]
+    },
+    "material_workflow": {
+      "class": "REMaterialWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\material_workflow_tools.py",
+      "tool_count": 4,
+      "tools": [
+        "create_material_instance_configure_save",
+        "update_material_instance_parameters",
+        "assign_materials_to_mesh_components",
+        "create_assign_material_instance"
+      ]
+    },
+    "niagara_workflow": {
+      "class": "RENiagaraWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\niagara_workflow_tools.py",
+      "tool_count": 4,
+      "tools": [
+        "place_niagara_system_and_verify",
+        "assign_niagara_system_to_component",
+        "set_niagara_user_parameters_and_verify",
+        "inspect_niagara_compact"
+      ]
+    },
+    "project_workflow": {
+      "class": "REProjectWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\project_workflow_tools.py",
+      "tool_count": 2,
+      "tools": [
+        "reload_workflow_modules",
+        "get_plugin_project_notes"
+      ]
+    },
+    "validation_workflow": {
+      "class": "REValidationWorkflowTools",
+      "source_file": "C:\\Users\\$USER\\Documents\\GitHub\\REAgentTools\\Content\\Python\\re_agent_tools\\toolsets\\validation_workflow_tools.py",
+      "tool_count": 3,
+      "tools": [
+        "compile_save_validate",
+        "get_recent_errors_compact",
+        "run_validation_bundle"
+      ]
+    }
+  },
+  "tag": "[VERIFIED: source scan REAgentTools toolsets 2026-07-29]"
+}

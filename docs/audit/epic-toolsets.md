@@ -1,7 +1,7 @@
 # Capability Matrix — Epic Engine Toolsets (UE 5.8)
 
 - **Owner:** WS-02
-- **Status:** **complete (source-verified; runtime enumeration blocked)**
+- **Status:** **source_complete** — tool names and dispositions verified from source; **runtime enumeration not done** (see checklist below)
 - **Brief:** [RB-02](../research/RB-02-epic-toolset-inventory.md)
 - **Last verified:** 2026-07-29
 
@@ -155,6 +155,25 @@ Planned UEREMCP surface must **cover every `supersede` row** above (envelope gra
 | `BlueprintTools` + `BlueprintNodeTools` | **Partially wrong** — only `BlueprintTools` exists `[VERIFIED: __init__.py]` |
 | `NiagaraToolsets.*` available | **Expected** when `AllToolsets` loads `[VERIFIED: AllToolsets.uplugin]` — runtime not confirmed |
 | `MaterialTools` for master materials | **Confirmed** 22 tools `[VERIFIED: source scan]` |
+
+---
+
+## Runtime verification checklist
+
+This file is **`source_complete`, not audit-complete.** The following require a live RE
+editor with ModelContextProtocol on `127.0.0.1:8000/mcp` before the Epic audit can be
+marked runtime-verified:
+
+- [ ] `list_toolsets` — dump to `docs/audit/raw/runtime-list_toolsets.json`
+- [ ] `describe_toolset` for each loaded class — schemas to `docs/audit/raw/schemas/`
+- [ ] Confirm load set matches `AllToolsets` inference (Niagara, GAS, GameplayTags, etc.)
+- [ ] Verify dotted toolset names match source scan (Python module paths vs MCP names)
+- [ ] Classify async tools (confirm `execute_tool_script` async; sample others)
+- [ ] Sample result payload sizes for composite tools (token budget calibration)
+- [ ] Negative findings log updated or closed — `docs/audit/raw/runtime-negative-findings.json`
+
+Until all checked: cite tool **names** from this file with `[VERIFIED: source scan]`; cite
+**schemas and load state** only from runtime dumps once they exist.
 
 ---
 

@@ -1,7 +1,7 @@
 # RB-15: REAgentTools disposition and migration
 
 - **Owner:** WS-02
-- **Status:** in_progress — `execute_editor_batch` grammar delivered to WS-05
+- **Status:** source_complete — 15-toolset dispositions done; coexistence/cutover pending
 - **Blocks:** the migration plan; prevents rebuilding working functionality
 - **Priority:** high
 
@@ -74,7 +74,7 @@ determine:
 
 ## Deliverables
 
-- [ ] `docs/audit/reagenttools.md` — per-toolset disposition matrix (batch row done)
+- [x] `docs/audit/reagenttools.md` — per-toolset disposition matrix (source-complete)
 - [ ] A migration plan with an explicit cutover bar
 - [x] The `execute_editor_batch` `$ref` grammar delivered to WS-05
       (`docs/audit/raw/q-reagenttools-execute-editor-batch.json`)
