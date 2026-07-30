@@ -9,6 +9,8 @@
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "Misc/Paths.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "Materials/Material.h"
+#include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialNiagaraExport.h"
 #include "UeremcpMaterialPaths.h"
 #include "UeremcpMaterialToolset.h"
@@ -37,6 +39,8 @@ namespace UeremcpMaterialTests
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileTrail_Ice"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_NS_WS08_ExportProbe_core"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ValidateFalse_Core"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Distortion_Probe"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Flipbook_Probe"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_WS08_ValidateFalse_Noise"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map"));
 
@@ -65,6 +69,72 @@ namespace UeremcpMaterialTests
 			return false;
 		}
 		return Root->TryGetStringField(TEXT("status"), OutStatus);
+	}
+
+	static FString FindDependencyPath(const FString& Json, const FString& Role)
+	{
+		TSharedPtr<FJsonObject> Root;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+		if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
+		{
+			return FString();
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* Deps = nullptr;
+		if (!Root->TryGetArrayField(TEXT("dependencies"), Deps) || !Deps)
+		{
+			return FString();
+		}
+
+		for (const TSharedPtr<FJsonValue>& Value : *Deps)
+		{
+			const TSharedPtr<FJsonObject>* ObjPtr = nullptr;
+			if (!Value.IsValid() || !Value->TryGetObject(ObjPtr) || !ObjPtr || !ObjPtr->IsValid())
+			{
+				continue;
+			}
+
+			FString DepRole;
+			if ((*ObjPtr)->TryGetStringField(TEXT("role"), DepRole) && DepRole == Role)
+			{
+				FString Path;
+				if ((*ObjPtr)->TryGetStringField(TEXT("asset_path"), Path))
+				{
+					return Path;
+				}
+			}
+		}
+
+		return FString();
+	}
+
+	static bool VerifyMasterFeatureWired(
+		FAutomationTestBase* Test,
+		const FString& MasterPath,
+		const TArray<FString>& Features,
+		const FString& FeatureToken)
+	{
+		UEditorAssetSubsystem* Subsystem = GetAssetSubsystem();
+		if (!Test->TestNotNull(TEXT("asset subsystem"), Subsystem))
+		{
+			return false;
+		}
+
+		UMaterial* Material = Cast<UMaterial>(Subsystem->LoadAsset(MasterPath));
+		if (!Test->TestNotNull(*FString::Printf(TEXT("master material loads: %s"), *MasterPath), Material))
+		{
+			return false;
+		}
+
+		UeremcpMaterialFeatures::FFeatureGraphVerifyResult Verify;
+		const bool bGraphOk = UeremcpMaterialFeatures::VerifyFeatureGraph(Material, Features, Verify);
+		Test->TestTrue(TEXT("VerifyFeatureGraph succeeds"), bGraphOk);
+
+		const bool* bWired = Verify.FeatureWired.Find(FeatureToken);
+		Test->TestTrue(
+			*FString::Printf(TEXT("feature '%s' wired in master graph"), *FeatureToken),
+			bWired != nullptr && *bWired);
+		return bGraphOk && bWired && *bWired;
 	}
 }
 
@@ -257,6 +327,100 @@ bool FUeremcpMaterialNiagaraExportServiceTest::RunTest(const FString& Parameters
 	if (Subsystem)
 	{
 		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Result.PrimaryAsset));
+	}
+
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCreateVfxDistortionTest,
+	"UeremcpMaterial.Toolset.CreateVfxMaterial.Distortion",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialCreateVfxDistortionTest::RunTest(const FString& Parameters)
+{
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+
+	const FString Target = TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Distortion_Probe");
+	const TArray<FString> Features = {
+		TEXT("distortion"),
+		TEXT("dynamic_color"),
+	};
+	const FString Request = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-distortion-probe",
+		"action":"create_vfx_material",
+		"target":{"asset_path":"%s"},
+		"specification":{
+			"purpose":"elemental_projectile_trail",
+			"element":"fire",
+			"features":["distortion","dynamic_color"]
+		},
+		"options":{"compile":true,"validate":true,"save":true}
+	})"), *Target);
+
+	const FString Json = UUeremcpMaterialToolset::CreateVfxMaterial(Request);
+	FString Status;
+	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
+	TestEqual(TEXT("created_and_validated"), Status, FString(TEXT("created_and_validated")));
+
+	const FString MasterPath =
+		UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
+	TestFalse(TEXT("master dependency reported"), MasterPath.IsEmpty());
+	UeremcpMaterialTests::VerifyMasterFeatureWired(this, MasterPath, Features, TEXT("distortion"));
+
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	if (Subsystem)
+	{
+		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Target));
+	}
+
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCreateVfxFlipbookSubuvTest,
+	"UeremcpMaterial.Toolset.CreateVfxMaterial.FlipbookSubuv",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialCreateVfxFlipbookSubuvTest::RunTest(const FString& Parameters)
+{
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+
+	const FString Target = TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Flipbook_Probe");
+	const TArray<FString> Features = {
+		TEXT("flipbook_subuv"),
+		TEXT("dynamic_color"),
+	};
+	const FString Request = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-flipbook-probe",
+		"action":"create_vfx_material",
+		"target":{"asset_path":"%s"},
+		"specification":{
+			"purpose":"elemental_projectile_trail",
+			"element":"fire",
+			"features":["flipbook_subuv","dynamic_color"]
+		},
+		"options":{"compile":true,"validate":true,"save":true}
+	})"), *Target);
+
+	const FString Json = UUeremcpMaterialToolset::CreateVfxMaterial(Request);
+	FString Status;
+	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
+	TestEqual(TEXT("created_and_validated"), Status, FString(TEXT("created_and_validated")));
+
+	const FString MasterPath =
+		UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
+	TestFalse(TEXT("master dependency reported"), MasterPath.IsEmpty());
+	UeremcpMaterialTests::VerifyMasterFeatureWired(this, MasterPath, Features, TEXT("flipbook_subuv"));
+
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	if (Subsystem)
+	{
+		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Target));
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
