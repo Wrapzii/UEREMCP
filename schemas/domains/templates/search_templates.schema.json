@@ -16,8 +16,8 @@
     },
     "element": {
       "type": "string",
-      "enum": ["fire", "water", "wind", "earth", "any"],
-      "description": "Optional elemental filter for templates that declare element inputs."
+      "enum": ["fire", "water", "wind", "earth", "ice", "any"],
+      "description": "Optional elemental filter for templates that declare element inputs. Must stay aligned with templates/elements/*.json and niagara.projectile.elemental.v1."
     },
     "limit": {
       "type": "integer",

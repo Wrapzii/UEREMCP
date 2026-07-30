@@ -83,6 +83,34 @@ class TemplateStoreTests(unittest.TestCase):
                 actual["EmissiveScale"],
             )
 
+    def test_elemental_composes_resolve_and_match_plan_archetypes(self) -> None:
+        self.store.load_from_directory(self.templates_dir)
+        elemental = self.store.find_by_id("niagara.projectile.elemental.v1")
+        assert elemental is not None
+        composes = elemental.composes
+        self.assertEqual(len(composes), 6)
+        for composed_id in composes:
+            self.assertIsNotNone(
+                self.store.find_by_id(composed_id),
+                msg=composed_id,
+            )
+
+        archetypes: list[str] = []
+        for operation in elemental.document["construction_plan"]:
+            if operation["action"] != "create_niagara_effect":
+                continue
+            for component in operation["specification"]["components"]:
+                archetypes.append(component["archetype"])
+        self.assertEqual(set(archetypes), set(composes))
+        self.assertEqual(len(archetypes), len(set(archetypes)))
+
+    def test_element_preset_ids_match_filenames(self) -> None:
+        self.store.load_from_directory(self.templates_dir)
+        for path in sorted((self.templates_dir / "elements").glob("*.json")):
+            document = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(path.stem, document["preset_id"])
+            self.assertTrue(path.stem.startswith(f"element.{document['element']}."))
+
 
 class TemplateSearchTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -100,6 +128,21 @@ class TemplateSearchTests(unittest.TestCase):
         ids = {hit.template_id for hit in hits}
         self.assertIn("niagara.projectile.elemental.v1", ids)
         self.assertTrue(all("emitter" in template_id for template_id in ids if template_id != "niagara.projectile.elemental.v1") or len(ids) >= 1)
+
+    def test_search_element_filter_includes_ice(self) -> None:
+        search_schema = json.loads(
+            (
+                ROOT
+                / "schemas"
+                / "domains"
+                / "templates"
+                / "search_templates.schema.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertIn("ice", search_schema["properties"]["element"]["enum"])
+        hits = self.service.search(SearchQuery(element="ice", domain="niagara"))
+        ids = {hit.template_id for hit in hits}
+        self.assertIn("niagara.projectile.elemental.v1", ids)
 
     def test_search_emitter_archetype(self) -> None:
         hits = self.service.search(SearchQuery(query="ribbon"))

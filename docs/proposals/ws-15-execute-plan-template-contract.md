@@ -9,14 +9,23 @@
 ## Evidence from the synced tree
 
 ADR-0008 requires `instantiate_template` to materialise a template and delegate to
-WS-05 `execute_plan`. The current tree contains the accepted batch schema and protocol
-helpers, but no `execute_plan` executor or action registration under
-`Plugins/UEREMCP/Source/UeremcpProtocol/**`.
+WS-05 `execute_plan`. WS-15 now exposes `UeremcpTemplates::SetExecutePlanDelegate`
+and submits one complete request envelope whose action is `execute_plan` and whose
+specification conforms to `schemas/batch/plan.schema.json`.
 
-WS-15 now exposes `UeremcpTemplates::SetExecutePlanDelegate` and submits one complete
-request envelope whose action is `execute_plan` and whose specification conforms to
-`schemas/batch/plan.schema.json`. Until WS-05 binds its executor, the action reports
-`partially_completed` and explicitly states that no asset operation ran.
+As of the current Templates tree:
+
+- Element presets under `templates/elements/` inject material overrides and Niagara
+  parameters while materializing `niagara.projectile.elemental.v1`.
+- Materialized operations validate against `create_vfx_material` /
+  `create_niagara_effect` schemas offline.
+- When the delegate is unbound, Instantiate returns an honest
+  `partially_completed` / unverified response and states that no asset operation ran.
+- When the delegate returns a domain `*_validated` result but template
+  `validation_rules` could not run, Templates downgrades to `partially_completed`
+  and lists `template.validation_rules` under `validation.checks_skipped`.
+
+Promotion contract details live in `ws-15-promotion-gate-handoffs.md`.
 
 Two frozen-schema gaps prevent an honest validated status:
 
