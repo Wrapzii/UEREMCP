@@ -137,6 +137,7 @@ class B8EvidenceTest(unittest.TestCase):
         )
         self.assertIn("poc_b8_create", runner)
         self.assertIn("poc_b8_verify", runner)
+        self.assertIn("UEREMCP_EDITOR_LOG=", runner)
         self.assertIn("$createId -ne $verifyId", runner)
         self.assertIn("restart verify checkpoint does not match create phase", runner)
         self.assertNotIn("retarget", runner.lower())
