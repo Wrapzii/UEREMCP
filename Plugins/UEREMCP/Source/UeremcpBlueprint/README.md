@@ -1,6 +1,6 @@
 # UeremcpBlueprint
 
-**Owner:** WS-06 (Blueprint Specialist). **Status:** P0 scaffolding — not POC A.
+**Owner:** WS-06 (Blueprint Specialist). **Status:** P1 `read_graph` implemented; P2 `submit_graph` stubbed.
 
 ## Purpose
 
@@ -31,31 +31,27 @@ implements graph read/submit.
 | `Ping` | Module liveness |
 | `Echo` | Envelope parse/serialize round-trip without touching assets |
 
-## Planned actions (P1+)
+## P1 tools
+
+| Tool / action | Purpose |
+|---|---|
+| `ReadGraph` / `read_graph` | One call → `graph.schema.json` + diagnostics + `content_hash` |
+| `SubmitGraph` / `submit_graph` | P2 stub (`partially_completed`) |
+
+## Planned (P2+)
 
 | Action | Schema | Notes |
 |---|---|---|
-| `read_graph` | `schemas/domains/blueprints/read_graph.schema.json` | One call → graph JSON + diagnostics |
-| `submit_graph` | `schemas/domains/blueprints/submit_graph.schema.json` | `replace` / `patch` / create modes |
-
-## Layering
-
-```
-UeremcpProtocol   (envelope, content hash — no editor)
-       ↑
-UeremcpBlueprint  (this module — ToolsetRegistry + Blueprint editor APIs)
-```
-
-Domain services must not include `ToolsetRegistry/` or `ModelContextProtocol/` outside
-the thin toolset layer (ADR-0002 rule 4).
+| `submit_graph` | `schemas/domains/blueprints/submit_graph.schema.json` | `replace` / `patch` / create modes (P2) |
 
 ## Tests
 
 Automation tests under `Private/Tests/`:
 
 - `UeremcpBlueprint.Toolset.Ping`
-- `UeremcpBlueprint.Toolset.Echo`
 - `UeremcpBlueprint.Toolset.Register`
+- `UeremcpBlueprint.Toolset.ReadGraphRoundTrip`
+- `UeremcpBlueprint.Toolset.SubmitGraphStub`
 
 Run via editor automation or `tests/run_editor_tests.ps1` once the module is registered
 in `UEREMCP.uplugin` (see `docs/proposals/ws-06-register-blueprint-module.md`).

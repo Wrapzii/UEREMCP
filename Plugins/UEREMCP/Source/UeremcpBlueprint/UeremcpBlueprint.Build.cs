@@ -22,6 +22,10 @@ public class UeremcpBlueprint : ModuleRules
 			"Json",
 			"JsonUtilities",
 			"Projects",
+			"BlueprintGraph",
+			"Kismet",
+			"BlueprintEditorLibrary",
+			"AssetRegistry",
 
 			// ADR-0003 envelope — no ToolsetRegistry coupling in Protocol.
 			"UeremcpProtocol",

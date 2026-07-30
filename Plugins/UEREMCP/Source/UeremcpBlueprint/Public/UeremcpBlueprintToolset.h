@@ -1,7 +1,7 @@
-// UEREMCP — Blueprint domain toolset (WS-06 P0).
+// UEREMCP — Blueprint domain toolset (WS-06).
 //
 // P0: envelope echo/ping proving ADR-0002 + ADR-0003 on the Blueprint workstream.
-// P1+: read_graph / submit_graph compose Epic BlueprintTools — do not rebuild primitives.
+// P1: read_graph composes Epic BlueprintTools — does not rebuild pin primitives.
 
 #pragma once
 
@@ -42,4 +42,19 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
 	static FString Echo(const FString& RequestJson);
+
+	/**
+	 * action=read_graph — one MCP call returns graph JSON (ADR-0004) + diagnostics.
+	 *
+	 * @param RequestJson Request envelope; target.asset_path required.
+	 * @return Response envelope with diagnostics.graphs at response_detail complete.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
+	static FString ReadGraph(const FString& RequestJson);
+
+	/**
+	 * action=submit_graph — P2 stub; rejects replace/patch until write path lands.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
+	static FString SubmitGraph(const FString& RequestJson);
 };

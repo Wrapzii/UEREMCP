@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/blueprints/read_graph.schema.json",
   "title": "read_graph specification",
-  "description": "specification payload for action=read_graph (Blueprint domain, WS-06). P0 stub — shape will grow in P1.",
+  "description": "specification payload for action=read_graph (Blueprint domain, WS-06 P1).",
   "type": "object",
   "additionalProperties": false,
   "properties": {
