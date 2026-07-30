@@ -1,16 +1,32 @@
 # WS-01 editor automation filter results
 
-- **Integration tip before this record:** `20edf2f` (`c4edd99` + cherry-picked WS-07 runtime-emission fix; B10 **FAILED** after fresh production recreation)
+- **Current integration tip:** `1831066` (`[WS-07] Restore integrated Niagara particle emission`)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `2384112` (runtime emit fix `20edf2f` / `8aae3b6` supersedes for particle spawn)
-- **Latest Material re-run tip:** `d691316` (**PASS 14/14**)
+- **Latest Niagara re-run tip:** `1831066` (fresh rendered runtime probe: 717 spawned / 421 live; B10 still **FAILS**)
+- **Latest Material re-run tip:** `d691316` (**PASS 14/14**); current tip also includes Material security integration `d3e35cd`
+- **Latest transport integration tip:** `dae0e5c`
 - **Latest Templates re-run tip:** `f15ea96`
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. B10 harness canary PASS on `0049153`. WS-07 proved 717 spawned / 423 live after 3s on its source lineage, and that fix is landed as `20edf2f`; however, a fresh production recreate on the integrated lineage produced 0 particles in both the runtime probe and B10. B10 **FAILS** with 5,405 changed / 0 warm / 0 particles. POC-B metrics remain partial. **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. WS-07 repaired the integrated fresh-create lifecycle/compile regression on `1831066`; a rendered probe of the saved production asset reports 717 spawned / 421 live particles and all six emitters ready. B10 still **FAILS** `system_emits_no_particles` against that same asset. WS-11 is investigating the harness count mismatch; “no tick” is not a complete explanation because the canary previously passed with ticks. POC-B metrics remain partial. **No overall POC-B claim.**
 - **Junction:** Not changed.
+
+## Integrated Niagara emission restoration (`1831066`)
+
+Canonical diagnosis and runtime evidence:
+[`ws-07-integrated-zero-particle-regression.md`](./ws-07-integrated-zero-particle-regression.md).
+The fresh-create root cause was the cloned `SystemState` lifecycle remaining `Once`
+with a zero-second loop, compounded by stale compiled runtime state. WS-07 normalized
+the lifecycle to `Infinite` and forced compilation after stack edits.
+
+The repaired saved asset produced **717 total spawned / 421 live particles**, with
+all six generated role emitters ready, in the rendered runtime probe. B10 then loaded
+that same asset but still **FAILED** `system_emits_no_particles` with a zero harness
+count. WS-11 is investigating this count mismatch. A missing-tick explanation alone
+is insufficient because the B10 canary previously passed under the ticking harness.
+This is not an overall POC-B claim.
 
 ## Invocation
 
