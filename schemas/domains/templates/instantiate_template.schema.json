@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/templates/instantiate_template.schema.json",
+  "title": "instantiate_template specification",
+  "description": "specification payload for action=instantiate_template (ADR-0008). Owned by WS-15; frozen shape accepted by WS-01 from RB-10.",
+  "type": "object",
+  "required": ["template_id"],
+  "additionalProperties": false,
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Canonical template id, including version suffix when applicable (e.g. niagara.projectile.elemental.v1)."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Values for the template's declared inputs (e.g. element: fire|water|wind|earth). Additional properties allowed — validated against the template's inputs schema at runtime.",
+      "additionalProperties": true
+    },
+    "modifiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Named modifier grammar from RB-10. Unknown modifier names fail closed.",
+      "properties": {
+        "replace": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named replace modifiers (swap modules/materials/presets)."
+        },
+        "adjust": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named numeric/range adjust modifiers."
+        },
+        "add": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named additive modifiers (extra debris, trails, etc.)."
+        },
+        "preserve": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named preserve constraints (e.g. preserve_networking)."
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset_path": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "name": { "type": "string" }
+      }
+    },
+    "mode": { "$ref": "../../common/defs.schema.json#/$defs/mode" }
+  }
+}

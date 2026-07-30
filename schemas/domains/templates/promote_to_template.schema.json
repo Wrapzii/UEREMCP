@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/templates/promote_to_template.schema.json",
+  "title": "promote_to_template specification",
+  "description": "specification payload for action=promote_to_template (ADR-0008). Destructive by default dry_run at envelope options level.",
+  "type": "object",
+  "required": ["source_asset"],
+  "additionalProperties": false,
+  "properties": {
+    "source_asset": {
+      "$ref": "../../common/defs.schema.json#/$defs/assetPath",
+      "description": "Asset path of a successful effect/graph to promote."
+    },
+    "base_template_id": {
+      "type": "string",
+      "description": "Optional parent template this promotion varies from."
+    },
+    "proposed_template_id": {
+      "type": "string",
+      "description": "Desired new template_id. If omitted, derived deterministically from source + base."
+    },
+    "description": {
+      "type": "string"
+    },
+    "quarantine": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true, write under /Game/__UeremcpTemplates/agent/ only."
+    }
+  }
+}

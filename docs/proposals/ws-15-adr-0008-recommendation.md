@@ -131,3 +131,13 @@ Add `schemas/domains/project/search_templates.schema.json` and
 `schemas/domains/project/promote_to_template.schema.json`.
 
 WS-15 will not edit `schemas/**` directly per ownership — this proposal is the handoff.
+
+## Response
+
+**Accepted.** ADR-0008 written and Accepted. Structured adjacent JSON substrate;
+no `UAgentSkill` subclass. Elemental variation is parameterized inputs/modifiers.
+
+Specification schemas added under `schemas/domains/templates/`
+(`instantiate_template`, `search_templates`, `promote_to_template`). Implementation
+remains gated on WS-03 host proof, WS-05 `execute_plan` wiring, and WS-07 seed
+patterns — research-complete only for now.

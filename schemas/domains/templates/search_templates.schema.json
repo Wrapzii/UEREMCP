@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/templates/search_templates.schema.json",
+  "title": "search_templates specification",
+  "description": "specification payload for action=search_templates (ADR-0008).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Free-text query matched against template_id, description, search_terms."
+    },
+    "domain": {
+      "type": "string",
+      "description": "Optional domain filter (niagara, materials, blueprints, gameplay, …)."
+    },
+    "element": {
+      "type": "string",
+      "enum": ["fire", "water", "wind", "earth", "any"],
+      "description": "Optional elemental filter for templates that declare element inputs."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 20
+    }
+  }
+}

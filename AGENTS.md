@@ -138,9 +138,10 @@ Full text in `docs/adr/`. Summary so you do not re-litigate:
 | 0004 | Graphs are exchanged as complete structured JSON with stable IDs, content hash, and revision |
 | 0005 | Rollback builds on `FileSandbox` + editor transactions; not a bespoke mechanism |
 | 0006 | Idempotency via stable paths + idempotency keys + `expected_revision` conflict checks |
+| 0008 | Templates are JSON + `UeremcpTemplates` + `execute_plan`; do **not** subclass `UAgentSkill`; elemental variation via inputs/modifiers |
 | 0009 | Long jobs: inline when `timeout_ms == 0`; else `partially_completed` + poll `get_job_result`; UEREMCP-owned cancel/progress |
 
-ADRs 0007, 0008, and 0010 remain unwritten until their blocking briefs land.
+ADRs 0007 and 0010 remain unwritten until their blocking briefs land.
 
 ## Definition of done
 

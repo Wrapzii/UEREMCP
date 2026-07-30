@@ -35,7 +35,7 @@ Unowned path? It is WS-01's until assigned. Propose, do not squat.
 | **WS-12** | Security & Reliability | `Plugins/UEREMCP/Source/UeremcpSecurity/**`, `docs/SECURITY.md` | 2 |
 | **WS-13** | Documentation | `docs/guide/**` | 3 |
 | **WS-14** | Integration Critic | `docs/reviews/**` | continuous |
-| **WS-15** | Template & Pattern Library | `Plugins/UEREMCP/Source/UeremcpTemplates/**`, `templates/**` | 2 |
+| **WS-15** | Template & Pattern Library | `Plugins/UEREMCP/Source/UeremcpTemplates/**`, `templates/**`, `schemas/domains/templates/**` | 2 |
 
 Everyone additionally owns `docs/research/RB-<their-number>-*.md` and may write freely
 to `docs/proposals/<their-ws>-*.md`.

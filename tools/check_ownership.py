@@ -82,7 +82,7 @@ OWNERSHIP: dict[str, list[str]] = {
     "WS-14": ["docs/reviews/**"],
     "WS-15": [
         "Plugins/UEREMCP/Source/UeremcpTemplates/**", "templates/**",
-        "docs/research/RB-10-*",
+        "schemas/domains/templates/**", "docs/research/RB-10-*",
     ],
 }
 
