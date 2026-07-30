@@ -17,7 +17,10 @@
 
 #include "Misc/PackageName.h"
 #include "Misc/App.h"
+#include "Misc/AutomationTest.h"
 #include "Containers/Ticker.h"
+#include "Async/TaskGraphInterfaces.h"
+#include "AssetCompilingManager.h"
 #include "UObject/SavePackage.h"
 #include "UObject/SoftObjectPath.h"
 
@@ -161,6 +164,18 @@ namespace
 		}
 	}
 
+	void PumpNiagaraCompileWait()
+	{
+		// [VERIFIED: Engine/Source/Runtime/Core/Public/Containers/Ticker.h:81]
+		FTSTicker::GetCoreTicker().Tick(FApp::GetDeltaTime());
+		// [VERIFIED: Engine/Source/Runtime/Core/Public/Async/TaskGraphInterfaces.h:347]
+		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+#if WITH_EDITOR
+		// [VERIFIED: Engine/Source/Runtime/Engine/Public/AssetCompilingManager.h:97]
+		FAssetCompilingManager::Get().ProcessAsyncTasks(/*bLimitExecutionTime=*/true);
+#endif
+	}
+
 	bool AwaitCompile(
 		UNiagaraSystem* System,
 		FNiagaraExternalEditContext& Context,
@@ -174,11 +189,12 @@ namespace
 
 		System->RequestCompile(false);
 
-		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:449]
-		// PollForCompilationComplete(bFlush=true) wraps QueryCompileComplete(false); pair with
-		// FTSTicker so unattended automation advances async compile work (NiagaraToolset_System.cpp:495-520).
-		// [VERIFIED: Engine/Source/Runtime/Core/Public/Containers/Ticker.h:81]
-		// Do not break on Poll's return value — true means one ActiveCompilation finished, not all.
+		// Bounded wait using public compile APIs only.
+		// PollForCompilationComplete uses QueryCompileComplete(false) (NiagaraSystem.cpp:3289) and
+		// never drains async VM compiles on a blocked game thread. WaitForCompilationComplete is the
+		// only public entry that calls QueryCompileComplete(true) (NiagaraSystem.cpp:3227-3250).
+		// Epic's NiagaraToolset async compile gate uses FTSTicker while the editor ticks (NiagaraToolset_System.cpp:495-520);
+		// synchronous create_niagara_effect must pump explicitly before blocking drain.
 		const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
 		while (FPlatformTime::Seconds() < Deadline)
 		{
@@ -188,9 +204,22 @@ namespace
 				break;
 			}
 
-			System->PollForCompilationComplete(/*bFlushRequestCompile=*/true);
-			FTSTicker::GetCoreTicker().Tick(FApp::GetDeltaTime());
-			FPlatformProcess::Sleep(0.001f);
+			PumpNiagaraCompileWait();
+
+			// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:452]
+			System->WaitForCompilationComplete(/*bIncludingGPUShaders=*/false, /*bShowProgress=*/false);
+
+			if (!System->HasActiveCompilations()
+				&& !System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
+			{
+				break;
+			}
+
+			if (GIsAutomationTesting)
+			{
+				// WaitForCompilationComplete applies GIsAutomationTesting termination cap when stuck.
+				break;
+			}
 		}
 
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
