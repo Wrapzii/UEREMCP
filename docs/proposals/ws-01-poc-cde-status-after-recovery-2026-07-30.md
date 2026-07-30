@@ -1,10 +1,10 @@
 # WS-01 — POC C/D/E claim readiness after recovery (2026-07-30)
 
 **Branch:** `ws-01-poc-cde-integration`  
-**Tip at status write:** post-`7853003` (+ E1/E7 closeout commits)  
+**Tip at status write:** post-`87e622c`
 **Overall POC C claimed:** **true** (C1-C7 MET live)
 **Overall POC D claimed:** **true** (D5 MET static per accepted wording)
-**Overall POC E claimed:** **false** (new C5 ability binding not yet in restart checkpoint)
+**Overall POC E claimed:** **true** (E1-E7 PASS under accepted wording)
 
 This consolidates live recovery evidence with the E1/E7 residual closeout. **No false overall claims.**
 
@@ -28,29 +28,36 @@ This consolidates live recovery evidence with the E1/E7 residual closeout. **No 
 
 | # | Status | Notes |
 |---|---|---|
-| E1 | **PASS partial** | Previous A/B/C/D assets + Validation scratch survived two-process restart. The new C5 result adds `/Game/__UeremcpPoc/Abilities/DT_POCC_Variations`; the E1 checkpoint does not yet include and re-read that table/rows after restart. Evidence: `tests/integration/_logs/poc_e1_ad_restart_clean_20260730.json` |
+| E1 | **PASS full A–D** | Two-process restart checkpoint covered every accepted A–D result. Fresh Verify re-read `/Game/__UeremcpPoc/Abilities/DT_POCC_Variations` and proved `poc_c_ice_fire_s` / `poc_c_wind_fire_s` unchanged. `full_ad_results_claimed=true`. Evidence: `tests/integration/_logs/poc_e1_ad_restart_full_20260730.json` |
 | E2 | **PASS** | MultiAssetDiscard |
-| E3 | **PASS scoped** | Protocol + Blueprint domain |
-| E4 | **PASS scoped** | Protocol + Blueprint domain |
+| E3 | **PASS scoped** | Named protocol gate + Blueprint domain; Niagara/Material domain pipelines remain ungated |
+| E4 | **PASS scoped** | Named protocol gate + Blueprint domain; Niagara/Material domain pipelines remain ungated |
 | E5 | **PASS** | validate:false forbids `*_validated` |
 | E6 | **PASS** | broken request → `failed_validation` |
 | E7 | **PASS (rows)** | `docs/reviews/poc-metrics.md` + `tests/integration/_logs/poc_e7_metrics_20260730.json` |
-| **Overall E** | **not claimed** | Requires E1–E7 truly met; E1 full A–D unmet |
+| **Overall E** | **MET** | E1-E7 pass under the frozen criteria; E3/E4 scope limitations remain explicit |
 
-### E1 asset survival vs criterion failures
+### E1 full restart checkpoint
 
-**Survived restart:** A CRT Blueprint; B fireball+MIs; C ice/wind systems+MIs; D `DT_PocD_Live`; Validation scratch curve.
+**Survived restart:** A CRT Blueprint; B fireball+MIs; C ice/wind
+systems+MIs plus `DT_POCC_Variations`; D `DT_PocD_Live`; Validation scratch
+curve. Both C gameplay rows matched their Create snapshots after restart.
 
-**Remaining E1 proof gap:** checkpoint and re-read
-`DT_POCC_Variations.poc_c_ice_fire_s` and `poc_c_wind_fire_s` in a fresh editor
-process, alongside the already checkpointed A-D assets. Multi-client remains
-deferred evidence, not a D5 or E1 prerequisite.
+**Scoped limitations, not hidden blockers:** E3/E4 do not gate Niagara or
+Material domain-specific idempotency/revision pipelines. The accepted criteria
+name `Idempotency.RepeatedCreate` and `Revision.StaleRejected`; both pass, with
+additional Blueprint domain gates `[VERIFIED: docs/POC_ACCEPTANCE.md:143-151]`.
+Multi-client remains optional under accepted D5 and is not an E1 on-disk
+durability result `[VERIFIED: docs/POC_ACCEPTANCE.md:123-130]`.
 
 ## Main fast-forward readiness
 
-Overall C and D are now claimable on the integration branch. Overall E remains
-unclaimed until the expanded E1 restart checkpoint proves the new composite
-ability-table result survives and re-reads correctly.
+Overall C, D, and E are claimable on the integration branch. The tested
+implementation commit is `713ad7014caa1472bba4c0f5d6a097a61c866e34`; the
+claim reconciliation tip is `87e622c`. The branch is ready for a local
+fast-forward of `main` once this WS-01 status commit lands, provided `main` is
+still an ancestor. This closeout records FF-readiness but does not move local
+`main` and does not push.
 
 ## Junction
 
