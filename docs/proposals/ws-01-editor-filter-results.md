@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `2384112` (`[WS-01] Record Niagara B7 editor PASS`)
+- **Current orchestration tip:** `df1cc03` (`[WS-01] Record Niagara Create/Inspect current-tip PASS`)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -30,8 +30,18 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.Create` | **PASS, 10/10** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
+| `UeremcpTemplates.Toolset` | **SKIP / unavailable** | — | Toolset is runtime-registered; editor automation filter is absent. Owner: WS-15. |
 
-Residuals: Templates remain SKIP / unavailable in the recorded baseline. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
+Residuals: the Templates toolset is present, but its editor automation filter is not registered. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
+
+## Templates automation blocker
+
+- **Owner:** WS-15 owns `Plugins/UEREMCP/Source/UeremcpTemplates/**` (`docs/WORK_ALLOCATION.md`, WS-15 row). WS-11 owns the shared harness and runs domain filters.
+- **Diagnosis:** missing editor automation filter registration, not a missing Templates toolset and not docs-only. `UUeremcpTemplatesToolset` exposes `SearchTemplates`, `InstantiateTemplate`, and `PromoteToTemplate`, and registers at PostEngineInit. Runtime evidence: `editor_UEREMCP_Niagara_Create_20260730_033148.log` lines 2177-2178 show registry registration and `UUeremcpTemplatesToolset registered`.
+- **Code evidence:** no `IMPLEMENT_*_AUTOMATION_TEST` exists under `UeremcpTemplates`; current tests are Python-only under `UeremcpTemplates/Tests/py` and therefore do not create an Unreal editor filter.
+- **Required WS-15 handoff:** add a thin `UeremcpTemplates.Toolset` editor automation suite in the Templates module that verifies toolset registration/schema and exercises existing search, instantiate dry-run/delegation honesty, and promote dry-run operations. No ADR or toolset redesign is needed. WS-11 then runs the registered filter and records the editor result.
+
+WS-01 did not edit WS-15-owned implementation paths.
 
 ## Blueprint triage re-proof on tip `35b4cab`
 
@@ -184,4 +194,4 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
 | WS-11 | Create/Inspect freshness closed on `2384112`; keep A6 / overall POC-B claims gated separately. |
 
-Wave 2 listed editor filters are green. Remaining residuals are Templates availability and A6 / overall POC-B criteria outside this filter set. No junction retarget.
+Wave 2 registered editor filters are green. Remaining handoff: WS-15 must add the missing Templates editor automation filter; A6 / overall POC-B remain separate criteria. No junction retarget.
