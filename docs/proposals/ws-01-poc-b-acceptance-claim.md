@@ -14,9 +14,9 @@
 > scenario: all binary criteria B1–B10 in `docs/POC_ACCEPTANCE.md` pass on the
 > assembled current lineage. One live MCP request completed the goal-level pipeline
 > in 4.7001219 seconds, and the measured successful primitive equivalent required
-> 63 operations in each of 3/3 trials. The live response status remains honestly
-> `partially_completed`; this is a product-status residual, not an invented
-> `*_validated` result.
+> 63 operations in each of 3/3 trials. The claim-time live response status was
+> honestly `partially_completed`; a post-claim WS-07 rerun at `e32d866` now
+> returns `modified_and_validated` for the canonical replace-mode request.
 
 This claim is limited to POC B. It does **not** claim POC C, POC D, or POC E.
 
@@ -38,9 +38,14 @@ Canonical assembled bundle:
 | B9 | **PASS** | Bundle `criteria.B9`; fresh-create marker `B9_present=PASS B9_complete=PASS` |
 | B10 | **PASS** | Bundle `criteria.B10`; `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_VisibleRender_20260730_095353.log`, programmatic gate `warm_changed_pixels=30454`; screenshot supplementary only |
 
-The B1 response status is `partially_completed`. B1–B10 do not require a particular
-response status string, so this does not negate those binary results. It does prevent
-WS-01 from representing the product response itself as `created_and_validated`.
+The claim-time B1 response status was `partially_completed`. B1–B10 do not require
+a particular response status string, so this did not negate those binary results.
+On 2026-07-30, after rebuilding `UeremcpNiagara` from WS-07 tip `e32d866`, a live
+MCP replay of `poc_b_mcp_fireball_request.json` returned
+`modified_and_validated`. The response reported six emitters, four user variables,
+six verified material bindings, matching post-create structural inspection, and
+verified save/compile/manifest gates. This closes the response-status residual; it
+does not extend the claim to POC C.
 
 ## Metrics and reduction
 
@@ -61,14 +66,9 @@ Canonical metrics record:
 
 ## Open residuals
 
-1. **Validated status ceiling (WS-07).** The live create response remains
-   `partially_completed`, not `created_and_validated`. When structural, compile,
-   material, and visible-render gates all pass, the implementation should return
-   `created_and_validated`; see
-   [`ws-01-niagara-created-and-validated-handoff.md`](./ws-01-niagara-created-and-validated-handoff.md).
-2. **Token accounting.** Total agent tokens remain unavailable for the precise
+1. **Token accounting.** Total agent tokens remain unavailable for the precise
    Cursor caller limitation above. No estimate is substituted.
-3. **Quarantine cleanup.** Five older loaded scratch systems may remain under
+2. **Quarantine cleanup.** Five older loaded scratch systems may remain under
    `/Game/__UeremcpPoc/__BenchmarkCleanup/`. Repeated live deletion returned
    `false`; safe cleanup may require editor unload/restart.
 

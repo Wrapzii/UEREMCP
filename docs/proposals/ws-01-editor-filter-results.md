@@ -3,7 +3,7 @@
 - **Current integration tip:** `2aab525`
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `268a102` (fresh fireball create **PASS**; production B10 **PASS**, 30,454 warm / 41,231 changed / 412 live / 705 spawned)
+- **Latest Niagara status-honesty tip:** `e32d866` (live canonical MCP replace returned **`modified_and_validated`** for six emitters)
 - **Latest Material re-run tip:** `d691316` (**PASS 14/14**); current tip also includes Material security integration `d3e35cd`
 - **Latest transport integration tip:** `dae0e5c`
 - **Latest Templates re-run tip:** `f15ea96`
@@ -13,9 +13,9 @@
 - **Status:** **Overall POC B CLAIMED** at `2aab525` for the demonstrated
   goal-level Niagara fireball scenario: B1–B10 are all PASS in the current-lineage
   evidence bundle, and the completed metrics record measures one UEREMCP MCP call
-  against 63 successful primitive operations in each of 3/3 trials. The live create
-  response remains honestly `partially_completed`, tokens are unavailable for the
-  precise Cursor caller reason recorded below, and scratch assets may remain
+  against 63 successful primitive operations in each of 3/3 trials. A post-claim
+  WS-07 live rerun now returns `modified_and_validated`; tokens remain unavailable
+  for the precise Cursor caller reason recorded below, and scratch assets may remain
   quarantined under `__BenchmarkCleanup/` until editor unload. This claim does not
   claim POC C, D, or E.
 - **Junction:** Not changed.
@@ -39,11 +39,24 @@ record is
 - Tokens: **unavailable** because the Cursor MCP caller exposes no per-call agent
   usage; `wire_bytes/4` is not total agent tokens.
 
-Residual product work is explicit: WS-07 must remove the live response's
-`partially_completed` ceiling when structural, compile, material, and visible gates
-all pass. Five older loaded scratch systems may remain safely quarantined under
+The WS-07 validated-status residual is closed by the live rerun recorded below.
+Five older loaded scratch systems may remain safely quarantined under
 `/Game/__UeremcpPoc/__BenchmarkCleanup/` until editor unload/restart. Neither
 residual changes the binary B1–B10 result, and neither is hidden by this claim.
+
+## WS-07 validated-status live rerun (`e32d866`)
+
+`UeremcpNiagara` was rebuilt successfully on 2026-07-30 after stopping editor
+instances that held `UnrealEditor-UeremcpNiagara.dll`. The canonical
+`poc_b_mcp_fireball_request.json` payload was then sent through the live MCP
+`CreateNiagaraEffect` tool.
+
+The replace-mode response returned **`status: modified_and_validated`**, not
+`partially_completed`. Its summary reported six emitters, four user variables,
+six verified material bindings, a matching post-create structural inspect, and
+verified save, compile, emitter-role, renderer/material, structural re-read, and
+change-manifest gates. The response diagnostics also reported B3, B4, and B6 true.
+This closes only the WS-07 response-status ceiling; it does not claim POC C.
 
 ## Post-bundle live B1 and primitive baseline (`fca736f`)
 
