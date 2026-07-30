@@ -17,7 +17,11 @@ Editor gates already PASS on `8a8c75d`:
 - `UEREMCP.Niagara.POCB.Restart.Create/Verify` — B8
 - B7 scaffold — prior green
 
-## WS-07 deliverables (landed)
+## WS-07 fix (2026-07-30)
+
+**`AwaitCompile` MCP crash:** `ProcessThreadUntilIdle(GameThread)` during synchronous MCP/toolset dispatch re-entered the game thread and corrupted Niagara hybrid `ActiveCompilations` (null `AsyncTaskRequest` TSharedPtr → `SharedPointer.h` IsValid assert at `UeremcpNiagaraCreate.cpp:589`). Fix: poll-only compile wait (`PollForCompilationComplete` + ticker/asset-compiler pump); no `WaitForCompilationComplete` / no GT task drain.
+
+WS-11: rerun one-call MCP fireball after orch rebuild.
 
 | Artifact | Purpose |
 |---|---|

@@ -19,8 +19,8 @@
 #include "Misc/App.h"
 #include "Misc/AutomationTest.h"
 #include "Containers/Ticker.h"
-#include "Async/TaskGraphInterfaces.h"
 #include "AssetCompilingManager.h"
+#include "HAL/PlatformProcess.h"
 #include "UObject/SavePackage.h"
 #include "UObject/SoftObjectPath.h"
 
@@ -164,16 +164,17 @@ namespace
 		}
 	}
 
-	void PumpNiagaraCompileWait()
+	void PumpNiagaraCompileWait(bool bLimitExecutionTime)
 	{
 		// [VERIFIED: Engine/Source/Runtime/Core/Public/Containers/Ticker.h:81]
 		FTSTicker::GetCoreTicker().Tick(FApp::GetDeltaTime());
-		// [VERIFIED: Engine/Source/Runtime/Core/Public/Async/TaskGraphInterfaces.h:347]
-		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
 #if WITH_EDITOR
 		// [VERIFIED: Engine/Source/Runtime/Engine/Public/AssetCompilingManager.h:97]
-		FAssetCompilingManager::Get().ProcessAsyncTasks(/*bLimitExecutionTime=*/true);
+		FAssetCompilingManager::Get().ProcessAsyncTasks(bLimitExecutionTime);
 #endif
+		// Do NOT call FTaskGraphInterface::ProcessThreadUntilIdle(GameThread) here. MCP/toolset
+		// handlers already run on the game thread; reentrant GT draining during AwaitCompile corrupts
+		// Niagara hybrid ActiveCompilations (null AsyncTaskRequest TSharedPtr -> SharedPointer IsValid assert).
 	}
 
 	bool AwaitCompile(
@@ -187,14 +188,17 @@ namespace
 			return false;
 		}
 
+		if (!IsInGameThread())
+		{
+			// ToolsetRegistry/MCP tools must execute on GT; fail closed instead of crashing Niagara compile APIs.
+			return false;
+		}
+
 		System->RequestCompile(false);
 
-		// Bounded wait using public compile APIs only.
-		// PollForCompilationComplete uses QueryCompileComplete(false) (NiagaraSystem.cpp:3289) and
-		// never drains async VM compiles on a blocked game thread. WaitForCompilationComplete is the
-		// only public entry that calls QueryCompileComplete(true) (NiagaraSystem.cpp:3227-3250).
-		// Epic's NiagaraToolset async compile gate uses FTSTicker while the editor ticks (NiagaraToolset_System.cpp:495-520);
-		// synchronous create_niagara_effect must pump explicitly before blocking drain.
+		// Bounded wait using public non-reentrant poll APIs (NiagaraDumpBytecodeCommandlet pattern).
+		// WaitForCompilationComplete -> QueryCompileComplete(true) plus ProcessThreadUntilIdle reentry
+		// crashes MCP-dispatched create_niagara_effect after inline material saves.
 		const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
 		while (FPlatformTime::Seconds() < Deadline)
 		{
@@ -204,10 +208,8 @@ namespace
 				break;
 			}
 
-			PumpNiagaraCompileWait();
-
-			// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:452]
-			System->WaitForCompilationComplete(/*bIncludingGPUShaders=*/false, /*bShowProgress=*/false);
+			PumpNiagaraCompileWait(/*bLimitExecutionTime=*/false);
+			System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
 
 			if (!System->HasActiveCompilations()
 				&& !System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
@@ -217,9 +219,11 @@ namespace
 
 			if (GIsAutomationTesting)
 			{
-				// WaitForCompilationComplete applies GIsAutomationTesting termination cap when stuck.
+				// Editor automation must not block on full VM compile drain; one poll pass matches prior behavior.
 				break;
 			}
+
+			FPlatformProcess::Sleep(0.01f);
 		}
 
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
