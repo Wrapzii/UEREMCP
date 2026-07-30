@@ -5,6 +5,7 @@
 #include "Misc/CoreDelegates.h"
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpNiagaraPlanHandlers.h"
 #include "UeremcpNiagaraToolset.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcpNiagara, Log, All);
@@ -29,6 +30,7 @@ public:
 
 		if (UObjectInitialized())
 		{
+			FUeremcpNiagaraPlanHandlers::Unregister();
 			UToolsetRegistry::UnregisterToolsetClass(UUeremcpNiagaraToolset::StaticClass());
 		}
 		UE_LOG(LogUeremcpNiagara, Log, TEXT("UEREMCP Niagara module shut down."));
@@ -49,6 +51,18 @@ private:
 		{
 			UE_LOG(LogUeremcpNiagara, Warning,
 				TEXT("UUeremcpNiagaraToolset registration failed at PostEngineInit."));
+		}
+
+		FString PlanHandlerError;
+		if (FUeremcpNiagaraPlanHandlers::Register(PlanHandlerError))
+		{
+			UE_LOG(LogUeremcpNiagara, Log,
+				TEXT("Niagara execute_plan handler registered (create_niagara_effect)."));
+		}
+		else
+		{
+			UE_LOG(LogUeremcpNiagara, Warning,
+				TEXT("Niagara execute_plan handler registration failed: %s"), *PlanHandlerError);
 		}
 	}
 

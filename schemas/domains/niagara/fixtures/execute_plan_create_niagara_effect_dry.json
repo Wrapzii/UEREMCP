@@ -1,0 +1,44 @@
+{
+  "$comment": "Offline fixture: execute_plan operation dispatching create_niagara_effect (WS-07 / WS-15 b15658f contract).",
+  "registered_action": "create_niagara_effect",
+  "owner": "WS-07",
+  "plan_request": {
+    "protocol_version": "1.0",
+    "request_id": "ws07-plan-create-dry",
+    "action": "execute_plan",
+    "specification": {
+      "transaction": {
+        "atomic": false,
+        "rollback_on_failure": false
+      },
+      "operations": [
+        {
+          "id": "projectile_fx",
+          "action": "create_niagara_effect",
+          "target": {
+            "asset_path": "/Game/__UeremcpTests/NS_WS07_PlanDry"
+          },
+          "specification": {
+            "effect_type": "projectile",
+            "element": "fire",
+            "components": ["sparks"],
+            "parameters": {
+              "scale": 1.0,
+              "intensity": 4.0
+            }
+          }
+        }
+      ],
+      "on_failure": "stop"
+    },
+    "options": {
+      "dry_run": true
+    }
+  },
+  "expectations": {
+    "requires_registered_handler": true,
+    "honest_domain_status": "partially_completed",
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"],
+    "atomic_plan_still_blocked_without_ws03_callbacks": true
+  }
+}

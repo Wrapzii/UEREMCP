@@ -92,6 +92,11 @@ until WS-11 proves retrieve → replace → retrieve stability.
 
 Response status remains **`partially_completed`**; `never_claims` lists `*_validated` statuses.
 
+`create_niagara_effect` registers with `FUeremcpPlanExecutor` at Niagara module startup
+(WS-15 handler contract). Template `execute_plan` instantiation remains
+**partially_completed** until WS-03 atomic transaction callbacks and WS-08
+`create_vfx_material` registration land.
+
 ## Epic tool composition (implementation note)
 
 UEREMCP does **not** re-expose NiagaraToolsets' 46 primitives. Internal batching via

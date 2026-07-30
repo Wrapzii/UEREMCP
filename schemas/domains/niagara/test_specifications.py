@@ -43,6 +43,7 @@ EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
     "six emitter",
     "post-create inspect",
     "mode 'replace'",
+    "execute_plan",
 )
 
 
@@ -307,6 +308,19 @@ class NiagaraSpecificationTests(unittest.TestCase):
             set(expectations["validation_never_claims"]),
             {"created_and_validated", "modified_and_validated"},
         )
+
+    def test_execute_plan_create_niagara_effect_fixture(self) -> None:
+        fixture = load_fixture("execute_plan_create_niagara_effect_dry.json")
+        expectations = fixture["expectations"]
+        operation = fixture["plan_request"]["specification"]["operations"][0]
+
+        self.assertEqual(fixture["registered_action"], "create_niagara_effect")
+        self.assertEqual(fixture["owner"], "WS-07")
+        self.assertEqual(operation["action"], "create_niagara_effect")
+        self.assertTrue(operation["target"]["asset_path"].startswith("/Game/__UeremcpTests/"))
+        self.assertTrue(expectations["requires_registered_handler"])
+        self.assertEqual(expectations["honest_domain_status"], "partially_completed")
+        self.assertTrue(expectations["atomic_plan_still_blocked_without_ws03_callbacks"])
 
     def test_hash_round_trip_poc_b_scaffold_fixture(self) -> None:
         import sys
