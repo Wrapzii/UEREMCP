@@ -66,3 +66,19 @@ provisional object-form resolver may ship as Wave 1 independent pieces.
 `$RAT/.../batch_workflow_tools.py` — string refs prefixed with `$` resolve to a
 prior step's `label` or `path` via `_resolve_ref`; 8 allowlisted actions;
 `dry_run` / `stop_on_error`. Formal audit row still assigned to WS-02.
+
+### Update 2026-07-29 (RB-15 q6 landed — `dac8d57`)
+
+**Fully unblocked for grammar decision.** Formal dump:
+`docs/audit/raw/q-reagenttools-execute-editor-batch.json` +
+`docs/audit/reagenttools.md`.
+
+Summary for WS-05:
+- `$` + step id → prior `label`, else `path`
+- 8 allowlisted actions; `BATCH_LIMIT=20`; `dry_run` (resolve_actor still runs);
+  `stop_on_error` default true
+- Disposition: preserve grammar ideas; supersede REAgentTools surface; compose
+  Epic multi-tool batches via `execute_tool_script`
+
+WS-05 should now choose object-form / `$`-string / both and update
+`schemas/batch/plan.schema.json` accordingly.
