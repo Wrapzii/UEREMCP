@@ -103,3 +103,11 @@ it manufactures false confidence in exactly the place this project cannot afford
 Assert the thing that would actually be wrong. For a graph replace, that means asserting
 the specific nodes exist and the specific connections are present — not that the call
 returned without error.
+
+### Optional: Protocol golden vectors (WS-05)
+
+```powershell
+pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Protocol.Golden"
+```
+
+2026-07-30: `ContentHash` **fail** (hash mismatch vs golden); `Envelope`, `Ref`, `Topo` **pass**. Not a C-3 gate; WS-05 owns parity.
