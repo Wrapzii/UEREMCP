@@ -320,6 +320,46 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 	}
 	const TSharedPtr<FJsonObject> SubmittedGraph = *SubmittedGraphPtr;
 
+	FString SubmittedGraphId;
+	SubmittedGraph->TryGetStringField(TEXT("graph_id"), SubmittedGraphId);
+	const FString TargetGraphId = !Request.TargetGraphId.IsEmpty()
+		? Request.TargetGraphId
+		: (!SubmittedGraphId.IsEmpty()
+			? SubmittedGraphId
+			: ReadGraphSpecificationString(Request, TEXT("graph_id")));
+
+	FString ValidateError;
+	TArray<FString> ValidateNotes;
+	if (!FUeremcpBlueprintGraphWriter::ValidateSubmittedGraphForReplace(
+			SubmittedGraph,
+			Request.TargetAssetPath,
+			TargetGraphId,
+			ValidateError,
+			ValidateNotes))
+	{
+		Response.Status = TEXT("failed_validation");
+		Response.Summary = ValidateError;
+		Response.CapabilityNotes = ValidateNotes;
+		TArray<FString> PerformedChecks = {TEXT("blueprint.submitted_graph_structure")};
+		if (ValidateNotes.Contains(TEXT("submit_graph.dsl_required")))
+		{
+			PerformedChecks.Add(TEXT("blueprint.dsl_resolution"));
+		}
+		AttachSubmitValidation(
+			Response,
+			false,
+			PerformedChecks,
+			{
+				TEXT("blueprint.current_graph_read"),
+				TEXT("blueprint.expected_revision_compare"),
+				TEXT("blueprint.submitted_graph_hash_compare"),
+				TEXT("blueprint.graph_write"),
+				TEXT("blueprint.compile"),
+				TEXT("blueprint.reread_after_write"),
+			});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
 	FString LoadError;
 	UBlueprint* Blueprint = LoadBlueprintAsset(Request.TargetAssetPath, LoadError);
 	if (!Blueprint)
@@ -327,14 +367,8 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 		return FUeremcpEnvelope::MakeRejection(Request.RequestId, LoadError);
 	}
 
-	FString SubmittedGraphId;
-	SubmittedGraph->TryGetStringField(TEXT("graph_id"), SubmittedGraphId);
 	FUeremcpBlueprintReadGraphOptions ReadOptions;
-	ReadOptions.GraphId = !Request.TargetGraphId.IsEmpty()
-		? Request.TargetGraphId
-		: (!SubmittedGraphId.IsEmpty()
-			? SubmittedGraphId
-			: ReadGraphSpecificationString(Request, TEXT("graph_id")));
+	ReadOptions.GraphId = TargetGraphId;
 	ReadOptions.ResponseDetail = TEXT("complete");
 
 	FUeremcpBlueprintReadGraphResult Current;

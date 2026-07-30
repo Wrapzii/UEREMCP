@@ -12,8 +12,10 @@ Blueprint graph mutation require the **game/editor main thread**. Today the
 toolset calls Epic bridge + `WriteGraphDsl` inline; this is fragile if transport
 ever invokes tools off-thread (WS-04) or during async job polling (ADR-0009).
 
-There is **no** `MutatingDispatch` helper in the repository yet (searched
-`Plugins/UEREMCP/Source/**`, 2026-07-30).
+There is **no** `MutatingDispatch` helper on branch `ws-06-blueprint` yet (searched
+`Plugins/UEREMCP/Source/**`, 2026-07-30). **`ws-01-orch` carries
+`FUeremcpMutatingDispatch::RunOnGameThread`** (`UeremcpMutatingDispatch.h`); WS-06
+adoption waits for orch merge into this worktree (separate lane).
 
 ## Ask (WS-03 / UeremcpCore)
 

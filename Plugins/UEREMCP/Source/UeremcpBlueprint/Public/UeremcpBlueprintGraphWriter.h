@@ -37,6 +37,14 @@ public:
 	/** Scratch writes only — /Game/__UeremcpTests/ (RB-14). */
 	static bool IsScratchAssetPath(const FString& AssetPath);
 
+	/** Pre-flight ADR-0004 shape + DSL resolution before load/write (honest failed_validation). */
+	static bool ValidateSubmittedGraphForReplace(
+		const TSharedPtr<FJsonObject>& SubmittedGraph,
+		const FString& ExpectedAssetPath,
+		const FString& ExpectedGraphId,
+		FString& OutError,
+		TArray<FString>& OutCapabilityNotes);
+
 	static bool ResolveWriteDsl(
 		const TSharedPtr<FJsonObject>& SubmittedGraph,
 		FString& OutDsl,

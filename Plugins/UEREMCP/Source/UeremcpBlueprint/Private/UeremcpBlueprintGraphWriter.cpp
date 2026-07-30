@@ -345,6 +345,119 @@ bool FUeremcpBlueprintGraphWriter::IsScratchAssetPath(const FString& AssetPath)
 	return AssetPath.StartsWith(TEXT("/Game/__UeremcpTests/"), ESearchCase::CaseSensitive);
 }
 
+namespace UeremcpBlueprintGraphWriterValidate
+{
+	static bool RequireStringField(
+		const TSharedPtr<FJsonObject>& Graph,
+		const TCHAR* Field,
+		FString& OutValue,
+		FString& OutError)
+	{
+		if (!Graph->TryGetStringField(Field, OutValue) || OutValue.IsEmpty())
+		{
+			OutError = FString::Printf(TEXT("submitted graph missing required field '%s'"), Field);
+			return false;
+		}
+		return true;
+	}
+}
+
+bool FUeremcpBlueprintGraphWriter::ValidateSubmittedGraphForReplace(
+	const TSharedPtr<FJsonObject>& SubmittedGraph,
+	const FString& ExpectedAssetPath,
+	const FString& ExpectedGraphId,
+	FString& OutError,
+	TArray<FString>& OutCapabilityNotes)
+{
+	using namespace UeremcpBlueprintGraphWriterValidate;
+
+	OutError.Reset();
+	OutCapabilityNotes.Reset();
+
+	if (!SubmittedGraph.IsValid())
+	{
+		OutError = TEXT("submitted graph is null");
+		return false;
+	}
+
+	FString AssetPath;
+	FString GraphId;
+	FString GraphType;
+	FString SchemaVersion;
+	if (!RequireStringField(SubmittedGraph, TEXT("asset_path"), AssetPath, OutError)
+		|| !RequireStringField(SubmittedGraph, TEXT("graph_id"), GraphId, OutError)
+		|| !RequireStringField(SubmittedGraph, TEXT("graph_type"), GraphType, OutError)
+		|| !RequireStringField(SubmittedGraph, TEXT("schema_version"), SchemaVersion, OutError))
+	{
+		return false;
+	}
+
+	const TSharedPtr<FJsonObject>* Fidelity = nullptr;
+	if (!SubmittedGraph->TryGetObjectField(TEXT("fidelity"), Fidelity) || !Fidelity || !Fidelity->IsValid())
+	{
+		OutError = TEXT("submitted graph missing required object 'fidelity'");
+		return false;
+	}
+	if (!(*Fidelity)->HasTypedField<EJson::Boolean>(TEXT("round_trip_supported")))
+	{
+		OutError = TEXT("submitted graph.fidelity.round_trip_supported is required");
+		return false;
+	}
+
+	if (!GraphType.StartsWith(TEXT("Blueprint"), ESearchCase::CaseSensitive))
+	{
+		OutError = FString::Printf(
+			TEXT("submit_graph replace supports Blueprint graph_type values only; got '%s'"),
+			*GraphType);
+		OutCapabilityNotes.Add(TEXT("submit_graph.unsupported_graph_type"));
+		return false;
+	}
+
+	if (!ExpectedAssetPath.IsEmpty()
+		&& !AssetPath.Equals(ExpectedAssetPath, ESearchCase::CaseSensitive))
+	{
+		OutError = FString::Printf(
+			TEXT("submitted graph asset_path '%s' does not match target '%s'"),
+			*AssetPath,
+			*ExpectedAssetPath);
+		OutCapabilityNotes.Add(TEXT("submit_graph.asset_path_mismatch"));
+		return false;
+	}
+
+	if (!ExpectedGraphId.IsEmpty() && !GraphId.Equals(ExpectedGraphId, ESearchCase::CaseSensitive))
+	{
+		OutError = FString::Printf(
+			TEXT("submitted graph graph_id '%s' does not match target '%s'"),
+			*GraphId,
+			*ExpectedGraphId);
+		OutCapabilityNotes.Add(TEXT("submit_graph.graph_id_mismatch"));
+		return false;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* Nodes = nullptr;
+	if (!SubmittedGraph->TryGetArrayField(TEXT("nodes"), Nodes) || !Nodes)
+	{
+		OutError = TEXT("submitted graph missing required array 'nodes'");
+		return false;
+	}
+
+	FString Dsl;
+	TArray<FString> LossyNotes;
+	if (!ResolveWriteDsl(SubmittedGraph, Dsl, LossyNotes, OutError))
+	{
+		OutCapabilityNotes.Add(TEXT("submit_graph.dsl_required"));
+		return false;
+	}
+	if (Dsl.IsEmpty())
+	{
+		OutError = TEXT("resolved DSL is empty");
+		OutCapabilityNotes.Add(TEXT("submit_graph.dsl_required"));
+		return false;
+	}
+
+	return true;
+}
+
 bool FUeremcpBlueprintGraphWriter::ResolveWriteDsl(
 	const TSharedPtr<FJsonObject>& SubmittedGraph,
 	FString& OutDsl,
