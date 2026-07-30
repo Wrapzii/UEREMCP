@@ -312,6 +312,19 @@ class GameplaySpecificationTests(unittest.TestCase):
         ):
             self.assertIn(evidence, toolset)
 
+    def test_session_idempotency_replay_scaffolds_before_mutation(self) -> None:
+        toolset = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpGameplayToolset.cpp"
+        ).read_text(encoding="utf-8")
+        replay = toolset.index("FUeremcpIdempotencyStore::Get().TryGetReplay(")
+        begin = toolset.index("MutatingDispatch.TryBegin(", replay)
+        put = toolset.index("FUeremcpIdempotencyStore::Get().Put(", begin)
+        self.assertLess(replay, begin)
+        self.assertLess(begin, put)
+        self.assertIn("IsVerifiedTerminalStatus(Response.Status)", toolset)
+        self.assertIn("Dry-run never reads or writes the store", toolset)
+        self.assertIn("Disk durability remains WS-05", toolset)
+
     def test_dry_run_response_golden_is_complete_and_schema_valid(self) -> None:
         response_schema = json.loads(
             (SCHEMAS_DIR / "envelope" / "response.schema.json").read_text(

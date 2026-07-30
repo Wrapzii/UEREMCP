@@ -6,6 +6,7 @@
 #include "Serialization/JsonSerializer.h"
 
 #include "UeremcpGameplayToolset.h"
+#include "UeremcpIdempotency.h"
 #include "UeremcpMutatorQueue.h"
 #include "UeremcpPermissionTier.h"
 #include "UeremcpSpellPlanner.h"
@@ -441,6 +442,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameters)
 {
+	FUeremcpIdempotencyStore::Get().Clear();
 	const FString ProjectPath =
 		FPaths::GetProjectFilePath().Replace(TEXT("\\"), TEXT("\\\\"));
 	const FString Request = FString::Printf(
@@ -452,6 +454,7 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 			"mode":"create_or_update",
 			"target":{"asset_path":"/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities"},
 			"options":{"dry_run":false},
+			"idempotency_key":"ws09-create-spell-lifecycle",
 			"specification":%s
 		})"),
 		*ProjectPath,
@@ -493,8 +496,39 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 		TEXT("request never leaks queue ownership"),
 		FUeremcpMutatorQueue::IsActive(FPaths::GetProjectFilePath()));
 
-	const FString RepeatRequest =
-		Request.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-repeat-no-change"));
+	const FString ReplayRequest =
+		Request.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-idempotency-replay"));
+	const TSharedPtr<FJsonObject> ReplayResponse =
+		ParseObject(UUeremcpGameplayToolset::CreateSpell(ReplayRequest));
+	TestTrue(TEXT("idempotency replay response parses"), ReplayResponse.IsValid());
+	if (ReplayResponse.IsValid())
+	{
+		TestEqual(
+			TEXT("replay preserves prior verified status"),
+			ReplayResponse->GetStringField(TEXT("status")),
+			Response.IsValid()
+				? Response->GetStringField(TEXT("status"))
+				: FString());
+		TestEqual(
+			TEXT("replay annotates current request id"),
+			ReplayResponse->GetStringField(TEXT("request_id")),
+			FString(TEXT("ws09-idempotency-replay")));
+		const TSharedPtr<FJsonObject>* Metrics = nullptr;
+		TestTrue(
+			TEXT("replay marks metrics.replayed"),
+			ReplayResponse->TryGetObjectField(TEXT("metrics"), Metrics)
+				&& Metrics && Metrics->IsValid()
+				&& (*Metrics)->GetBoolField(TEXT("replayed")));
+	}
+	TestFalse(
+		TEXT("idempotency replay never acquires the mutator"),
+		FUeremcpMutatorQueue::IsActive(FPaths::GetProjectFilePath()));
+
+	const FString RepeatRequest = Request
+		.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-repeat-no-change"))
+		.Replace(
+			TEXT("\"idempotency_key\":\"ws09-create-spell-lifecycle\""),
+			TEXT("\"idempotency_key\":\"ws09-create-spell-no-change\""));
 	const TSharedPtr<FJsonObject> RepeatResponse =
 		ParseObject(UUeremcpGameplayToolset::CreateSpell(RepeatRequest));
 	TestTrue(TEXT("repeat response parses"), RepeatResponse.IsValid());
@@ -508,6 +542,9 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 
 	const FString MissingDependencyRequest = Request
 		.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-missing-dependency"))
+		.Replace(
+			TEXT("\"idempotency_key\":\"ws09-create-spell-lifecycle\""),
+			TEXT("\"idempotency_key\":\"ws09-create-spell-missing-dep\""))
 		.Replace(MutationSpecificationJson, MissingDependencySpecificationJson);
 	const TSharedPtr<FJsonObject> MissingDependencyResponse =
 		ParseObject(UUeremcpGameplayToolset::CreateSpell(MissingDependencyRequest));
@@ -531,6 +568,9 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 
 	const FString ConflictRequest = RepeatRequest
 		.Replace(TEXT("ws09-repeat-no-change"), TEXT("ws09-revision-conflict"))
+		.Replace(
+			TEXT("\"idempotency_key\":\"ws09-create-spell-no-change\""),
+			TEXT("\"idempotency_key\":\"ws09-create-spell-revision-conflict\""))
 		.Replace(
 			TEXT("\"mode\":\"create_or_update\""),
 			TEXT("\"mode\":\"create_or_update\",\"expected_revision\":\"sha256:wrong\""));

@@ -20,6 +20,8 @@ WS-09 now owns an independently testable `create_spell` executor:
   revision comparison, and persist-or-discard rollback;
 - presentation dependency loading with resolved/unresolved asset evidence; unresolved
   dependencies block non-dry mutation before the DataTable executor;
+- session-scoped idempotency replay through Protocol `FUeremcpIdempotencyStore` for
+  verified non-dry terminals (disk durability remains WS-05);
 - one envelope-shaped `AICallable` entry point;
 - schema, local-header drift, and C++ automation tests;
 - no Epic GAS/DataTable/Niagara/material primitives re-exposed.
@@ -139,6 +141,9 @@ orchestration lane.
 - Production `DT_Abilities` mutation remains prohibited. The current tool accepts
   `/Game/__UeremcpTests/` targets only.
 - Gameplay-tag INI mutation remains out of POC D by accepted WS-01 guidance.
-- The idempotency key is preserved in the write plan and terminal audit, but durable
-  response replay remains a shared protocol/integration concern; row equality still
-  makes repeated execution a verified `no_change_required`.
+- Session-scoped ADR-0006 replay is wired through `FUeremcpIdempotencyStore`
+  `[VERIFIED: UeremcpIdempotency.h:15-35]`: non-dry retries with the same key return
+  the stored verified response with `metrics.replayed=true` and perform no dispatch
+  or DataTable work. Dry-run never reads or writes the store. Disk durability across
+  editor restart remains WS-05; row equality still yields `no_change_required` when a
+  distinct key is used.

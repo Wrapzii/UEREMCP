@@ -3,6 +3,7 @@
 #include "Dom/JsonValue.h"
 #include "UeremcpAbilityTableMutator.h"
 #include "UeremcpEnvelope.h"
+#include "UeremcpIdempotency.h"
 #include "UeremcpMutatingDispatch.h"
 #include "UeremcpPathPolicy.h"
 #include "UeremcpSpellPlanner.h"
@@ -19,6 +20,13 @@ TArray<TSharedPtr<FJsonValue>> StringValues(const TArray<FString>& Values)
 		Result.Add(MakeShared<FJsonValueString>(Value));
 	}
 	return Result;
+}
+
+bool IsVerifiedTerminalStatus(const FString& Status)
+{
+	return Status == TEXT("created_and_validated")
+		|| Status == TEXT("modified_and_validated")
+		|| Status == TEXT("no_change_required");
 }
 }
 
@@ -152,6 +160,21 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
 			FString::Printf(TEXT("Invalid ability-table write plan: %s"), *PlanError));
+	}
+
+	// Session-scoped ADR-0006 replay via Protocol store
+	// [VERIFIED: UeremcpIdempotency.h:15-35]. Disk durability remains WS-05.
+	// Dry-run never reads or writes the store so planning cannot poison retries.
+	if (!Request.bDryRun && !Request.IdempotencyKey.IsEmpty())
+	{
+		FString ReplayJson;
+		if (FUeremcpIdempotencyStore::Get().TryGetReplay(
+			Request.IdempotencyKey,
+			Request.RequestId,
+			ReplayJson))
+		{
+			return ReplayJson;
+		}
 	}
 
 	FUeremcpMutatingDispatch MutatingDispatch;
@@ -446,7 +469,14 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	Response.ExtraFields->SetObjectField(TEXT("rollback"), Rollback);
 	Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
 
-	return Request.bDryRun
+	const FString TerminalJson = Request.bDryRun
 		? FUeremcpEnvelope::SerializeResponse(Response)
 		: MutatingDispatch.Complete(Response);
+	if (!Request.bDryRun
+		&& !Request.IdempotencyKey.IsEmpty()
+		&& IsVerifiedTerminalStatus(Response.Status))
+	{
+		FUeremcpIdempotencyStore::Get().Put(Request.IdempotencyKey, TerminalJson);
+	}
+	return TerminalJson;
 }
