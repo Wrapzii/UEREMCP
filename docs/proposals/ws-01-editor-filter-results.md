@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current integration tip:** `4b3d32f` (`[WS-11] Assemble current-lineage POC-B evidence`)
+- **Current integration tip:** `fca736f`
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `268a102` (fresh fireball create **PASS**; production B10 **PASS**, 30,454 warm / 41,231 changed / 412 live / 705 spawned)
@@ -10,7 +10,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. The current-lineage POC-B criterion bundle is closed on `4b3d32f` with honest transport scope: B1 is **SKIP** because live MCP refused the connection (the editor single-call equivalent **PASS** is recorded separately), and B2–B10 are **PASS**. Metrics are recorded via `e249841`: editor-equivalent wall clock was measured at `31.370670s`; tokens are unavailable from Cursor; and no executable/measured primitive baseline is available. Overall POC-B still requires live MCP B1 proof and an executable, measured primitive baseline. **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. Live MCP B1 is now **PASS** on `fca736f` in [`poc_b_b1_live_mcp_20260730.json`](../reviews/metrics/artifacts/poc_b_b1_live_mcp_20260730.json): one transport round trip, `B1_single_request_complete=true`, and `4.7001219s` wall clock. The response still reported `partially_completed`; status honesty versus the validated gates must be investigated separately. The older `4b3d32f` lineage bundle still records B1 as **SKIP**, so the live artifact supersedes that B1 result outside the bundle until WS-11 refreshes it or records the external proof. The first live primitive-baseline attempt executed 36 operations in `10.5785073s` but **FAILED validation** because the system contained a seventh `Minimal` emitter; WS-07 is fixing the fixture. Remaining work is clean primitive-baseline trial(s), unavailable token accounting, possible response-status honesty, and then overall claim review. **No overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Current-lineage POC-B bundle (`4b3d32f`)
@@ -28,8 +28,41 @@ records `bundle_status=criterion_evidence_complete_with_transport_skip` and
   executable inputs.
 
 The lineage evidence bundle is closed with that scope. Remaining for an overall
-POC-B claim are live MCP B1 proof and an executable, measured equivalent
-primitive baseline. **No overall POC-B claim.**
+POC-B claim at the time of that bundle were live MCP B1 proof and an executable,
+measured equivalent primitive baseline. The later `fca736f` live artifact
+supersedes the bundle's B1 **SKIP** with transport B1 **PASS**, but the bundle JSON
+has not yet been refreshed. WS-11 should either refresh the bundle or explicitly
+record that transport B1 is proven outside the older JSON. **No overall POC-B
+claim.**
+
+## Post-bundle live B1 and primitive baseline (`fca736f`)
+
+Live MCP B1 **PASS** is measured in
+[`poc_b_b1_live_mcp_20260730.json`](../reviews/metrics/artifacts/poc_b_b1_live_mcp_20260730.json):
+
+- one live streamable-HTTP MCP round trip;
+- `B1_single_request_complete=true`;
+- `wall_clock_seconds=4.7001219`.
+
+The same response remained `partially_completed`. This is not an overall POC-B
+result, and the status-honesty question must be investigated separately rather
+than silently relabeling the response as validated.
+
+The primitive baseline was attempted live using
+[`poc_b_primitive_baseline_live_20260730.json`](../reviews/metrics/artifacts/poc_b_primitive_baseline_live_20260730.json).
+The measured attempt executed **36 primitive operations in 10.5785073 seconds**
+but **FAILED validation**: the generated system had seven emitters
+(`Minimal` plus the six requested roles). It is therefore not a usable baseline
+trial. WS-07 is fixing the fixture.
+
+Remaining before an overall claim review:
+
+- clean, validated primitive-baseline trial(s);
+- token accounting, which remains unavailable from the caller;
+- investigation of `partially_completed` versus the successful validated gates;
+- overall POC-B claim review only after those items close.
+
+**No overall POC-B claim.**
 
 ## WS-08 warm-material integration (`268a102`): production B10 PASS
 
@@ -89,9 +122,12 @@ Raw metrics artifacts:
 - [`poc_b_primitive_baseline_attempt_20260730.json`](../reviews/metrics/artifacts/poc_b_primitive_baseline_attempt_20260730.json)
 - [`poc_b_ueremcp_prepared.json`](../reviews/metrics/artifacts/poc_b_ueremcp_prepared.json)
 
-The later `4b3d32f` bundle closes current-lineage criterion evidence with B1
-transport **SKIP** and B2–B10 **PASS**. Overall POC-B remains unclaimed pending
-live MCP B1 proof and an executable, measured primitive baseline.
+The later `4b3d32f` bundle closes its historical current-lineage criterion
+evidence with B1 transport **SKIP** and B2–B10 **PASS**. The `fca736f` live
+artifact now supersedes that B1 result with **PASS** outside the unchanged bundle
+JSON. Overall POC-B remains unclaimed pending clean validated primitive-baseline
+trial(s), unavailable token accounting, possible response-status honesty work,
+and final claim review.
 
 ## WS-07 warm-color re-run (`a9977cf`)
 
@@ -645,18 +681,20 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Overall POC A claimed via Python-free CRT on `3756244`; support only if regressions appear. |
-| WS-07 | Warm `Particles.Color` writes landed on `a9977cf`; fresh create PASS and production emission are closed. Material handoff recorded in [`ws-07-b10-warm-signature-fix.md`](./ws-07-b10-warm-signature-fix.md). |
+| WS-07 | Fix the primitive-baseline fixture so it does not retain the seventh `Minimal` emitter, then support clean validated baseline trial(s). |
 | WS-08 | Own the remaining B10 blocker: generated materials are visually black despite approximately 412 live / 715 spawned particles and warm `Particles.Color`; diagnose the generated material output/binding per the WS-07 handoff. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | B10 harness observation is closed. Production still FAILS with 0 warm pixels. After the WS-08 material fix: rerun B10, MCP `timing_ms`, and the primitive baseline with WS-14 metrics capture. |
+| WS-11 | Refresh the `4b3d32f` lineage bundle for live B1 PASS, or explicitly record that transport B1 is proven by the later `fca736f` artifact outside the older bundle JSON. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
 **Current status supersedes this historical handoff:** overall POC A is claimed on
-CRT `3756244`; the `4b3d32f` current-lineage POC-B bundle is closed with B1
-transport **SKIP** and B2–B10 **PASS**. Metrics record measured editor-equivalent
-wall clock, unavailable tokens, and no executable/measured primitive baseline.
-Live MCP B1 proof and the executable, measured primitive baseline remain open.
-**No overall POC-B claim.** No junction retarget.
+CRT `3756244`. The older `4b3d32f` POC-B bundle remains unchanged with B1
+transport **SKIP**, but live MCP B1 is now proven **PASS** outside that bundle on
+`fca736f` with a measured `4.7001219s` wall clock. The 36-operation,
+`10.5785073s` primitive attempt failed validation on the extra `Minimal` emitter
+and is not a usable baseline. Clean baseline trial(s), unavailable tokens,
+possible `partially_completed` status-honesty work, and final overall claim review
+remain. **No overall POC-B claim.** No junction retarget.
 
 ---
 
