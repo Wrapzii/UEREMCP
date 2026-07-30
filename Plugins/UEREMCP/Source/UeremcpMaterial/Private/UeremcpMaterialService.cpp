@@ -13,6 +13,7 @@
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialCapabilityNotes.h"
 #include "UeremcpMaterialElementPresets.h"
+#include "UeremcpMaterialElementPresetsLoader.h"
 #include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialMasterBuilder.h"
 #include "UeremcpMaterialNiagaraExport.h"
@@ -444,8 +445,21 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		}
 		else
 		{
-			Result.InterpretationNotes.Add(
-				FString::Printf(TEXT("Applied element defaults for '%s'."), *Element));
+			if (UeremcpMaterialElementPresetsLoader::IsLoadedFromJson())
+			{
+				Result.InterpretationNotes.Add(
+					FString::Printf(
+						TEXT("Applied element defaults for '%s' from element_presets.v1.json (%s)."),
+						*Element,
+						*UeremcpMaterialElementPresetsLoader::GetLoadedPath()));
+			}
+			else
+			{
+				Result.InterpretationNotes.Add(
+					FString::Printf(
+						TEXT("Applied element defaults for '%s' from C++ fallback (element_presets.v1.json not loaded)."),
+						*Element));
+			}
 		}
 	}
 	UeremcpMaterialElementPresets::ApplyModifiers(Modifiers, Purpose, Params);

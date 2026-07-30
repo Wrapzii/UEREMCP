@@ -13,6 +13,7 @@
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionSphereMask.h"
 #include "Misc/Crc.h"
+#include "UeremcpMaterialElementPresetsLoader.h"
 #include "UeremcpMaterialPaths.h"
 
 namespace
@@ -44,6 +45,12 @@ void UeremcpMaterialFeatures::ParseFeaturesFromSpec(
 
 TArray<FString> UeremcpMaterialFeatures::DefaultFeaturesForPurpose(const FString& Purpose)
 {
+	TArray<FString> FromJson;
+	if (UeremcpMaterialElementPresetsLoader::TryGetPurposeDefaultFeatures(Purpose, FromJson))
+	{
+		return FromJson;
+	}
+
 	if (Purpose.Equals(TEXT("elemental_projectile_trail"), ESearchCase::CaseSensitive) ||
 		Purpose.Equals(TEXT("fireball_ribbon_trail"), ESearchCase::CaseSensitive))
 	{

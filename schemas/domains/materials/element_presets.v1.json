@@ -1,5 +1,5 @@
 {
-  "$comment": "WS-08 reference data: element → default MI parameters + purpose feature defaults. Mirrored in C++. Tested by test_element_presets.py and test_features.py.",
+  "$comment": "WS-08 reference data: element → default MI parameters + purpose feature defaults. Loaded at runtime by UeremcpMaterialElementPresetsLoader; C++ fallback when file unavailable. Tested by test_element_presets.py and test_features.py.",
   "version": 2,
   "elements": {
     "fire": {

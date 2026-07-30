@@ -1,6 +1,6 @@
 // UEREMCP — element preset defaults for create_vfx_material (RB-08 §D, ADR-0008).
 //
-// Data mirrored from schemas/domains/materials/element_presets.v1.json.
+// Data source: schemas/domains/materials/element_presets.v1.json (runtime loader + C++ fallback).
 
 #pragma once
 

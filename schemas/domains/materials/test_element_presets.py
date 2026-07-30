@@ -19,6 +19,10 @@ PRESETS_CPP = (
     REPO_ROOT
     / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialElementPresets.cpp"
 )
+LOADER_CPP = (
+    REPO_ROOT
+    / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialElementPresetsLoader.cpp"
+)
 FEATURES_CPP = (
     REPO_ROOT
     / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialFeatures.cpp"
@@ -43,12 +47,23 @@ class ElementPresetParityTests(unittest.TestCase):
 
     def test_fire_defaults_present_in_cpp(self) -> None:
         fire = self.data["elements"]["fire"]
-        # Spot-check literals mirrored in GetElementDefaults fire branch.
+        # C++ fallback branch retains fire literals when JSON is unavailable.
         self.assertIn("0.35f", self.cpp_text)
         self.assertIn("8.0f", self.cpp_text)
         self.assertIn(str(fire["depth_fade"]).replace(".0", ".0f").split(".")[0], self.cpp_text)
         pc = fire["particle_color"]
         self.assertIn(f"{pc[0]}f", self.cpp_text)
+
+    def test_runtime_loader_implemented(self) -> None:
+        self.assertTrue(LOADER_CPP.is_file(), "element presets runtime loader must exist")
+        loader = LOADER_CPP.read_text(encoding="utf-8")
+        self.assertIn("TryGetElementDefaults", loader)
+        self.assertIn("TryGetPurposeDefaultFeatures", loader)
+        self.assertIn("purpose_default_features", loader)
+        self.assertIn("ResolvePresetsJsonPath", loader)
+
+    def test_presets_cpp_delegates_to_loader(self) -> None:
+        self.assertIn("UeremcpMaterialElementPresetsLoader::TryGetElementDefaults", self.cpp_text)
 
 
 if __name__ == "__main__":

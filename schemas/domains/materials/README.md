@@ -62,7 +62,7 @@ Elemental VFX materials use **one tooling surface** (`create_vfx_material`) with
 | `flow_maps` | Panner(`FlowSpeed`) × `FlowMap` sample → emissive | `[VERIFIED: MaterialExpressionPanner.h]`, `[VERIFIED: MaterialExpressionTextureSampleParameter2D.h]` |
 
 Masters are named `{M_Ueremcp_ProjCore|ProjTrail}_{FeatureSignature}` so graph variants do not collide.
-Purpose defaults live in `element_presets.v1.json` → `purpose_default_features` (mirrored in C++).
+Purpose defaults live in `element_presets.v1.json` → `purpose_default_features` (loaded at runtime with C++ fallback).
 
 Not yet wired: `distortion`, `flipbook_subuv`, engine MaterialFunctions.
 
@@ -95,7 +95,7 @@ These keys match `UeremcpMaterialCapabilityNotes.h` and `create_vfx_material` `c
 | MaterialTools omits blend/shading/domain | Mitigated | Set on `UMaterial` before recompile in feature graph builder |
 | Feature tokens not wired | Mitigated (projectile slice) | See feature table above; unimplemented tokens → `created_with_warnings` |
 | Procedural texture generation | Mitigated | `create_procedural_texture` + `textures.generate` slots (CPU FImageUtils path) |
-| Element presets from JSON at runtime | Medium | C++ mirrors `element_presets.v1.json`; loader proposal pending |
+| Element presets at runtime | Mitigated | `element_presets.v1.json` via `UeremcpMaterialElementPresetsLoader` with C++ fallback |
 | Substrate shading overrides | Medium | Per-material runtime check in RE project |
 | Graph round-trip unproven | Medium | WS-11 harness under `/Game/__UeremcpTests/` |
 

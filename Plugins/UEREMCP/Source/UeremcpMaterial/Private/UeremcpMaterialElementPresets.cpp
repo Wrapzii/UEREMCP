@@ -3,6 +3,7 @@
 #include "UeremcpMaterialElementPresets.h"
 
 #include "Dom/JsonObject.h"
+#include "UeremcpMaterialElementPresetsLoader.h"
 #include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialPaths.h"
 
@@ -56,6 +57,11 @@ FString UeremcpMaterialElementPresets::ResolveMasterPackagePath(
 
 bool UeremcpMaterialElementPresets::GetElementDefaults(const FString& Element, FUeremcpMaterialParameterSet& OutPreset)
 {
+	if (UeremcpMaterialElementPresetsLoader::TryGetElementDefaults(Element, OutPreset))
+	{
+		return true;
+	}
+
 	const FString Key = Element.ToLower();
 	if (Key == TEXT("fire"))
 	{
