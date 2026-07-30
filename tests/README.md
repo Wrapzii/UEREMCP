@@ -20,6 +20,9 @@ pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.ValidationProbe.Launch.Smoke"
 
 # Engine FileSandbox lifecycle (Epic):
 pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library" -NoProbe
+
+# Transport constraints and current JobRegistry skips:
+pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Transport"
 ```
 
 **SoT for Rollback:** `Plugins/UEREMCP/Source/UeremcpValidation/.../RollbackMultiAssetDiscard.spec.cpp`  
@@ -111,6 +114,18 @@ round-trip support** — it sets `fidelity.round_trip_supported: false` and list
 
 Upcoming Niagara and Material runtime filters have a no-claim handoff checklist in
 [`integration/Domain.Runtime.Handoffs.md`](integration/Domain.Runtime.Handoffs.md).
+
+### Transport JobRegistry unskip gate
+
+The last recorded shipping Transport run was **5 PASS + 3 SKIP**, although Unreal
+Automation reported all eight paths as `Success`
+`[VERIFIED-RUNTIME: editor_UEREMCP_Transport_20260730_010212.log; recorded in
+docs/research/RB-04-transport-and-jobs.md]`. The skipped paths are Poll, Cancel, and
+Timeout.PartiallyCompleted; do not report them as passes.
+
+The deterministic fixtures and exact conversion criteria are in
+[`integration/Transport.JobRegistry.Unskip.md`](integration/Transport.JobRegistry.Unskip.md).
+They remain documentation-only until WS-05 lands callable JobRegistry symbols.
 
 ## `benchmark/`
 

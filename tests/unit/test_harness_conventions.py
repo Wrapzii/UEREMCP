@@ -139,6 +139,21 @@ class HarnessLayoutTest(unittest.TestCase):
         self.assertIn("PASS (scoped)", readme)
         self.assertIn("DiscardFiles()", readme)
 
+    def test_jobregistry_unskip_handoff_preserves_skip_status(self):
+        path = REPO_ROOT / "tests" / "integration" / "Transport.JobRegistry.Unskip.md"
+        self.assertTrue(path.is_file(), f"missing {path}")
+        handoff = path.read_text(encoding="utf-8")
+        for automation_path in (
+            "UEREMCP.Transport.JobRegistry.Poll",
+            "UEREMCP.Transport.JobRegistry.Cancel",
+            "UEREMCP.Transport.Timeout.PartiallyCompleted",
+        ):
+            self.assertIn(automation_path, handoff)
+        self.assertIn("5 PASS + 3 SKIP", handoff)
+        self.assertIn("8 PASS, 0 SKIP, 0 FAIL", handoff)
+        self.assertIn("do not use fixed sleeps", handoff.lower())
+        self.assertIn("Do not retarget the RE junction", handoff)
+
     def test_run_scripts_exist(self):
         self.assertTrue((REPO_ROOT / "tests" / "run_unit_tests.py").is_file())
         self.assertTrue((REPO_ROOT / "tests" / "run_editor_tests.ps1").is_file())
