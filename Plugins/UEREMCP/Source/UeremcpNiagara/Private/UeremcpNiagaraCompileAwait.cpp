@@ -101,14 +101,16 @@ FUeremcpNiagaraCompileAwaitResult FUeremcpNiagaraCompileAwait::AwaitCompile(
 
 		if (!IsLiveToolDispatchContext())
 		{
-			// Editor automation: one bounded PollForCompilationComplete pass (uses QueryCompileComplete).
-			if (!System->HasActiveCompilations()
-				&& !System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
+			// Editor automation must keep polling until the script-derived state catches
+			// up. One poll is insufficient after multiple stack-input edits: the first
+			// pass can only promote the queued request into an active compile.
+			if (System->HasActiveCompilations()
+				|| System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
 			{
-				break;
+				System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
 			}
-			System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
-			break;
+			FPlatformProcess::Sleep(0.01f);
+			continue;
 		}
 
 		FPlatformProcess::Sleep(0.01f);

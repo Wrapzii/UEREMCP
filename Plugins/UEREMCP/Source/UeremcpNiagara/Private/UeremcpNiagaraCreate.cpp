@@ -182,6 +182,55 @@ namespace
 		}
 	}
 
+	bool ApplyParticleColor(
+		UNiagaraSystem* System,
+		FNiagaraExternalEditContext& Context,
+		const TArray<FString>& EmitterNames,
+		const TSharedPtr<FJsonObject>& Parameters,
+		int32& InOutOps,
+		TArray<FString>& OutChecks,
+		FString& OutError)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* Primary = nullptr;
+		FLinearColor PrimaryColor;
+		if (!System
+			|| !Parameters.IsValid()
+			|| !Parameters->TryGetArrayField(TEXT("primary_color"), Primary)
+			|| !TryReadLinearColorFromArray(Primary, PrimaryColor))
+		{
+			return true;
+		}
+
+		for (const FString& EmitterName : EmitterNames)
+		{
+			FNiagaraExt_SetParameterEntry ColorEntry;
+			ColorEntry.Variable.Name = TEXT("Particles.Color");
+			ColorEntry.Variable.Type = FNiagaraTypeDefinition::GetColorDef();
+			FNiagaraVariant ColorVariant;
+			ColorVariant.SetBytesValue(ColorEntry.Variable.Type, PrimaryColor);
+			ColorEntry.DefaultValue.Set(ColorEntry.Variable.Type, ColorVariant);
+
+			FNiagaraExt_StackItemReference ParticleSpawnRef(
+				System,
+				FName(*EmitterName),
+				TEXT("ParticleSpawnScript"));
+			FNiagaraExt_ModuleTopology AddedModule;
+			UNiagaraExternalEditUtilities::AddSetParametersModule(
+				ParticleSpawnRef,
+				{ ColorEntry },
+				AddedModule,
+				Context);
+			++InOutOps;
+			if (Context.HasErrors())
+			{
+				OutError = ContextErrorsToString(Context);
+				return false;
+			}
+		}
+		OutChecks.Add(TEXT("niagara.set_particles_color"));
+		return true;
+	}
+
 	bool SaveSystemPackage(UNiagaraSystem* System, FString& OutError)
 	{
 		UPackage* Package = System ? System->GetOutermost() : nullptr;
@@ -646,6 +695,18 @@ bool FUeremcpNiagaraCreate::Run(
 	else
 	{
 		OutResult.ChecksSkipped.Add(TEXT("niagara.add_user_variables"));
+	}
+
+	if (!ApplyParticleColor(
+		System,
+		Context,
+		OutResult.EmittersAdded,
+		Spec.Parameters,
+		OutResult.InternalOperations,
+		OutResult.ChecksPerformed,
+		OutResult.Error))
+	{
+		return false;
 	}
 
 	if (ResolvedMaterialPaths.Num() > 0 || InlineMaterialCreates.Num() > 0 || UnresolvedMaterialPaths.Num() > 0)

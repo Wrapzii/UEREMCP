@@ -10,6 +10,9 @@
 #include "NiagaraEmitter.h"
 #include "NiagaraEmitterInstance.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
+#include "NiagaraMeshRendererProperties.h"
+#include "NiagaraRibbonRendererProperties.h"
+#include "NiagaraSpriteRendererProperties.h"
 #include "NiagaraSystem.h"
 #include "NiagaraSystemInstance.h"
 #include "NiagaraSystemInstanceController.h"
@@ -173,6 +176,8 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 	int32 SpawnModuleCount = 0;
 	int32 InitializeModuleCount = 0;
 	int32 EnabledEmitterCount = 0;
+	int32 ColorCapableRendererCount = 0;
+	int32 ParticleColorBoundRendererCount = 0;
 	bool bSystemLifecycleInfinite = false;
 	TArray<FNiagaraExt_ModuleInputValues> SystemUpdateInputValues;
 	UNiagaraExternalEditUtilities::GetScriptStackInputValues(
@@ -303,6 +308,51 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 			*FString::Join(EmitterUpdateModuleNames, TEXT(",")),
 			*FString::Join(ParticleSpawnModuleNames, TEXT(","))));
 	}
+	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+	{
+		const FVersionedNiagaraEmitterData* EmitterData = Handle.GetEmitterData();
+		if (!EmitterData)
+		{
+			continue;
+		}
+		EmitterData->ForEachRenderer([&](const UNiagaraRendererProperties* Renderer)
+		{
+			const FNiagaraVariableAttributeBinding* ColorBinding = nullptr;
+			if (const UNiagaraSpriteRendererProperties* Sprite =
+				Cast<UNiagaraSpriteRendererProperties>(Renderer))
+			{
+				ColorBinding = &Sprite->ColorBinding;
+			}
+			else if (const UNiagaraMeshRendererProperties* Mesh =
+				Cast<UNiagaraMeshRendererProperties>(Renderer))
+			{
+				ColorBinding = &Mesh->ColorBinding;
+			}
+			else if (const UNiagaraRibbonRendererProperties* Ribbon =
+				Cast<UNiagaraRibbonRendererProperties>(Renderer))
+			{
+				ColorBinding = &Ribbon->ColorBinding;
+			}
+			if (!ColorBinding)
+			{
+				return;
+			}
+
+			++ColorCapableRendererCount;
+			const FName BindingName =
+				ColorBinding->GetParamMapBindableVariable().GetName();
+			if (BindingName == TEXT("Particles.Color"))
+			{
+				++ParticleColorBoundRendererCount;
+			}
+			AddInfo(FString::Printf(
+				TEXT("UEREMCP_NIAGARA_RENDERER_COLOR emitter=%s renderer=%s binding=%s source_exists=%s"),
+				*Handle.GetName().ToString(),
+				*Renderer->GetClass()->GetName(),
+				*BindingName.ToString(),
+				ColorBinding->DoesBindingExistOnSource() ? TEXT("true") : TEXT("false")));
+		});
+	}
 
 	UWorld* World = GEditor->GetEditorWorldContext().World();
 	if (!TestNotNull(TEXT("editor world exists"), World))
@@ -421,6 +471,11 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("system lifecycle is explicitly infinite"), bSystemLifecycleInfinite);
 	TestTrue(TEXT("at least one emitter has a spawn module"), SpawnModuleCount > 0);
 	TestTrue(TEXT("at least one emitter initializes particles"), InitializeModuleCount > 0);
+	TestTrue(TEXT("at least one color-capable renderer exists"), ColorCapableRendererCount > 0);
+	TestEqual(
+		TEXT("all color-capable renderers consume initialized Particles.Color"),
+		ParticleColorBoundRendererCount,
+		ColorCapableRendererCount);
 	TestTrue(TEXT("system spawned particles"), TotalSpawnedParticles > 0);
 	TestTrue(TEXT("system has live particles during simulation"), LiveParticles > 0);
 	TestTrue(
