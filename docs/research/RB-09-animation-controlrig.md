@@ -341,9 +341,16 @@ No ADR challenge filed — representation holds; achievability differs by family
 
 ### Phase 4b — graph read
 
-5. `animation.read_anim_bp` — `list_graphs` + UEdGraph walk → `AnimBlueprintGraph` /
-   `AnimStateMachine` JSON with `fidelity.round_trip_supported=false`.
-6. Coordinate with WS-06 for shared EdGraph serializer.
+5. `animation.read_anim_bp` — **inventory scaffold landed (WS-10):**
+   `UAnimationBlueprintLibrary::GetAnimationGraphs` + `UBlueprint::GetAllGraphs`
+   → graph name / class / `graph_type` / `node_count` / fidelity flags
+   (`nodes_emitted=false`, `round_trip_supported=false`). Tool returns
+   `partially_completed`; full ADR-0004 node/link walk deferred.
+   `[VERIFIED: AnimationBlueprintLibrary.h:681]`
+   `[VERIFIED: Blueprint.h:1107]`
+   `[VERIFIED: AnimationGraph.h:20]`
+   `[VERIFIED: AnimationStateMachineGraph.h:16]`
+6. Coordinate with WS-06 for shared EdGraph serializer (still open).
 
 ### Phase 4c — Control Rig (compose, don't rebuild)
 

@@ -281,6 +281,63 @@ class AnimationContractTests(unittest.TestCase):
         self.assertNotIn("SavePackage(", source)
         self.assertNotIn("SaveAsset(", source)
 
+    def test_read_anim_bp_spec_is_complete_state_request(self) -> None:
+        schema = json.loads(
+            (REPO / "schemas/domains/animation/read_anim_bp.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(schema["type"], "object")
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(schema["properties"], {})
+        self.assertIn("read-only", schema["description"])
+        self.assertIn("deferred", schema["description"].lower())
+
+    def test_read_anim_bp_service_inventories_graphs_without_nodes(self) -> None:
+        source = (
+            MODULE / "Private/UeremcpAnimationService.cpp"
+        ).read_text(encoding="utf-8")
+        for expected in (
+            "GetAnimationGraphs",
+            "GetAllGraphs",
+            "UAnimationStateMachineGraph",
+            "UAnimationGraph",
+            '"graph_type"',
+            '"node_count"',
+            '"fidelity"',
+            '"nodes_emitted"',
+            '"round_trip_supported"',
+            "InspectAnimBlueprint",
+        ):
+            self.assertIn(expected, source)
+
+    def test_read_anim_bp_tool_stays_partial_and_withholds_asset_state(self) -> None:
+        source = (
+            MODULE / "Private/UeremcpAnimationToolset.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("ReadAnimBp", source)
+        self.assertIn('TEXT("read_anim_bp")', source)
+        self.assertIn('Response.Status = TEXT("partially_completed")', source)
+        self.assertIn("animation.anim_bp.nodes_not_emitted", source)
+        self.assertNotIn('SetObjectField(TEXT("asset_state")', source)
+        self.assertIn("AnimGraph", MODULE.joinpath("UeremcpAnimation.Build.cs").read_text(encoding="utf-8"))
+
+    def test_read_anim_bp_cpp_coverage_and_editor_scratch(self) -> None:
+        source = (
+            MODULE / "Private/Tests/UeremcpAnimationTests.cpp"
+        ).read_text(encoding="utf-8")
+        for expected in (
+            "UEREMCP.Animation.ReadAnimBp.GraphInventory",
+            "UEREMCP.Animation.ReadAnimBp.EditorScratchAsset",
+            "UEREMCP.Animation.ReadAnimBp.EnvelopeRejections",
+            "stable AnimBP revision",
+            "nodes not claimed emitted",
+            "response remains honest before asset_state amendment",
+            "animation.anim_bp.nodes_not_emitted",
+        ):
+            self.assertIn(expected, source)
+        self.assertNotIn("SavePackage(", source)
+
 
 if __name__ == "__main__":
     unittest.main()

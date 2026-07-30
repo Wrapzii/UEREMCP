@@ -1,12 +1,17 @@
 #include "UeremcpAnimationService.h"
 
 #include "AnimationBlueprintLibrary.h"
+#include "Animation/AnimBlueprint.h"
 #include "Animation/AnimCompositeBase.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 #include "Animation/AnimSequenceBase.h"
 #include "Animation/AnimTypes.h"
 #include "Animation/Skeleton.h"
+#include "AnimationGraph.h"
+#include "AnimationStateMachineGraph.h"
+#include "EdGraph/EdGraph.h"
+#include "Engine/Blueprint.h"
 #include "UeremcpContentHash.h"
 
 namespace
@@ -30,6 +35,23 @@ namespace
 		}
 #endif
 		return NAME_None;
+	}
+
+	FString ClassifyAnimBlueprintGraph(const UEdGraph* Graph)
+	{
+		if (Cast<UAnimationStateMachineGraph>(Graph))
+		{
+			return TEXT("AnimStateMachine");
+		}
+		if (Cast<UAnimationGraph>(Graph))
+		{
+			return TEXT("AnimBlueprintGraph");
+		}
+		if (Graph && Graph->GetFName() == TEXT("EventGraph"))
+		{
+			return TEXT("EventGraph");
+		}
+		return TEXT("EdGraph");
 	}
 }
 
@@ -164,5 +186,121 @@ bool FUeremcpAnimationService::InspectMontage(
 	State->SetStringField(TEXT("content_hash"), OutInspection.ContentHash);
 	State->SetStringField(TEXT("revision"), OutInspection.ContentHash);
 	OutInspection.State = MoveTemp(State);
+	return true;
+}
+
+bool FUeremcpAnimationService::InspectAnimBlueprint(
+	UAnimBlueprint* AnimBlueprint,
+	const FString& AssetPath,
+	FUeremcpAnimBlueprintInspection& OutInspection,
+	FString& OutError)
+{
+	OutInspection = FUeremcpAnimBlueprintInspection();
+	OutError.Reset();
+
+	if (!AnimBlueprint)
+	{
+		OutError = TEXT("AnimBlueprint is null.");
+		return false;
+	}
+
+	TSharedPtr<FJsonObject> Inventory = MakeShared<FJsonObject>();
+	Inventory->SetStringField(TEXT("asset_path"), AssetPath);
+	Inventory->SetStringField(TEXT("asset_class"), AnimBlueprint->GetClass()->GetPathName());
+	Inventory->SetBoolField(TEXT("is_template"), AnimBlueprint->bIsTemplate);
+	Inventory->SetStringField(TEXT("skeleton"), ObjectPath(AnimBlueprint->TargetSkeleton.Get()));
+
+	if (AnimBlueprint->TargetSkeleton)
+	{
+		OutInspection.DependencyPaths.AddUnique(ObjectPath(AnimBlueprint->TargetSkeleton.Get()));
+	}
+
+	TArray<UAnimationGraph*> AnimationGraphs;
+	UAnimationBlueprintLibrary::GetAnimationGraphs(AnimBlueprint, AnimationGraphs);
+	TSet<const UEdGraph*> AnimationGraphSet;
+	for (const UAnimationGraph* AnimationGraph : AnimationGraphs)
+	{
+		AnimationGraphSet.Add(AnimationGraph);
+	}
+
+	TArray<UEdGraph*> AllGraphs;
+	AnimBlueprint->GetAllGraphs(AllGraphs);
+
+	struct FGraphSortKey
+	{
+		FString Name;
+		FString Guid;
+		UEdGraph* Graph = nullptr;
+	};
+	TArray<FGraphSortKey> Sorted;
+	Sorted.Reserve(AllGraphs.Num());
+	for (UEdGraph* Graph : AllGraphs)
+	{
+		if (!Graph)
+		{
+			continue;
+		}
+		FGraphSortKey Key;
+		Key.Name = Graph->GetName();
+		Key.Guid = Graph->GraphGuid.ToString(EGuidFormats::DigitsWithHyphensLower);
+		Key.Graph = Graph;
+		Sorted.Add(MoveTemp(Key));
+	}
+	Sorted.Sort([](const FGraphSortKey& A, const FGraphSortKey& B)
+	{
+		const int32 NameCmp = A.Name.Compare(B.Name);
+		if (NameCmp != 0)
+		{
+			return NameCmp < 0;
+		}
+		return A.Guid < B.Guid;
+	});
+
+	TArray<TSharedPtr<FJsonValue>> GraphsJson;
+	for (const FGraphSortKey& Entry : Sorted)
+	{
+		UEdGraph* Graph = Entry.Graph;
+		const FString GraphType = ClassifyAnimBlueprintGraph(Graph);
+		const bool bIsAnimationGraph = AnimationGraphSet.Contains(Graph);
+		const int32 NodeCount = Graph->Nodes.Num();
+
+		TSharedPtr<FJsonObject> GraphObject = MakeShared<FJsonObject>();
+		GraphObject->SetStringField(TEXT("name"), Entry.Name);
+		GraphObject->SetStringField(TEXT("graph_guid"), Entry.Guid);
+		GraphObject->SetStringField(TEXT("graph_class"), Graph->GetClass()->GetPathName());
+		GraphObject->SetStringField(TEXT("graph_type"), GraphType);
+		GraphObject->SetNumberField(TEXT("node_count"), NodeCount);
+		GraphObject->SetBoolField(TEXT("is_animation_graph"), bIsAnimationGraph);
+
+		TSharedPtr<FJsonObject> Fidelity = MakeShared<FJsonObject>();
+		Fidelity->SetBoolField(TEXT("inventory_complete"), true);
+		Fidelity->SetBoolField(TEXT("nodes_emitted"), false);
+		Fidelity->SetBoolField(TEXT("links_emitted"), false);
+		Fidelity->SetBoolField(TEXT("round_trip_supported"), false);
+		GraphObject->SetObjectField(TEXT("fidelity"), Fidelity);
+
+		GraphsJson.Add(JsonObjectValue(GraphObject));
+		OutInspection.NodeCount += NodeCount;
+		if (GraphType == TEXT("AnimBlueprintGraph"))
+		{
+			++OutInspection.AnimGraphCount;
+		}
+		else if (GraphType == TEXT("AnimStateMachine"))
+		{
+			++OutInspection.StateMachineCount;
+		}
+	}
+	Inventory->SetArrayField(TEXT("graphs"), GraphsJson);
+	OutInspection.GraphCount = GraphsJson.Num();
+
+	OutInspection.ContentHash = FUeremcpContentHash::HashJsonObject(Inventory, &OutError);
+	if (OutInspection.ContentHash.IsEmpty())
+	{
+		return false;
+	}
+
+	Inventory->SetStringField(TEXT("content_hash"), OutInspection.ContentHash);
+	Inventory->SetStringField(TEXT("revision"), OutInspection.ContentHash);
+	OutInspection.Inventory = MoveTemp(Inventory);
 	return true;
 }

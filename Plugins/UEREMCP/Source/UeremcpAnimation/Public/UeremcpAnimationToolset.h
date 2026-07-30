@@ -28,4 +28,16 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Animation")
 	static FString InspectMontage(const FString& RequestJson);
+
+	/**
+	 * Read-only AnimBlueprint graph inventory in one call: skeleton, graph names,
+	 * graph_type discriminators, node counts, and fidelity flags.
+	 *
+	 * Full ADR-0004 node/link emission is deferred (shared EdGraph walk with WS-06).
+	 * AnimBP state-machine authoring remains unsupported.
+	 *
+	 * @param RequestJson Request envelope with action read_anim_bp and target.asset_path.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Animation")
+	static FString ReadAnimBp(const FString& RequestJson);
 };

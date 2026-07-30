@@ -19,6 +19,14 @@ Slot, segment, and section fields are public
 `[VERIFIED: Engine/Source/Runtime/Engine/Classes/Animation/AnimMontage.h:37-93,695-749]`
 `[VERIFIED: Engine/Source/Runtime/Engine/Classes/Animation/AnimCompositeBase.h:65-138]`.
 
+`read_anim_bp` inventory scaffold is also owned-implemented: graph enumeration via
+`GetAnimationGraphs` / `GetAllGraphs`, type discriminators, node counts, and fidelity
+flags with `nodes_emitted=false`. Full ADR-0004 node/link emission awaits WS-06
+shared EdGraph serialization. Tool response remains `partially_completed` and does
+not emit `asset_state` while ADR-0011 is Proposed.
+`[VERIFIED: AnimationBlueprintLibrary.h:681]`
+`[VERIFIED: Blueprint.h:1107]`
+
 ## Blocker 1 — plugin descriptor registration (WS-03)
 
 `UEREMCP.uplugin` does not list `UeremcpAnimation`, so UnrealBuildTool will not build
@@ -45,7 +53,7 @@ After integration, run:
 1. Build `REEditor Win64 Development -NoHotReloadFromIDE`.
 2. Run `UEREMCP.Animation.*`.
 3. Confirm `UeremcpAnimation.UeremcpAnimationToolset` appears in `list_toolsets`.
-4. Confirm `describe_toolset` exposes only `InspectMontage`.
+4. Confirm `describe_toolset` exposes `InspectMontage` and `ReadAnimBp`.
 
 ## Blocker 2 — frozen response has no structured non-graph state (WS-01/WS-05)
 
@@ -85,7 +93,7 @@ but the current response schema has no `resource_link`
 
 ## Blocker 3 — capability catalog (WS-01)
 
-Add one action, not primitives:
+Add actions, not primitives:
 
 - Domain: `animation`
 - Action: `inspect_montage`
@@ -93,8 +101,18 @@ Add one action, not primitives:
 - Specification: `schemas/domains/animation/inspect_montage.schema.json`
 - Result: complete montage adjacent state after Blocker 2
 - Verification: asset class load, all public arrays enumerated, canonical content hash
-- Limitations: no AnimBP state-machine authoring; no montage mutation; Control Rig
-  continues to compose Epic AnimationAssistant primitives
+- Limitations: no montage mutation; Control Rig continues to compose Epic
+  AnimationAssistant primitives
+
+- Domain: `animation`
+- Action: `read_anim_bp`
+- Mode: read-only inventory
+- Specification: `schemas/domains/animation/read_anim_bp.schema.json`
+- Result: graph inventory + revision now; full ADR-0004 node/link state after
+  WS-06 shared EdGraph serializer (and after Blocker 2 if emitted via `asset_state`
+  / `diagnostics.graphs`)
+- Verification: AnimBP load, `GetAnimationGraphs` + `GetAllGraphs`, content hash
+- Limitations: no AnimBP state-machine authoring; nodes/links not yet emitted
 
 ## Completion boundary
 

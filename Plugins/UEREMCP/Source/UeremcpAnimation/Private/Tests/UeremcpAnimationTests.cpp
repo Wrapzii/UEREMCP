@@ -1,16 +1,21 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/PackageName.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "UObject/Package.h"
 
+#include "Animation/AnimBlueprint.h"
 #include "Animation/AnimCompositeBase.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimNotifies/AnimNotify_ResetDynamics.h"
 #include "Animation/AnimNotifies/AnimNotifyState_DisableRootMotion.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimTypes.h"
+#include "AnimationGraph.h"
+#include "AnimationStateMachineGraph.h"
+#include "EdGraph/EdGraph.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpAnimationService.h"
 #include "UeremcpAnimationToolset.h"
@@ -454,6 +459,168 @@ bool FUeremcpAnimationInspectMontageEnvelopeTest::RunTest(const FString& Paramet
 
 	const FString MissingTarget = UUeremcpAnimationToolset::InspectMontage(
 		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-missing","action":"inspect_montage"})"));
+	TestTrue(TEXT("missing target rejected"), MissingTarget.Contains(TEXT("\"status\":\"rejected\"")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpAnimationReadAnimBpServiceTest,
+	"UEREMCP.Animation.ReadAnimBp.GraphInventory",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
+{
+	UAnimBlueprint* AnimBP = NewObject<UAnimBlueprint>(GetTransientPackage(), TEXT("ABP_WS10_Inspect"));
+	AnimBP->bIsTemplate = true;
+
+	UAnimationGraph* AnimGraph = NewObject<UAnimationGraph>(AnimBP, TEXT("AnimGraph"));
+	AnimBP->FunctionGraphs.Add(AnimGraph);
+
+	UAnimationStateMachineGraph* StateMachine = NewObject<UAnimationStateMachineGraph>(
+		AnimBP, TEXT("Locomotion"));
+	AnimBP->FunctionGraphs.Add(StateMachine);
+
+	UEdGraph* EventGraph = NewObject<UEdGraph>(AnimBP, TEXT("EventGraph"));
+	AnimBP->UbergraphPages.Add(EventGraph);
+
+	FUeremcpAnimBlueprintInspection Inspection;
+	FString Error;
+	TestTrue(
+		TEXT("transient AnimBP inventory succeeds"),
+		FUeremcpAnimationService::InspectAnimBlueprint(
+			AnimBP,
+			TEXT("/Game/__UeremcpTests/Animation/ABP_WS10_Inspect"),
+			Inspection,
+			Error));
+	if (!Error.IsEmpty())
+	{
+		AddError(Error);
+	}
+
+	TestTrue(TEXT("inventory returned"), Inspection.Inventory.IsValid());
+	TestTrue(TEXT("content hash returned"), Inspection.ContentHash.StartsWith(TEXT("sha256:")));
+	TestEqual(TEXT("graph count"), Inspection.GraphCount, 3);
+	TestEqual(TEXT("anim graph count"), Inspection.AnimGraphCount, 1);
+	TestEqual(TEXT("state machine count"), Inspection.StateMachineCount, 1);
+	TestEqual(TEXT("node count on empty graphs"), Inspection.NodeCount, 0);
+
+	if (Inspection.Inventory.IsValid())
+	{
+		const TArray<TSharedPtr<FJsonValue>>* Graphs = nullptr;
+		TestTrue(TEXT("graphs array present"), Inspection.Inventory->TryGetArrayField(TEXT("graphs"), Graphs));
+		TestEqual(TEXT("three serialized graphs"), Graphs ? Graphs->Num() : 0, 3);
+
+		bool bSawFidelity = false;
+		if (Graphs)
+		{
+			for (const TSharedPtr<FJsonValue>& GraphValue : *Graphs)
+			{
+				const TSharedPtr<FJsonObject> GraphObject = GraphValue->AsObject();
+				if (!GraphObject.IsValid())
+				{
+					continue;
+				}
+				const TSharedPtr<FJsonObject>* Fidelity = nullptr;
+				if (GraphObject->TryGetObjectField(TEXT("fidelity"), Fidelity) && Fidelity && (*Fidelity).IsValid())
+				{
+					bSawFidelity = true;
+					TestTrue(
+						TEXT("inventory flagged complete"),
+						(*Fidelity)->GetBoolField(TEXT("inventory_complete")));
+					TestFalse(
+						TEXT("nodes not claimed emitted"),
+						(*Fidelity)->GetBoolField(TEXT("nodes_emitted")));
+					TestFalse(
+						TEXT("round-trip unsupported"),
+						(*Fidelity)->GetBoolField(TEXT("round_trip_supported")));
+				}
+			}
+		}
+		TestTrue(TEXT("fidelity flags present"), bSawFidelity);
+	}
+
+	FUeremcpAnimBlueprintInspection Reread;
+	FString RereadError;
+	TestTrue(
+		TEXT("reread succeeds"),
+		FUeremcpAnimationService::InspectAnimBlueprint(
+			AnimBP,
+			TEXT("/Game/__UeremcpTests/Animation/ABP_WS10_Inspect"),
+			Reread,
+			RereadError));
+	TestEqual(TEXT("stable AnimBP revision"), Inspection.ContentHash, Reread.ContentHash);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpAnimationReadAnimBpEditorScratchTest,
+	"UEREMCP.Animation.ReadAnimBp.EditorScratchAsset",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpAnimationReadAnimBpEditorScratchTest::RunTest(const FString& Parameters)
+{
+	const FString PackageName = FString::Printf(
+		TEXT("/Game/__UeremcpTests/Animation/ABP_WS10_Scratch_%s"),
+		*FGuid::NewGuid().ToString(EGuidFormats::Digits));
+	UPackage* Package = CreatePackage(*PackageName);
+	Package->SetFlags(RF_Transient);
+	Package->SetDirtyFlag(false);
+
+	UAnimBlueprint* AnimBP = NewObject<UAnimBlueprint>(
+		Package, *FPackageName::GetLongPackageAssetName(PackageName), RF_Public | RF_Transient);
+	AnimBP->bIsTemplate = true;
+	UAnimationGraph* AnimGraph = NewObject<UAnimationGraph>(AnimBP, TEXT("AnimGraph"));
+	AnimBP->FunctionGraphs.Add(AnimGraph);
+
+	const FString Request = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-abp-scratch","action":"read_anim_bp","target":{"asset_path":"%s"}})"),
+		*PackageName);
+	const FString ResponseJson = UUeremcpAnimationToolset::ReadAnimBp(Request);
+
+	TestTrue(TEXT("scratch AnimBP inspect is partial"), ResponseJson.Contains(TEXT("\"status\":\"partially_completed\"")));
+	TestTrue(TEXT("summary names inventory"), ResponseJson.Contains(TEXT("Inventoried AnimBlueprint")));
+	TestFalse(TEXT("response remains honest before asset_state amendment"), ResponseJson.Contains(TEXT("\"asset_state\"")));
+	TestTrue(TEXT("nodes-not-emitted check recorded"), ResponseJson.Contains(TEXT("animation.anim_bp.nodes_not_emitted")));
+
+	const FString ObjectPath = FString::Printf(
+		TEXT("%s.%s"), *PackageName, *FPackageName::GetLongPackageAssetName(PackageName));
+	const FString ObjectPathRequest = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-abp-object","action":"read_anim_bp","target":{"asset_path":"%s"}})"),
+		*ObjectPath);
+	const FString ObjectPathResponse = UUeremcpAnimationToolset::ReadAnimBp(ObjectPathRequest);
+	TestTrue(
+		TEXT("package and object paths produce one canonical primary"),
+		ObjectPathResponse.Contains(FString::Printf(TEXT("\"primary_asset\":\"%s\""), *PackageName)));
+
+	AnimBP->ClearFlags(RF_Public | RF_Standalone);
+	AnimBP->MarkAsGarbage();
+	Package->SetDirtyFlag(false);
+	Package->MarkAsGarbage();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpAnimationReadAnimBpEnvelopeTest,
+	"UEREMCP.Animation.ReadAnimBp.EnvelopeRejections",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpAnimationReadAnimBpEnvelopeTest::RunTest(const FString& Parameters)
+{
+	const FString Malformed = UUeremcpAnimationToolset::ReadAnimBp(TEXT("not-json"));
+	TestTrue(TEXT("malformed request rejected"), Malformed.Contains(TEXT("\"status\":\"rejected\"")));
+
+	const FString WrongAction = UUeremcpAnimationToolset::ReadAnimBp(
+		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-abp-wrong","action":"inspect_montage","target":{"asset_path":"/Game/None"}})"));
+	TestTrue(TEXT("wrong action rejected"), WrongAction.Contains(TEXT("\"status\":\"rejected\"")));
+
+	const FString MissingTarget = UUeremcpAnimationToolset::ReadAnimBp(
+		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-abp-missing","action":"read_anim_bp"})"));
 	TestTrue(TEXT("missing target rejected"), MissingTarget.Contains(TEXT("\"status\":\"rejected\"")));
 	return true;
 }

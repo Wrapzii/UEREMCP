@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/animation/read_anim_bp.schema.json",
+  "title": "read_anim_bp specification",
+  "description": "One-call read-only AnimBlueprint graph inventory. The target is request.target.asset_path. Returns skeleton, graph names, graph_type discriminators, node counts and fidelity flags. Full ADR-0004 node/link emission is deferred; owned by WS-10. Does not author AnimBP state machines.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {},
+  "examples": [{}]
+}

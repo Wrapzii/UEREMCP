@@ -18,6 +18,7 @@ public class UeremcpAnimation : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			"AnimGraph",
 			"AnimationBlueprintLibrary",
 			"ToolsetRegistry",
 			"UeremcpProtocol",
