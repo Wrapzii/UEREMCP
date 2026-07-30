@@ -98,6 +98,11 @@
     "checks_skipped_honest_gaps": [
       "niagara.structural_re_read",
       "niagara.runtime_smoke_test"
-    ]
+    ],
+    "poc_b_gates": {
+      "round_trip_supported": false,
+      "B7_renderers_bound": null,
+      "B7_data_interfaces_complete": null
+    }
   }
 }

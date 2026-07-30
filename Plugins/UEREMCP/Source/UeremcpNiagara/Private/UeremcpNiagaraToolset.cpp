@@ -8,6 +8,7 @@
 #include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraMaterialBindingDiagnostics.h"
+#include "UeremcpNiagaraPocBGates.h"
 #include "UeremcpNiagaraRoundTrip.h"
 
 FString UUeremcpNiagaraToolset::Echo(const FString& RequestJson)
@@ -369,6 +370,32 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	}
 
 	Extra->SetObjectField(TEXT("validation"), Validation);
+
+	if (!Request.bDryRun && CreateResult.EmittersAdded.Num() > 0)
+	{
+		const FUeremcpNiagaraPocBGateResult PocBGates = FUeremcpNiagaraPocBGates::Evaluate(
+			CreateResult,
+			bRanRoundTrip ? &RoundTripResult : nullptr);
+		Extra->SetObjectField(
+			TEXT("poc_b_gates"),
+			FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(PocBGates));
+
+		for (const FString& Check : PocBGates.ChecksPerformed)
+		{
+			ChecksPerformed.Add(MakeShared<FJsonValueString>(Check));
+		}
+		for (const FString& Check : PocBGates.ChecksSkipped)
+		{
+			if (!ChecksSkipped.ContainsByPredicate([&Check](const TSharedPtr<FJsonValue>& Value) {
+				return Value->AsString() == Check;
+			}))
+			{
+				ChecksSkipped.Add(MakeShared<FJsonValueString>(Check));
+			}
+		}
+		Validation->SetArrayField(TEXT("checks_performed"), ChecksPerformed);
+		Validation->SetArrayField(TEXT("checks_skipped"), ChecksSkipped);
+	}
 
 	if (TSharedPtr<FJsonObject> Materials =
 		FUeremcpNiagaraMaterialBindingDiagnostics::BuildMaterialBindingsObject(CreateResult.MaterialBindings))

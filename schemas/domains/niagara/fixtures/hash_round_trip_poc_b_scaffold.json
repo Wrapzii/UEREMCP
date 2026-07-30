@@ -1,0 +1,104 @@
+{
+  "$comment": "Offline fixture: POC B seven-graph hash scaffold (1 system + 6 emitters). round_trip_supported stays false until WS-11 proof.",
+  "probe_asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+  "inspect_graphs": [
+    {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+      "graph_id": "/Game/__UeremcpTests/NS_POCB_FireballProbe::System",
+      "graph_name": "NS_POCB_FireballProbe",
+      "graph_type": "NiagaraSystemGraph",
+      "schema_version": "1.0",
+      "fidelity": {
+        "round_trip_supported": false,
+        "lossy_areas": [
+          "event_handler_stacks",
+          "module_reorder_without_readd",
+          "script_graph_internals"
+        ]
+      },
+      "extensions": {
+        "niagara": {
+          "user_parameters": [
+            { "name": "User.Scale" },
+            { "name": "User.Intensity" }
+          ]
+        }
+      }
+    },
+    {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+      "graph_id": "/Game/__UeremcpTests/NS_POCB_FireballProbe::Core",
+      "graph_name": "Core",
+      "graph_type": "NiagaraEmitterGraph",
+      "schema_version": "1.0",
+      "fidelity": { "round_trip_supported": false, "lossy_areas": ["renderer_material_bindings"] }
+    },
+    {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+      "graph_id": "/Game/__UeremcpTests/NS_POCB_FireballProbe::FlameShell",
+      "graph_name": "FlameShell",
+      "graph_type": "NiagaraEmitterGraph",
+      "schema_version": "1.0",
+      "fidelity": { "round_trip_supported": false, "lossy_areas": ["renderer_material_bindings"] }
+    },
+    {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+      "graph_id": "/Game/__UeremcpTests/NS_POCB_FireballProbe::Sparks",
+      "graph_name": "Sparks",
+      "graph_type": "NiagaraEmitterGraph",
+      "schema_version": "1.0",
+      "fidelity": { "round_trip_supported": false, "lossy_areas": ["renderer_material_bindings"] }
+    },
+    {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+      "graph_id": "/Game/__UeremcpTests/NS_POCB_FireballProbe::Smoke",
+      "graph_name": "Smoke",
+      "graph_type": "NiagaraEmitterGraph",
+      "schema_version": "1.0",
+      "fidelity": { "round_trip_supported": false, "lossy_areas": ["renderer_material_bindings"] }
+    },
+    {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+      "graph_id": "/Game/__UeremcpTests/NS_POCB_FireballProbe::RibbonTrail",
+      "graph_name": "RibbonTrail",
+      "graph_type": "NiagaraEmitterGraph",
+      "schema_version": "1.0",
+      "fidelity": { "round_trip_supported": false, "lossy_areas": ["renderer_material_bindings"] }
+    },
+    {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+      "graph_id": "/Game/__UeremcpTests/NS_POCB_FireballProbe::ImpactBurst",
+      "graph_name": "ImpactBurst",
+      "graph_type": "NiagaraEmitterGraph",
+      "schema_version": "1.0",
+      "fidelity": { "round_trip_supported": false, "lossy_areas": ["renderer_material_bindings"] }
+    }
+  ],
+  "hash_scaffold_expectations": {
+    "graph_count": 7,
+    "emitter_graph_count": 6,
+    "round_trip_supported": false,
+    "content_hash_prefix": "sha256:",
+    "checks_performed": [
+      "niagara.content_hash_compute",
+      "niagara.content_hash_manifest"
+    ],
+    "checks_skipped": [
+      "niagara.content_hash_round_trip_stability"
+    ],
+    "validation_never_claims": [
+      "created_and_validated",
+      "modified_and_validated"
+    ]
+  },
+  "poc_b_gate_expectations": {
+    "round_trip_supported": false,
+    "B7_renderers_bound": null,
+    "B7_data_interfaces_complete": null,
+    "checks_skipped_always": [
+      "niagara.poc_b.B7_renderers_bound",
+      "niagara.poc_b.B7_data_interfaces_complete",
+      "niagara.content_hash_round_trip_stability"
+    ]
+  }
+}

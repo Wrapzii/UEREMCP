@@ -6,6 +6,7 @@
 
 #include "UeremcpNiagaraGraphHash.h"
 #include "UeremcpNiagaraHashRoundTrip.h"
+#include "UeremcpNiagaraRoleNames.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -79,6 +80,81 @@ bool FUeremcpNiagaraGraphHashOfflineTest::RunTest(const FString& Parameters)
 	Graph->SetStringField(TEXT("graph_name"), TEXT("MutatedStack"));
 	FUeremcpNiagaraGraphHash::ApplyContentHashToGraph(Graph, Error);
 	TestNotEqual(TEXT("semantic change changes hash"), Graph->GetStringField(TEXT("content_hash")), FirstHash);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraGraphHashPocBManifestOfflineTest,
+	"UEREMCP.Niagara.Hash.PocBManifestOffline",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraGraphHashPocBManifestOfflineTest::RunTest(const FString& Parameters)
+{
+	const FString AssetPath = TEXT("/Game/__UeremcpTests/NS_POCB_FireballProbe");
+	TArray<TSharedPtr<FJsonValue>> Graphs;
+
+	TSharedPtr<FJsonObject> SystemGraph = MakeShared<FJsonObject>();
+	SystemGraph->SetStringField(TEXT("asset_path"), AssetPath);
+	SystemGraph->SetStringField(TEXT("graph_id"), AssetPath + TEXT("::System"));
+	SystemGraph->SetStringField(TEXT("graph_name"), TEXT("NS_POCB_FireballProbe"));
+	SystemGraph->SetStringField(TEXT("graph_type"), TEXT("NiagaraSystemGraph"));
+	Graphs.Add(MakeShared<FJsonValueObject>(SystemGraph));
+
+	for (const FString& Role : UeremcpNiagaraRoles::DefaultPocBComponentRoles())
+	{
+		const FString EmitterName = UeremcpNiagaraRoles::RoleToEmitterName(Role);
+		TSharedPtr<FJsonObject> EmitterGraph = MakeShared<FJsonObject>();
+		EmitterGraph->SetStringField(TEXT("asset_path"), AssetPath);
+		EmitterGraph->SetStringField(TEXT("graph_id"), AssetPath + TEXT("::") + EmitterName);
+		EmitterGraph->SetStringField(TEXT("graph_name"), EmitterName);
+		EmitterGraph->SetStringField(TEXT("graph_type"), TEXT("NiagaraEmitterGraph"));
+		Graphs.Add(MakeShared<FJsonValueObject>(EmitterGraph));
+	}
+
+	TestEqual(TEXT("seven POC B graphs"), Graphs.Num(), 7);
+
+	TArray<FString> ChecksPerformed;
+	TArray<FString> ChecksSkipped;
+	TestEqual(
+		TEXT("hash all graphs"),
+		FUeremcpNiagaraGraphHash::ApplyContentHashesToGraphs(Graphs, ChecksPerformed, ChecksSkipped),
+		7);
+	FUeremcpNiagaraGraphHash::EnsureRoundTripUnsupportedOnGraphs(Graphs);
+
+	for (const TSharedPtr<FJsonValue>& GraphValue : Graphs)
+	{
+		const TSharedPtr<FJsonObject> Graph = GraphValue->AsObject();
+		TestTrue(TEXT("content_hash present"), Graph->HasField(TEXT("content_hash")));
+		TestFalse(
+			TEXT("round_trip_supported false"),
+			Graph->GetObjectField(TEXT("fidelity"))->GetBoolField(TEXT("round_trip_supported")));
+	}
+
+	TArray<TSharedPtr<FJsonValue>> PassB;
+	for (const TSharedPtr<FJsonValue>& GraphValue : Graphs)
+	{
+		const TSharedPtr<FJsonObject> Copy = MakeShared<FJsonObject>(*GraphValue->AsObject());
+		PassB.Add(MakeShared<FJsonValueObject>(Copy));
+	}
+
+	FUeremcpNiagaraHashRoundTripResult Scaffold;
+	FUeremcpNiagaraHashRoundTrip::RecordPostInspectScaffold(Graphs, Scaffold);
+	TestTrue(TEXT("hash manifest present"), Scaffold.bHashesPresent);
+	TestEqual(TEXT("seven hashes recorded"), Scaffold.GraphIdToHash.Num(), 7);
+	TestFalse(TEXT("retrieve retrieve not claimed"), Scaffold.bRetrieveRetrieveStable);
+
+	FUeremcpNiagaraHashRoundTripResult Stability;
+	TestTrue(
+		TEXT("retrieve-retrieve stable for cloned manifest"),
+		FUeremcpNiagaraHashRoundTrip::EvaluateRetrieveRetrieveStability(Graphs, PassB, Stability));
+	TestTrue(TEXT("seven graph stable compare"), Stability.bRetrieveRetrieveStable);
+
+	const TSharedPtr<FJsonObject> Diagnostics =
+		FUeremcpNiagaraHashRoundTrip::BuildDiagnosticsObject(Stability);
+	bool bRoundTripSupported = true;
+	TestTrue(TEXT("diagnostics round_trip field"), Diagnostics->TryGetBoolField(TEXT("round_trip_supported"), bRoundTripSupported));
+	TestFalse(TEXT("round_trip stays false"), bRoundTripSupported);
 
 	return true;
 }

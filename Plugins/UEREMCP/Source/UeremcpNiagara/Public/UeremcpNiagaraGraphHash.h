@@ -28,4 +28,7 @@ public:
 	static void CollectGraphHashes(
 		const TArray<TSharedPtr<FJsonValue>>& Graphs,
 		TMap<FString, FString>& OutGraphIdToHash);
+
+	/** Force fidelity.round_trip_supported=false on every graph object (offline harness). */
+	static void EnsureRoundTripUnsupportedOnGraphs(TArray<TSharedPtr<FJsonValue>>& Graphs);
 };

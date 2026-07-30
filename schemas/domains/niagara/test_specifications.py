@@ -280,6 +280,41 @@ class NiagaraSpecificationTests(unittest.TestCase):
             "implemented_probe",
         )
         self.assertIn("niagara.runtime_smoke_test", expectations["checks_skipped_honest_gaps"])
+        self.assertIn("poc_b_gates", expectations)
+        self.assertFalse(expectations["poc_b_gates"]["round_trip_supported"])
+
+    def test_hash_round_trip_poc_b_scaffold_fixture(self) -> None:
+        import sys
+
+        sys.path.insert(0, str(PROTOCOL_TESTS))
+        from ueremcp_protocol.content_hash import content_hash
+
+        fixture = load_fixture("hash_round_trip_poc_b_scaffold.json")
+        graphs = fixture["inspect_graphs"]
+        hash_expectations = fixture["hash_scaffold_expectations"]
+        gate_expectations = fixture["poc_b_gate_expectations"]
+
+        self.assertEqual(len(graphs), hash_expectations["graph_count"])
+        self.assertEqual(
+            sum(1 for graph in graphs if graph["graph_type"] == "NiagaraEmitterGraph"),
+            hash_expectations["emitter_graph_count"],
+        )
+        self.assertFalse(hash_expectations["round_trip_supported"])
+
+        for graph in graphs:
+            self.assertFalse(graph["fidelity"]["round_trip_supported"])
+            digest = content_hash(graph)
+            self.assertTrue(digest.startswith(hash_expectations["content_hash_prefix"]))
+            digest_again = content_hash(graph)
+            self.assertEqual(digest, digest_again)
+
+        for check in hash_expectations["checks_skipped"]:
+            self.assertIn("round_trip", check)
+
+        self.assertFalse(gate_expectations["round_trip_supported"])
+        self.assertIsNone(gate_expectations["B7_renderers_bound"])
+        for check in gate_expectations["checks_skipped_always"]:
+            self.assertTrue(check.startswith("niagara.poc_b.") or check.startswith("niagara.content_hash_"))
 
     def test_hash_round_trip_scaffold_fixture(self) -> None:
         import sys

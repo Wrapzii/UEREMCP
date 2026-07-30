@@ -71,6 +71,25 @@ Every retrieved graph includes:
 
 These keys match `UeremcpNiagaraCapabilityNotes.h` and `inspect_system` `capability_notes`.
 
+POC B multi-graph hash scaffold (`hash_round_trip_poc_b_scaffold.json`) documents a seven-graph
+manifest (1 system + 6 emitters) with `diagnostics.hash_scaffold.round_trip_supported: false`
+until WS-11 proves retrieve → replace → retrieve stability.
+
+### POC B gate scaffolding (`extra.poc_b_gates`)
+
+`FUeremcpNiagaraPocBGates` surfaces honest partial status for acceptance criteria B4/B7:
+
+| Field | Meaning |
+|---|---|
+| `B4_material_bindings_verified` | All requested material roles passed renderer re-read |
+| `B7_emitters_non_empty` | Create added at least one emitter |
+| `B7_structural_match` | Post-create inspect structural match (when `options.validate`) |
+| `B7_renderers_bound` | **null** — not implemented; never inferred |
+| `B7_data_interfaces_complete` | **null** — not implemented |
+| `round_trip_supported` | always **false** until hash round-trip proven |
+
+Response status remains **`partially_completed`**; `never_claims` lists `*_validated` statuses.
+
 ## Epic tool composition (implementation note)
 
 UEREMCP does **not** re-expose NiagaraToolsets' 46 primitives. Internal batching via

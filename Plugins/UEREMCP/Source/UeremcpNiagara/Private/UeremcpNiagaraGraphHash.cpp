@@ -114,3 +114,16 @@ void FUeremcpNiagaraGraphHash::CollectGraphHashes(
 		}
 	}
 }
+
+void FUeremcpNiagaraGraphHash::EnsureRoundTripUnsupportedOnGraphs(
+	TArray<TSharedPtr<FJsonValue>>& Graphs)
+{
+	for (const TSharedPtr<FJsonValue>& GraphValue : Graphs)
+	{
+		const TSharedPtr<FJsonObject> Graph = GraphValue->AsObject();
+		if (Graph.IsValid())
+		{
+			EnsureRoundTripUnsupported(Graph);
+		}
+	}
+}
