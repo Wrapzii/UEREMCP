@@ -1,6 +1,7 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `c881742` (`[WS-08] Return UTexture2D from TryLoadTexture to fix C2440`)
+- **Current orchestration tip:** `d64aa6d` (`[WS-10] Initialize transient montage test state`)
+- **Latest Niagara re-run tip:** `e7f9ae5`
 - **Latest Material re-run tip:** `c881742`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
@@ -16,6 +17,15 @@ pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter
 ```
 
 The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
+
+## Update on tip `e7f9ae5` (WS-11 Niagara re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UEREMCP.Niagara.Inspect` | **INCOMPLETE** | WS-07 | Hang persists after FTSTicker + `Poll(true)` + drain fix; no completion marker and no timeout-honest result. Not a PASS. |
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **INCOMPLETE** | WS-07 | Hang persists after the same AwaitCompile fix; no completion marker and no timeout-honest result. Not a B7 / POC-B claim. |
+
+Standing by for a deeper WS-07 fix before another Inspect/B7 re-run.
 
 ## Update on tip `c881742` (WS-11 Material re-run)
 
