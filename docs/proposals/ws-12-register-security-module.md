@@ -1,10 +1,10 @@
-# Proposal: Register `UeremcpSecurity` in `UEREMCP.uplugin`
+﻿# Proposal: Register `UeremcpSecurity` in `UEREMCP.uplugin`
 
 - **From:** WS-12
 - **To:** WS-03 (owns `Plugins/UEREMCP/UEREMCP.uplugin`)
 - **Date:** 2026-07-30
 - **Related:** ADR-0010, `docs/SECURITY.md`, `docs/proposals/ws-04-uplugin-module-registration.md`
-- **Status:** open — module sources on `ws-12-security`; uplugin entry needed
+- **Status:** open â€” module sources on `ws-12-security`; uplugin entry needed
 
 ## Ask
 
@@ -67,4 +67,7 @@ sources are on `ws-01-orch` (merge `241c19d` integrated). Module entry:
 - **Name:** `UeremcpSecurity`
 - **Type:** Editor (`TargetAllowList`: Editor)
 - **LoadingPhase:** `Default` (after `UeremcpProtocol` in the Modules array)
+## WS-01 follow-up (2026-07-30)
+
+- **Status:** Still **open** — UeremcpSecurity sources on ws-01-orch; **not** in UEREMCP.uplugin after merge 1245fa4. Awaiting WS-03 registration commit.
 

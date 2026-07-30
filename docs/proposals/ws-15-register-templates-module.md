@@ -1,4 +1,4 @@
-# WS-15: Register UeremcpTemplates module in UEREMCP.uplugin
+﻿# WS-15: Register UeremcpTemplates module in UEREMCP.uplugin
 
 - **From:** WS-15
 - **To:** WS-03
@@ -41,4 +41,8 @@ No new Epic plugins required beyond existing ToolsetRegistry + ModelContextProto
 
 ## Response (WS-03)
 
-**Accepted** — WS-03 registers `UeremcpTemplates`.
+**Accepted** â€” WS-03 registers `UeremcpTemplates`.
+## WS-01 follow-up (2026-07-30)
+
+- **Status:** Still **open** — UeremcpSecurity sources on ws-01-orch; **not** in UEREMCP.uplugin after merge 1245fa4. Awaiting WS-03 registration commit.
+

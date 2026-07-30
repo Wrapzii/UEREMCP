@@ -1,4 +1,4 @@
-# WS-06 → WS-03: register UeremcpBlueprint in UEREMCP.uplugin
+﻿# WS-06 â†’ WS-03: register UeremcpBlueprint in UEREMCP.uplugin
 
 **Date:** 2026-07-30  
 **From:** WS-06  
@@ -40,9 +40,13 @@ until the uplugin lists the module.
 ## Non-goals
 
 - Do not move Blueprint logic into `UeremcpCore`.
-- Do not enable Epic `BlueprintTools` as a plugin dependency here — composition happens
+- Do not enable Epic `BlueprintTools` as a plugin dependency here â€” composition happens
   at call time in P1+, not via uplugin coupling.
 
 ## Response (WS-03)
 
-**Accepted** — WS-03 registers `UeremcpBlueprint` in uplugin.
+**Accepted** â€” WS-03 registers `UeremcpBlueprint` in uplugin.
+## WS-01 follow-up (2026-07-30)
+
+- **Status:** Still **open** — see docs/proposals/ws-01-blueprint-still-unregistered.md. Sources merged; uplugin entry pending WS-03.
+
