@@ -76,6 +76,30 @@ namespace
 			return MakeShared<FJsonValueNull>();
 		}
 	}
+
+	bool JsonScalarEquals(
+		const TSharedPtr<FJsonValue>& Left,
+		const TSharedPtr<FJsonValue>& Right)
+	{
+		if (!Left.IsValid() || !Right.IsValid() || Left->Type != Right->Type)
+		{
+			return false;
+		}
+
+		switch (Left->Type)
+		{
+		case EJson::String:
+			return Left->AsString() == Right->AsString();
+		case EJson::Number:
+			return FMath::IsNearlyEqual(Left->AsNumber(), Right->AsNumber());
+		case EJson::Boolean:
+			return Left->AsBool() == Right->AsBool();
+		case EJson::Null:
+			return true;
+		default:
+			return false;
+		}
+	}
 }
 
 FUeremcpTemplateService::FUeremcpTemplateService(FUeremcpTemplateStore& InStore)
@@ -180,12 +204,41 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 						*Request.TemplateId);
 					return Result;
 				}
+
+				Result.Summary = FString::Printf(
+					TEXT("Modifier '%s' is declared but has no executable delta in the frozen template schema."),
+					*ModifierName);
+				Result.CapabilityNotes.Add(
+					TEXT("Named modifier execution is blocked until template.schema.json can represent modifier deltas."));
+				return Result;
 			}
 		}
 	}
 
+	TSharedPtr<FJsonObject> EffectiveInputs = CloneJsonObject(Request.Inputs);
+	if (!EffectiveInputs.IsValid())
+	{
+		EffectiveInputs = MakeShared<FJsonObject>();
+	}
+	if (!Request.TargetAssetPath.IsEmpty() && !EffectiveInputs->HasField(TEXT("target_path")))
+	{
+		EffectiveInputs->SetStringField(TEXT("target_path"), Request.TargetAssetPath);
+	}
+
+	FString InputError;
+	if (!ValidateInputs(*Record, EffectiveInputs, InputError))
+	{
+		Result.Summary = InputError;
+		return Result;
+	}
+
 	FString MaterializeError;
-	const TSharedPtr<FJsonObject> Plan = MaterializePlan(*Record, Request.Inputs, Request.Modifiers, MaterializeError);
+	const TSharedPtr<FJsonObject> Plan = MaterializePlan(
+		*Record,
+		EffectiveInputs,
+		Request.TargetAssetPath,
+		Request.Mode,
+		MaterializeError);
 	if (!Plan.IsValid())
 	{
 		Result.Summary = MaterializeError;
@@ -193,11 +246,15 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 	}
 
 	Result.bSuccess = true;
+	const TArray<TSharedPtr<FJsonValue>>* ValidationRules = nullptr;
+	Result.bHasTemplateValidationRules =
+		Record->Document->TryGetArrayField(TEXT("validation_rules"), ValidationRules)
+		&& ValidationRules
+		&& ValidationRules->Num() > 0;
 	Result.Status = TEXT("partially_completed");
 	Result.Summary = FString::Printf(
-		TEXT("Materialized construction_plan for '%s'. execute_plan delegation not wired in v1."),
+		TEXT("Materialized an execute_plan specification for '%s'."),
 		*Request.TemplateId);
-	Result.CapabilityNotes.Add(TEXT("instantiate_template v1 returns materialized plan only; execute_plan not invoked."));
 	Result.MaterializedPlan = Plan;
 	return Result;
 }
@@ -345,10 +402,129 @@ TSharedPtr<FJsonValue> FUeremcpTemplateService::ApplyInputsToJsonValue(
 	return CloneJsonValue(Value);
 }
 
+bool FUeremcpTemplateService::ValidateInputs(
+	const FUeremcpTemplateRecord& Record,
+	const TSharedPtr<FJsonObject>& Inputs,
+	FString& OutError)
+{
+	const TSharedPtr<FJsonObject>* InputSchema = nullptr;
+	if (!Record.Document.IsValid()
+		|| !Record.Document->TryGetObjectField(TEXT("inputs"), InputSchema)
+		|| !InputSchema
+		|| !InputSchema->IsValid())
+	{
+		return true;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* Required = nullptr;
+	if ((*InputSchema)->TryGetArrayField(TEXT("required"), Required) && Required)
+	{
+		for (const TSharedPtr<FJsonValue>& RequiredValue : *Required)
+		{
+			FString RequiredName;
+			if (RequiredValue.IsValid()
+				&& RequiredValue->TryGetString(RequiredName)
+				&& (!Inputs.IsValid() || !Inputs->HasField(RequiredName)))
+			{
+				OutError = FString::Printf(TEXT("Missing required template input '%s'."), *RequiredName);
+				return false;
+			}
+		}
+	}
+
+	const TSharedPtr<FJsonObject>* Properties = nullptr;
+	if (!(*InputSchema)->TryGetObjectField(TEXT("properties"), Properties)
+		|| !Properties
+		|| !Properties->IsValid()
+		|| !Inputs.IsValid())
+	{
+		return true;
+	}
+
+	for (const auto& InputPair : Inputs->Values)
+	{
+		const TSharedPtr<FJsonObject>* PropertySchema = nullptr;
+		if (!(*Properties)->TryGetObjectField(InputPair.Key, PropertySchema)
+			|| !PropertySchema
+			|| !PropertySchema->IsValid())
+		{
+			continue;
+		}
+
+		FString ExpectedType;
+		if ((*PropertySchema)->TryGetStringField(TEXT("type"), ExpectedType))
+		{
+			const bool bTypeMatches =
+				(ExpectedType == TEXT("string") && InputPair.Value->Type == EJson::String)
+				|| (ExpectedType == TEXT("number") && InputPair.Value->Type == EJson::Number)
+				|| (ExpectedType == TEXT("integer")
+					&& InputPair.Value->Type == EJson::Number
+					&& InputPair.Value->AsNumber()
+						== static_cast<double>(static_cast<int64>(InputPair.Value->AsNumber())))
+				|| (ExpectedType == TEXT("boolean") && InputPair.Value->Type == EJson::Boolean)
+				|| (ExpectedType == TEXT("object") && InputPair.Value->Type == EJson::Object)
+				|| (ExpectedType == TEXT("array") && InputPair.Value->Type == EJson::Array);
+			if (!bTypeMatches)
+			{
+				OutError = FString::Printf(
+					TEXT("Template input '%s' must be %s."),
+					*InputPair.Key,
+					*ExpectedType);
+				return false;
+			}
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* EnumValues = nullptr;
+		if ((*PropertySchema)->TryGetArrayField(TEXT("enum"), EnumValues) && EnumValues)
+		{
+			bool bEnumMatch = false;
+			for (const TSharedPtr<FJsonValue>& EnumValue : *EnumValues)
+			{
+				if (JsonScalarEquals(EnumValue, InputPair.Value))
+				{
+					bEnumMatch = true;
+					break;
+				}
+			}
+			if (!bEnumMatch)
+			{
+				OutError = FString::Printf(
+					TEXT("Template input '%s' is not an allowed value."),
+					*InputPair.Key);
+				return false;
+			}
+		}
+
+		if (InputPair.Value->Type == EJson::Number)
+		{
+			double Bound = 0.0;
+			if ((*PropertySchema)->TryGetNumberField(TEXT("minimum"), Bound)
+				&& InputPair.Value->AsNumber() < Bound)
+			{
+				OutError = FString::Printf(
+					TEXT("Template input '%s' is below its minimum."),
+					*InputPair.Key);
+				return false;
+			}
+			if ((*PropertySchema)->TryGetNumberField(TEXT("maximum"), Bound)
+				&& InputPair.Value->AsNumber() > Bound)
+			{
+				OutError = FString::Printf(
+					TEXT("Template input '%s' is above its maximum."),
+					*InputPair.Key);
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 	const FUeremcpTemplateRecord& Record,
 	const TSharedPtr<FJsonObject>& Inputs,
-	const TSharedPtr<FJsonObject>& Modifiers,
+	const FString& TargetAssetPath,
+	const FString& Mode,
 	FString& OutError)
 {
 	if (!Record.Document.IsValid())
@@ -377,20 +553,30 @@ TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 		return nullptr;
 	}
 
+	TArray<TSharedPtr<FJsonValue>> Operations = *MaterializedSteps;
+	if (Operations.Num() > 0 && Operations.Last().IsValid() && Operations.Last()->Type == EJson::Object)
+	{
+		const TSharedPtr<FJsonObject> TerminalOperation = Operations.Last()->AsObject();
+		if (!TargetAssetPath.IsEmpty())
+		{
+			const TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
+			Target->SetStringField(TEXT("asset_path"), TargetAssetPath);
+			TerminalOperation->SetObjectField(TEXT("target"), Target);
+		}
+		if (!Mode.IsEmpty())
+		{
+			TerminalOperation->SetStringField(TEXT("mode"), Mode);
+		}
+	}
+
 	const TSharedPtr<FJsonObject> Plan = MakeShared<FJsonObject>();
-	Plan->SetStringField(TEXT("template_id"), Record.TemplateId);
-	Plan->SetArrayField(TEXT("operations"), *MaterializedSteps);
-
-	if (Inputs.IsValid())
-	{
-		Plan->SetObjectField(TEXT("resolved_inputs"), Inputs);
-	}
-	if (Modifiers.IsValid())
-	{
-		Plan->SetObjectField(TEXT("applied_modifiers"), Modifiers);
-	}
-
-	Plan->SetStringField(TEXT("executor"), TEXT("execute_plan"));
-	Plan->SetStringField(TEXT("status_note"), TEXT("materialized_only_v1"));
+	const TSharedPtr<FJsonObject> Transaction = MakeShared<FJsonObject>();
+	Transaction->SetBoolField(TEXT("atomic"), true);
+	Transaction->SetBoolField(TEXT("rollback_on_failure"), true);
+	Transaction->SetStringField(TEXT("compile_policy"), TEXT("at_boundaries"));
+	Transaction->SetStringField(TEXT("validate_policy"), TEXT("at_end"));
+	Plan->SetObjectField(TEXT("transaction"), Transaction);
+	Plan->SetArrayField(TEXT("operations"), Operations);
+	Plan->SetStringField(TEXT("on_failure"), TEXT("rollback_all"));
 	return Plan;
 }

@@ -9,8 +9,8 @@
 
 /**
  * Domain service for search_templates and instantiate_template.
- * Execution delegates to execute_plan (WS-05) once batch executor lands; v1
- * materialises construction_plan JSON only.
+ * Materialisation produces exactly the WS-05 execute_plan specification shape;
+ * the AICallable boundary delegates that envelope through UeremcpTemplatesModule.
  */
 class UEREMCPTEMPLATES_API FUeremcpTemplateService
 {
@@ -27,10 +27,15 @@ private:
 	static TSharedPtr<FJsonValue> ApplyInputsToJsonValue(
 		const TSharedPtr<FJsonValue>& Value,
 		const TSharedPtr<FJsonObject>& Inputs);
+	static bool ValidateInputs(
+		const FUeremcpTemplateRecord& Record,
+		const TSharedPtr<FJsonObject>& Inputs,
+		FString& OutError);
 	static TSharedPtr<FJsonObject> MaterializePlan(
 		const FUeremcpTemplateRecord& Record,
 		const TSharedPtr<FJsonObject>& Inputs,
-		const TSharedPtr<FJsonObject>& Modifiers,
+		const FString& TargetAssetPath,
+		const FString& Mode,
 		FString& OutError);
 
 	FUeremcpTemplateStore& Store;

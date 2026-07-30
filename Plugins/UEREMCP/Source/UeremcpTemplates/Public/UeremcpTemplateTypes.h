@@ -55,10 +55,11 @@ struct UEREMCPTEMPLATES_API FUeremcpTemplateInstantiateRequest
 	FString Mode = TEXT("create_or_update");
 };
 
-/** Materialised plan returned by instantiate (delegates to execute_plan when wired). */
+/** Materialised execute_plan specification returned to the tool boundary. */
 struct UEREMCPTEMPLATES_API FUeremcpTemplateInstantiateResult
 {
 	bool bSuccess = false;
+	bool bHasTemplateValidationRules = false;
 	FString Summary;
 	FString Status;
 	TArray<FString> CapabilityNotes;

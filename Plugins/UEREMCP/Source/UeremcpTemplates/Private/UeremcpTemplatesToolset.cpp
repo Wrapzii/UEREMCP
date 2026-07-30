@@ -18,6 +18,149 @@ namespace
 		return Request.Specification;
 	}
 
+	bool SerializeJsonObject(const TSharedPtr<FJsonObject>& Object, FString& OutJson)
+	{
+		if (!Object.IsValid())
+		{
+			return false;
+		}
+		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutJson);
+		return FJsonSerializer::Serialize(Object.ToSharedRef(), Writer);
+	}
+
+	bool BuildExecutePlanRequest(
+		const FString& OriginalRequestJson,
+		const TSharedPtr<FJsonObject>& Plan,
+		FString& OutRequestJson)
+	{
+		TSharedPtr<FJsonObject> RequestObject;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(OriginalRequestJson);
+		if (!FJsonSerializer::Deserialize(Reader, RequestObject) || !RequestObject.IsValid())
+		{
+			return false;
+		}
+
+		RequestObject->SetStringField(TEXT("action"), TEXT("execute_plan"));
+		RequestObject->SetObjectField(TEXT("specification"), Plan);
+		return SerializeJsonObject(RequestObject, OutRequestJson);
+	}
+
+	void AppendStringArrayValue(
+		const TSharedPtr<FJsonObject>& Object,
+		const FString& Field,
+		const FString& Value)
+	{
+		TArray<TSharedPtr<FJsonValue>> Values;
+		const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
+		if (Object->TryGetArrayField(Field, Existing) && Existing)
+		{
+			Values = *Existing;
+		}
+		Values.Add(MakeShared<FJsonValueString>(Value));
+		Object->SetArrayField(Field, Values);
+	}
+
+	bool FinalizeDelegatedResponse(
+		const FString& DelegatedResponseJson,
+		const FUeremcpRequest& OriginalRequest,
+		const FUeremcpTemplateInstantiateRequest& InstantiateRequest,
+		bool bHasTemplateValidationRules,
+		FString& OutResponseJson,
+		FString& OutError)
+	{
+		TSharedPtr<FJsonObject> ResponseObject;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(DelegatedResponseJson);
+		if (!FJsonSerializer::Deserialize(Reader, ResponseObject) || !ResponseObject.IsValid())
+		{
+			OutError = TEXT("execute_plan returned invalid JSON.");
+			return false;
+		}
+
+		FString Status;
+		FString Summary;
+		const TSharedPtr<FJsonObject>* Metrics = nullptr;
+		double McpRoundTrips = 0.0;
+		double InternalOperations = 0.0;
+		if (!ResponseObject->TryGetStringField(TEXT("status"), Status)
+			|| !FUeremcpEnvelope::IsValidStatus(Status)
+			|| !ResponseObject->TryGetStringField(TEXT("summary"), Summary)
+			|| !ResponseObject->TryGetObjectField(TEXT("metrics"), Metrics)
+			|| !Metrics
+			|| !Metrics->IsValid()
+			|| !(*Metrics)->TryGetNumberField(TEXT("mcp_round_trips"), McpRoundTrips)
+			|| !(*Metrics)->TryGetNumberField(TEXT("internal_operations"), InternalOperations))
+		{
+			OutError = TEXT("execute_plan response is missing required structured envelope fields.");
+			return false;
+		}
+
+		(*Metrics)->SetNumberField(TEXT("mcp_round_trips"), 1);
+		ResponseObject->SetStringField(TEXT("request_id"), OriginalRequest.RequestId);
+		ResponseObject->SetStringField(
+			TEXT("summary"),
+			FString::Printf(
+				TEXT("Instantiated template '%s' through execute_plan. %s"),
+				*InstantiateRequest.TemplateId,
+				*Summary));
+
+		TSharedPtr<FJsonObject> Understood;
+		const TSharedPtr<FJsonObject>* ExistingUnderstood = nullptr;
+		if (ResponseObject->TryGetObjectField(TEXT("understood"), ExistingUnderstood)
+			&& ExistingUnderstood
+			&& ExistingUnderstood->IsValid())
+		{
+			Understood = *ExistingUnderstood;
+		}
+		else
+		{
+			Understood = MakeShared<FJsonObject>();
+		}
+		Understood->SetStringField(TEXT("action"), TEXT("instantiate_template"));
+		Understood->SetStringField(TEXT("template_used"), InstantiateRequest.TemplateId);
+		if (!InstantiateRequest.TargetAssetPath.IsEmpty())
+		{
+			Understood->SetStringField(TEXT("resolved_target"), InstantiateRequest.TargetAssetPath);
+		}
+		ResponseObject->SetObjectField(TEXT("understood"), Understood);
+
+		if (bHasTemplateValidationRules)
+		{
+			const bool bWouldOtherwiseClaimSuccess =
+				Status == TEXT("created_and_validated")
+				|| Status == TEXT("modified_and_validated")
+				|| Status == TEXT("created_with_warnings")
+				|| Status == TEXT("no_change_required");
+			if (bWouldOtherwiseClaimSuccess)
+			{
+				ResponseObject->SetStringField(TEXT("status"), TEXT("partially_completed"));
+			}
+			AppendStringArrayValue(
+				ResponseObject,
+				TEXT("capability_notes"),
+				TEXT("Template validation_rules were not executed: execute_plan has no registered template-rule post-step contract."));
+
+			TSharedPtr<FJsonObject> Validation;
+			const TSharedPtr<FJsonObject>* ExistingValidation = nullptr;
+			if (ResponseObject->TryGetObjectField(TEXT("validation"), ExistingValidation)
+				&& ExistingValidation
+				&& ExistingValidation->IsValid())
+			{
+				Validation = *ExistingValidation;
+			}
+			else
+			{
+				Validation = MakeShared<FJsonObject>();
+			}
+			AppendStringArrayValue(
+				Validation,
+				TEXT("checks_skipped"),
+				TEXT("template.validation_rules"));
+			ResponseObject->SetObjectField(TEXT("validation"), Validation);
+		}
+
+		return SerializeJsonObject(ResponseObject, OutResponseJson);
+	}
+
 	FString SerializeSearchResults(
 		const FUeremcpRequest& Request,
 		const TArray<FUeremcpTemplateSearchHit>& Hits)
@@ -139,22 +282,56 @@ FString UUeremcpTemplatesToolset::InstantiateTemplate(const FString& RequestJson
 	const FUeremcpTemplateInstantiateResult Result =
 		UeremcpTemplates::GetService().Instantiate(InstantiateRequest);
 
-	FUeremcpResponse Response;
-	Response.RequestId = Request.RequestId;
-	Response.Status = Result.Status;
-	Response.Summary = Result.Summary;
-	Response.UnderstoodAction = Request.Action;
-	Response.CapabilityNotes = Result.CapabilityNotes;
-	Response.Metrics.McpRoundTrips = 1;
-	Response.Metrics.InternalOperations = Result.bSuccess ? 1 : 0;
-
-	if (Result.MaterializedPlan.IsValid())
+	if (!Result.bSuccess || !Result.MaterializedPlan.IsValid())
 	{
-		FString PlanJson;
-		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&PlanJson);
-		FJsonSerializer::Serialize(Result.MaterializedPlan.ToSharedRef(), Writer);
-		Response.Summary = FString::Printf(TEXT("%s Plan: %s"), *Result.Summary, *PlanJson);
+		FUeremcpResponse Response;
+		Response.RequestId = Request.RequestId;
+		Response.Status = Result.Status;
+		Response.Summary = Result.Summary;
+		Response.UnderstoodAction = Request.Action;
+		Response.UnderstoodTemplate = InstantiateRequest.TemplateId;
+		Response.CapabilityNotes = Result.CapabilityNotes;
+		Response.Metrics.McpRoundTrips = 1;
+		Response.Metrics.InternalOperations = 0;
+		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
 
-	return FUeremcpEnvelope::SerializeResponse(Response);
+	FString ExecutePlanRequestJson;
+	if (!BuildExecutePlanRequest(RequestJson, Result.MaterializedPlan, ExecutePlanRequestJson))
+	{
+		return FUeremcpEnvelope::MakeUnverified(
+			Request.RequestId,
+			TEXT("Materialized the template, but could not serialize the execute_plan request."),
+			{ TEXT("No asset operation was executed.") });
+	}
+
+	FString DelegatedResponseJson;
+	FString DelegateError;
+	if (!UeremcpTemplates::ExecutePlan(ExecutePlanRequestJson, DelegatedResponseJson, DelegateError))
+	{
+		return FUeremcpEnvelope::MakeUnverified(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Materialized template '%s', but execute_plan delegation was unavailable."),
+				*InstantiateRequest.TemplateId),
+			{ DelegateError, TEXT("No asset operation was executed.") });
+	}
+
+	FString FinalResponseJson;
+	FString FinalizeError;
+	if (!FinalizeDelegatedResponse(
+		DelegatedResponseJson,
+		Request,
+		InstantiateRequest,
+		Result.bHasTemplateValidationRules,
+		FinalResponseJson,
+		FinalizeError))
+	{
+		return FUeremcpEnvelope::MakeUnverified(
+			Request.RequestId,
+			TEXT("execute_plan returned, but its response could not be validated."),
+			{ FinalizeError });
+	}
+
+	return FinalResponseJson;
 }

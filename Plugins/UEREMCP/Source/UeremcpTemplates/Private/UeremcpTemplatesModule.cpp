@@ -1,10 +1,11 @@
 // UEREMCP — template module bootstrap. Owner: WS-15.
 
-#include "Modules/ModuleManager.h"
-#include "Misc/Paths.h"
-#include "Interfaces/IPluginManager.h"
-
 #include "UeremcpTemplatesModule.h"
+
+#include "Interfaces/IPluginManager.h"
+#include "Misc/Paths.h"
+#include "Modules/ModuleManager.h"
+
 #include "UeremcpTemplateService.h"
 #include "UeremcpTemplateStore.h"
 
@@ -37,10 +38,28 @@ public:
 
 	FUeremcpTemplateStore& GetStore() { return *Store; }
 	FUeremcpTemplateService& GetService() { return *Service; }
+	void SetExecutePlanDelegate(FUeremcpExecutePlanDelegate InDelegate)
+	{
+		ExecutePlanDelegate = MoveTemp(InDelegate);
+	}
+	void ClearExecutePlanDelegate()
+	{
+		ExecutePlanDelegate = FUeremcpExecutePlanDelegate();
+	}
+	bool ExecutePlan(const FString& RequestJson, FString& OutResponseJson, FString& OutError)
+	{
+		if (!ExecutePlanDelegate)
+		{
+			OutError = TEXT("execute_plan executor is not registered by UeremcpProtocol.");
+			return false;
+		}
+		return ExecutePlanDelegate(RequestJson, OutResponseJson, OutError);
+	}
 
 private:
 	TUniquePtr<FUeremcpTemplateStore> Store;
 	TUniquePtr<FUeremcpTemplateService> Service;
+	FUeremcpExecutePlanDelegate ExecutePlanDelegate;
 };
 
 namespace UeremcpTemplates
@@ -79,6 +98,33 @@ namespace UeremcpTemplates
 	{
 		check(GTemplatesModule);
 		return GTemplatesModule->GetService();
+	}
+
+	void SetExecutePlanDelegate(FUeremcpExecutePlanDelegate InDelegate)
+	{
+		check(GTemplatesModule);
+		GTemplatesModule->SetExecutePlanDelegate(MoveTemp(InDelegate));
+	}
+
+	void ClearExecutePlanDelegate()
+	{
+		if (GTemplatesModule)
+		{
+			GTemplatesModule->ClearExecutePlanDelegate();
+		}
+	}
+
+	bool ExecutePlan(
+		const FString& RequestJson,
+		FString& OutResponseJson,
+		FString& OutError)
+	{
+		if (!GTemplatesModule)
+		{
+			OutError = TEXT("UeremcpTemplates module is not initialized.");
+			return false;
+		}
+		return GTemplatesModule->ExecutePlan(RequestJson, OutResponseJson, OutError);
 	}
 }
 
