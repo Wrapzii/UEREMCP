@@ -189,8 +189,20 @@ Helpers for PredictedDeleted / soft-path preflight without forking policy:
 | Niagara (WS-07) | `CreateNiagaraEffect` | **yes** | `FUeremcpMutatingDispatch` + ADR-0006 revision/idempotency gates (2026-07-30) |
 | Material (WS-08) | `CreateVfxMaterial`, `CreateProceduralTexture` | **yes** | `FUeremcpMutatingDispatch` (prior) + ADR-0006 revision/idempotency gates (2026-07-30) |
 
-**R-07 closed for Niagara and Material live mutators** on the tip recorded in
-`docs/proposals/ws-01-poc-closeout-2026-07-30.md`.
+**R-07 mitigated** for live mutators that use `FUeremcpMutatingDispatch`
+(Blueprint, Gameplay, Niagara, Material — table above)
+`[VERIFIED: docs/proposals/ws-01-poc-closeout-2026-07-30.md;
+docs/proposals/ws-12-niagara-mutating-dispatch-handoff.md;
+docs/proposals/ws-12-material-mutating-dispatch-handoff.md]`.
+**R-07 residual remains** for any mutate path that skips the gate (Animation writes
+if added; Templates `promote_to_template`; future domains) and for operator loopback
+discipline (R-13). Do not claim universal content-safety.
+
+**R-12 mitigated** for gated mutators: `FUeremcpMutatorQueue::IsImplemented()` is
+true and Security automation serialises concurrent writers
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp;
+UEREMCP.Security.MutatorQueue.SerializesMutators]`. Residual: ungated paths and
+tag/INI concurrency outside the queue.
 
 ## Audit
 
@@ -229,8 +241,9 @@ Registration of the module in `UEREMCP.uplugin` landed in WS-03 merge `9148d52`
 `[VERIFIED: docs/proposals/ws-12-register-security-module.md:60-63]`.
 
 Core dispatcher (`FUeremcpMutatingDispatch`) landed per
-`docs/proposals/ws-12-core-security-dispatcher-gate.md` — residual work is **domain
-adoption**, not Core wiring.
+`docs/proposals/ws-12-core-security-dispatcher-gate.md`. Wired live mutators are
+listed in the domain adoption table above. Residual work is **any mutate path that
+still skips the gate**, not Core wiring itself.
 
 ## Legacy primitive sequence (Core/tests only)
 

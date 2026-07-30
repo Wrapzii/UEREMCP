@@ -34,8 +34,18 @@ def main() -> int:
                 errors.append(f"docs/SECURITY.md missing '{heading}' section/text")
         if "RegisterToolsetClass" not in body:
             errors.append("docs/SECURITY.md must document absence of RegisterToolsetClass")
-        if "R-07 stays open" not in body and "R-07 remains" not in body:
-            errors.append("docs/SECURITY.md must state R-07 remains open until domain adoption")
+        if "R-07 residual remains" not in body and "R-07 remains open" not in body and "R-07 stays open" not in body:
+            errors.append(
+                "docs/SECURITY.md must state R-07 residual remains for ungated mutate paths"
+            )
+        if "R-07 mitigated" not in body and "R-07 closed" not in body:
+            errors.append(
+                "docs/SECURITY.md must state R-07 mitigated (or closed) for wired live mutators"
+            )
+        if "FUeremcpMutatorQueue" not in body:
+            errors.append("docs/SECURITY.md must document FUeremcpMutatorQueue")
+        if "R-12 mitigated" not in body and "R-12" not in body:
+            errors.append("docs/SECURITY.md should document R-12 / mutator-queue status")
 
     required_headers = {
         "UeremcpSecurity.h": ["UeremcpSecurityDomainAdoption.h", "UeremcpPermissionPolicy.h"],
