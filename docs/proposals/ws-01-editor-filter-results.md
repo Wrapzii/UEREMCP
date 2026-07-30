@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `7594f46` (CompleteRoundTrip fixture + compile include)
+- **Current orchestration tip:** `0e79641` (WS-07 B1/B8-save/B9 + emitter_added gates)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** CompleteRoundTrip runner/fixture landed as `600c383` (`8bf7b0d`), compile-fixed at `7594f46`; Validation is green and CRT re-run is next. Fireball B2/B4 editor gate remains PASS. No overall POC-A/POC-B claim; POC-B remains open on B1/B3/B5/B6/B8/B9.
+- **Status:** WS-07 `0e79641` (`501aff6`) extends POC-B gates for B1, B8-save, B9, and `emitter_added`. WS-11 must assert B3/B5/B6/B9, run B8 restart, and re-run CompleteRoundTrip. No overall POC-A/POC-B claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: B2/B4 editor gate is green on `a6ca454`; overall POC-B is not. CompleteRoundTrip fixture/runner and compile fix are now on orch; re-run is pending, so A1/A2/A5/A9/A10 and overall POC A remain unclaimed.
+Residuals: B2/B4 editor gate is green on `a6ca454`. WS-07 gate scaffolding for B1/B8-save/B9 landed as `0e79641`; WS-11 must assert B3/B5/B6/B9, run B8 restart, and re-run CompleteRoundTrip. Overall POC-A/POC-B unclaimed.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -84,7 +84,7 @@ WS-11 parsing fix is integrated as `674c439`. The ordered co-location stack is `
 |---|---|---|
 | Fireball inline materials | **PASS** | `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_055332.log`: all six B4 roles verified; `UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_b2_b4`; exit 0. |
 
-This proves the B2/B4 editor gate only. Remaining overall POC-B criteria: B1, B3, B5, B6, B8, and B9. B7 has separate scaffold proof; B10 is optional/supplementary.
+This proves the B2/B4 editor gate only. Remaining overall POC-B criteria: B1 (MCP proof), B3/B5/B6/B9 (assert after `0e79641`), B8 restart survival. B7 has separate scaffold proof; B8-save is gated but restart is open; B10 is optional.
 
 ## Blueprint CompleteRoundTrip current result
 
@@ -296,10 +296,10 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Complete submit evidence landed as `7cd6c93`; A1/A2/A5/A9/A10 and overall POC A not claimed until CompleteRoundTrip. |
-| WS-07 | B2/B4 editor gate PASS with all six roles. Close remaining B1/B3/B5/B6/B8/B9 with WS-11. |
+| WS-07 | B1/B8-save/B9/`emitter_added` gates landed as `0e79641`; B2/B4 editor PASS. Overall POC-B unclaimed. |
 | WS-08 | Trail graph + honest MI-absent fixes are proven by the B2/B4 editor gate PASS. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Run CompleteRoundTrip on `7594f46` lineage. Close remaining POC-B criteria B1/B3/B5/B6/B8/B9. Keep overall POC-A/POC-B unclaimed. |
+| WS-11 | Assert B3/B5/B6/B9 after `0e79641`; run B8 restart harness; re-run CompleteRoundTrip. Keep overall POC-A/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-POC A remains partial pending CompleteRoundTrip. B2/B4 editor gate passes, but overall POC-B remains open on B1/B3/B5/B6/B8/B9. No overall POC-A / overall POC-B claim. No junction retarget.
+POC A remains partial pending CompleteRoundTrip. B2/B4 editor gate passes; B1/B3/B5/B6/B8-restart/B9 still need WS-11 proof. No overall POC-A / overall POC-B claim. No junction retarget.
