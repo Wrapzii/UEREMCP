@@ -24,6 +24,31 @@
 
 #if WITH_DEV_AUTOMATION_TESTS
 
+namespace
+{
+	TSharedPtr<FJsonObject> ParseResponseObject(const FString& ResponseJson)
+	{
+		TSharedPtr<FJsonObject> Response;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
+		if (!FJsonSerializer::Deserialize(Reader, Response) || !Response.IsValid())
+		{
+			return nullptr;
+		}
+		return Response;
+	}
+
+	FString ResponseStatus(const FString& ResponseJson)
+	{
+		const TSharedPtr<FJsonObject> Response = ParseResponseObject(ResponseJson);
+		FString Status;
+		if (Response.IsValid())
+		{
+			Response->TryGetStringField(TEXT("status"), Status);
+		}
+		return Status;
+	}
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpAnimationInspectMontageServiceTest,
 	"UEREMCP.Animation.InspectMontage.StructuredState",
@@ -453,15 +478,15 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FUeremcpAnimationInspectMontageEnvelopeTest::RunTest(const FString& Parameters)
 {
 	const FString Malformed = UUeremcpAnimationToolset::InspectMontage(TEXT("not-json"));
-	TestTrue(TEXT("malformed request rejected"), Malformed.Contains(TEXT("\"status\":\"rejected\"")));
+	TestEqual(TEXT("malformed request rejected"), ResponseStatus(Malformed), FString(TEXT("rejected")));
 
 	const FString WrongAction = UUeremcpAnimationToolset::InspectMontage(
 		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-wrong","action":"inspect_sequence","target":{"asset_path":"/Game/None"}})"));
-	TestTrue(TEXT("wrong action rejected"), WrongAction.Contains(TEXT("\"status\":\"rejected\"")));
+	TestEqual(TEXT("wrong action rejected"), ResponseStatus(WrongAction), FString(TEXT("rejected")));
 
 	const FString MissingTarget = UUeremcpAnimationToolset::InspectMontage(
 		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-missing","action":"inspect_montage"})"));
-	TestTrue(TEXT("missing target rejected"), MissingTarget.Contains(TEXT("\"status\":\"rejected\"")));
+	TestEqual(TEXT("missing target rejected"), ResponseStatus(MissingTarget), FString(TEXT("rejected")));
 	return true;
 }
 
@@ -732,7 +757,10 @@ bool FUeremcpAnimationReadAnimBpEditorScratchTest::RunTest(const FString& Parame
 		*PackageName);
 	const FString ResponseJson = UUeremcpAnimationToolset::ReadAnimBp(Request);
 
-	TestTrue(TEXT("scratch AnimBP inspect is partial"), ResponseJson.Contains(TEXT("\"status\":\"partially_completed\"")));
+	TestEqual(
+		TEXT("scratch AnimBP inspect is partial"),
+		ResponseStatus(ResponseJson),
+		FString(TEXT("partially_completed")));
 	TestTrue(TEXT("summary names structured read"), ResponseJson.Contains(TEXT("Read AnimBlueprint")));
 	TestFalse(TEXT("response remains honest before asset_state amendment"), ResponseJson.Contains(TEXT("\"asset_state\"")));
 	TestTrue(TEXT("nodes-and-links check recorded"), ResponseJson.Contains(TEXT("animation.anim_bp.nodes_and_links_read")));
@@ -743,9 +771,22 @@ bool FUeremcpAnimationReadAnimBpEditorScratchTest::RunTest(const FString& Parame
 		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-abp-object","action":"read_anim_bp","target":{"asset_path":"%s"}})"),
 		*ObjectPath);
 	const FString ObjectPathResponse = UUeremcpAnimationToolset::ReadAnimBp(ObjectPathRequest);
+	const TSharedPtr<FJsonObject> ObjectPathRoot = ParseResponseObject(ObjectPathResponse);
+	const TSharedPtr<FJsonObject>* ObjectPathResult = nullptr;
+	TestTrue(TEXT("object-path response parses"), ObjectPathRoot.IsValid());
 	TestTrue(
-		TEXT("package and object paths produce one canonical primary"),
-		ObjectPathResponse.Contains(FString::Printf(TEXT("\"primary_asset\":\"%s\""), *PackageName)));
+		TEXT("object-path response carries result"),
+		ObjectPathRoot.IsValid()
+			&& ObjectPathRoot->TryGetObjectField(TEXT("result"), ObjectPathResult)
+			&& ObjectPathResult
+			&& (*ObjectPathResult).IsValid());
+	if (ObjectPathResult && (*ObjectPathResult).IsValid())
+	{
+		TestEqual(
+			TEXT("package and object paths produce one canonical primary"),
+			(*ObjectPathResult)->GetStringField(TEXT("primary_asset")),
+			PackageName);
+	}
 
 	AnimBP->ClearFlags(RF_Public | RF_Standalone);
 	AnimBP->MarkAsGarbage();
@@ -764,15 +805,15 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FUeremcpAnimationReadAnimBpEnvelopeTest::RunTest(const FString& Parameters)
 {
 	const FString Malformed = UUeremcpAnimationToolset::ReadAnimBp(TEXT("not-json"));
-	TestTrue(TEXT("malformed request rejected"), Malformed.Contains(TEXT("\"status\":\"rejected\"")));
+	TestEqual(TEXT("malformed request rejected"), ResponseStatus(Malformed), FString(TEXT("rejected")));
 
 	const FString WrongAction = UUeremcpAnimationToolset::ReadAnimBp(
 		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-abp-wrong","action":"inspect_montage","target":{"asset_path":"/Game/None"}})"));
-	TestTrue(TEXT("wrong action rejected"), WrongAction.Contains(TEXT("\"status\":\"rejected\"")));
+	TestEqual(TEXT("wrong action rejected"), ResponseStatus(WrongAction), FString(TEXT("rejected")));
 
 	const FString MissingTarget = UUeremcpAnimationToolset::ReadAnimBp(
 		TEXT(R"({"protocol_version":"1.0","request_id":"ws10-abp-missing","action":"read_anim_bp"})"));
-	TestTrue(TEXT("missing target rejected"), MissingTarget.Contains(TEXT("\"status\":\"rejected\"")));
+	TestEqual(TEXT("missing target rejected"), ResponseStatus(MissingTarget), FString(TEXT("rejected")));
 	return true;
 }
 
