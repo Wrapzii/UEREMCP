@@ -19,7 +19,25 @@
 			"TargetAllowList": [ "Editor" ]
 		},
 		{
+			"Name": "UeremcpBlueprint",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
 			"Name": "UeremcpNiagara",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
+			"Name": "UeremcpSecurity",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
+			"Name": "UeremcpTemplates",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"TargetAllowList": [ "Editor" ]
@@ -62,4 +80,3 @@
 		}
 	]
 }
-
