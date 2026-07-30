@@ -416,6 +416,11 @@ The action-owned emitted-state contract now exists at
 The editor fixture submits both package and full object paths and requires one
 canonical package identity and revision
 `[VERIFIED: UeremcpAnimationTests.cpp; PackageName.h:882-888]`.
+Notify state now includes `track_index` and is canonicalized with the engine's own
+ordering rule (trigger time, then track index)
+`[VERIFIED: AnimTypes.h:458-474; UeremcpAnimationService.cpp]`. The authored
+`NotifyOrdering` automation test covers reversed raw storage, an invalid track index,
+and a notify with no object class; it is not a runtime-pass claim.
 
 Mutation (`ensure_montage`) remains blocked behind shared mutator-queue / sandbox
 orchestration: `FUeremcpMutatorQueue::IsImplemented()` returns false

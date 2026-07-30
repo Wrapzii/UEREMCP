@@ -107,6 +107,10 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 			{
 				TestEqual(TEXT("notify name"), NotifyObject->GetStringField(TEXT("name")), FString(TEXT("Impact")));
 				TestEqual(TEXT("notify track"), NotifyObject->GetStringField(TEXT("track")), FString(TEXT("Gameplay")));
+				TestEqual(
+					TEXT("notify track index"),
+					static_cast<int32>(NotifyObject->GetNumberField(TEXT("track_index"))),
+					0);
 				TestTrue(TEXT("notify time"), FMath::IsNearlyEqual(NotifyObject->GetNumberField(TEXT("time")), 0.5));
 				TestTrue(TEXT("notify duration"), FMath::IsNearlyEqual(NotifyObject->GetNumberField(TEXT("duration")), 0.2));
 				TestTrue(TEXT("notify trigger chance"), FMath::IsNearlyEqual(NotifyObject->GetNumberField(TEXT("trigger_chance")), 0.75));
@@ -193,6 +197,93 @@ bool FUeremcpAnimationInspectMontageRevisionTest::RunTest(const FString& Paramet
 	FUeremcpMontageInspection Restored;
 	TestTrue(TEXT("restored inspection succeeds"), Inspect(Restored));
 	TestEqual(TEXT("restoring semantic state restores revision"), Restored.ContentHash, First.ContentHash);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpAnimationInspectMontageNotifyOrderingTest,
+	"UEREMCP.Animation.InspectMontage.NotifyOrdering",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpAnimationInspectMontageNotifyOrderingTest::RunTest(const FString& Parameters)
+{
+	UAnimMontage* Montage = NewObject<UAnimMontage>(
+		GetTransientPackage(),
+		TEXT("AM_WS10_NotifyOrdering"));
+#if WITH_EDITORONLY_DATA
+	Montage->AnimNotifyTracks.Reset();
+	Montage->AnimNotifyTracks.Add(FAnimNotifyTrack(TEXT("Gameplay"), FLinearColor::White));
+#endif
+
+	FAnimNotifyEvent LateEvent;
+	LateEvent.NotifyName = TEXT("Late");
+	LateEvent.SetTime(0.75f);
+	LateEvent.TrackIndex = 0;
+	LateEvent.Notify = NewObject<UAnimNotify_ResetDynamics>(Montage);
+	Montage->Notifies.Add(LateEvent);
+
+	FAnimNotifyEvent EarlyInvalidTrackEvent;
+	EarlyInvalidTrackEvent.NotifyName = TEXT("EarlyInvalidTrack");
+	EarlyInvalidTrackEvent.SetTime(0.25f);
+	EarlyInvalidTrackEvent.TrackIndex = -1;
+	Montage->Notifies.Add(EarlyInvalidTrackEvent);
+
+	auto Inspect = [this, Montage](FUeremcpMontageInspection& Out) -> bool
+	{
+		FString Error;
+		const bool bOk = FUeremcpAnimationService::InspectMontage(
+			Montage,
+			TEXT("/Game/__UeremcpTests/Animation/AM_WS10_NotifyOrdering"),
+			Out,
+			Error);
+		if (!bOk)
+		{
+			AddError(Error);
+		}
+		return bOk;
+	};
+
+	FUeremcpMontageInspection First;
+	TestTrue(TEXT("notify ordering inspection succeeds"), Inspect(First));
+	const TArray<TSharedPtr<FJsonValue>>* FirstNotifies = nullptr;
+	TestTrue(
+		TEXT("ordered notify array returned"),
+		First.State.IsValid()
+			&& First.State->TryGetArrayField(TEXT("notifies"), FirstNotifies)
+			&& FirstNotifies);
+	TestEqual(TEXT("two notify edge cases returned"), FirstNotifies ? FirstNotifies->Num() : 0, 2);
+	if (FirstNotifies && FirstNotifies->Num() == 2)
+	{
+		const TSharedPtr<FJsonObject> Early = (*FirstNotifies)[0]->AsObject();
+		const TSharedPtr<FJsonObject> Late = (*FirstNotifies)[1]->AsObject();
+		TestEqual(
+			TEXT("earlier trigger is serialized first"),
+			Early->GetStringField(TEXT("name")),
+			FString(TEXT("EarlyInvalidTrack")));
+		TestEqual(
+			TEXT("invalid track index is retained"),
+			static_cast<int32>(Early->GetNumberField(TEXT("track_index"))),
+			-1);
+		TestTrue(TEXT("invalid track name degrades to empty"), Early->GetStringField(TEXT("track")).IsEmpty());
+		const TSharedPtr<FJsonValue> ClassValue = Early->TryGetField(TEXT("class"));
+		TestTrue(
+			TEXT("notify without object has null class"),
+			ClassValue.IsValid() && ClassValue->Type == EJson::Null);
+		TestEqual(
+			TEXT("later trigger is serialized second"),
+			Late->GetStringField(TEXT("name")),
+			FString(TEXT("Late")));
+	}
+
+	Montage->Notifies.Swap(0, 1);
+	FUeremcpMontageInspection ReorderedStorage;
+	TestTrue(TEXT("reordered storage inspection succeeds"), Inspect(ReorderedStorage));
+	TestEqual(
+		TEXT("raw notify storage order does not change revision"),
+		ReorderedStorage.ContentHash,
+		First.ContentHash);
 	return true;
 }
 

@@ -120,6 +120,9 @@ bool FUeremcpAnimationService::InspectMontage(
 	// Public read API; avoids treating REAgentTools notify-plan metadata as real notifies.
 	// [VERIFIED: AnimationBlueprintLibrary.h:230-232]
 	UAnimationBlueprintLibrary::GetAnimationNotifyEvents(Montage, NotifyEvents);
+	// Match the engine's canonical notify ordering: trigger time, then track index.
+	// [VERIFIED: Runtime/Engine/Public/Animation/AnimTypes.h:458-474]
+	NotifyEvents.Sort();
 
 	TArray<TSharedPtr<FJsonValue>> Notifies;
 	for (const FAnimNotifyEvent& Event : NotifyEvents)
@@ -129,6 +132,7 @@ bool FUeremcpAnimationService::InspectMontage(
 		NotifyObject->SetNumberField(TEXT("time"), Event.GetTriggerTime());
 		NotifyObject->SetNumberField(TEXT("duration"), Event.GetDuration());
 		NotifyObject->SetStringField(TEXT("track"), NotifyTrackName(*Montage, Event).ToString());
+		NotifyObject->SetNumberField(TEXT("track_index"), Event.TrackIndex);
 		NotifyObject->SetNumberField(TEXT("trigger_chance"), Event.NotifyTriggerChance);
 		NotifyObject->SetBoolField(TEXT("trigger_on_dedicated_server"), Event.bTriggerOnDedicatedServer);
 

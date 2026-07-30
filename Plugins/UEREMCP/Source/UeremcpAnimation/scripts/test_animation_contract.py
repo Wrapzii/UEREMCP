@@ -65,6 +65,7 @@ def montage_state() -> dict:
                 "time": 0.5,
                 "duration": 0.0,
                 "track": "Gameplay",
+                "track_index": 0,
                 "trigger_chance": 1.0,
                 "trigger_on_dedicated_server": True,
                 "is_state": False,
@@ -150,8 +151,16 @@ class AnimationContractTests(unittest.TestCase):
             "editor notify GUID does not change revision",
             "notify trigger policy changes revision",
             "restoring semantic state restores revision",
+            "earlier trigger is serialized first",
+            "invalid track index is retained",
+            "notify without object has null class",
+            "raw notify storage order does not change revision",
         ):
             self.assertIn(expected, source)
+        service = (
+            MODULE / "Private/UeremcpAnimationService.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("NotifyEvents.Sort()", service)
 
     def test_asset_state_schema_accepts_emitted_shape(self) -> None:
         validator, schema = asset_state_validator()
@@ -204,6 +213,7 @@ class AnimationContractTests(unittest.TestCase):
                 "time",
                 "duration",
                 "track",
+                "track_index",
                 "trigger_chance",
                 "trigger_on_dedicated_server",
                 "is_state",
