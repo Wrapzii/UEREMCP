@@ -70,6 +70,18 @@ class TemplateStoreTests(unittest.TestCase):
                 "DepthFade": "depth_fade",
             }.items():
                 self.assertEqual(actual[json_name], expected[reference_name])
+            self.assertEqual(
+                preset.niagara_parameters["primary_color"],
+                actual["ParticleColor"],
+            )
+            self.assertEqual(
+                preset.niagara_parameters["secondary_color"],
+                actual["ColorSecondary"],
+            )
+            self.assertEqual(
+                preset.niagara_parameters["intensity"],
+                actual["EmissiveScale"],
+            )
 
 
 class TemplateSearchTests(unittest.TestCase):
@@ -126,6 +138,17 @@ class TemplateInstantiateTests(unittest.TestCase):
                 json.loads(schema_path.read_text(encoding="utf-8")),
                 registry=load_registry(ROOT / "schemas"),
             )
+        self.ws08_reference = json.loads(
+            (
+                ROOT
+                / "schemas"
+                / "domains"
+                / "materials"
+                / "element_presets.v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.elemental = self.store.find_by_id("niagara.projectile.elemental.v1")
+        assert self.elemental is not None
 
     @staticmethod
     def projectile_inputs(element: str) -> dict[str, object]:
@@ -232,6 +255,118 @@ class TemplateInstantiateTests(unittest.TestCase):
             self.action_validators["create_niagara_effect"].iter_errors(niagara_spec)
         )
         self.assertEqual(errors, [], msg=str(errors))
+
+    def test_element_enum_matches_loaded_presets_and_ws08(self) -> None:
+        enum_values = self.elemental.document["inputs"]["properties"]["element"]["enum"]
+        self.assertEqual(set(enum_values), set(self.ws08_reference["elements"]))
+        for element in enum_values:
+            self.assertIsNotNone(self.store.find_element_preset(element))
+        self.assertEqual(self.store.element_preset_count(), len(enum_values))
+
+    def test_construction_plan_features_match_ws08_purpose_defaults(self) -> None:
+        purpose_features = self.ws08_reference["purpose_default_features"]
+        for operation in self.elemental.document["construction_plan"]:
+            if operation["action"] != "create_vfx_material":
+                continue
+            purpose = operation["specification"]["purpose"]
+            self.assertEqual(
+                operation["specification"]["features"],
+                purpose_features[purpose],
+                msg=f"features for purpose {purpose}",
+            )
+
+    def test_every_element_preset_materializes_parity_plan(self) -> None:
+        for element in self.elemental.document["inputs"]["properties"]["element"]["enum"]:
+            with self.subTest(element=element):
+                preset = self.store.find_element_preset(element)
+                self.assertIsNotNone(preset)
+                assert preset is not None
+                result = self.service.instantiate(
+                    InstantiateRequest(
+                        template_id="niagara.projectile.elemental.v1",
+                        inputs={
+                            "element": element,
+                            "target_path": f"/Game/VFX/Spells/NS_{element.title()}Projectile",
+                            "scale": 1.5,
+                            "intensity": 9.0,
+                        },
+                    )
+                )
+                self.assertTrue(result.success, msg=result.summary)
+                assert result.plan is not None
+                self.assertEqual(result.status, "partially_completed")
+                self.assertEqual(list(self.plan_validator.iter_errors(result.plan)), [])
+
+                operations = {
+                    operation["id"]: operation for operation in result.plan["operations"]
+                }
+                for material_id in ("core_material", "trail_material"):
+                    overrides = operations[material_id]["specification"][
+                        "parameter_overrides"
+                    ]
+                    self.assertEqual(
+                        overrides,
+                        preset.material_parameter_overrides,
+                        msg=f"{element}/{material_id}",
+                    )
+                    self.assertEqual(
+                        list(
+                            self.action_validators["create_vfx_material"].iter_errors(
+                                operations[material_id]["specification"]
+                            )
+                        ),
+                        [],
+                        msg=f"{element}/{material_id} schema",
+                    )
+
+                niagara_params = operations["projectile_fx"]["specification"]["parameters"]
+                self.assertEqual(
+                    niagara_params["primary_color"],
+                    preset.material_parameter_overrides["ParticleColor"],
+                )
+                self.assertEqual(
+                    niagara_params["secondary_color"],
+                    preset.material_parameter_overrides["ColorSecondary"],
+                )
+                self.assertEqual(niagara_params["scale"], 1.5)
+                self.assertEqual(niagara_params["intensity"], 9.0)
+                self.assertEqual(
+                    operations["projectile_fx"]["specification"]["materials"],
+                    {
+                        "core": {"$ref": "core_material.result.primary_asset"},
+                        "trail": {"$ref": "trail_material.result.primary_asset"},
+                    },
+                )
+                self.assertEqual(
+                    operations["core_material"]["target"]["asset_path"],
+                    f"/Game/VFX/Spells/MI_NS_{element.title()}Projectile_Core",
+                )
+                self.assertEqual(
+                    operations["projectile_fx"]["target"]["asset_path"],
+                    f"/Game/VFX/Spells/NS_{element.title()}Projectile",
+                )
+
+    def test_missing_preset_fails_when_enum_bypass_is_impossible(self) -> None:
+        # Enum rejects unknown elements first; this asserts the preset gate exists
+        # for any future enum expansion before a JSON preset lands.
+        record = self.elemental.document
+        original_enum = list(record["inputs"]["properties"]["element"]["enum"])
+        record["inputs"]["properties"]["element"]["enum"] = original_enum + ["arcane"]
+        try:
+            result = self.service.instantiate(
+                InstantiateRequest(
+                    template_id="niagara.projectile.elemental.v1",
+                    inputs={
+                        "element": "arcane",
+                        "target_path": "/Game/VFX/Spells/NS_ArcaneProjectile",
+                    },
+                )
+            )
+            self.assertFalse(result.success)
+            self.assertIn("No element preset is loaded for 'arcane'", result.summary)
+            self.assertEqual(result.status, "failed_validation")
+        finally:
+            record["inputs"]["properties"]["element"]["enum"] = original_enum
 
     def test_target_is_forwarded_to_terminal_operation(self) -> None:
         result = self.service.instantiate(
@@ -397,6 +532,14 @@ class TemplateInstantiateTests(unittest.TestCase):
 
 
 class TemplatePromotionTests(unittest.TestCase):
+    EXPECTED_GATES = [
+        "template.promotion.complete_state_retrieval",
+        "template.promotion.reproduction_plan_synthesis",
+        "template.promotion.schema_validation",
+        "template.promotion.security_write_gate",
+        "template.promotion.quarantine_write",
+    ]
+
     def setUp(self) -> None:
         self.store = TemplateStore()
         self.store.load_from_directory(ROOT / "templates")
@@ -425,7 +568,7 @@ class TemplatePromotionTests(unittest.TestCase):
             "/Game/__UeremcpTemplates/agent/assets.promoted.ns_fireball.v1",
         )
         self.assertEqual(before, after)
-        self.assertEqual(len(result.contract_gates or []), 5)
+        self.assertEqual(result.contract_gates, self.EXPECTED_GATES)
 
         response = build_promotion_response(
             {
@@ -439,10 +582,12 @@ class TemplatePromotionTests(unittest.TestCase):
         self.assertEqual(list(self.response_validator.iter_errors(response)), [])
         self.assertNotIn("changes", response)
         self.assertNotIn("result", response)
-        self.assertIn(
-            "template.promotion.complete_state_retrieval",
-            response["validation"]["checks_skipped"],
-        )
+        self.assertEqual(response["validation"]["checks_skipped"], self.EXPECTED_GATES)
+        self.assertNotIn(response["status"], {
+            "created_and_validated",
+            "modified_and_validated",
+            "created_with_warnings",
+        })
 
     def test_base_template_drives_domain_and_category(self) -> None:
         result = self.service.plan_promotion(
@@ -456,13 +601,22 @@ class TemplatePromotionTests(unittest.TestCase):
             result.proposed_template_id,
             "niagara.projectile.ns_iceshard.v1",
         )
+        self.assertEqual(result.contract_gates, self.EXPECTED_GATES)
 
     def test_invalid_contract_inputs_fail_before_preview(self) -> None:
-        invalid_source = self.service.plan_promotion(
-            PromotionRequest(source_asset="/Engine/VFX/NS_Fireball")
-        )
-        self.assertFalse(invalid_source.success)
-        self.assertEqual(invalid_source.status, "failed_validation")
+        for source in (
+            "/Engine/VFX/NS_Fireball",
+            "/Game/../Engine/VFX/NS_Fireball",
+            "/Game/VFX/NS_Fireball/",
+            "",
+        ):
+            with self.subTest(source=source):
+                invalid_source = self.service.plan_promotion(
+                    PromotionRequest(source_asset=source)
+                )
+                self.assertFalse(invalid_source.success)
+                self.assertEqual(invalid_source.status, "failed_validation")
+                self.assertFalse(invalid_source.contract_gates)
 
         missing_base = self.service.plan_promotion(
             PromotionRequest(
@@ -492,9 +646,22 @@ class TemplatePromotionTests(unittest.TestCase):
         result = self.service.plan_promotion(request)
         self.assertTrue(result.success)
         self.assertEqual(result.status, "partially_completed")
+        self.assertEqual(result.contract_gates, self.EXPECTED_GATES)
         notes = " ".join(result.capability_notes or [])
         self.assertIn("quarantine=false was not honored", notes)
         self.assertIn("dry_run=false was requested", notes)
+        response = build_promotion_response(
+            {
+                "protocol_version": "1.0",
+                "request_id": "promote-mutate",
+                "action": "promote_to_template",
+            },
+            request,
+            result,
+        )
+        self.assertEqual(list(self.response_validator.iter_errors(response)), [])
+        self.assertNotIn("changes", response)
+        self.assertEqual(response["validation"]["checks_skipped"], self.EXPECTED_GATES)
 
 
 def main() -> int:
