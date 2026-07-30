@@ -100,6 +100,16 @@ re-reads the saved asset via `inspect_system` and sets `validation.structurally_
 names and `User.*` parameters match. This is **not** ADR-0004 content-hash round-trip; status stays
 `partially_completed`.
 
+### Idempotent probes (`mode: replace`)
+
+Use envelope **`mode: "replace"`** (not a specification field) to delete and recreate assets under
+`/Game/__UeremcpTests/` only. Paths outside the probe root are rejected for deletion
+(`UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath`). Destructive tier defaults to dry-run unless
+`options.dry_run: false` is explicit (ADR-0010). Status remains **`partially_completed`**, never
+`*_validated`.
+
+Example target: `/Game/__UeremcpTests/NS_WS07_RoundTripProbe`.
+
 ## Tests
 
 Runtime probes and created assets: **`/Game/__UeremcpTests/`** only (e.g. `NS_WS07_Probe`).

@@ -40,6 +40,8 @@ struct FUeremcpNiagaraCreateResult
 	TArray<FString> ChecksPerformed;
 	TArray<FString> ChecksSkipped;
 
+	bool bReplacedExisting = false;
+
 	TOptional<bool> bCompiled;
 	TOptional<bool> bSaved;
 

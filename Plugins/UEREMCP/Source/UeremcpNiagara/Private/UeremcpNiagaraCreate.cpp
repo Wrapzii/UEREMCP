@@ -4,6 +4,7 @@
 
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraPaths.h"
+#include "UeremcpNiagaraProbeAssets.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraEmitter.h"
@@ -11,7 +12,6 @@
 #include "NiagaraTypes.h"
 #include "NiagaraVariant.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Misc/PackageName.h"
 #include "UObject/SavePackage.h"
 #include "UObject/SoftObjectPath.h"
@@ -85,12 +85,7 @@ namespace
 
 	bool AssetExistsAtPath(const FString& AssetPath)
 	{
-		FAssetRegistryModule& AssetRegistry =
-			FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-		const FString PackagePath = UeremcpNiagaraPaths::PackageFolderFromAssetPath(AssetPath);
-		const FString AssetName = UeremcpNiagaraPaths::AssetNameFromAssetPath(AssetPath);
-		const FSoftObjectPath ObjectPath(FString::Printf(TEXT("%s/%s.%s"), *PackagePath, *AssetName, *AssetName));
-		return AssetRegistry.Get().GetAssetByObjectPath(ObjectPath).IsValid();
+		return UeremcpNiagaraProbeAssets::AssetExistsAtPath(AssetPath);
 	}
 
 	FNiagaraExt_UserVariable MakeFloatUserVariable(const FName& ParamName, float Value)
@@ -332,26 +327,57 @@ bool FUeremcpNiagaraCreate::Run(
 	const FString PackageFolder = UeremcpNiagaraPaths::PackageFolderFromAssetPath(Request.TargetAssetPath);
 	const FString AssetName = Spec.Name;
 	const FString CreatedPath = FString::Printf(TEXT("%s/%s"), *PackageFolder, *AssetName);
+	const bool bReplaceMode = UeremcpNiagaraProbeAssets::IsReplaceMode(Request.Mode);
+	const bool bAssetExists = AssetExistsAtPath(CreatedPath);
 
 	if (Request.bDryRun)
 	{
 		OutResult.bSuccess = true;
 		OutResult.CreatedAssetPath = CreatedPath;
-		OutResult.Summary = FString::Printf(
-			TEXT("Dry run: would create Niagara effect '%s' (effect_type=%s) with %d emitter role(s) from template. No editor state touched."),
-			*CreatedPath,
-			*Spec.EffectType,
-			Spec.ComponentRoles.Num());
-		OutResult.ChecksSkipped.Add(TEXT("niagara.create_all_steps_dry_run"));
+		if (bReplaceMode && bAssetExists)
+		{
+			OutResult.Summary = FString::Printf(
+				TEXT("Dry run: would replace existing probe asset '%s' (effect_type=%s) by deleting and recreating with %d emitter role(s). No editor state touched."),
+				*CreatedPath,
+				*Spec.EffectType,
+				Spec.ComponentRoles.Num());
+			OutResult.ChecksSkipped.Add(TEXT("niagara.replace_delete_and_create_dry_run"));
+		}
+		else
+		{
+			OutResult.Summary = FString::Printf(
+				TEXT("Dry run: would create Niagara effect '%s' (effect_type=%s) with %d emitter role(s) from template. No editor state touched."),
+				*CreatedPath,
+				*Spec.EffectType,
+				Spec.ComponentRoles.Num());
+			OutResult.ChecksSkipped.Add(TEXT("niagara.create_all_steps_dry_run"));
+		}
 		return true;
 	}
 
-	if (AssetExistsAtPath(CreatedPath))
+	if (bAssetExists)
 	{
-		OutResult.Error = FString::Printf(
-			TEXT("Asset already exists at '%s'. Use mode replace or choose a new target path."),
-			*CreatedPath);
-		return false;
+		if (bReplaceMode)
+		{
+			if (!UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath(CreatedPath, OutResult.Error))
+			{
+				return false;
+			}
+			OutResult.bReplacedExisting = true;
+			OutResult.ChecksPerformed.Add(TEXT("niagara.replace_delete_probe_asset"));
+		}
+		else
+		{
+			OutResult.Error = FString::Printf(
+				TEXT("Asset already exists at '%s'. Use envelope mode 'replace' for idempotent probes under %s."),
+				*CreatedPath,
+				UeremcpNiagaraPaths::TestsContentRoot);
+			return false;
+		}
+	}
+	else if (bReplaceMode)
+	{
+		OutResult.ChecksSkipped.Add(TEXT("niagara.replace_no_existing_asset"));
 	}
 
 	const FString TemplatePath = Spec.TemplateSystemPath.IsEmpty()
@@ -491,12 +517,24 @@ bool FUeremcpNiagaraCreate::Run(
 
 	OutResult.CreatedAssetPath = CreatedPath;
 	OutResult.bSuccess = true;
-	OutResult.Summary = FString::Printf(
-		TEXT("Created Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s). Materials and renderer binding not validated — status is not *_validated."),
-		*CreatedPath,
-		*Spec.EffectType,
-		OutResult.EmittersAdded.Num(),
-		OutResult.UserVariablesAdded.Num());
+	if (OutResult.bReplacedExisting)
+	{
+		OutResult.Summary = FString::Printf(
+			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s). Materials and renderer binding not validated — status is not *_validated."),
+			*CreatedPath,
+			*Spec.EffectType,
+			OutResult.EmittersAdded.Num(),
+			OutResult.UserVariablesAdded.Num());
+	}
+	else
+	{
+		OutResult.Summary = FString::Printf(
+			TEXT("Created Niagara probe effect '%s' (effect_type=%s): %d emitter(s), %d user variable(s). Materials and renderer binding not validated — status is not *_validated."),
+			*CreatedPath,
+			*Spec.EffectType,
+			OutResult.EmittersAdded.Num(),
+			OutResult.UserVariablesAdded.Num());
+	}
 
 	return true;
 }

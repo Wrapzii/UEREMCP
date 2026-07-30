@@ -309,6 +309,15 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 		Validation->SetField(TEXT("saved"), MakeShared<FJsonValueNull>());
 	}
 
+	if (!Request.bDryRun && CreateResult.bReplacedExisting)
+	{
+		Validation->SetBoolField(TEXT("replaced_existing"), true);
+	}
+	else
+	{
+		Validation->SetField(TEXT("replaced_existing"), MakeShared<FJsonValueNull>());
+	}
+
 	if (bRanRoundTrip && RoundTripResult.bInspectSucceeded)
 	{
 		Validation->SetBoolField(TEXT("structurally_valid"), RoundTripResult.bStructuralMatch);

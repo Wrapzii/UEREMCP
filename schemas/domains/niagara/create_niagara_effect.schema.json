@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/niagara/create_niagara_effect.schema.json",
   "title": "create_niagara_effect specification",
-  "description": "Goal-level Niagara effect creation (POC B). Duplicate-and-modify from a template system; compose emitter archetypes; expose user parameters. Elemental variants are one parameterized family (pending ADR-0008), not per-element tools. Owned by WS-07.",
+  "description": "Goal-level Niagara effect creation (POC B). Duplicate-and-modify from a template system; compose emitter archetypes; expose user parameters. Use envelope mode replace for idempotent probes under /Game/__UeremcpTests/ only (ADR-0010 destructive tier). Elemental variants are one parameterized family (pending ADR-0008), not per-element tools. Owned by WS-07.",
   "type": "object",
   "required": ["effect_type"],
   "additionalProperties": false,

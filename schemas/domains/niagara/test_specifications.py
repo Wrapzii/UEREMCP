@@ -39,6 +39,7 @@ EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
     "partially_completed",
     "POC B",
     "post-create inspect",
+    "mode 'replace'",
 )
 
 
@@ -146,6 +147,23 @@ class NiagaraSpecificationTests(unittest.TestCase):
             set(expectations["validation_never_claims"]),
             {"created_and_validated", "modified_and_validated"},
         )
+
+    def test_create_replace_probe_fixture(self) -> None:
+        fixture = load_fixture("create_replace_probe.json")
+        request = fixture["request"]
+        self.assertEqual(request["mode"], "replace")
+        self.assertTrue(
+            request["target"]["asset_path"].startswith(
+                fixture["expectations"]["allowed_probe_root"]
+            )
+        )
+        expectations = fixture["expectations"]
+        for forbidden in expectations["forbidden_delete_paths"]:
+            self.assertFalse(
+                forbidden.startswith(expectations["allowed_probe_root"]),
+                "fixture must document paths outside probe root as forbidden",
+            )
+        self.assertIn("niagara.replace_delete_probe_asset", expectations["checks_when_replacing"])
 
 
 if __name__ == "__main__":

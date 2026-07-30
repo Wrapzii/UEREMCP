@@ -1,0 +1,35 @@
+{
+  "$comment": "Offline fixture: envelope mode replace for idempotent create_niagara_effect probes.",
+  "request": {
+    "protocol_version": "1.0",
+    "request_id": "ws07-create-replace-probe",
+    "action": "create_niagara_effect",
+    "mode": "replace",
+    "target": {
+      "asset_path": "/Game/__UeremcpTests/NS_WS07_RoundTripProbe"
+    },
+    "specification": {
+      "effect_type": "projectile",
+      "element": "fire",
+      "components": ["sparks", "impact_burst"],
+      "parameters": {
+        "primary_color": [1.0, 0.2, 0.05, 1.0],
+        "scale": 1.0,
+        "intensity": 6.0
+      }
+    },
+    "options": {
+      "dry_run": false,
+      "compile": true,
+      "validate": true,
+      "save": true
+    }
+  },
+  "expectations": {
+    "allowed_probe_root": "/Game/__UeremcpTests/",
+    "forbidden_delete_paths": ["/Game/VFX/NS_Fireball"],
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"],
+    "checks_when_replacing": ["niagara.replace_delete_probe_asset"],
+    "checks_when_no_existing": ["niagara.replace_no_existing_asset"]
+  }
+}
