@@ -1064,6 +1064,17 @@ TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 			const TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
 			Target->SetStringField(TEXT("asset_path"), TargetAssetPath);
 			TerminalOperation->SetObjectField(TEXT("target"), Target);
+			const TSharedPtr<FJsonObject>* TerminalSpecification = nullptr;
+			if (TerminalOperation->TryGetObjectField(
+					TEXT("specification"),
+					TerminalSpecification)
+				&& TerminalSpecification
+				&& (*TerminalSpecification)->HasField(TEXT("name")))
+			{
+				(*TerminalSpecification)->SetStringField(
+					TEXT("name"),
+					FPaths::GetBaseFilename(TargetAssetPath));
+			}
 		}
 		if (!Mode.IsEmpty())
 		{
