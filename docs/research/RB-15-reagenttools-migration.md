@@ -1,7 +1,7 @@
 # RB-15: REAgentTools disposition and migration
 
 - **Owner:** WS-02
-- **Status:** not_started
+- **Status:** in_progress — `execute_editor_batch` grammar delivered to WS-05
 - **Blocks:** the migration plan; prevents rebuilding working functionality
 - **Priority:** high
 
@@ -40,9 +40,9 @@ determine:
    `limits.py`, `properties.py`, `resolution.py` — what conventions are worth carrying
    into C++? The compact-result and limit conventions in particular were shaped by real
    token pressure and should inform `response_detail`.
-6. `execute_editor_batch` — 8 allowlisted actions, `$ref` chaining, `dry_run`. **This is
-   direct prior art for `schemas/batch/plan.schema.json`.** Document its `$ref` grammar
-   and its failure semantics; WS-05 is waiting on it before finalising the batch schema.
+6. `execute_editor_batch` — 8 allowlisted actions, `$ref` chaining, `dry_run`. **Delivered**
+   to WS-05 in `docs/audit/raw/q-reagenttools-execute-editor-batch.json` and
+   `docs/audit/reagenttools.md` `[VERIFIED: batch_workflow_tools.py 2026-07-29]`.
 7. `agent_policy.py` — what policy does it encode, and is any of it still right?
 8. `rc_bridge.py` / `_rc_reagent_exec.py` — the Remote Control fallback for when client
    MCP discovery fails. Is that failure mode still real? If so, we inherit it.
@@ -74,9 +74,10 @@ determine:
 
 ## Deliverables
 
-- [ ] `docs/audit/reagenttools.md` — per-toolset disposition matrix
+- [ ] `docs/audit/reagenttools.md` — per-toolset disposition matrix (batch row done)
 - [ ] A migration plan with an explicit cutover bar
-- [ ] The `execute_editor_batch` `$ref` grammar delivered to WS-05
+- [x] The `execute_editor_batch` `$ref` grammar delivered to WS-05
+      (`docs/audit/raw/q-reagenttools-execute-editor-batch.json`)
 - [ ] `NIAGARA_BATCHING.md` findings delivered to WS-07
 - [ ] Benchmark methodology delivered to WS-11
 - [ ] A "do not rebuild — this already works" list for all workstreams

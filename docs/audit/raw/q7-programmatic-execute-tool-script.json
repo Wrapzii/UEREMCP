@@ -1,0 +1,33 @@
+{
+  "question": "RB-02 q7: Does ProgrammaticToolset.execute_tool_script exist, and what does it accept?",
+  "answer": "YES — exists as an AICallable tool on ProgrammaticToolset (EditorToolset plugin).",
+  "verified_name": "editor_toolset.toolsets.programmatic.ProgrammaticToolset.execute_tool_script",
+  "alternate_dotted_names": [
+    "ProgrammaticToolset.execute_tool_script",
+    "EditorToolset.ProgrammaticToolset.execute_tool_script"
+  ],
+  "registration": "[VERIFIED: EditorToolset/Content/Python/editor_toolset/toolsets/__init__.py — ProgrammaticToolset in Registration list]",
+  "tools_on_class": {
+    "get_execution_environment": {
+      "purpose": "Returns language, allowed import modules, and agent instructions for scripting",
+      "returns": "ProgrammaticApiExecutionEnvironmentInfo",
+      "tag": "[VERIFIED: programmatic.py:887-902]"
+    },
+    "execute_tool_script": {
+      "input": {
+        "script": "str — Python source; MUST define callable run() returning dict[str, Any]"
+      },
+      "returns": "ToolCallAsyncResultString (async) — JSON-encoded dict from run() on success",
+      "sandbox": {
+        "execute_tool_builtin": "Calls any registered tool by dotted full name + JSON input string",
+        "allowed_imports": ["json", "math", "datetime", "copy", "re", "time"],
+        "restricted_open": "read-only under project_dir and project_saved_dir",
+        "transaction": "Wrapped in editor transaction; auto-undo on script failure unless committed",
+        "async": true
+      },
+      "tag": "[VERIFIED: programmatic.py:904-953]"
+    }
+  },
+  "disposition_for_ws05": "preserve as batching primitive — UEREMCP execute_plan should compose over execute_tool_script for Niagara/editor orchestration, not replace it",
+  "runtime_schema": "NOT OBTAINED — editor MCP offline; input inferred from Python annotations and docstring, not from describe_toolset JSON Schema dump"
+}

@@ -1,0 +1,8 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 1,
+  "cpp_tools": [
+    "CompileLiveCoding"
+  ]
+}

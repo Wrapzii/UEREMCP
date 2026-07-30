@@ -1,0 +1,16 @@
+{
+  "python_toolset_classes": {
+    "ConversationTools": [
+      "get_all_nodes",
+      "get_node_by_guid",
+      "get_node_connections",
+      "get_node_guids",
+      "get_sub_nodes",
+      "list_entry_points",
+      "list_speakers"
+    ]
+  },
+  "python_tool_count": 7,
+  "cpp_tool_count": 0,
+  "cpp_tools": []
+}

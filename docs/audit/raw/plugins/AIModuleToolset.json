@@ -1,0 +1,16 @@
+{
+  "python_toolset_classes": {
+    "BehaviorTreeTools": [
+      "get_blackboard",
+      "get_children",
+      "get_node_depth",
+      "get_node_depths",
+      "get_root_decorators",
+      "get_subtree",
+      "list_nodes"
+    ]
+  },
+  "python_tool_count": 7,
+  "cpp_tool_count": 0,
+  "cpp_tools": []
+}

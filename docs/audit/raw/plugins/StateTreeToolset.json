@@ -1,0 +1,18 @@
+{
+  "python_toolset_classes": {
+    "StateTreeTools": [
+      "get_children",
+      "get_editor_data",
+      "get_enter_conditions",
+      "get_evaluators",
+      "get_global_tasks",
+      "get_node_description",
+      "get_root_states",
+      "get_tasks",
+      "get_transitions"
+    ]
+  },
+  "python_tool_count": 9,
+  "cpp_tool_count": 0,
+  "cpp_tools": []
+}

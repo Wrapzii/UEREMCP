@@ -1,0 +1,9 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 2,
+  "cpp_tools": [
+    "GetConditionDescription",
+    "GetQueryDescription"
+  ]
+}

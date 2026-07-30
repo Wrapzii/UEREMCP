@@ -1,7 +1,7 @@
 # RB-02: Actual tool inventory of Epic's 27 toolsets
 
 - **Owner:** WS-02
-- **Status:** not_started
+- **Status:** complete (source-verified; runtime enumeration blocked — see `docs/audit/raw/runtime-negative-findings.json`)
 - **Blocks:** every domain workstream
 - **Priority:** highest — start immediately
 
@@ -71,10 +71,9 @@ Dump raw output to `docs/audit/raw/` so others can grep it without repeating the
 
 ## Deliverables
 
-- [ ] `docs/audit/epic-toolsets.md` — the capability matrix, one row per tool, with
-      the disposition columns from `docs/audit/_TEMPLATE-capability-matrix.md`
-- [ ] `docs/audit/raw/` — verbatim schema dumps
-- [ ] A short list: **tools that already do something goal-level** — the "do not
-      rebuild" list every domain workstream must read
-- [ ] A short list: **the real gaps** — where no Epic tool exists at all
-- [ ] Answers to 7 and 8 flagged directly to WS-05 and WS-06; they are blocked on them
+- [x] `docs/audit/epic-toolsets.md` — capability matrix + dispositions (source-verified; runtime schemas pending)
+- [x] `docs/audit/raw/` — source scan dumps, q7/q8 JSON, runtime negative findings, per-plugin JSON
+- [x] Do-not-rebuild list (in epic-toolsets.md)
+- [x] Real gaps list (in epic-toolsets.md)
+- [x] q7 and q8 answered for WS-05/WS-06 (see `docs/audit/raw/q7-*.json`, `q8-*.json`)
+- [ ] Runtime `describe_toolset` JSON Schema dumps — **blocked: editor MCP offline**

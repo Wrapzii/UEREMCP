@@ -1,0 +1,30 @@
+{
+  "python_toolset_classes": {
+    "SequencerAnimMixerTools": [
+      "add_animation_to_mixer",
+      "add_child_track_to_layer",
+      "add_decoration",
+      "add_mixer_layer",
+      "change_transition_type",
+      "find_decoration",
+      "get_compatible_decorations",
+      "get_decorations",
+      "get_layer_index",
+      "get_layer_name",
+      "get_layer_sections",
+      "get_mixer_layer_count",
+      "get_mixer_layers",
+      "get_transition_between",
+      "get_transition_info",
+      "get_transition_name",
+      "get_transitions_for_section",
+      "insert_mixer_layer",
+      "is_layer_empty",
+      "remove_decoration",
+      "set_layer_name"
+    ]
+  },
+  "python_tool_count": 21,
+  "cpp_tool_count": 0,
+  "cpp_tools": []
+}

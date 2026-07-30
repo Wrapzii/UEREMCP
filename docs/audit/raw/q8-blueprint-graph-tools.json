@@ -1,0 +1,24 @@
+{
+  "question": "RB-02 q8: What Blueprint graph/node tools does Epic already have, and how far do they get?",
+  "answer": "Epic ships a single BlueprintTools class (no separate BlueprintNodeTools). Graph authoring is extensive: primitive node ops plus read/write_graph_dsl round-trip.",
+  "verified_class": "editor_toolset.toolsets.blueprint.BlueprintTools",
+  "tool_count": 52,
+  "tag": "[VERIFIED: source-scan-summary.json EditorToolset.BlueprintTools + blueprint.py]",
+  "categories": {
+    "asset_lifecycle": ["create", "compile_blueprint", "get_default_object", "list_graphs", "get_graph", "get_parent", "set_parent"],
+    "functions_events": ["list_functions", "list_events", "add_function_graph", "add_event", "remove_function_graph", "add_function_param", "remove_function_param", "add_struct_function_param", "add_object_function_param", "add_component_bound_event", "list_component_events"],
+    "variables_dispatchers": ["add_variable", "add_struct_variable", "add_object_variable", "list_variables", "remove_variable", "set_variable_*", "get_variable_*", "add_event_dispatcher", "list_event_dispatchers"],
+    "graph_nodes_pins": ["create_node", "delete_node", "connect_pins", "break_pins", "set_pin_value", "get_pin_value", "add_node_pin", "remove_node_pin", "retarget_node_class", "set_node_position", "arrange_nodes", "find_nodes", "find_node_types", "find_node_categories", "get_node_infos", "get_connected_subgraph", "get_node_type_pins"],
+    "dsl_round_trip": ["get_graph_dsl_docs", "write_graph_dsl", "read_graph_dsl"],
+    "inspection": ["list_compatible_event_functions", "get_create_event_function", "set_create_event_function"]
+  },
+  "ceiling_assessment": {
+    "reaches": "Full EventGraph/function graph node authoring, pin wiring, variable/function scaffolding, compile, and S-expression DSL import/export with automatic compile after write_graph_dsl",
+    "write_graph_dsl": "[VERIFIED: blueprint.py:1454-1477 — transpiles DSL, compiles blueprint]",
+    "read_graph_dsl": "[VERIFIED: blueprint.py:1481-1502 — decompiles graph to DSL]",
+    "does_not_reach": "Stable cross-session graph JSON with revision/hash (DSL is text, node refs are UObject handles); envelope-shaped batch submit; verified round-trip status reporting; idempotency keys — UEREMCP ADR-0003/0004/0006 scope remains",
+    "ws06_implication": "WS-06 should compose over BlueprintTools + execute_tool_script rather than rebuild primitive node tools; POC A becomes DSL/graph-schema bridge + validation, not pin-by-pin authoring from scratch"
+  },
+  "reagenttools_claim_correction": "REAgentTools docs reference BlueprintTools AND BlueprintNodeTools — only BlueprintTools exists in UE 5.8 EditorToolset [VERIFIED: __init__.py Registration list has blueprint.BlueprintTools only]",
+  "runtime_verification": "NOT OBTAINED — no live describe_toolset schema dump or tool invocation"
+}

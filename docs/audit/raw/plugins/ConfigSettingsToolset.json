@@ -1,0 +1,15 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 8,
+  "cpp_tools": [
+    "GetSectionPropertyValues",
+    "GetSectionSchema",
+    "ListCategories",
+    "ListContainers",
+    "ListSections",
+    "ResetSectionToDefaults",
+    "SaveSection",
+    "SetSectionProperties"
+  ]
+}

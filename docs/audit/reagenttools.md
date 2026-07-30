@@ -1,8 +1,8 @@
 # Capability Matrix — REAgentTools
 
 - **Owner:** WS-02
-- **Status:** **SEED ONLY — not started.** Structure and verified layout recorded;
-  per-tool inventory and dispositions are the work.
+- **Status:** **in_progress** — `execute_editor_batch` grammar verified; full 15-toolset
+  matrix still pending.
 - **Source:** repository inspection of `$RAT` on 2026-07-29, plus the project's own
   `Docs/CAPABILITY_MATRIX.md` (**self-reported — treat as claims to verify**).
 - **Brief:** [RB-15](../research/RB-15-reagenttools-migration.md)
@@ -41,11 +41,84 @@ warning "ToolsetRegistry not available — enable ModelContextProtocol" on failu
 
 ---
 
+## `execute_editor_batch` — verified grammar (RB-15 q6 → WS-05)
+
+**Source:** `$RAT/Content/Python/re_agent_tools/toolsets/batch_workflow_tools.py`
+`[VERIFIED: read 2026-07-29]`. Machine-readable dump:
+`docs/audit/raw/q-reagenttools-execute-editor-batch.json`.
+
+### Tool signature
+
+| Param | Type | Default | Tag |
+|---|---|---|---|
+| `operations_json` | `str` | — | JSON array of op dicts `[VERIFIED: batch_workflow_tools.py:67,74]` |
+| `dry_run` | `bool` | `false` | `[VERIFIED: batch_workflow_tools.py:68]` |
+| `stop_on_error` | `bool` | `true` | `[VERIFIED: batch_workflow_tools.py:69]` |
+
+Returns compact JSON `WorkflowResult` string `[VERIFIED: results.py:30-73]`.
+
+### `$ref` resolution (`_resolve_ref`)
+
+| Rule | Detail | Tag |
+|---|---|---|
+| Syntax | String starting with `$` → prior step **id** (no braces) | `[VERIFIED: batch_workflow_tools.py:37-48]` |
+| Lookup | `step_results[step_id]` from earlier op with matching `"id"` | same |
+| Resolution order | Return `"label"` if present, else `"path"`, else error | same |
+| Literal | Strings not starting with `$` pass through unchanged | same |
+
+**Example:** `{"id":"a1","action":"spawn_actor",...}` then
+`{"action":"set_actor_transform","label":"$a1",...}` resolves label from step `a1`.
+
+Label fields accept aliases: `label` \| `actor_label` \| `name` \| `actor`
+`[VERIFIED: batch_workflow_tools.py:51-57]`.
+
+### `ALLOWED_ACTIONS` (exact set of 8)
+
+```
+resolve_actor | spawn_actor | set_actor_properties | set_actor_transform |
+save_level | compile_blueprint | set_asset_properties | save_asset
+```
+
+`[VERIFIED: batch_workflow_tools.py:17-26]`. Any other `action` → `ValueError`.
+
+### Limits and control flow
+
+| Control | Behaviour | Tag |
+|---|---|---|
+| `BATCH_LIMIT` | **20** ops max (`limits.py` + `DefaultREAgentTools.ini`); exceed → immediate error, no execution | `[VERIFIED: limits.py:11, batch_workflow_tools.py:75-81]` |
+| `dry_run` | Skips mutating ops with warnings; **`resolve_actor` still runs** | `[VERIFIED: batch_workflow_tools.py:105-197]` |
+| `stop_on_error` | On invalid op or `ResolutionError`/`ValueError`, stop remaining ops (default true) | `[VERIFIED: batch_workflow_tools.py:204-212]` |
+| Transaction | Single `ScopedEditorTransaction("RE execute_editor_batch")` wraps all ops | `[VERIFIED: transactions.py:12-14]` |
+
+### Disposition
+
+| Aspect | Disposition | Rationale |
+|---|---|---|
+| `$ref` grammar, allowlist, `dry_run`, `stop_on_error` | **preserve ideas** → WS-05 `execute_plan` schema | Proven prior art; do not invent incompatible grammar |
+| `execute_editor_batch` tool surface | **supersede** → UEREMCP `execute_plan` envelope action | ADR-0003 one-envelope-in/out |
+| REAgentTools implementation | **internalise** during migration; retire after cutover | Avoid duplicate agent-facing batch tools |
+
+### Relationship to Epic `execute_tool_script`
+
+| | REAgentTools `execute_editor_batch` | Epic `ProgrammaticToolset.execute_tool_script` |
+|---|---|---|
+| Input | JSON op array | Python `script` with `run()` |
+| Scope | 8 allowlisted RE editor ops | Any registered tool via `execute_tool()` |
+| Batching model | Declarative steps + `$ref` | Imperative script orchestration |
+| **UEREMCP stance** | Adopt `$ref`/allowlist semantics in `execute_plan` | **Compose, don't rebuild** — plan steps delegate Epic batches here |
+
+Niagara and other Epic domains batch through `execute_tool_script`, not
+`execute_editor_batch` `[VERIFIED: NIAGARA_BATCHING.md cited in GROUNDED_FACTS §6.2;
+programmatic.py:906-953]`.
+
+---
+
 ## Matrix — TO BE FILLED BY RB-15
 
 | Toolset | Tool | Purpose | Input | Output | Limitations | Altitude | Disposition | Superseded by | Tag |
 |---|---|---|---|---|---|---|---|---|---|
-| _empty_ | | | | | | | | | |
+| `batch_workflow` | `execute_editor_batch` | Allowlisted multi-op editor batch with `$ref` | `operations_json`, `dry_run`, `stop_on_error` | WorkflowResult JSON | 8 actions only; BATCH_LIMIT 20; resolve_actor not dry-run | composite | supersede surface / preserve grammar | `execute_plan` | [VERIFIED: batch_workflow_tools.py] |
+| _remaining 14 toolsets_ | | | | | | | defer | | |
 
 ---
 
