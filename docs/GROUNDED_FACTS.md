@@ -84,6 +84,37 @@ Free functions: `UE::ModelContextProtocol::GetServerUrlPath()`,
 This matches `$PROJ/.mcp.json`, which points a client at
 `http://127.0.0.1:8000/mcp` over `"type": "http"`.
 
+### 1.1a Transport shape (from RB-04 — do not re-derive)
+
+Epic MCP is **HTTP only** — no stdio in the plugin
+`[VERIFIED: ModelContextProtocolServer.h:23-24; grep $MCP — zero stdio matches]`.
+`tools/call` uses Streamable HTTP / SSE (`text/event-stream`); control methods
+return plain JSON `[VERIFIED: ModelContextProtocolServer.cpp:840-846, 892-895]`.
+GET on the MCP path returns 405 — no persistent push channel
+`[VERIFIED: ModelContextProtocolServer.cpp:1066-1075]`.
+
+Protocol versions include `2025-11-25` (also `2025-06-18`, `2024-11-05`)
+`[VERIFIED: ModelContextProtocol.h:19-28]`. Initialize advertises tools + resources
+`[VERIFIED: ModelContextProtocolServer.cpp:677-680]`.
+`IModelContextProtocolResourceProvider` is the public registration surface for
+`resources/list` / `resources/read`
+`[VERIFIED: IModelContextProtocolResourceProvider.h:30-33]`.
+
+Progress: heartbeat `notifications/progress` when the client supplies
+`progressToken` — monotonic integers, not percent-complete
+`[VERIFIED: ModelContextProtocolServer.cpp:1036-1057, 1052-1053]`.
+Cancellation: MCP `notifications/cancelled` calls `CancelAsync`, but the
+ToolsetRegistry adapter does **not** override it
+`[VERIFIED: ModelContextProtocolServer.cpp:717-719;
+ModelContextProtocolToolsetRegistryAdapter.h:13-26]`.
+No engine job IDs. Auth: Origin localhost guard; no bearer/token auth in the
+reviewed surface. Client configs bind `127.0.0.1`
+`[VERIFIED: ModelContextProtocolClientConfig.cpp:158]`.
+
+**Implication:** long work uses the UEREMCP poll-after-timeout job model
+(`ADR-0009`), not a second transport. Handoff JSON:
+`Plugins/UEREMCP/Source/UeremcpTransport/constraints/transport_job_handoff.json`.
+
 ### 1.2 Tool search already exists — §2.9 of the master prompt is partly solved
 
 Verbatim from `ModelContextProtocolSettings.h`:
@@ -440,11 +471,10 @@ a repudiation of it.
 Everything here is an open question, not a gap in the file. Do not fill these in
 from memory — they are assigned in `research/`.
 
-1. Whether `ModelContextProtocol` supports stdio, or HTTP only. (`RB-04`)
-2. Whether progress reporting / cancellation / job IDs exist for long tool calls,
-   beyond a bare `TFuture`. (`RB-04`)
-3. What authentication, if any, the HTTP server performs. Assume **none** until
-   proven. (`RB-13`)
+1. ~~Whether `ModelContextProtocol` supports stdio, or HTTP only.~~ **Closed by RB-04:** HTTP/SSE only; no stdio. See §1.1a / `ADR-0009`.
+2. ~~Whether progress / cancellation / job IDs exist for long tool calls.~~ **Closed by RB-04:** heartbeat progress; MCP cancel unwired to ToolsetRegistry; no engine job IDs — UEREMCP poll model (`ADR-0009`).
+3. What authentication, if any, the HTTP server performs beyond the Origin localhost
+   guard noted in §1.1a. Full bind/exposure check remains (`RB-13`).
 4. Whether `RunOnMainThread.h` and other `Private` ToolsetRegistry headers are
    usable from an out-of-tree plugin, or need a public equivalent. (`RB-03`)
 5. Exact tool inventory, schemas, and result shapes of each Epic toolset —

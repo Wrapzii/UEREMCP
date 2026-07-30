@@ -40,7 +40,7 @@ they are, because all four can invalidate Phase 2 work.
 | Blueprint graph **read** into `graph.schema.json` | WS-06 | R-01 (half) |
 | Envelope parse/serialise/validate in C++ | WS-05 | — |
 | Test harness, one passing integration test | WS-11 | R-14 |
-| Transport capabilities and job model constraints | WS-04 | R-11 |
+| Transport capabilities and job model constraints | WS-04 | R-11 (partial — ADR-0009 accepted; modal companion still WS-12) |
 
 This phase is deliberately all *executable* deliverables. Phase 1 producing only
 documents is R-15 materialising.

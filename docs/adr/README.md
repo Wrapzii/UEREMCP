@@ -28,15 +28,14 @@ later agent reading the code does not "fix" a deliberate choice.
 | [0004](ADR-0004-graph-representation.md) | Complete graph representation and exchange | Accepted |
 | [0005](ADR-0005-transactions-rollback.md) | Transactions, sandboxing, and rollback | Accepted |
 | [0006](ADR-0006-idempotency-revisions.md) | Idempotency, revisions, and conflict handling | Accepted |
-| 0007 | Implementation language for domain services (C++ vs Python split) | **Proposed** — needs RB-03 |
-| 0008 | Template & pattern library substrate (`UAgentSkill` or bespoke) | **Proposed** — needs RB-10 |
-| 0009 | Long-running job model (progress, cancellation, resumption) | **Proposed** — needs RB-04 |
-| 0010 | Security model and permission tiers | **Proposed** — needs RB-13 |
+| 0007 | Implementation language for domain services (C++ vs Python split) | **Unwritten** — needs RB-03 |
+| 0008 | Template & pattern library substrate (`UAgentSkill` or bespoke) | **Unwritten** — needs RB-10 |
+| [0009](ADR-0009-long-running-jobs.md) | Long-running job model (progress, cancellation, resumption) | **Accepted** |
+| 0010 | Security model and permission tiers | **Unwritten** — needs RB-13 |
 
-ADRs 0007–0010 are deliberately unwritten. They depend on research findings that do
-not exist yet, and writing them now would mean guessing. The research briefs that
-unblock each one are named above. **WS-01 writes them once the brief lands** —
-no other workstream should assume an answer in the meantime.
+ADR-0009 is written from RB-04. ADRs 0007, 0008, and 0010 stay unwritten until
+their blocking briefs land — **WS-01 writes them then**; no other workstream should
+assume an answer in the meantime.
 
 ## Challenging a frozen ADR
 
