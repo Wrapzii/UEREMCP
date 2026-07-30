@@ -46,3 +46,10 @@ WS-03 must register `UeremcpValidation`. WS-11 must collapse probe duplication a
 re-run with `UEREMCP` enabled, committing a redacted log. Until then,
 `rollback.available: true` stays limited to the FileSandbox Content/`Discard`
 engine path and must not imply the shipping plugin gate passed.
+
+### Update 2026-07-29 (partially resolved)
+
+WS-11 `a63b69e`: probe collapsed to launch-smoke; Rollback SoT only in
+`UeremcpValidation`. Shipping re-run failed — `UeremcpProtocol.dll` missing
+(Validation.dll also absent) despite uplugin registration. Escalated to WS-03
+as a **build/link** blocker, not a registration-text blocker.

@@ -12,18 +12,22 @@ Wave 1 blocker for every other workstream.
 # Fast, no editor — run this always
 python tests/run_unit_tests.py
 
-# Editor automation (UnrealEditor-Cmd). Defaults disable broken UEREMCP and enable
-# the interim UeremcpValidationProbe plugin. Filter examples:
-pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Harness.Smoke"
-pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Rollback.MultiAssetDiscard"
-pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library"
+# Shipping path (UEREMCP enabled; needs Protocol+Validation DLLs):
+pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"
+
+# Interim probe launch-smoke only (not the shipping Rollback gate — C-3):
+pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.ValidationProbe.Launch.Smoke"
+
+# Engine FileSandbox lifecycle (Epic):
+pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library" -NoProbe
 ```
 
-Logs land in `tests/integration/_logs/` (gitignored). Scratch assets only under
-`/Game/__UeremcpTests/` with `FUeremcpScratchGuard` cleanup — see RB-14.
+**SoT for Rollback:** `Plugins/UEREMCP/Source/UeremcpValidation/.../RollbackMultiAssetDiscard.spec.cpp`  
+Raw logs gitignored; redacted notes may live under `tests/integration/_logs/*.redacted.md`.  
+Scratch: `/Game/__UeremcpTests/` + `FUeremcpScratchGuard` — see RB-14.
 
-Until `Rollback.MultiAssetDiscard` is observed green, **`rollback.available` stays
-`false`** (ADR-0005). Do not claim atomic multi-asset rollback from source reading alone.
+Until the **shipping** gate is green with UEREMCP enabled, **`rollback.available` stays
+`false`** (ADR-0005 + C-3). Engine probe evidence alone is not enough.
 
 ## Layout
 

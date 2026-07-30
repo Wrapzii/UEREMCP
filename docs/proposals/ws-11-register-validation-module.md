@@ -3,15 +3,15 @@
 - **From:** WS-11
 - **To:** WS-03 (owns `Plugins/UEREMCP/UEREMCP.uplugin`)
 - **Date:** 2026-07-29
-- **Blocks:** editor execution of `UEREMCP.Validation.*` automation tests
+- **Status:** **uplugin registration observed** in RE junction (`UEREMCP-ws03`);
+  **shipping gate still blocked** on missing module binaries (see below)
 
-## Ask
+## Ask (original)
 
 Add an Editor module entry for `UeremcpValidation` to `UEREMCP.uplugin`, and ensure
-the plugin dependency list enables `FileSandbox` (or relies on ToolsetRegistry's
-existing dependency) so `FGlobalSandbox` is available at runtime.
+FileSandbox is available (direct or via ToolsetRegistry).
 
-Suggested module block (mirror existing Editor modules):
+Suggested module block — **now present** in the live RE plugin uplugin:
 
 ```json
 {
@@ -22,59 +22,42 @@ Suggested module block (mirror existing Editor modules):
 }
 ```
 
-Also add to `Plugins` if not already pulled transitively:
+FileSandbox plugin dependency also present. Thank you WS-03.
 
-```json
-{ "Name": "FileSandbox", "Enabled": true }
+## Remaining shipping blocker (2026-07-29)
+
+`-KeepUeremcp -NoProbe` still aborts before Automation:
+
+```text
+Plugin 'UEREMCP' failed to load because module 'UeremcpProtocol' could not be found.
 ```
 
-(Confirm whether ToolsetRegistry already enables FileSandbox — it declares the
-dependency `[VERIFIED: ToolsetRegistry.uplugin per GROUNDED_FACTS / ADR-0005]`.
-If transitive enablement works in RE, the explicit FileSandbox line is optional.)
+`UnrealEditor-UeremcpProtocol.dll` and `UnrealEditor-UeremcpValidation.dll` are
+absent from `Plugins/UEREMCP/Binaries/Win64/` while Core/Transport DLLs exist.
+Details: `tests/integration/_logs/shipping-gate-blocker.redacted.md`.
 
-## Why
+**Source of truth** for the Rollback test remains WS-11's tree:
+`Plugins/UEREMCP/Source/UeremcpValidation/**` (do not fork the test body into the
+probe). WS-03 may vendor a copy for the junction build; please prefer syncing from
+ws-11 / main after merge so CurveFloat + C-3 docs stay current.
 
-WS-11 owns `Plugins/UEREMCP/Source/UeremcpValidation/**` and has landed:
+## Interim (honest)
 
-- scratch-path helpers
-- `UEREMCP.Validation.Harness.Smoke`
-- `UEREMCP.Validation.Rollback.MultiAssetDiscard` (ADR-0005 gate)
+Probe plugin is **launch-smoke only** (`UEREMCP.ValidationProbe.Launch.Smoke`).
+Earlier probe Rollback green = **engine** FileSandbox evidence (C-3), not the
+shipping UEREMCP gate.
 
-Without uplugin registration the module never loads and the Wave 1 harness cannot
-run inside RE. WS-11 cannot edit the uplugin (ownership).
+```powershell
+# Shipping (when Protocol+Validation DLLs load):
+pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"
+
+# Interim:
+pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.ValidationProbe.Launch.Smoke"
+```
 
 ## Response
 
-**Accepted; assigned to WS-03.** Register `UeremcpValidation` in `UEREMCP.uplugin`
-once `Plugins/UEREMCP/Source/UeremcpValidation/**` is present (merge/checkout from
-`ws-11-validation` if needed). Probe plugin remains interim only.
-
-## Interim workaround (already in tree)
-
-Until this lands, WS-11 ships a standalone probe plugin under
-`tests/integration/editor_plugin/UeremcpValidationProbe/` (junctioned into
-`$PROJ/Plugins/UeremcpValidationProbe`, `EnabledByDefault: false`).
-`tests/run_editor_tests.ps1` defaults to:
-
-```text
--DisablePlugins=UEREMCP -EnablePlugins=UeremcpValidationProbe
-```
-
-so Cmd can start even when `UeremcpCore` is missing. That is a **temporary** path;
-permanent registration here is still required so domain WSs run validation tests
-without the probe.
-
-Observed blocker without the workaround (2026-07-29):  
-`Plugin 'UEREMCP' failed to load because module 'UeremcpCore' could not be found`
-— editor aborts before Automation RunTests.
-
-## What WS-11 will do once registered
-
-Rebuild RE with the module, run with `-KeepUeremcp` (or drop DisablePlugins):
-
-```powershell
-pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Harness.Smoke" -KeepUeremcp
-pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Rollback.MultiAssetDiscard" -KeepUeremcp
-```
-
-and publish runtime q1/q3 verdicts into `docs/research/RB-06-sandbox-and-rollback.md`.
+**Accepted; registration alone is insufficient.** WS-03 must produce linkable
+`UeremcpProtocol` and `UeremcpValidation` binaries (sources already on
+`ws-01-orch`). Until `-KeepUeremcp -NoProbe` runs `Rollback.MultiAssetDiscard`
+green, keep `rollback.available: false` for the shipping-plugin claim.

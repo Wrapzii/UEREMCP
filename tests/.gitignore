@@ -1,2 +1,10 @@
-# Editor Cmd logs — keep locally, never commit (large, machine-specific).
-integration/_logs/
+# Editor Cmd logs — large/machine-specific by default.
+integration/_logs/*
+# Allow small redacted status notes committed for blockers / shipping-gate evidence.
+!integration/_logs/*.redacted.md
+!integration/_logs/README.md
+
+# Probe plugin build outputs (local only).
+integration/editor_plugin/**/Binaries/
+integration/editor_plugin/**/Intermediate/
+integration/editor_plugin/**/DerivedDataCache/

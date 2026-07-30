@@ -121,6 +121,8 @@ path** (2026-07-29) for N× Content/`UCurveFloat` creates → Discard+Leave
 
 This proves FileSandbox semantics for Content/ full-`Discard`. It does **not**
 yet prove the shipping `UEREMCP` plugin graph loads and runs the same test.
-`rollback.available` may report `true` only for that scoped engine path; keep
-`false` / degraded for BP compile artifacts, deletions, non-mount paths, and
-until a green run with `UEREMCP` enabled is committed.
+**Report `rollback.available: false` for shipping-plugin claims** until
+`-KeepUeremcp -NoProbe` greens `Rollback.MultiAssetDiscard`
+(`[VERIFIED-RUNTIME` blocker: `UeremcpProtocol` module DLL missing —
+`tests/integration/_logs/shipping-gate-blocker.redacted.md`]). Engine-path
+evidence remains valid separately.

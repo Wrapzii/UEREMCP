@@ -4,16 +4,21 @@
 - **To:** WS-01 (owns ADRs)
 - **Date:** 2026-07-29
 - **Related:** ADR-0005, RB-06
-- **Status:** evidence update — **gate green** for Content/ adds; continue against accepted design
+- **Status:** C-3 nuance — engine evidence green; **shipping UEREMCP gate unproven**
 
 ## Verdict on ADR-0005
 
 **Do not replace ADR-0005.** The two-layer design (`FGlobalSandbox` + editor
 transactions) still matches the engine surface.
 
-`Rollback.MultiAssetDiscard` is **observed green** (2026-07-29) for N× Content/
-`UCurveFloat` creates → Discard+Leave. WS-05 may set `rollback.available: true`
-for that scoped path. Supplement hazards below; do not claim BP compile / deletion /
+**Engine** `Rollback.MultiAssetDiscard` path is **observed green** (2026-07-29) for
+N× Content/`UCurveFloat` creates → Discard+Leave (interim probe; UEREMCP disabled).
+Per WS-14 **C-3** (accepted by WS-01), that proves FileSandbox **engine** semantics
+only — **not** the shipping UEREMCP plugin gate.
+
+Until `UEREMCP.Validation.Rollback.MultiAssetDiscard` is green with UEREMCP
+enabled (`-KeepUeremcp -NoProbe`), keep product `rollback.available: false` (or
+explicitly degraded). Supplement hazards below; do not claim BP compile / deletion /
 `Saved|Config` coverage yet.
 
 Full evidence in `docs/research/RB-06-sandbox-and-rollback.md`.
@@ -56,9 +61,10 @@ must detect `IsActive()` and refuse or serialize — agrees with ADR-0005 rule 3
 
 ## Recommended supplements (for WS-05 batch executor)
 
-1. `rollback.available: true` is allowed for the **proven** Content/ package-save +
-   full-`Discard` path (gate green 2026-07-29). Keep false/degraded for BP compile
-   artifacts, deletions, and non-mount paths until gated.
+1. Keep `rollback.available: false` until the **shipping** UEREMCP Validation gate
+   is green (C-3). Engine FileSandbox evidence alone is insufficient for the product
+   flag. After shipping green, still degrade for BP compile / deletions / non-mount
+   paths until those are gated.
 2. Prefer `Discard()` (full) over `DiscardFiles()` for failure rollback, **or**
    after `DiscardFiles` explicitly purge/hot-reload the returned package sets.
 3. Derive `changes` from `GetChanges()` as ADR-0005 says, but **supplement**

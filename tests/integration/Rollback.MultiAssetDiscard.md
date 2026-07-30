@@ -1,12 +1,17 @@
 # Rollback.MultiAssetDiscard
 
-**Owner:** WS-11. **Gates:** ADR-0005 `rollback.available` (must stay `false` until this passes).
+**Owner:** WS-11. **Gates:** ADR-0005 shipping `rollback.available` for UEREMCP.
 
-## Automation test name
+## Single source of truth
 
-`UEREMCP.Validation.Rollback.MultiAssetDiscard`
+| Item | Path |
+|---|---|
+| Automation name | `UEREMCP.Validation.Rollback.MultiAssetDiscard` |
+| **Implementation** | `Plugins/UEREMCP/Source/UeremcpValidation/Private/Tests/RollbackMultiAssetDiscard.spec.cpp` |
+| Module | `UeremcpValidation` (must be registered in `UEREMCP.uplugin` — WS-03) |
 
-Source: `Plugins/UEREMCP/Source/UeremcpValidation/Private/Tests/RollbackMultiAssetDiscard.spec.cpp`
+The interim `UeremcpValidationProbe` plugin **does not** contain this test body
+(C-3). Probe launch-smoke is unrelated to the shipping gate.
 
 ## What it asserts
 
@@ -26,19 +31,19 @@ Source: `Plugins/UEREMCP/Source/UeremcpValidation/Private/Tests/RollbackMultiAss
 - Root: `/Game/__UeremcpTests/` only
 - `FUeremcpScratchGuard` deletes the suite on scope exit even if the test fails
 
-## How to run
+## How to run (shipping path)
 
 ```powershell
-pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Rollback.MultiAssetDiscard"
+pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation.Rollback.MultiAssetDiscard"
 ```
 
-Requires `UeremcpValidation` registered and built (proposal: `docs/proposals/ws-11-register-validation-module.md`).
+Requires `UeremcpValidation` registered and built (proposal: `docs/proposals/ws-11-register-validation-module.md`) and a loadable `UeremcpCore`.
 
-## Status
+## Status (C-3 nuance)
 
-**Observed green** 2026-07-29 via `pwsh tests/run_editor_tests.ps1 -Filter UEREMCP.Validation`
-(probe plugin; `-DisablePlugins=UEREMCP`). Log lines: `Q1 POSITIVE`, `Q3 POSITIVE`,
-`Result={Success}` for both Smoke and MultiAssetDiscard.
+| Claim | Status |
+|---|---|
+| **Engine** FileSandbox q1/q3 (Content/ CurveFloat adds) | Observed green 2026-07-29 via interim probe path (`-DisablePlugins=UEREMCP`). Valid as engine semantics. |
+| **Shipping** UEREMCP plugin gate (Validation module under enabled UEREMCP) | **Not proven.** Blocked — see `tests/integration/_logs/shipping-gate-blocker.redacted.md`. |
 
-See `docs/research/RB-06-sandbox-and-rollback.md` for scoped claims and remaining gaps
-(BP compile, deletions, Config/Saved).
+See `docs/research/RB-06-sandbox-and-rollback.md`.
