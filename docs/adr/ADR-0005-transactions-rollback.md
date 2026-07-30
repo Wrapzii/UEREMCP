@@ -114,10 +114,13 @@ full-`Discard` path. See `docs/proposals/ws-11-adr-0005-sandbox-semantics.md`.
 
 ## Verification
 
-Integration test `Rollback.MultiAssetDiscard`: **PASSING** (2026-07-29) for N×
-Content/`UCurveFloat` creates → Discard+Leave
-`[VERIFIED-RUNTIME: UnrealEditor-Cmd UEREMCP.Validation]`.
+Integration test `Rollback.MultiAssetDiscard`: **PASSING on FileSandbox engine
+path** (2026-07-29) for N× Content/`UCurveFloat` creates → Discard+Leave
+`[VERIFIED-RUNTIME: UnrealEditor-Cmd via UeremcpValidationProbe with
+-DisablePlugins=UEREMCP — WS-14 C-3]`.
 
-`rollback.available` may report `true` for that scoped path; keep `false` /
-degraded for BP compile artifacts, deletions, and non-mount paths until those
-gates pass.
+This proves FileSandbox semantics for Content/ full-`Discard`. It does **not**
+yet prove the shipping `UEREMCP` plugin graph loads and runs the same test.
+`rollback.available` may report `true` only for that scoped engine path; keep
+`false` / degraded for BP compile artifacts, deletions, non-mount paths, and
+until a green run with `UEREMCP` enabled is committed.
