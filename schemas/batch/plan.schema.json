@@ -127,14 +127,13 @@
           }
         },
         {
-          "id": "spell",
-          "action": "create_spell",
+          "id": "ability",
+          "action": "create_gameplay_ability",
           "depends_on": ["niagara"],
           "specification": {
-            "name": "Fireball_Ueremcp",
-            "element": "Fire",
-            "projectile_effect": { "$ref": "niagara.result.primary_asset" },
-            "networking": { "pattern": "B", "authority": "server" }
+            "name": "GA_Fireball",
+            "cue_effect": { "$ref": "niagara.result.primary_asset" },
+            "networking": { "authority": "server", "replicated": true }
           }
         }
       ],

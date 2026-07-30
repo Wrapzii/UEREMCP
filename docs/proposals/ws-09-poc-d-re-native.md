@@ -44,9 +44,9 @@ Phase 4 implementation waits on acceptance.
 
 - `docs/POC_ACCEPTANCE.md` POC D rewritten for RE magecraft (`create_spell` /
   `upsert_ability_row`, Pattern B, no textbook GA/GE).
-- `schemas/examples/batch-fireball-ability.json` and the embedded
-  `plan.schema.json` example updated accordingly (test paths under
-  `/Game/__UeremcpTests/`).
+- `schemas/examples/batch-fireball-ability.json` updated (test paths under
+  `/Game/__UeremcpTests/`). Embedded `plan.schema.json` example left to WS-05
+  via `ws-01-plan-example-create-spell.md`.
 - Elemental variants stay one parameterized family (ADR-0008).
 
 Domain schemas under `schemas/domains/gameplay/**` remain WS-09 Wave 3
