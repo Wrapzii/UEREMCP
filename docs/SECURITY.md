@@ -90,9 +90,12 @@ Plan destructive work with a dry run first; opt out only deliberately.
 
 ### Concurrency
 
-`FUeremcpMutatorQueue` (Wave 2) serialises `write|destructive|unsafe` — one active
-mutator per project. `read` tools stay concurrent. Waiters compose with ADR-0009 job
-poll handles.
+`FUeremcpMutatorQueue` serialises `write|destructive|unsafe` FIFO — one active
+mutator per normalized project key. `read` bypasses the queue. A waiter receives a
+stable job id and claims the slot by retrying after the prior owner releases it
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp]`.
+Core/Transport still must map that id into ADR-0009 polling; see
+`docs/proposals/ws-12-core-security-dispatcher-gate.md`.
 
 ### Forbidden patterns
 
@@ -110,6 +113,11 @@ Fields: timestamp, `request_id`, `idempotency_key`, action, mode, status, target
 created/modified/deleted lists, `dry_run`, tier, revision before/after, project path
 (RB-13 B8).
 
+Writes are process-serialized, directory creation is recursive, each record is
+condensed JSON followed by one newline, and file writes use append mode
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpAuditLog.cpp;
+FFileHelper.h:196; FileManager.h:20,122]`.
+
 ## Module map
 
 | Component | Role |
@@ -117,11 +125,52 @@ created/modified/deleted lists, `dry_run`, tier, revision before/after, project 
 | `UUeremcpSecuritySettings` | Project tiers, `bAllowUnsafe`, audit retention |
 | `FUeremcpPathPolicy` | Soft + filesystem roots |
 | `FUeremcpPermissionPolicy` | Tier + destructive dry_run gate |
-| `FUeremcpMutatorQueue` | Single active writer (stub) |
-| `FUeremcpAuditLog` | JSONL writer (stub) |
+| `FUeremcpMutatorQueue` | Per-project FIFO single active mutator |
+| `FUeremcpAuditLog` | Append-only daily JSONL writer + retention prune |
 
-Registration in `UEREMCP.uplugin` is pending — see
-`docs/proposals/ws-12-register-security-module.md` (WS-03).
+Registration in `UEREMCP.uplugin` landed in WS-03 merge `9148d52`
+`[VERIFIED: docs/proposals/ws-12-register-security-module.md:60-63]`.
+Core dispatcher integration remains open:
+`docs/proposals/ws-12-core-security-dispatcher-gate.md`.
+
+## WS-09 Gameplay integration surface
+
+Gameplay DataTable mutators should add `UeremcpSecurity` as a private module
+dependency, then use this sequence around the complete write/verify/audit operation:
+
+```cpp
+const FString ProjectKey = Request.ProjectPath;
+const FString RequestId = Request.RequestId;
+const auto Acquire = FUeremcpMutatorQueue::TryAcquire(
+	ProjectKey, RequestId, EUeremcpPermissionTier::Write);
+if (!Acquire.bAcquired)
+{
+	// With ADR-0009 job wiring: return partially_completed using Acquire.JobId.
+	// Without job wiring: CancelQueued(ProjectKey, RequestId) and reject as busy.
+}
+
+// Hold ownership through DataTable write, save, re-read verification, and audit.
+// Use scope-exit so every terminal path calls:
+FUeremcpMutatorQueue::Release(ProjectKey, RequestId);
+```
+
+Before acquisition, call `FUeremcpPermissionPolicy::Evaluate` and
+`FUeremcpPathPolicy::ValidateSoftPath`; use the verdict's required tier rather than
+hard-coding `Write` if a future Gameplay mode can delete or replace existing content
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpPermissionPolicy.h;
+Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpPathPolicy.h]`.
+
+After verification, populate `FUeremcpAuditRecord` with the terminal status and
+created/modified/deleted asset lists, then call
+`FUeremcpAuditLog::Append(Record, FUeremcpPathPolicy::RootsFromProject(), Error)`.
+Append failure must be surfaced; it must not be reported as an audited success
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpAuditLog.h]`.
+
+Queued requests are FIFO and retain the same job id across retries. If WS-09 cannot
+yet register the waiter with the ADR-0009 job registry, it must call `CancelQueued`
+before returning a terminal busy rejection so an abandoned waiter cannot block later
+writes
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp]`.
 
 ## Tests
 

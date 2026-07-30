@@ -1,6 +1,4 @@
 // UEREMCP — append-only audit trail (ADR-0010 §3.6, RB-13 B8).
-//
-// TODO (Wave 2): JSONL writer, rotation, retention prune.
 
 #pragma once
 
@@ -38,12 +36,11 @@ public:
 	/** Daily file name pattern: YYYY-MM-DD.jsonl */
 	static FString DailyLogFileName(const FDateTime& UtcNow = FDateTime::UtcNow());
 
-	/** Returns false until JSONL append is implemented (stub locks API). */
 	static bool IsImplemented();
 
-	/** Append one record. TODO: create directory, append JSON line, fsync best-effort. */
+	/** Append exactly one condensed JSON object and newline to the daily log. */
 	static bool Append(const FUeremcpAuditRecord& Record, const FUeremcpPathPolicyRoots& Roots, FString& OutError);
 
-	/** Delete files older than RetentionDays. TODO: implement prune. */
+	/** Delete daily JSONL files whose modification time is outside retention. */
 	static int32 PruneOlderThanDays(int32 RetentionDays, const FUeremcpPathPolicyRoots& Roots);
 };

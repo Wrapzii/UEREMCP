@@ -10,8 +10,15 @@
 #include "UeremcpPermissionPolicy.h"
 #include "UeremcpSecuritySettings.h"
 
+#include "Async/ParallelFor.h"
+#include "Dom/JsonObject.h"
+#include "HAL/FileManager.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
 #include "Misc/Paths.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -135,21 +142,130 @@ bool FUeremcpSecurityPermissionPolicyDryRunTest::RunTest(const FString& Paramete
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FUeremcpSecurityStubApiTest,
-	"UEREMCP.Security.Stubs.ApiSurface",
+	FUeremcpSecurityMutatorQueueTest,
+	"UEREMCP.Security.MutatorQueue.SerializesMutators",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FUeremcpSecurityStubApiTest::RunTest(const FString& Parameters)
+bool FUeremcpSecurityMutatorQueueTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
 
-	TestFalse(TEXT("mutator queue not implemented"), FUeremcpMutatorQueue::IsImplemented());
-	const auto Acquire = FUeremcpMutatorQueue::TryAcquire(TEXT("req-1"), EUeremcpPermissionTier::Write);
-	TestFalse(TEXT("mutator acquire fails until wired"), Acquire.bAcquired);
-	TestFalse(TEXT("mutator inactive"), FUeremcpMutatorQueue::IsActive());
+	const FString ProjectA = TEXT("C:/Projects/RE/RE.uproject");
+	const FString ProjectB = TEXT("C:/Projects/Other/Other.uproject");
+	const FString ProjectC = TEXT("C:/Projects/Parallel/Parallel.uproject");
+	TestTrue(TEXT("mutator queue implemented"), FUeremcpMutatorQueue::IsImplemented());
 
-	TestFalse(TEXT("audit log not implemented"), FUeremcpAuditLog::IsImplemented());
-	const FUeremcpPathPolicyRoots Roots = UeremcpSecurityTest::TestRoots();
+	const auto Read = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("read-1"), EUeremcpPermissionTier::Read);
+	TestTrue(TEXT("read bypasses queue"), Read.bAcquired);
+	TestFalse(TEXT("read does not activate mutator"), FUeremcpMutatorQueue::IsActive(ProjectA));
+
+	const auto Writer1 = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-1"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("first writer acquires"), Writer1.bAcquired);
+	TestTrue(TEXT("project A active"), FUeremcpMutatorQueue::IsActive(ProjectA));
+
+	const auto Writer1Again = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-1"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("owner reacquire is idempotent"), Writer1Again.bAcquired);
+
+	const auto Writer2 = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-2"), EUeremcpPermissionTier::Destructive);
+	TestFalse(TEXT("second writer waits"), Writer2.bAcquired);
+	TestTrue(TEXT("second writer queued"), Writer2.bQueued);
+	TestFalse(TEXT("queued writer gets job id"), Writer2.JobId.IsEmpty());
+
+	const auto Writer2Again = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-2"), EUeremcpPermissionTier::Destructive);
+	TestEqual(TEXT("queued retry keeps job id"), Writer2Again.JobId, Writer2.JobId);
+
+	const auto Writer3 = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-3"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("third writer queued"), Writer3.bQueued);
+	TestEqual(TEXT("two pending writers"), FUeremcpMutatorQueue::PendingCount(ProjectA), 2);
+
+	const auto OtherProjectWriter = FUeremcpMutatorQueue::TryAcquire(
+		ProjectB, TEXT("other-1"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("different project has independent slot"), OtherProjectWriter.bAcquired);
+	TestTrue(TEXT("release other project"), FUeremcpMutatorQueue::Release(ProjectB, TEXT("other-1")));
+
+	constexpr int32 ContenderCount = 8;
+	TArray<FUeremcpMutatorQueue::FAcquireResult> ConcurrentResults;
+	ConcurrentResults.SetNum(ContenderCount);
+	ParallelFor(ContenderCount, [&ConcurrentResults, &ProjectC](int32 Index)
+	{
+		ConcurrentResults[Index] = FUeremcpMutatorQueue::TryAcquire(
+			ProjectC,
+			FString::Printf(TEXT("parallel-%d"), Index),
+			EUeremcpPermissionTier::Write);
+	});
+
+	int32 ConcurrentAcquired = 0;
+	int32 ConcurrentQueued = 0;
+	FString ConcurrentOwner;
+	for (int32 Index = 0; Index < ConcurrentResults.Num(); ++Index)
+	{
+		if (ConcurrentResults[Index].bAcquired)
+		{
+			++ConcurrentAcquired;
+			ConcurrentOwner = FString::Printf(TEXT("parallel-%d"), Index);
+		}
+		if (ConcurrentResults[Index].bQueued)
+		{
+			++ConcurrentQueued;
+		}
+	}
+	TestEqual(TEXT("concurrent contenders produce one owner"), ConcurrentAcquired, 1);
+	TestEqual(TEXT("remaining concurrent contenders queue"), ConcurrentQueued, ContenderCount - 1);
+	TestTrue(TEXT("concurrent owner releases"), FUeremcpMutatorQueue::Release(ProjectC, ConcurrentOwner));
+	for (int32 Index = 0; Index < ContenderCount; ++Index)
+	{
+		const FString RequestId = FString::Printf(TEXT("parallel-%d"), Index);
+		if (RequestId != ConcurrentOwner)
+		{
+			TestTrue(TEXT("queued contender cancels"), FUeremcpMutatorQueue::CancelQueued(ProjectC, RequestId));
+		}
+	}
+
+	TestFalse(TEXT("non-owner cannot release"), FUeremcpMutatorQueue::Release(ProjectA, TEXT("write-2")));
+	TestTrue(TEXT("owner releases"), FUeremcpMutatorQueue::Release(ProjectA, TEXT("write-1")));
+	TestFalse(TEXT("release leaves slot unclaimed"), FUeremcpMutatorQueue::IsActive(ProjectA));
+
+	const auto Writer3Early = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-3"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("later waiter remains queued"), Writer3Early.bQueued);
+
+	const auto Writer2Promoted = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-2"), EUeremcpPermissionTier::Destructive);
+	TestTrue(TEXT("FIFO head acquires after release"), Writer2Promoted.bAcquired);
+	TestTrue(TEXT("second writer releases"), FUeremcpMutatorQueue::Release(ProjectA, TEXT("write-2")));
+
+	const auto Writer3Promoted = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("write-3"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("third writer acquires next"), Writer3Promoted.bAcquired);
+	TestTrue(TEXT("third writer releases"), FUeremcpMutatorQueue::Release(ProjectA, TEXT("write-3")));
+	TestFalse(TEXT("queue inactive after releases"), FUeremcpMutatorQueue::IsActive(ProjectA));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpSecurityAuditLogTest,
+	"UEREMCP.Security.Audit.AppendOnlyJsonl",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpSecurityAuditLogTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+
+	TestTrue(TEXT("audit log implemented"), FUeremcpAuditLog::IsImplemented());
+	FUeremcpPathPolicyRoots Roots = FUeremcpPathPolicy::RootsFromProject();
+	const FString UniqueRoot = FPaths::Combine(
+		Roots.ProjectSavedDir,
+		TEXT("Automation"),
+		TEXT("UeremcpSecurity"),
+		FGuid::NewGuid().ToString(EGuidFormats::Digits));
+	Roots.ProjectSavedDir = UniqueRoot;
+
 	const FString AuditDir = FUeremcpAuditLog::AuditDirectory(Roots);
 	TestTrue(TEXT("audit dir under Saved/UEREMCP"), AuditDir.Contains(TEXT("UEREMCP/audit")));
 
@@ -158,8 +274,58 @@ bool FUeremcpSecurityStubApiTest::RunTest(const FString& Parameters)
 
 	FString Error;
 	FUeremcpAuditRecord Record;
-	Record.RequestId = TEXT("abc");
-	TestFalse(TEXT("append stub returns false"), FUeremcpAuditLog::Append(Record, Roots, Error));
+	Record.RequestId = TEXT("audit-1");
+	Record.IdempotencyKey = TEXT("idem-1");
+	Record.Action = TEXT("submit_graph\nescaped");
+	Record.Mode = TEXT("patch");
+	Record.Status = TEXT("modified_and_validated");
+	Record.TargetAssetPath = TEXT("/Game/Test/BP_Audit");
+	Record.ModifiedAssets.Add(TEXT("/Game/Test/BP_Audit"));
+	Record.bAtomic = true;
+	Record.RequiredTier = EUeremcpPermissionTier::Write;
+	Record.ProjectPath = FPaths::GetProjectFilePath();
+	TestTrue(TEXT("first audit append succeeds"), FUeremcpAuditLog::Append(Record, Roots, Error));
+	TestTrue(TEXT("first append has no error"), Error.IsEmpty());
+
+	Record.RequestId = TEXT("audit-2");
+	Record.Status = TEXT("rolled_back");
+	Record.bDryRun = true;
+	TestTrue(TEXT("second audit append succeeds"), FUeremcpAuditLog::Append(Record, Roots, Error));
+
+	const FString AuditFilePath = FPaths::Combine(
+		AuditDir,
+		FUeremcpAuditLog::DailyLogFileName());
+	FString Contents;
+	TestTrue(TEXT("audit file readable"), FFileHelper::LoadFileToString(Contents, *AuditFilePath));
+	TArray<FString> Lines;
+	Contents.ParseIntoArrayLines(Lines, false);
+	TestEqual(TEXT("append preserves both JSONL records"), Lines.Num(), 2);
+
+	if (Lines.Num() == 2)
+	{
+		TSharedPtr<FJsonObject> FirstObject;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Lines[0]);
+		TestTrue(TEXT("first line is valid JSON"), FJsonSerializer::Deserialize(Reader, FirstObject));
+		if (FirstObject.IsValid())
+		{
+			TestEqual(TEXT("first request id retained"), FirstObject->GetStringField(TEXT("request_id")), TEXT("audit-1"));
+			TestEqual(TEXT("tier serialized"), FirstObject->GetStringField(TEXT("required_tier")), TEXT("write"));
+			TestEqual(TEXT("escaped newline retained inside JSON"), FirstObject->GetStringField(TEXT("action")), Record.Action);
+		}
+	}
+
+	IFileManager::Get().DeleteDirectory(*UniqueRoot, false, true);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpSecuritySettingsDefaultsTest,
+	"UEREMCP.Security.Settings.Defaults",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpSecuritySettingsDefaultsTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
 
 	const UUeremcpSecuritySettings* Settings = GetDefault<UUeremcpSecuritySettings>();
 	TestFalse(TEXT("unsafe off by default"), Settings->bAllowUnsafe);

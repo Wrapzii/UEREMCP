@@ -30,7 +30,7 @@ def main() -> int:
     required_headers = {
         "UeremcpPathPolicy.h": ["ValidateSoftPath", "ValidateFilesystemPath"],
         "UeremcpPermissionPolicy.h": ["Evaluate"],
-        "UeremcpMutatorQueue.h": ["TryAcquire", "Release", "IsImplemented"],
+        "UeremcpMutatorQueue.h": ["TryAcquire", "Release", "CancelQueued", "PendingCount", "IsImplemented"],
         "UeremcpAuditLog.h": ["Append", "AuditDirectory", "DailyLogFileName", "IsImplemented"],
         "UeremcpSecuritySettings.h": ["bAllowUnsafe", "AuditRetentionDays"],
     }
