@@ -241,8 +241,32 @@ class GameplaySpecificationTests(unittest.TestCase):
             "release_shared_mutator",
         ):
             self.assertIn(guarded_step, planner)
-        self.assertIn('TEXT("UeremcpSecurity.mutator_queue")', planner)
+        self.assertIn('TEXT("UeremcpCore.mutating_dispatcher")', planner)
         self.assertNotIn("UeremcpGameplay.module_registration", planner)
+
+    def test_non_dry_write_is_queue_gated_and_audited(self) -> None:
+        toolset = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpGameplayToolset.cpp"
+        ).read_text(encoding="utf-8")
+        non_dry = toolset.index("if (!Request.bDryRun)")
+        acquire = toolset.index("FUeremcpMutatorQueue::TryAcquire(", non_dry)
+        audit = toolset.index("FUeremcpAuditLog::Append(", acquire)
+        release = toolset.index(
+            "FUeremcpMutatorQueue::Release(ProjectKey, Request.RequestId)",
+            audit,
+        )
+        self.assertLess(non_dry, acquire)
+        self.assertLess(acquire, audit)
+        self.assertLess(audit, release)
+        self.assertIn(
+            "FUeremcpMutatorQueue::CancelQueued(ProjectKey, Request.RequestId)",
+            toolset,
+        )
+        self.assertIn("Shared mutator queue is unavailable", toolset)
+        self.assertIn("no write occurred", toolset)
+        self.assertIn("UeremcpCore.mutating_dispatcher", (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpSpellPlanner.cpp"
+        ).read_text(encoding="utf-8"))
 
     def test_dry_run_response_golden_is_complete_and_schema_valid(self) -> None:
         response_schema = json.loads(

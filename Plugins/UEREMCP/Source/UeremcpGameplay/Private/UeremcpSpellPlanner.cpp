@@ -574,7 +574,7 @@ bool FUeremcpSpellPlanner::BuildTableWritePlan(
 	OutWritePlan.bCanClaimValidatedMutation =
 		!Options.bDryRun && Options.bSave && Options.bValidate;
 	OutWritePlan.RequiredRuntimeGates = {
-		TEXT("UeremcpSecurity.mutator_queue"),
+		TEXT("UeremcpCore.mutating_dispatcher"),
 	};
 	OutWritePlan.OrderedSteps = {
 		TEXT("acquire_shared_mutator"),

@@ -1,7 +1,7 @@
 # Proposal: unblock guarded Gameplay mutation
 
 - **From:** WS-09
-- **To:** WS-12 (mutator queue), WS-01/WS-05 (shared example)
+- **To:** WS-03 (Core dispatcher), WS-01/WS-05 (shared example)
 - **Date:** 2026-07-30
 - **Status:** partially resolved
 - **Blocks:** executable `create_spell` DataTable upsert and runtime tests
@@ -22,7 +22,8 @@ WS-09 now owns an independently testable `create_spell` preflight:
 
 The planner maps only fields read from the RE row definition
 `[VERIFIED: REAbilityTypes.h:85-247]`. The tool returns
-`partially_completed` and does not mutate assets while the queue gate below is open.
+`partially_completed` and does not mutate assets while the Core dispatcher gate
+below is open.
 Dry-run preflight explicitly returns empty `changes`, null write-validation fields,
 rollback unavailable/not performed, and a planning execution trace. It never emits
 `created_and_validated` or `modified_and_validated`.
@@ -34,22 +35,31 @@ WS-03 registered `UeremcpGameplay` in the plugin descriptor on orchestration com
 unregisters the delegate during shutdown, so no additional owned C-1 change is
 needed `[VERIFIED: Plugins/UEREMCP/Source/UeremcpGameplay/Private/UeremcpGameplayModule.cpp:17-27,38]`.
 
-## Remaining runtime gate — WS-12: mutator queue
+## Resolved — WS-12 mutator queue
 
-ADR-0010 requires one active mutator per open project. The current public API says
-`FUeremcpMutatorQueue::IsImplemented()` is false and `TryAcquire` is a stub
-`[VERIFIED: UeremcpMutatorQueue.h:1-35]`.
+WS-12 implemented per-project FIFO acquisition, owner-only release, stable waiter
+job IDs, cancellation, and append-only audit on commit `1fd0eef`
+`[VERIFIED: 1fd0eef:Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpMutatorQueue.h;
+1fd0eef:Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpAuditLog.h]`.
 
-WS-09 must not add a private lock or mutate around this shared policy. Requested
-minimum API behavior:
+WS-09 now routes every non-dry request through permission evaluation, exact project
+path validation, `TryAcquire(ProjectPath, RequestId, Tier)`, terminal audit append,
+and owner release. Acquisition failure is fail-closed. Because Core does not yet map
+the stable waiter ID to ADR-0009 polling, WS-09 cancels the waiter before returning a
+terminal busy rejection; no abandoned FIFO head remains. `dry_run` does not acquire
+and does not mutate.
 
-1. FIFO game-thread acquire for write tier;
-2. ownership keyed by `request_id`;
-3. release by the same owner only;
-4. queued/time-limited acquisition returns an ADR-0009 job handle;
-5. tests for two concurrent writers and foreign release.
+## Remaining runtime gate — WS-03 Core dispatcher
 
-Once this lands, WS-09 will add the guarded operation:
+The shared mutating dispatcher requested by WS-12 is still open. Core must preserve
+explicit destructive-dry-run intent, apply the shared permission/path gate before
+domain work, own queue-job polling/cancellation, and keep queue ownership across
+sandbox resolution, domain mutation, verification, response construction, and audit
+`[VERIFIED: 1fd0eef:docs/proposals/ws-12-core-security-dispatcher-gate.md]`.
+
+Until that shared lifecycle exists, WS-09 deliberately stops after queue-gated
+planning and terminal audit. It does not enter FileSandbox or touch a DataTable.
+After Core integration, the remaining owned executor steps are:
 
 1. acquire write slot;
 2. enter the proven Content/ FileSandbox path;
@@ -58,7 +68,9 @@ Once this lands, WS-09 will add the guarded operation:
 5. save;
 6. re-read and compare every normalized row field;
 7. persist or full-discard;
-8. return `*_validated` only after successful re-read.
+8. append terminal audit while still owning the queue;
+9. release the queue;
+10. return `*_validated` only after successful re-read.
 
 The prepared plan captures `request_id` for queue ownership, mode, `dry_run`,
 atomicity, save, validation, rollback, queue timeout, revision-conflict policy,
@@ -92,14 +104,18 @@ WS-09 will not edit the shared example. Acceptance is validating the embedded
 `create_spell` specification against
 `schemas/domains/gameplay/create_spell.schema.json` in CI.
 
-## Integrated-build blocker outside WS-09
+## Integration/compile residual outside WS-09
 
-The last integrated build attempt stopped before compiling Gameplay because
+The WS-09 branch intentionally does not copy WS-12-owned files; compilation of the
+new explicit project-key overload therefore requires integration of `1fd0eef`.
+An earlier integrated build also stopped before compiling Gameplay because
 `UeremcpMaterial.Build.cs` referenced an unresolved `Editor` module
 `[VERIFIED-RUNTIME: Build.bat reported "Could not find definition for module
 'Editor', referenced via REEditor -> UeremcpMaterial.Build.cs"]`. WS-09 does not own
-that module. This is a C++ test-execution blocker, not a Gameplay mutation design
-gate, and must be rechecked after the orchestration lane is integrated.
+that module. The latest retry only waited on the global UBT mutex and exited
+`0xFFFFFFFF`, so it did not supersede that evidence. These are C++ test-execution
+blockers, not Gameplay mutation design gates, and must be rechecked on the
+orchestration lane.
 
 ## Remaining non-gates
 

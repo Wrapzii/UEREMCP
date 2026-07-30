@@ -1,10 +1,13 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
 #include "UeremcpGameplayToolset.h"
+#include "UeremcpMutatorQueue.h"
+#include "UeremcpPermissionTier.h"
 #include "UeremcpSpellPlanner.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -148,9 +151,9 @@ bool FUeremcpSpellPlannerValidTest::RunTest(const FString& Parameters)
 			&& WritePlan.bAtomic
 			&& WritePlan.bRollbackOnFailure);
 	TestTrue(
-		TEXT("only remaining runtime gate is shared mutator queue"),
+		TEXT("only remaining runtime gate is shared Core dispatcher"),
 		WritePlan.RequiredRuntimeGates.Num() == 1
-			&& WritePlan.RequiredRuntimeGates[0] == TEXT("UeremcpSecurity.mutator_queue"));
+			&& WritePlan.RequiredRuntimeGates[0] == TEXT("UeremcpCore.mutating_dispatcher"));
 	return true;
 }
 
@@ -406,6 +409,97 @@ bool FUeremcpCreateSpellPreflightHonestyTest::RunTest(const FString& Parameters)
 		TestFalse(TEXT("preflight does not claim created assets"), (*Result)->HasField(TEXT("created_assets")));
 		TestFalse(TEXT("preflight does not claim modified assets"), (*Result)->HasField(TEXT("modified_assets")));
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpCreateSpellQueueGateLifecycleTest,
+	"UEREMCP.Gameplay.Toolset.CreateSpellQueueGateLifecycle",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameters)
+{
+	const FString ProjectPath =
+		FPaths::GetProjectFilePath().Replace(TEXT("\\"), TEXT("\\\\"));
+	const FString Request = FString::Printf(
+		TEXT(R"({
+			"protocol_version":"1.0",
+			"request_id":"ws09-queue-lifecycle",
+			"action":"create_spell",
+			"project":{"path":"%s","engine_version":"5.8"},
+			"mode":"create_or_update",
+			"target":{"asset_path":"/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities"},
+			"options":{"dry_run":false},
+			"specification":%s
+		})"),
+		*ProjectPath,
+		ValidSpecificationJson);
+
+	const TSharedPtr<FJsonObject> Response =
+		ParseObject(UUeremcpGameplayToolset::CreateSpell(Request));
+	TestTrue(TEXT("queue-gated response parses"), Response.IsValid());
+	if (Response.IsValid())
+	{
+		TestEqual(
+			TEXT("no mutation success is claimed while Core gate is open"),
+			Response->GetStringField(TEXT("status")),
+			FString(TEXT("partially_completed")));
+		const TSharedPtr<FJsonObject>* Validation = nullptr;
+		if (Response->TryGetObjectField(TEXT("validation"), Validation)
+			&& Validation && Validation->IsValid())
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Checks = nullptr;
+			if ((*Validation)->TryGetArrayField(TEXT("checks_performed"), Checks) && Checks)
+			{
+				TArray<FString> CheckNames;
+				for (const TSharedPtr<FJsonValue>& Check : *Checks)
+				{
+					CheckNames.Add(Check->AsString());
+				}
+				TestTrue(
+					TEXT("queue acquisition recorded"),
+					CheckNames.Contains(TEXT("mutator_queue_acquired")));
+				TestTrue(
+					TEXT("terminal audit recorded"),
+					CheckNames.Contains(TEXT("terminal_audit_appended")));
+				TestTrue(
+					TEXT("queue release recorded"),
+					CheckNames.Contains(TEXT("mutator_queue_released")));
+			}
+		}
+	}
+	TestFalse(
+		TEXT("request never leaks queue ownership"),
+		FUeremcpMutatorQueue::IsActive(FPaths::GetProjectFilePath()));
+
+	const FUeremcpMutatorQueue::FAcquireResult Blocker =
+		FUeremcpMutatorQueue::TryAcquire(
+			FPaths::GetProjectFilePath(),
+			TEXT("ws09-blocker"),
+			EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("test blocker acquires queue"), Blocker.bAcquired);
+	const FString ContendedRequest =
+		Request.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-queued-cancel"));
+	const TSharedPtr<FJsonObject> ContendedResponse =
+		ParseObject(UUeremcpGameplayToolset::CreateSpell(ContendedRequest));
+	TestTrue(TEXT("contended response parses"), ContendedResponse.IsValid());
+	if (ContendedResponse.IsValid())
+	{
+		TestTrue(
+			TEXT("contended request fails closed"),
+			ContendedResponse->GetStringField(TEXT("summary")).Contains(TEXT("no write occurred")));
+	}
+	TestEqual(
+		TEXT("terminal rejection cancels abandoned waiter"),
+		FUeremcpMutatorQueue::PendingCount(FPaths::GetProjectFilePath()),
+		0);
+	TestTrue(
+		TEXT("test blocker releases queue"),
+		FUeremcpMutatorQueue::Release(
+			FPaths::GetProjectFilePath(),
+			TEXT("ws09-blocker")));
 	return true;
 }
 

@@ -2,7 +2,7 @@
   "protocol_version": "1.0",
   "request_id": "ws09-dry-run-golden",
   "status": "partially_completed",
-  "summary": "Prepared and statically validated an RE spell row; guarded DataTable mutation, save, and re-read were not performed.",
+  "summary": "Prepared and statically validated an RE spell row; dry_run performed no mutation.",
   "understood": {
     "action": "create_spell",
     "resolved_target": "/Game/__UeremcpTests/Abilities/DT_UeremcpAbilities",
@@ -42,7 +42,7 @@
       "deterministic_datatable_write_plan_prepared"
     ],
     "checks_skipped": [
-      "datatable_upsert: ADR-0010 mutator queue not implemented",
+      "datatable_upsert: dry_run planning path does not mutate",
       "save: no mutation performed",
       "reread_after_write: no mutation performed",
       "dependency_resolution: requires editor asset load",
@@ -72,8 +72,8 @@
   },
   "capability_notes": [
     "Specification-to-FREAbilityDef planning and Pattern B static checks completed.",
-    "DataTable upsert, save, and re-read skipped: guarded mutation is not implemented in this preflight slice.",
     "No gameplay-tag INI mutation is performed; RE Element, EffectTag, and ImpactStatus fields are used.",
-    "Multi-client replication proof remains WS-11/RB-14; this response does not claim it."
+    "Multi-client replication proof remains WS-11/RB-14; this response does not claim it.",
+    "dry_run intentionally did not acquire the mutator queue or write assets."
   ]
 }
