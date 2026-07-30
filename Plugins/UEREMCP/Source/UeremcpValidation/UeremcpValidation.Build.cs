@@ -40,6 +40,12 @@ public class UeremcpValidation : ModuleRules
 			// ADR-0006 protocol primitives (idempotency store, content_hash, envelope).
 			"UeremcpProtocol",
 
+			// WS-07 POC B editor gate calls the goal-level create tool directly.
+			"UeremcpNiagara",
+
+			// WS-06 MutatingDispatch adapter regression (skips until handoff header lands).
+			"UeremcpBlueprint",
+
 			// Blueprint compile probe (ADR-0005 open q4).
 			"BlueprintGraph",
 			"Kismet",

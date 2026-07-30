@@ -15,6 +15,9 @@ python tests/run_unit_tests.py
 # Shipping path (UEREMCP enabled; needs Protocol+Validation DLLs):
 pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"
 
+# Cross-workstream handoffs (returns 0 PASS, 1 FAIL, 2 SKIP):
+pwsh tests/run_editor_handoff_gates.ps1 -Gate All
+
 # Interim probe launch-smoke only (not the shipping Rollback gate — C-3):
 pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.ValidationProbe.Launch.Smoke"
 
@@ -111,6 +114,13 @@ Plus, per family, the ADR-0004 round-trip test: retrieve → replace unchanged �
 asserting an identical `content_hash`. **A family that cannot pass it does not claim
 round-trip support** — it sets `fidelity.round_trip_supported: false` and lists
 `lossy_areas`.
+
+The handoff runner covers `UEREMCP.Validation.Blueprint.MutatingDispatchGate` and
+`UEREMCP.Niagara.POCB.SixEmitterGateScaffold`. It reports **SKIP** when the handed-off
+source/filter is absent from the active RE plugin binary. It never retargets the RE
+junction. The Blueprint regression proves adapter queue admission/release only, not POC
+A criterion A6; the Niagara regression consumes the WS-07 scaffold and does not promote
+POC B beyond the response's runtime evidence.
 
 Upcoming Niagara and Material runtime filters have a no-claim handoff checklist in
 [`integration/Domain.Runtime.Handoffs.md`](integration/Domain.Runtime.Handoffs.md).

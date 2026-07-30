@@ -158,6 +158,51 @@ class HarnessLayoutTest(unittest.TestCase):
         self.assertTrue((REPO_ROOT / "tests" / "run_unit_tests.py").is_file())
         self.assertTrue((REPO_ROOT / "tests" / "run_editor_tests.ps1").is_file())
 
+    def test_editor_handoff_runner_preserves_pass_fail_skip(self):
+        runner = (REPO_ROOT / "tests" / "run_editor_handoff_gates.ps1").read_text(
+            encoding="utf-8"
+        )
+        for token in (
+            "UEREMCP.Validation.Blueprint.MutatingDispatchGate",
+            "UEREMCP.Niagara.POCB.SixEmitterGateScaffold",
+            "UEREMCP_BLUEPRINT_DISPATCH_OUTCOME",
+            "UEREMCP_POC_B_GATE_OUTCOME",
+            '"skipped"',
+            "without retargeting the RE junction",
+        ):
+            self.assertIn(token, runner)
+
+    def test_poc_b_editor_gate_consumes_canonical_scaffold(self):
+        gate = (
+            REPO_ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpValidation"
+            / "Private"
+            / "Tests"
+            / "NiagaraPocBSixEmitterGate.spec.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("UeremcpPocBScaffold=", gate)
+        self.assertIn("/Game/__UeremcpTests/NS_POCB_FireballProbe", gate)
+        self.assertIn("status remains honest", gate)
+        self.assertIn("UEREMCP_POC_B_GATE_OUTCOME=PASS", gate)
+
+    def test_blueprint_dispatch_regression_does_not_claim_a6(self):
+        gate = (
+            REPO_ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpValidation"
+            / "Private"
+            / "Tests"
+            / "BlueprintMutatingDispatchGate.spec.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("ws06_204a0d3_not_merged", gate)
+        self.assertIn("adapter_queue_release", gate)
+        self.assertIn("A6 is not claimed", gate)
+
 
 if __name__ == "__main__":
     unittest.main()
