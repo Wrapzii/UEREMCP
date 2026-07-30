@@ -166,9 +166,23 @@ bool FUeremcpPlanActionsSuccessTest::RunTest(const FString& Parameters)
 		Response->GetStringField(TEXT("status")),
 		FString(TEXT("created_and_validated")));
 	TestEqual(
-		TEXT("understood action"),
-		Response->GetStringField(TEXT("understood_action")),
+		TEXT("understood action follows ADR-0003 envelope"),
+		Response->GetObjectField(TEXT("understood"))->GetStringField(TEXT("action")),
 		FString(TEXT("execute_plan")));
+	TestEqual(
+		TEXT("success keeps request id"),
+		Response->GetStringField(TEXT("request_id")),
+		FString(TEXT("plan-ok")));
+	TestEqual(
+		TEXT("success uses current protocol version"),
+		Response->GetStringField(TEXT("protocol_version")),
+		FUeremcpEnvelope::ProtocolVersion());
+	TestTrue(TEXT("success has actionable summary"), !Response->GetStringField(TEXT("summary")).IsEmpty());
+	TestEqual(
+		TEXT("success is one MCP round trip"),
+		static_cast<int32>(
+			Response->GetObjectField(TEXT("metrics"))->GetNumberField(TEXT("mcp_round_trips"))),
+		1);
 	TestFalse(TEXT("success does not roll back"), bRolledBack);
 
 	const FString ReplayJson = FUeremcpPlanActions::ExecutePlan(TEXT(R"JSON(
@@ -188,6 +202,10 @@ bool FUeremcpPlanActionsSuccessTest::RunTest(const FString& Parameters)
 		TEXT("replay uses current request id"),
 		Replay->GetStringField(TEXT("request_id")),
 		FString(TEXT("plan-ok-replay")));
+	TestEqual(
+		TEXT("replay keeps understood action"),
+		Replay->GetObjectField(TEXT("understood"))->GetStringField(TEXT("action")),
+		FString(TEXT("execute_plan")));
 	TestTrue(
 		TEXT("replay annotated"),
 		Replay->GetObjectField(TEXT("metrics"))->GetBoolField(TEXT("replayed")));
@@ -312,6 +330,10 @@ bool FUeremcpPlanActionsTimeoutCompleteTest::RunTest(const FString& Parameters)
 		TEXT("fast positive-timeout path validates"),
 		Response->GetStringField(TEXT("status")),
 		FString(TEXT("created_and_validated")));
+	TestEqual(
+		TEXT("fast path keeps understood action"),
+		Response->GetObjectField(TEXT("understood"))->GetStringField(TEXT("action")),
+		FString(TEXT("execute_plan")));
 	TestFalse(TEXT("fast path does not roll back"), bRolledBack);
 
 	Reset();

@@ -273,6 +273,10 @@ class PlanExecutor:
             final["status"] = final_status
             final["summary"] = summary
 
+        understood = copy.deepcopy(final.get("understood") or {})
+        understood["action"] = "execute_plan"
+        final["understood"] = understood
+
         aggregate: dict[str, Any] = {"operations": results}
         if not rolled_back:
             for field in (
