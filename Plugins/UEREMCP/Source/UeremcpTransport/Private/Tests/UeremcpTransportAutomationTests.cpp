@@ -198,7 +198,7 @@ bool FUeremcpTransportJobStateNegativeTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("parse error reported"), Error.IsEmpty());
 
 	const FString BadStdioJson = TEXT(R"({
-		"handoff_version":"ws04-wave1-1",
+		"handoff_version":"ws04-cancel-hardening-1",
 		"recommended_job_model":"poll_after_timeout",
 		"capabilities":{
 			"http_transport_only":true,
@@ -208,6 +208,7 @@ bool FUeremcpTransportJobStateNegativeTest::RunTest(const FString& Parameters)
 			"mcp_progress_notifications":true,
 			"mcp_cancellation_notification":true,
 			"toolset_registry_cancel_wired":false,
+			"ueremcp_cancel_job_action":true,
 			"persistent_server_push":false,
 			"engine_job_ids":false,
 			"engine_auth":false,
@@ -628,9 +629,120 @@ bool FUeremcpTransportJobRegistryCancelTest::RunTest(const FString& Parameters)
 	}
 	SharedRegistry.Clear();
 
+	FPooledSyncEvent SchedulerWorkerStarted(true);
+	FPooledSyncEvent SchedulerWorkerStopped(true);
+	FPooledSyncEvent SchedulerInitialResponseReady(true);
+	FUeremcpResponse SchedulerInitialResponse;
+	FString SchedulerJobId;
+	int32 SchedulerRollbackCheckpoints = 0;
+	bool bSchedulerWorkerObservedCancellation = false;
+	TestTrue(
+		TEXT("cancellable scheduler fixture dispatches"),
+		FUeremcpJobScheduler::Dispatch(
+			TEXT("transport-cancel-scheduler-origin"),
+			1000,
+			true,
+			TEXT("Waiting for explicit cancel_job"),
+			[&SchedulerWorkerStarted,
+			 &SchedulerWorkerStopped,
+			 &SchedulerRollbackCheckpoints,
+			 &bSchedulerWorkerObservedCancellation](
+				const FString& ScheduledJobId,
+				const TSharedRef<FThreadSafeBool, ESPMode::ThreadSafe>& CancelRequested)
+			{
+				SchedulerWorkerStarted->Trigger();
+				for (int32 Attempt = 0; Attempt < 5000 && !*CancelRequested; ++Attempt)
+				{
+					FPlatformProcess::SleepNoStats(0.001f);
+				}
+
+				bSchedulerWorkerObservedCancellation = *CancelRequested;
+				if (bSchedulerWorkerObservedCancellation)
+				{
+					// Represents the domain's rollback boundary. Real asset rollback
+					// remains the owning domain's FileSandbox responsibility.
+					++SchedulerRollbackCheckpoints;
+				}
+				SchedulerWorkerStopped->Trigger();
+
+				FUeremcpResponse Response;
+				Response.ProtocolVersion = FUeremcpEnvelope::ProtocolVersion();
+				Response.RequestId = TEXT("transport-cancel-scheduler-origin");
+				Response.Status = TEXT("partially_completed");
+				Response.Summary = bSchedulerWorkerObservedCancellation
+					? TEXT("Worker stopped at its cooperative cancellation checkpoint.")
+					: TEXT("Worker failed to observe cancellation before its test deadline.");
+				Response.Metrics.McpRoundTrips = 1;
+				Response.Metrics.InternalOperations = 0;
+				return Response;
+			},
+			[&SchedulerInitialResponse, &SchedulerInitialResponseReady](
+				const FUeremcpResponse& Response)
+			{
+				SchedulerInitialResponse = Response;
+				SchedulerInitialResponseReady->Trigger();
+			},
+			SchedulerJobId,
+			Error));
+	TestFalse(TEXT("cancellable scheduler fixture has a job id"), SchedulerJobId.IsEmpty());
+	TestTrue(TEXT("scheduler worker reaches cancellation wait"), SchedulerWorkerStarted->Wait(5000));
+	TestTrue(
+		TEXT("scheduler progress reaches cooperative checkpoint"),
+		SharedRegistry.UpdateProgress(
+			SchedulerJobId,
+			0.4,
+			TEXT("Mutation staged; rollback checkpoint armed"),
+			Error));
+
+	const TSharedPtr<FJsonObject> SchedulerCancel = UeremcpTransportTest::ParseResponseJson(
+		UUeremcpReferenceToolset::CancelJob(UeremcpTransportTest::MakeJobActionRequest(
+			TEXT("transport-cancel-scheduler-action"),
+			TEXT("cancel_job"),
+			SchedulerJobId)));
+	TestTrue(TEXT("scheduler cancel_job returns JSON"), SchedulerCancel.IsValid());
+	TestTrue(
+		TEXT("scheduler worker observes cooperative cancellation"),
+		SchedulerWorkerStopped->Wait(5000));
+	TestTrue(
+		TEXT("scheduler cancellation response completes initiating callback"),
+		SchedulerInitialResponseReady->Wait(5000));
+	TestTrue(
+		TEXT("scheduler worker observed cancellation token"),
+		bSchedulerWorkerObservedCancellation);
+	TestEqual(
+		TEXT("scheduler cancellation executes rollback checkpoint"),
+		SchedulerRollbackCheckpoints,
+		1);
+
+	FUeremcpResponse SchedulerCancelledPoll;
+	TestTrue(
+		TEXT("scheduler cancellation remains pollable"),
+		SharedRegistry.GetJobResult(SchedulerJobId, SchedulerCancelledPoll, Error));
+	TestEqual(
+		TEXT("scheduler cancellation is terminal"),
+		SchedulerCancelledPoll.Job.State,
+		FString(TEXT("cancelled")));
+	TestEqual(
+		TEXT("scheduler cancellation never claims validated completion"),
+		SchedulerCancelledPoll.Status,
+		FString(TEXT("partially_completed")));
+	TestTrue(
+		TEXT("progress is frozen at the cancellation checkpoint"),
+		SchedulerCancelledPoll.Job.bHasProgress);
+	TestEqual(
+		TEXT("cancelled progress value is retained"),
+		SchedulerCancelledPoll.Job.Progress,
+		0.4);
+	TestEqual(
+		TEXT("initiating callback observes cancelled state"),
+		SchedulerInitialResponse.Job.State,
+		FString(TEXT("cancelled")));
+	SharedRegistry.Clear();
+
 	AddInfo(TEXT(
-		"SKIP residual: MCP notifications/cancelled is not mapped to the UEREMCP "
-		"cooperative cancel wrapper; direct AICallable CancelJob coverage is active."));
+		"IMMUTABLE EPIC LIMITATION: notifications/cancelled does not reach "
+		"ToolsetRegistry AICallable work; cancel_job(job_id) is the supported "
+		"user-visible cancellation path."));
 	return true;
 }
 

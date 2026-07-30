@@ -20,8 +20,11 @@ semantic percent-complete — only interval heartbeats when the client sends
 **Recommended job model for ADR-0009:** `options.timeout_ms == 0` → complete inline
 on the MCP SSE stream; `timeout_ms > 0` → return `partially_completed` with `job`
 handle before client/MCP timeout, continue work in-process, poll via
-`get_job_result`. Map MCP `notifications/cancelled` to cooperative domain
-cancellation when implemented.
+`get_job_result`. User-visible cancellation is the explicit AICallable `cancel_job`
+action keyed by UEREMCP `job_id`. MCP `notifications/cancelled` remains unsupported
+for ToolsetRegistry-backed UEREMCP calls because Epic's adapter has no cancellation
+override. This is a closed UE 5.8 substrate limitation, not an unimplemented UEREMCP
+adapter `[VERIFIED: ModelContextProtocolToolsetRegistryAdapter.h:13-26]`.
 
 ---
 
@@ -187,9 +190,11 @@ ToolsetRegistry adapter does **not** forward progress to MCP
 | Default `CancelAsync` | Empty no-op `[VERIFIED: IModelContextProtocolTool.h:97]` |
 | Legacy async actions | `UCancellableAsyncAction::Cancel()` `[VERIFIED: ModelContextProtocolToolAsyncAction.cpp:347-355]` |
 | **ToolsetRegistry / AICallable tools** | **Not wired** — adapter has no `CancelAsync` override `[VERIFIED: ModelContextProtocolToolsetRegistryAdapter.h:13-26]` |
+| **UEREMCP jobs** | **Wired through `cancel_job(job_id)`** — cooperative scheduler token, retained `cancelled` state, frozen progress, and domain rollback checkpoint `[VERIFIED-RUNTIME: UEREMCP.Transport.JobRegistry.Cancel, isolated BuildPlugin host, 2026-07-30]` |
 
-UEREMCP must implement cooperative cancellation inside domain services and expose
-`cancellable: true` only when honored.
+UEREMCP domain services must implement their rollback/checkpoint boundary and expose
+`cancellable: true` only when honored. Transport cannot infer how to undo a domain
+mutation.
 
 ### B12. Editor responsiveness
 
@@ -253,8 +258,9 @@ See `docs/proposals/ws-04-modal-protection.md`.
 | Persistent server push | No (GET 405) | Poll model for jobs |
 | MCP resources | Yes | Optional provider for `complete` payloads |
 | MCP progress push | Heartbeat only | Semantic progress in `job` block |
-| MCP cancel notification | Yes | Wire cooperative cancel in tools |
-| ToolsetRegistry cancel | No | Must implement |
+| MCP cancel notification | Yes for tools overriding `CancelAsync` | Unsupported for Epic ToolsetRegistry adapter |
+| ToolsetRegistry cancel | No | Immutable UE 5.8 adapter limitation |
+| UEREMCP job cancel | Yes | Use `cancel_job(job_id)` |
 | Job IDs | No | In-process registry |
 | Auth | Origin guard only | WS-12 |
 | Concurrent sessions | Yes | Document write hazards |
@@ -284,7 +290,8 @@ Agent tools/call (SSE open)
 1. Never hold MCP SSE open past practical client timeout (~30s observed in Epic tests).
 2. `job_id` is UEREMCP-scoped (UUID), not MCP JSON-RPC request id.
 3. `metrics.mcp_round_trips` counts polls.
-4. `notifications/cancelled` should map to `job.state: cancelled` when cooperative cancel succeeds.
+4. `cancel_job(job_id)` maps cooperative acceptance to `job.state: cancelled`; do
+   not claim MCP request cancellation maps to the job.
 5. Epic progress heartbeats are optional UX only; envelope `job.progress` is authoritative.
 
 ---
@@ -309,7 +316,10 @@ UEREMCP transport adapter uses **public module API only** — no fork, no privat
 
 1. **No stdio** — external stdio MCP clients cannot attach without a proxy (REAgentTools `UnrealMcpProxy` pattern).
 2. **No engine job queue** — master prompt §18 job features are entirely UEREMCP-owned.
-3. **Cancel does not stop ToolsetRegistry tools** — MCP cancel is cosmetic until we wire it.
+3. **MCP cancel does not stop ToolsetRegistry tools** — the UE 5.8 adapter is private
+   and has no `CancelAsync` override. UEREMCP uses `cancel_job(job_id)` instead
+   `[VERIFIED: ModelContextProtocolToolsetRegistryAdapter.h:13-26;
+   UeremcpReferenceToolset.h:76-84]`.
 4. **No measured end-to-end tool duration** — runtime blocked; use conservative `timeout_ms` defaults (120s default in handoff JSON).
 5. **No modal detection API** in public MCP/ToolsetRegistry headers.
 
@@ -336,7 +346,8 @@ UEREMCP transport adapter uses **public module API only** — no fork, no privat
 | ADR-0003 | `job` block and `timeout_ms` are UEREMCP responsibilities — schema assumes features Epic does not provide |
 | ADR-0006 | Concurrent sessions OK at transport; write serialization not provided — see proposal, not a contradiction |
 
-No accepted ADR is contradicted by evidence. ADR-0009 (pending) should adopt the poll model above.
+No accepted ADR is contradicted by evidence. The implementation follows accepted
+ADR-0009's poll-after-timeout model.
 
 ---
 
@@ -345,9 +356,13 @@ No accepted ADR is contradicted by evidence. ADR-0009 (pending) should adopt the
 - `python Plugins/UEREMCP/Source/UeremcpTransport/scripts/test_transport_constraints.py` — **PASS** `[VERIFIED-RUNTIME: 2026-07-30]`
 - `python tools/validate_schemas.py`
 - `python tools/check_ownership.py --ws WS-04`
-- **C++ automation on RE shipping harness** (`UEREMCP.Transport.*`) — **8/8 Success**
-  (5 PASS + 3 SKIP) `[VERIFIED-RUNTIME: editor_UEREMCP_Transport_20260730_010212.log]`
-  - PASS: `Handoff.DriftGuard`, `DispatchModel`, `JobState.Invariants`, `JobState.Negative`, `Probe.EpicMcp`
-  - SKIP (Success + `SKIP:` info): `JobRegistry.Poll`, `JobRegistry.Cancel`, `Timeout.PartiallyCompleted`
-- `RunUAT BuildPlugin` (Transport-only sandbox, pre-orch) — **Succeeded** `[VERIFIED-RUNTIME: 2026-07-30]`
-- `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Transport"` on RE — **PASS** (exit 0; orch junction unblocks prior phantom-module failure)
+- **C++ automation on an isolated packaged-plugin host** (`UEREMCP.Transport.*`) —
+  **8/8 Success, no test-body SKIPs**
+  `[VERIFIED-RUNTIME: $UEREMCP_ROOT-ws04-cancel-hardening-build/TestLogs/editor_UEREMCP_Transport_20260730_143347.log]`.
+  `JobRegistry.Cancel` invokes the AICallable `CancelJob` wrapper against
+  `FUeremcpJobScheduler`, observes the worker stop token, executes one rollback
+  checkpoint, retains progress, and polls terminal `job.state: cancelled`.
+- Isolated `RunUAT BuildPlugin` — **Succeeded**, including
+  `UeremcpJobConstraints.cpp`, `UeremcpJobScheduler.cpp`, and
+  `UeremcpTransportAutomationTests.cpp`
+  `[VERIFIED-RUNTIME: BuildPlugin 2026-07-30, 183/183 actions, ExitCode=0]`.

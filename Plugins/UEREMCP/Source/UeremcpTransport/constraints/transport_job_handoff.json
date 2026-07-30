@@ -1,5 +1,5 @@
 {
-  "handoff_version": "ws04-wave1-1",
+  "handoff_version": "ws04-cancel-hardening-1",
   "source": "docs/research/RB-04-transport-and-jobs.md",
   "recommended_job_model": "poll_after_timeout",
   "capabilities": {
@@ -10,6 +10,7 @@
     "mcp_progress_notifications": true,
     "mcp_cancellation_notification": true,
     "toolset_registry_cancel_wired": false,
+    "ueremcp_cancel_job_action": true,
     "persistent_server_push": false,
     "engine_job_ids": false,
     "engine_auth": false,
@@ -33,7 +34,7 @@
   "ueremcp_must_build": [
     "In-process job registry with stable job_id (envelope job block)",
     "get_job_result poll tool/action",
-    "Cooperative cancellation wired from MCP cancel to domain work",
+    "Cooperative cancellation through explicit cancel_job to domain work",
     "Semantic progress mapping (engine heartbeat is not percent-complete)",
     "timeout_ms enforcement returning partially_completed + job handle",
     "Crash recovery is out of scope for Wave 1 — jobs are in-memory only"
@@ -44,5 +45,12 @@
     "never_hold_mcp_sse_open_past_client_timeout": true,
     "job_id_scope": "per-editor-process",
     "mcp_round_trips_metric_includes_polls": true
+  },
+  "cancellation_paths": {
+    "protocol_notification_for_custom_mcp_tools": "supported",
+    "protocol_notification_for_toolset_registry_tools": "unsupported_epic_adapter",
+    "user_visible_job_cancellation": "cancel_job",
+    "user_visible_correlation_key": "job_id",
+    "advertise_cancellable_only_with_cooperative_checkpoint": true
   }
 }

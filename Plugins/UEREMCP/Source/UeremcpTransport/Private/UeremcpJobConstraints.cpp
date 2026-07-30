@@ -50,6 +50,7 @@ namespace
 			&& Left.bMcpProgressNotifications == Right.bMcpProgressNotifications
 			&& Left.bMcpCancellationNotification == Right.bMcpCancellationNotification
 			&& Left.bToolsetRegistryCancelWired == Right.bToolsetRegistryCancelWired
+			&& Left.bUeremcpCancelJobAction == Right.bUeremcpCancelJobAction
 			&& Left.bPersistentServerPushChannel == Right.bPersistentServerPushChannel
 			&& Left.bEngineJobIds == Right.bEngineJobIds
 			&& Left.bEngineAuth == Right.bEngineAuth
@@ -88,6 +89,9 @@ FUeremcpTransportCapabilityFlags UeremcpTransport::GetStaticCapabilityFlags()
 	// FToolsetRegistryToolAdapter does not override CancelAsync
 	// [VERIFIED: ModelContextProtocolToolsetRegistryAdapter.h:13-26]
 	Flags.bToolsetRegistryCancelWired = false;
+	// UEREMCP exposes a distinct AICallable cancel_job action keyed by job_id.
+	// [VERIFIED: UeremcpReferenceToolset.h:76-84, UeremcpJobActions.cpp:105-159]
+	Flags.bUeremcpCancelJobAction = true;
 	// GET returns 405; no persistent push channel outside in-flight tools/call
 	// [VERIFIED: ModelContextProtocolServer.cpp:1012-1014, 1066-1075]
 	Flags.bPersistentServerPushChannel = false;
@@ -112,6 +116,7 @@ FString UeremcpTransport::CapabilityFlagsToJson(const FUeremcpTransportCapabilit
 	CapObj->SetBoolField(TEXT("mcp_progress_notifications"), Flags.bMcpProgressNotifications);
 	CapObj->SetBoolField(TEXT("mcp_cancellation_notification"), Flags.bMcpCancellationNotification);
 	CapObj->SetBoolField(TEXT("toolset_registry_cancel_wired"), Flags.bToolsetRegistryCancelWired);
+	CapObj->SetBoolField(TEXT("ueremcp_cancel_job_action"), Flags.bUeremcpCancelJobAction);
 	CapObj->SetBoolField(TEXT("persistent_server_push"), Flags.bPersistentServerPushChannel);
 	CapObj->SetBoolField(TEXT("engine_job_ids"), Flags.bEngineJobIds);
 	CapObj->SetBoolField(TEXT("engine_auth"), Flags.bEngineAuth);
@@ -129,7 +134,7 @@ FString UeremcpTransport::CapabilityFlagsToJson(const FUeremcpTransportCapabilit
 		ResolveDispatchModel(0) == EUeremcpJobDispatchModel::InlineComplete
 			? TEXT("inline_complete")
 			: TEXT("poll_after_timeout"));
-	Root->SetStringField(TEXT("handoff_version"), TEXT("ws04-wave1-1"));
+	Root->SetStringField(TEXT("handoff_version"), TEXT("ws04-cancel-hardening-1"));
 
 	FString Out;
 	const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Out);
@@ -227,6 +232,7 @@ bool UeremcpTransport::ParseHandoffConstraintsJson(
 		|| !ReadBoolField(Caps, TEXT("mcp_progress_notifications"), OutHandoff.Capabilities.bMcpProgressNotifications, OutError)
 		|| !ReadBoolField(Caps, TEXT("mcp_cancellation_notification"), OutHandoff.Capabilities.bMcpCancellationNotification, OutError)
 		|| !ReadBoolField(Caps, TEXT("toolset_registry_cancel_wired"), OutHandoff.Capabilities.bToolsetRegistryCancelWired, OutError)
+		|| !ReadBoolField(Caps, TEXT("ueremcp_cancel_job_action"), OutHandoff.Capabilities.bUeremcpCancelJobAction, OutError)
 		|| !ReadBoolField(Caps, TEXT("persistent_server_push"), OutHandoff.Capabilities.bPersistentServerPushChannel, OutError)
 		|| !ReadBoolField(Caps, TEXT("engine_job_ids"), OutHandoff.Capabilities.bEngineJobIds, OutError)
 		|| !ReadBoolField(Caps, TEXT("engine_auth"), OutHandoff.Capabilities.bEngineAuth, OutError)
@@ -318,6 +324,18 @@ bool UeremcpTransport::ValidateHandoffConstraints(
 		return false;
 	}
 
+	if (Handoff.Capabilities.bToolsetRegistryCancelWired)
+	{
+		OutError = TEXT("toolset_registry_cancel_wired must remain false for UE 5.8");
+		return false;
+	}
+
+	if (!Handoff.Capabilities.bUeremcpCancelJobAction)
+	{
+		OutError = TEXT("ueremcp_cancel_job_action must remain true");
+		return false;
+	}
+
 	if (Handoff.PollAction != FUeremcpJobModelDefaults::PollActionName)
 	{
 		OutError = TEXT("job_defaults.poll_action must be get_job_result");
@@ -360,7 +378,7 @@ bool UeremcpTransport::HandoffMatchesRuntimeCapabilities(
 		return false;
 	}
 
-	if (Handoff.HandoffVersion != TEXT("ws04-wave1-1"))
+	if (Handoff.HandoffVersion != TEXT("ws04-cancel-hardening-1"))
 	{
 		OutError = TEXT("unexpected handoff_version — update C++ constants and tests");
 		return false;

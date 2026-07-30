@@ -26,7 +26,7 @@ SCHEDULER_SOURCE = ROOT / "Private" / "UeremcpJobScheduler.cpp"
 REQUIRED_JOB_CAPABILITIES = {
     "In-process job registry with stable job_id (envelope job block)",
     "get_job_result poll tool/action",
-    "Cooperative cancellation wired from MCP cancel to domain work",
+    "Cooperative cancellation through explicit cancel_job to domain work",
     "Semantic progress mapping (engine heartbeat is not percent-complete)",
     "timeout_ms enforcement returning partially_completed + job handle",
     "Crash recovery is out of scope for Wave 1 — jobs are in-memory only",
@@ -59,6 +59,7 @@ def main() -> int:
         "mcp_progress_notifications",
         "mcp_cancellation_notification",
         "toolset_registry_cancel_wired",
+        "ueremcp_cancel_job_action",
         "persistent_server_push",
         "engine_job_ids",
         "engine_auth",
@@ -76,6 +77,21 @@ def main() -> int:
 
     if caps.get("toolset_registry_cancel_wired") is not False:
         errors.append("toolset_registry_cancel_wired must be false until Epic wires CancelAsync")
+
+    if caps.get("ueremcp_cancel_job_action") is not True:
+        errors.append("ueremcp_cancel_job_action must be true")
+
+    cancellation_paths = data.get("cancellation_paths", {})
+    required_cancellation_paths = {
+        "protocol_notification_for_custom_mcp_tools": "supported",
+        "protocol_notification_for_toolset_registry_tools": "unsupported_epic_adapter",
+        "user_visible_job_cancellation": "cancel_job",
+        "user_visible_correlation_key": "job_id",
+        "advertise_cancellable_only_with_cooperative_checkpoint": True,
+    }
+    for key, expected in required_cancellation_paths.items():
+        if cancellation_paths.get(key) != expected:
+            errors.append(f"cancellation_paths.{key} must be {expected!r}")
 
     defaults = data.get("job_defaults", {})
     if defaults.get("poll_action") != "get_job_result":
@@ -184,7 +200,7 @@ def validate_unskip_gate(errors: list[str]) -> str:
         )
 
     validate_wrapper_and_residual_scope(automation_source, errors)
-    return "ready (scheduler active; notification cancellation residual tracked)"
+    return "ready (cancel_job active; Epic notification limitation closed)"
 
 
 def validate_wrapper_and_residual_scope(
@@ -208,19 +224,18 @@ def validate_wrapper_and_residual_scope(
         if invocation not in automation_source:
             errors.append(f"Transport tests must invoke active wrapper: {invocation}")
 
-    residual_markers = {
-        "MCP notifications/cancelled is not mapped": "cancellation notification",
-    }
-    for marker, residual_name in residual_markers.items():
-        if marker not in automation_source:
-            errors.append(f"missing honest {residual_name} residual marker")
-
-    residual_count = automation_source.count("SKIP residual:")
-    if residual_count != len(residual_markers):
-        errors.append(
-            "Transport must carry exactly the verified notification-cancellation "
-            f"residual SKIP; found {residual_count}"
-        )
+    limitation_marker = "IMMUTABLE EPIC LIMITATION: notifications/cancelled does not reach "
+    if limitation_marker not in automation_source:
+        errors.append("missing definitive Epic notification-cancellation limitation marker")
+    if "SKIP residual:" in automation_source:
+        errors.append("cancellation disposition is closed and must not remain a SKIP residual")
+    for proof_marker in (
+        "scheduler worker observes cooperative cancellation",
+        "scheduler cancellation executes rollback checkpoint",
+        "progress is frozen at the cancellation checkpoint",
+    ):
+        if proof_marker not in automation_source:
+            errors.append(f"missing cancel_job scheduler proof: {proof_marker}")
 
     for path in (SCHEDULER_HEADER, SCHEDULER_SOURCE):
         if not path.is_file():

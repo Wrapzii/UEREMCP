@@ -28,6 +28,7 @@ struct UEREMCPTRANSPORT_API FUeremcpTransportCapabilityFlags
 	bool bMcpProgressNotifications = true;
 	bool bMcpCancellationNotification = true;
 	bool bToolsetRegistryCancelWired = false;
+	bool bUeremcpCancelJobAction = true;
 	bool bPersistentServerPushChannel = false;
 	bool bEngineJobIds = false;
 	bool bEngineAuth = false;

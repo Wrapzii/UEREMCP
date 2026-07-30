@@ -11,7 +11,13 @@
  *
  * JobId is populated for poll-after-timeout work and empty for inline work.
  * Cooperative implementations must stop before validated completion when
- * CancelRequested becomes true.
+ * CancelRequested becomes true. They must also run their owned rollback boundary
+ * before returning; Transport cannot infer or safely undo domain mutations.
+ *
+ * MCP notifications/cancelled cannot set this token for ToolsetRegistry-backed
+ * AICallable work in UE 5.8. The supported user-visible path is the AICallable
+ * cancel_job action keyed by this scheduler's JobId.
+ * [VERIFIED: ModelContextProtocolToolsetRegistryAdapter.h:13-26]
  */
 using FUeremcpScheduledJobWork = TFunction<FUeremcpResponse(
 	const FString& JobId,
