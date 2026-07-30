@@ -2,7 +2,7 @@
 
 - **From:** WS-15 Templates
 - **To:** WS-05 Protocol and WS-01 schema owner
-- **Status:** proposed
+- **Status:** executor and Templates binding landed; residual contracts proposed
 - **Blocks:** fully validated `instantiate_template`; executable named modifiers;
   `promote_to_template`
 
@@ -15,6 +15,10 @@ specification conforms to `schemas/batch/plan.schema.json`.
 
 As of the current Templates tree:
 
+- `FUeremcpPlanExecutor` landed from WS-05 (`cc79f22`, integrated by orch as
+  `1659633`), and `FUeremcpTemplatesModule::StartupModule` binds
+  `UeremcpTemplates::SetExecutePlanDelegate(&FUeremcpPlanExecutor::ExecuteRequest)`.
+  Shutdown clears the delegate before destroying the service.
 - Element presets under `templates/elements/` inject material overrides and Niagara
   parameters while materializing `niagara.projectile.elemental.v1`.
 - Materialized operations validate against `create_vfx_material` /
@@ -45,11 +49,17 @@ contract exists in WS-15-owned paths.
 
 ### WS-05
 
-1. Implement/register the accepted `execute_plan` interpreter.
-2. Bind it to `UeremcpTemplates::SetExecutePlanDelegate` during module startup and
-   clear the binding during shutdown.
-3. Define how template validation post-steps are represented and returned in
+1. **Landed:** fail-closed `FUeremcpPlanExecutor` interpreter.
+2. **Landed in WS-15:** startup delegate binding and shutdown clearing.
+3. **Residual:** define how template validation post-steps are represented and returned in
    `validation.checks_performed`, without introducing a second interpreter.
+
+### WS-03 / domain workstreams
+
+Register `create_vfx_material` and `create_niagara_effect` semantic handlers plus
+complete begin/commit/rollback transaction callbacks. Until those capabilities are
+registered, the bound executor rejects before mutation; binding alone does not make
+elemental instantiation complete.
 
 ### WS-01
 

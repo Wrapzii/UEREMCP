@@ -707,6 +707,52 @@ class TemplatePromotionTests(unittest.TestCase):
         self.assertEqual(response["validation"]["checks_skipped"], self.EXPECTED_GATES)
 
 
+class TemplateExecutorBindingTests(unittest.TestCase):
+    def test_module_binds_and_clears_plan_executor_delegate(self) -> None:
+        module_source = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpTemplates"
+            / "Private"
+            / "UeremcpTemplatesModule.cpp"
+        ).read_text(encoding="utf-8")
+        executor_header = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpProtocol"
+            / "Public"
+            / "UeremcpPlanExecutor.h"
+        ).read_text(encoding="utf-8")
+        build_rules = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpTemplates"
+            / "UeremcpTemplates.Build.cs"
+        ).read_text(encoding="utf-8")
+
+        bind = (
+            "UeremcpTemplates::SetExecutePlanDelegate("
+            "&FUeremcpPlanExecutor::ExecuteRequest);"
+        )
+        clear = "UeremcpTemplates::ClearExecutePlanDelegate();"
+        self.assertIn('#include "UeremcpPlanExecutor.h"', module_source)
+        self.assertIn(bind, module_source)
+        self.assertIn(clear, module_source)
+        self.assertIn("static bool ExecuteRequest(", executor_header)
+        self.assertIn('"UeremcpProtocol"', build_rules)
+
+        self.assertLess(module_source.index("GTemplatesModule = this;"), module_source.index(bind))
+        self.assertLess(module_source.index(bind), module_source.index("Store->LoadFromDirectory"))
+        self.assertLess(module_source.index(clear), module_source.index("Service.Reset();"))
+        self.assertLess(module_source.index(clear), module_source.rindex("GTemplatesModule = nullptr;"))
+
+
 def main() -> int:
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
@@ -714,6 +760,7 @@ def main() -> int:
     suite.addTests(loader.loadTestsFromTestCase(TemplateSearchTests))
     suite.addTests(loader.loadTestsFromTestCase(TemplateInstantiateTests))
     suite.addTests(loader.loadTestsFromTestCase(TemplatePromotionTests))
+    suite.addTests(loader.loadTestsFromTestCase(TemplateExecutorBindingTests))
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     return 0 if result.wasSuccessful() else 1
 

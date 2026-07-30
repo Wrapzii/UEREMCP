@@ -8,6 +8,7 @@
 #include "Modules/ModuleManager.h"
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpPlanExecutor.h"
 #include "UeremcpTemplateService.h"
 #include "UeremcpTemplateStore.h"
 #include "UeremcpTemplatesToolset.h"
@@ -29,6 +30,7 @@ public:
 		GTemplatesModule = this;
 		Store = MakeUnique<FUeremcpTemplateStore>();
 		Service = MakeUnique<FUeremcpTemplateService>(*Store);
+		UeremcpTemplates::SetExecutePlanDelegate(&FUeremcpPlanExecutor::ExecuteRequest);
 
 		TArray<FString> Errors;
 		Store->LoadFromDirectory(UeremcpTemplates::ResolveTemplatesDirectory(), Errors);
@@ -50,6 +52,7 @@ public:
 			UToolsetRegistry::UnregisterToolsetClass(UUeremcpTemplatesToolset::StaticClass());
 		}
 
+		UeremcpTemplates::ClearExecutePlanDelegate();
 		Service.Reset();
 		Store.Reset();
 		GTemplatesModule = nullptr;
