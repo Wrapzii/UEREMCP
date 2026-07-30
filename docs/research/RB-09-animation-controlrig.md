@@ -346,6 +346,10 @@ No ADR challenge filed — representation holds; achievability differs by family
    → graph name / class / `graph_type` / `node_count` / fidelity flags
    (`nodes_emitted=false`, `round_trip_supported=false`). Tool returns
    `partially_completed`; full ADR-0004 node/link walk deferred.
+   Nested state-machine, graph classification, node-count revision, engine-GUID
+   churn, null-input reset, and montage/AnimBP isolation fixtures are authored.
+   Engine `GraphGuid` is intentionally not emitted or hashed: ADR-0004 says
+   engine-internal GUIDs are not contract identity.
    `[VERIFIED: AnimationBlueprintLibrary.h:681]`
    `[VERIFIED: Blueprint.h:1107]`
    `[VERIFIED: AnimationGraph.h:20]`

@@ -13,9 +13,11 @@
 #include "Animation/AnimNotifies/AnimNotifyState_DisableRootMotion.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimTypes.h"
+#include "Animation/Skeleton.h"
 #include "AnimationGraph.h"
 #include "AnimationStateMachineGraph.h"
 #include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpAnimationService.h"
 #include "UeremcpAnimationToolset.h"
@@ -476,13 +478,17 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 	AnimBP->bIsTemplate = true;
 
 	UAnimationGraph* AnimGraph = NewObject<UAnimationGraph>(AnimBP, TEXT("AnimGraph"));
+	AnimGraph->GraphGuid = FGuid(1, 2, 3, 4);
 	AnimBP->FunctionGraphs.Add(AnimGraph);
+	AnimGraph->AddNode(NewObject<UEdGraphNode>(AnimGraph), false, false);
 
 	UAnimationStateMachineGraph* StateMachine = NewObject<UAnimationStateMachineGraph>(
-		AnimBP, TEXT("Locomotion"));
-	AnimBP->FunctionGraphs.Add(StateMachine);
+		AnimGraph, TEXT("Locomotion"));
+	StateMachine->GraphGuid = FGuid(5, 6, 7, 8);
+	AnimGraph->SubGraphs.Add(StateMachine);
 
 	UEdGraph* EventGraph = NewObject<UEdGraph>(AnimBP, TEXT("EventGraph"));
+	EventGraph->GraphGuid = FGuid(9, 10, 11, 12);
 	AnimBP->UbergraphPages.Add(EventGraph);
 
 	FUeremcpAnimBlueprintInspection Inspection;
@@ -504,7 +510,7 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("graph count"), Inspection.GraphCount, 3);
 	TestEqual(TEXT("anim graph count"), Inspection.AnimGraphCount, 1);
 	TestEqual(TEXT("state machine count"), Inspection.StateMachineCount, 1);
-	TestEqual(TEXT("node count on empty graphs"), Inspection.NodeCount, 0);
+	TestEqual(TEXT("node count includes nested graph inventory"), Inspection.NodeCount, 1);
 
 	if (Inspection.Inventory.IsValid())
 	{
@@ -512,7 +518,9 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 		TestTrue(TEXT("graphs array present"), Inspection.Inventory->TryGetArrayField(TEXT("graphs"), Graphs));
 		TestEqual(TEXT("three serialized graphs"), Graphs ? Graphs->Num() : 0, 3);
 
-		bool bSawFidelity = false;
+		TArray<FString> GraphNames;
+		TSet<FString> GraphTypes;
+		int32 FidelityCount = 0;
 		if (Graphs)
 		{
 			for (const TSharedPtr<FJsonValue>& GraphValue : *Graphs)
@@ -522,10 +530,12 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 				{
 					continue;
 				}
+				GraphNames.Add(GraphObject->GetStringField(TEXT("name")));
+				GraphTypes.Add(GraphObject->GetStringField(TEXT("graph_type")));
 				const TSharedPtr<FJsonObject>* Fidelity = nullptr;
 				if (GraphObject->TryGetObjectField(TEXT("fidelity"), Fidelity) && Fidelity && (*Fidelity).IsValid())
 				{
-					bSawFidelity = true;
+					++FidelityCount;
 					TestTrue(
 						TEXT("inventory flagged complete"),
 						(*Fidelity)->GetBoolField(TEXT("inventory_complete")));
@@ -533,12 +543,25 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 						TEXT("nodes not claimed emitted"),
 						(*Fidelity)->GetBoolField(TEXT("nodes_emitted")));
 					TestFalse(
+						TEXT("links not claimed emitted"),
+						(*Fidelity)->GetBoolField(TEXT("links_emitted")));
+					TestFalse(
 						TEXT("round-trip unsupported"),
 						(*Fidelity)->GetBoolField(TEXT("round_trip_supported")));
 				}
 			}
 		}
-		TestTrue(TEXT("fidelity flags present"), bSawFidelity);
+		TestEqual(TEXT("three graph names collected"), GraphNames.Num(), 3);
+		if (GraphNames.Num() == 3)
+		{
+			TestEqual(TEXT("AnimGraph sorts first"), GraphNames[0], FString(TEXT("AnimGraph")));
+			TestEqual(TEXT("EventGraph sorts second"), GraphNames[1], FString(TEXT("EventGraph")));
+			TestEqual(TEXT("Locomotion sorts third"), GraphNames[2], FString(TEXT("Locomotion")));
+		}
+		TestTrue(TEXT("AnimGraph classified"), GraphTypes.Contains(TEXT("AnimBlueprintGraph")));
+		TestTrue(TEXT("EventGraph classified"), GraphTypes.Contains(TEXT("EventGraph")));
+		TestTrue(TEXT("nested state machine classified"), GraphTypes.Contains(TEXT("AnimStateMachine")));
+		TestEqual(TEXT("every graph carries fidelity flags"), FidelityCount, 3);
 	}
 
 	FUeremcpAnimBlueprintInspection Reread;
@@ -551,6 +574,120 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 			Reread,
 			RereadError));
 	TestEqual(TEXT("stable AnimBP revision"), Inspection.ContentHash, Reread.ContentHash);
+
+	AnimGraph->GraphGuid = FGuid::NewGuid();
+	StateMachine->GraphGuid = FGuid::NewGuid();
+	FUeremcpAnimBlueprintInspection GuidChurn;
+	FString GuidChurnError;
+	TestTrue(
+		TEXT("inspection after engine GUID churn succeeds"),
+		FUeremcpAnimationService::InspectAnimBlueprint(
+			AnimBP,
+			TEXT("/Game/__UeremcpTests/Animation/ABP_WS10_Inspect"),
+			GuidChurn,
+			GuidChurnError));
+	TestEqual(
+		TEXT("engine graph GUID churn does not change semantic revision"),
+		Inspection.ContentHash,
+		GuidChurn.ContentHash);
+
+	AnimGraph->AddNode(NewObject<UEdGraphNode>(AnimGraph), false, false);
+	FUeremcpAnimBlueprintInspection NodeChange;
+	FString NodeChangeError;
+	TestTrue(
+		TEXT("inspection after node-count change succeeds"),
+		FUeremcpAnimationService::InspectAnimBlueprint(
+			AnimBP,
+			TEXT("/Game/__UeremcpTests/Animation/ABP_WS10_Inspect"),
+			NodeChange,
+			NodeChangeError));
+	TestNotEqual(
+		TEXT("node-count semantic change updates revision"),
+		Inspection.ContentHash,
+		NodeChange.ContentHash);
+	TestEqual(TEXT("node-count semantic change is counted"), NodeChange.NodeCount, 2);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpAnimationCrossAssetInspectionTest,
+	"UEREMCP.Animation.CrossAsset.MontageAndAnimBpIsolation",
+	EAutomationTestFlags_ApplicationContextMask
+		| EAutomationTestFlags::EditorContext
+		| EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpAnimationCrossAssetInspectionTest::RunTest(const FString& Parameters)
+{
+	USkeleton* Skeleton = NewObject<USkeleton>(GetTransientPackage(), TEXT("SK_WS10_Shared"));
+
+	UAnimMontage* Montage = NewObject<UAnimMontage>(GetTransientPackage(), TEXT("AM_WS10_Cross"));
+	Montage->SetSkeleton(Skeleton);
+	Montage->SlotAnimTracks.Reset();
+	Montage->AddSlot(TEXT("DefaultSlot"));
+
+	UAnimBlueprint* AnimBP = NewObject<UAnimBlueprint>(GetTransientPackage(), TEXT("ABP_WS10_Cross"));
+	AnimBP->TargetSkeleton = Skeleton;
+	UAnimationGraph* AnimGraph = NewObject<UAnimationGraph>(AnimBP, TEXT("AnimGraph"));
+	AnimBP->FunctionGraphs.Add(AnimGraph);
+
+	FUeremcpMontageInspection MontageInspection;
+	FString MontageError;
+	TestTrue(
+		TEXT("montage half of cross-fixture succeeds"),
+		FUeremcpAnimationService::InspectMontage(
+			Montage,
+			TEXT("/Game/__UeremcpTests/Animation/AM_WS10_Cross"),
+			MontageInspection,
+			MontageError));
+
+	FUeremcpAnimBlueprintInspection AnimBpInspection;
+	FString AnimBpError;
+	TestTrue(
+		TEXT("AnimBP half of cross-fixture succeeds"),
+		FUeremcpAnimationService::InspectAnimBlueprint(
+			AnimBP,
+			TEXT("/Game/__UeremcpTests/Animation/ABP_WS10_Cross"),
+			AnimBpInspection,
+			AnimBpError));
+
+	TestEqual(TEXT("montage resolves shared skeleton once"), MontageInspection.DependencyPaths.Num(), 1);
+	TestEqual(TEXT("AnimBP resolves shared skeleton once"), AnimBpInspection.DependencyPaths.Num(), 1);
+	if (MontageInspection.DependencyPaths.Num() == 1 && AnimBpInspection.DependencyPaths.Num() == 1)
+	{
+		TestEqual(
+			TEXT("cross-fixtures report the same skeleton dependency"),
+			MontageInspection.DependencyPaths[0],
+			AnimBpInspection.DependencyPaths[0]);
+	}
+	TestNotEqual(
+		TEXT("different asset shapes retain independent revisions"),
+		MontageInspection.ContentHash,
+		AnimBpInspection.ContentHash);
+
+	if (MontageInspection.State.IsValid() && AnimBpInspection.Inventory.IsValid())
+	{
+		TestTrue(TEXT("montage state retains slots"), MontageInspection.State->HasField(TEXT("slots")));
+		TestFalse(TEXT("montage state does not leak graphs"), MontageInspection.State->HasField(TEXT("graphs")));
+		TestTrue(TEXT("AnimBP inventory retains graphs"), AnimBpInspection.Inventory->HasField(TEXT("graphs")));
+		TestFalse(TEXT("AnimBP inventory does not leak slots"), AnimBpInspection.Inventory->HasField(TEXT("slots")));
+	}
+
+	FUeremcpAnimBlueprintInspection NullInspection;
+	NullInspection.GraphCount = 99;
+	NullInspection.ContentHash = TEXT("stale");
+	NullInspection.DependencyPaths.Add(TEXT("/Game/Stale"));
+	FString NullError;
+	TestFalse(
+		TEXT("null AnimBP is rejected"),
+		FUeremcpAnimationService::InspectAnimBlueprint(
+			nullptr,
+			TEXT("/Game/None"),
+			NullInspection,
+			NullError));
+	TestEqual(TEXT("null rejection resets graph count"), NullInspection.GraphCount, 0);
+	TestTrue(TEXT("null rejection clears stale revision"), NullInspection.ContentHash.IsEmpty());
+	TestTrue(TEXT("null rejection clears stale dependencies"), NullInspection.DependencyPaths.IsEmpty());
+	TestEqual(TEXT("null rejection explains failure"), NullError, FString(TEXT("AnimBlueprint is null.")));
 	return true;
 }
 

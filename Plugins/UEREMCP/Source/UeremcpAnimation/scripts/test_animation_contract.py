@@ -75,6 +75,43 @@ def montage_state() -> dict:
     }
 
 
+def anim_bp_inventory() -> dict:
+    return {
+        "asset_path": "/Game/__UeremcpTests/Animation/ABP_WS10_Inspect",
+        "asset_class": "/Script/Engine.AnimBlueprint",
+        "is_template": True,
+        "skeleton": "",
+        "graphs": [
+            {
+                "name": "AnimGraph",
+                "graph_class": "/Script/AnimGraph.AnimationGraph",
+                "graph_type": "AnimBlueprintGraph",
+                "node_count": 1,
+                "is_animation_graph": True,
+                "fidelity": {
+                    "inventory_complete": True,
+                    "nodes_emitted": False,
+                    "links_emitted": False,
+                    "round_trip_supported": False,
+                },
+            },
+            {
+                "name": "Locomotion",
+                "graph_class": "/Script/AnimGraph.AnimationStateMachineGraph",
+                "graph_type": "AnimStateMachine",
+                "node_count": 0,
+                "is_animation_graph": False,
+                "fidelity": {
+                    "inventory_complete": True,
+                    "nodes_emitted": False,
+                    "links_emitted": False,
+                    "round_trip_supported": False,
+                },
+            },
+        ],
+    }
+
+
 class AnimationContractTests(unittest.TestCase):
     def test_inspect_montage_spec_is_complete_state_request(self) -> None:
         schema = json.loads(
@@ -310,6 +347,8 @@ class AnimationContractTests(unittest.TestCase):
             "InspectAnimBlueprint",
         ):
             self.assertIn(expected, source)
+        self.assertNotIn('TEXT("graph_guid")', source)
+        self.assertNotIn("Graph->GraphGuid", source)
 
     def test_read_anim_bp_tool_stays_partial_and_withholds_asset_state(self) -> None:
         source = (
@@ -331,12 +370,30 @@ class AnimationContractTests(unittest.TestCase):
             "UEREMCP.Animation.ReadAnimBp.EditorScratchAsset",
             "UEREMCP.Animation.ReadAnimBp.EnvelopeRejections",
             "stable AnimBP revision",
+            "engine graph GUID churn does not change semantic revision",
+            "node-count semantic change updates revision",
+            "nested state machine classified",
+            "every graph carries fidelity flags",
             "nodes not claimed emitted",
             "response remains honest before asset_state amendment",
             "animation.anim_bp.nodes_not_emitted",
+            "UEREMCP.Animation.CrossAsset.MontageAndAnimBpIsolation",
+            "cross-fixtures report the same skeleton dependency",
+            "different asset shapes retain independent revisions",
+            "null rejection clears stale dependencies",
         ):
             self.assertIn(expected, source)
         self.assertNotIn("SavePackage(", source)
+
+    def test_anim_bp_revision_tracks_inventory_semantics(self) -> None:
+        first = anim_bp_inventory()
+        node_change = copy.deepcopy(first)
+        node_change["graphs"][0]["node_count"] = 2
+        self.assertNotEqual(content_hash(first), content_hash(node_change))
+
+        classification_change = copy.deepcopy(first)
+        classification_change["graphs"][1]["graph_type"] = "EdGraph"
+        self.assertNotEqual(content_hash(first), content_hash(classification_change))
 
 
 if __name__ == "__main__":

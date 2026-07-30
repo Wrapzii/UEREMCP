@@ -229,7 +229,9 @@ bool FUeremcpAnimationService::InspectAnimBlueprint(
 	struct FGraphSortKey
 	{
 		FString Name;
-		FString Guid;
+		FString Class;
+		FString Type;
+		int32 NodeCount = 0;
 		UEdGraph* Graph = nullptr;
 	};
 	TArray<FGraphSortKey> Sorted;
@@ -242,7 +244,9 @@ bool FUeremcpAnimationService::InspectAnimBlueprint(
 		}
 		FGraphSortKey Key;
 		Key.Name = Graph->GetName();
-		Key.Guid = Graph->GraphGuid.ToString(EGuidFormats::DigitsWithHyphensLower);
+		Key.Class = Graph->GetClass()->GetPathName();
+		Key.Type = ClassifyAnimBlueprintGraph(Graph);
+		Key.NodeCount = Graph->Nodes.Num();
 		Key.Graph = Graph;
 		Sorted.Add(MoveTemp(Key));
 	}
@@ -253,21 +257,32 @@ bool FUeremcpAnimationService::InspectAnimBlueprint(
 		{
 			return NameCmp < 0;
 		}
-		return A.Guid < B.Guid;
+		const int32 ClassCmp = A.Class.Compare(B.Class);
+		if (ClassCmp != 0)
+		{
+			return ClassCmp < 0;
+		}
+		const int32 TypeCmp = A.Type.Compare(B.Type);
+		if (TypeCmp != 0)
+		{
+			return TypeCmp < 0;
+		}
+		return A.NodeCount < B.NodeCount;
 	});
 
 	TArray<TSharedPtr<FJsonValue>> GraphsJson;
 	for (const FGraphSortKey& Entry : Sorted)
 	{
 		UEdGraph* Graph = Entry.Graph;
-		const FString GraphType = ClassifyAnimBlueprintGraph(Graph);
+		const FString& GraphType = Entry.Type;
 		const bool bIsAnimationGraph = AnimationGraphSet.Contains(Graph);
-		const int32 NodeCount = Graph->Nodes.Num();
+		const int32 NodeCount = Entry.NodeCount;
 
+		// Deliberately omit GraphGuid: ADR-0004 says engine-internal GUIDs are not
+		// contract identity. Inventory order and revision use emitted semantics only.
 		TSharedPtr<FJsonObject> GraphObject = MakeShared<FJsonObject>();
 		GraphObject->SetStringField(TEXT("name"), Entry.Name);
-		GraphObject->SetStringField(TEXT("graph_guid"), Entry.Guid);
-		GraphObject->SetStringField(TEXT("graph_class"), Graph->GetClass()->GetPathName());
+		GraphObject->SetStringField(TEXT("graph_class"), Entry.Class);
 		GraphObject->SetStringField(TEXT("graph_type"), GraphType);
 		GraphObject->SetNumberField(TEXT("node_count"), NodeCount);
 		GraphObject->SetBoolField(TEXT("is_animation_graph"), bIsAnimationGraph);
