@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/batch/plan.schema.json",
   "title": "UEREMCP Batch Plan",
-  "description": "The `specification` payload for action=execute_plan. Batching is first-class (master prompt §2.3): one request, many dependent operations, one consolidated result. Owned by WS-05. Prior art to audit before changing this: REAgentTools `execute_editor_batch` ($ref chaining, dry_run, 8 allowlisted actions) and Epic's `ProgrammaticToolset.execute_tool_script`.",
+  "description": "The `specification` payload for action=execute_plan. Batching is first-class (master prompt §2.3): one request, many dependent operations, one consolidated result. Owned by WS-05. Composes OVER Epic ProgrammaticToolset.execute_tool_script (preserve — WS-02 q7). $ref grammar final — see docs/proposals/ws-05-batch-ref-grammar.md and domains/_shared/result_ref.schema.json.",
   "type": "object",
   "required": ["operations"],
   "additionalProperties": false,
@@ -38,7 +38,7 @@
       "type": "string",
       "enum": ["stop", "continue_independent", "rollback_all"],
       "default": "rollback_all",
-      "description": "'continue_independent' attempts operations that do not transitively depend on the failed one, and yields partially_completed."
+      "description": "'continue_independent' attempts operations that do not transitively depend on the failed one, and yields partially_completed. Maps to REAgentTools stop_on_error=false for the independent subset [VERIFIED: batch_workflow_tools.py:66-70]."
     }
   },
 
@@ -53,7 +53,11 @@
           "pattern": "^[a-zA-Z0-9_-]+$",
           "description": "Unique within the plan. Used by depends_on and by $ref result substitution."
         },
-        "action": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "action": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "Goal-level UEREMCP action, or an internal bridge action. Domain workstreams register actions; REAgentTools' 8-action allowlist is prior art for a *primitive* batch, not a ceiling on execute_plan [VERIFIED: batch_workflow_tools.py:17-26]."
+        },
         "depends_on": {
           "type": "array",
           "items": { "type": "string" },
@@ -70,7 +74,7 @@
         "mode": { "$ref": "../common/defs.schema.json#/$defs/mode" },
         "specification": {
           "type": "object",
-          "description": "Action-specific, same as the top-level envelope. May contain $ref substitutions (see below)."
+          "description": "Action-specific, same as the top-level envelope. May contain result $ref substitutions (object-form and/or dollar-string form — see domains/_shared/result_ref.schema.json)."
         },
         "expected_revision": { "$ref": "../common/defs.schema.json#/$defs/revision" },
         "optional": {
@@ -118,7 +122,8 @@
           "specification": {
             "name": "Fireball",
             "effect_type": "projectile",
-            "core_material": { "$ref": "material.result.primary_asset" }
+            "core_material": { "$ref": "material.result.primary_asset" },
+            "trail_material": "$material"
           }
         },
         {
@@ -136,5 +141,5 @@
     }
   ],
 
-  "$comment": "PROVISIONAL pending WS-02 audit of REAgentTools execute_editor_batch and Epic execute_tool_script (docs/proposals/ws-05-batch-grammar-blocked.md). $ref substitution: any object of the form {\"$ref\": \"<operation_id>.<dotted.path.into.that.operation's.response>\"} is replaced with the referenced value before the operation executes. Resolution failure fails the operation rather than substituting null — a silently-null asset path produces a broken asset that validates. This mirrors the *idea* behind REAgentTools' $ref convention but not necessarily its string grammar; do not finalise until the audit lands. Shared schema fragment: domains/_shared/result_ref.schema.json."
+  "$comment": "FINAL $ref grammar (2026-07-29). (1) Object form {\"$ref\":\"<operation_id>.<dotted.path.into.response>\"} is canonical for UEREMCP envelope paths. (2) Dollar-string \"$<operation_id>\" is accepted REAgentTools prior art [VERIFIED: batch_workflow_tools.py:37-48] resolving to result.primary_asset|label|path. Resolution failure fails the operation — never substitutes null. execute_plan composes OVER ProgrammaticToolset.execute_tool_script (preserve) [VERIFIED: WS-02 epic-toolsets.md q7]. Shared fragment: domains/_shared/result_ref.schema.json. Decision: docs/proposals/ws-05-batch-ref-grammar.md."
 }

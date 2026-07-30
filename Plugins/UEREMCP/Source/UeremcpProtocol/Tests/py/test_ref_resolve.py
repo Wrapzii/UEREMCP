@@ -64,6 +64,42 @@ class RefResolveTests(unittest.TestCase):
         self.assertEqual(out["x"]["$ref"], "a.result.primary_asset")
         self.assertEqual(out["x"]["note"], "keep")
 
+    def test_dollar_string_primary_asset(self):
+        spec = {"core_material": "$material", "name": "Fireball"}
+        completed = {
+            "material": {"result": {"primary_asset": "/Game/VFX/Materials/MI_Core"}}
+        }
+        out = resolve_refs(spec, completed)
+        self.assertEqual(out["core_material"], "/Game/VFX/Materials/MI_Core")
+        self.assertEqual(out["name"], "Fireball")
+
+    def test_dollar_string_reagenttools_label(self):
+        # [VERIFIED: batch_workflow_tools.py:37-48]
+        spec = {"actor": "$spawn1"}
+        completed = {"spawn1": {"label": "RE_Fireball", "path": "/Game/Map.Map:PersistentLevel.RE_Fireball"}}
+        out = resolve_refs(spec, completed)
+        self.assertEqual(out["actor"], "RE_Fireball")
+
+    def test_dollar_string_path_fallback(self):
+        spec = {"asset": "$a"}
+        completed = {"a": {"path": "/Game/BP_X"}}
+        out = resolve_refs(spec, completed)
+        self.assertEqual(out["asset"], "/Game/BP_X")
+
+    def test_dollar_string_unresolved_fails(self):
+        with self.assertRaises(RefResolveError):
+            resolve_refs({"x": "$missing"}, {})
+
+    def test_both_forms_together(self):
+        spec = {
+            "a": {"$ref": "mat.result.primary_asset"},
+            "b": "$mat",
+        }
+        completed = {"mat": {"result": {"primary_asset": "/Game/M"}}}
+        out = resolve_refs(spec, completed)
+        self.assertEqual(out["a"], "/Game/M")
+        self.assertEqual(out["b"], "/Game/M")
+
 
 if __name__ == "__main__":
     unittest.main()

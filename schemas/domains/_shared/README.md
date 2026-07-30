@@ -8,7 +8,7 @@ redefining them.
 
 | File | Purpose |
 |---|---|
-| `result_ref.schema.json` | Provisional `{"$ref":"<op>.<path>"}` substitution object used inside batch specifications. **Grammar not final** — see `docs/proposals/ws-05-batch-grammar-blocked.md`. |
+| `result_ref.schema.json` | Final batch result `$ref`: object form `{"$ref":"<op>.<path>"}` **and** dollar-string `"$<op>"` (REAgentTools). See `docs/proposals/ws-05-batch-ref-grammar.md`. |
 
-Content-hash rules live with the protocol module:
-`Plugins/UEREMCP/Source/UeremcpProtocol/Docs/CONTENT_HASH.md`.
+Content-hash / job / batch-ref docs live with the protocol module under
+`Plugins/UEREMCP/Source/UeremcpProtocol/Docs/`.

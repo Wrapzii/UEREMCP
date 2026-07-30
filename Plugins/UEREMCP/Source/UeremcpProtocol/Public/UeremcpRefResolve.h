@@ -1,11 +1,10 @@
-// UEREMCP — provisional $ref substitution for batch plans.
+// UEREMCP — batch $ref substitution (final grammar).
 //
-// Grammar is PROVISIONAL pending WS-02 audit of REAgentTools execute_editor_batch
-// and Epic ProgrammaticToolset.execute_tool_script. See docs/proposals/ws-05-batch-grammar-blocked.md.
+// Two accepted forms (docs/proposals/ws-05-batch-ref-grammar.md):
+//   1. Object: {"$ref": "<operation_id>.<dotted.path>"}  — canonical
+//   2. Dollar-string: "$<operation_id>"                   — REAgentTools prior art
+//      [VERIFIED: REAgentTools/.../batch_workflow_tools.py:37-48]
 //
-// Schema $comment (schemas/batch/plan.schema.json): any object of the form
-//   {"$ref": "<operation_id>.<dotted.path.into.that.operation's.response>"}
-// is replaced with the referenced value before the operation executes.
 // Resolution failure fails the operation — never substitutes null.
 // Owner: WS-05.
 
@@ -18,27 +17,41 @@ class UEREMCPPROTOCOL_API FUeremcpRefResolve
 {
 public:
 	/**
-	 * Walk Specification recursively. Replace every {"$ref":"..."} object with the
-	 * resolved value from CompletedResults[operation_id] looking up the dotted path.
+	 * Walk Specification recursively. Replace:
+	 *   - {"$ref":"op.path..."} objects
+	 *   - "$op_id" dollar-strings
+	 * with values from CompletedResults.
 	 *
-	 * CompletedResults maps operation id -> that operation's response JSON object.
+	 * CompletedResults maps operation id -> that operation's response JSON object
+	 * (or a REAgentTools-shaped step bag with label/path).
 	 *
 	 * @return false with OutError on any unresolved or malformed $ref.
-	 *         On failure OutSpecification is left unmodified.
 	 */
 	static bool ResolveInPlace(
 		TSharedPtr<FJsonValue>& Specification,
 		const TMap<FString, TSharedPtr<FJsonObject>>& CompletedResults,
 		FString& OutError);
 
-	/** True when Value is an object whose only (or distinguishing) key is "$ref". */
+	/** True when Value is {"$ref": "..."} with no other keys. */
 	static bool IsRefObject(const TSharedPtr<FJsonValue>& Value);
 
-	/** Parse "op.path.to.value" into operation id + remaining path segments. */
-	static bool ParseRefString(
+	/** True when Value is a string matching ^\$[a-zA-Z0-9_-]+$. */
+	static bool IsDollarStringRef(const TSharedPtr<FJsonValue>& Value);
+
+	/** Parse object-form "op.path.to.value" into operation id + path segments. */
+	static bool ParseObjectRefPath(
 		const FString& Ref,
 		FString& OutOperationId,
 		TArray<FString>& OutPath,
+		FString& OutError);
+
+	/**
+	 * Resolve "$op_id" shorthand: result.primary_asset → label → path.
+	 * Returns a string JsonValue, or null with OutError set.
+	 */
+	static TSharedPtr<FJsonValue> ResolveDollarShorthand(
+		const FString& OperationId,
+		const TSharedPtr<FJsonObject>& Completed,
 		FString& OutError);
 
 	/** Walk a JSON object along dotted path segments. */
@@ -46,4 +59,14 @@ public:
 		const TSharedPtr<FJsonObject>& Root,
 		const TArray<FString>& Path,
 		FString& OutError);
+
+	/** @deprecated Use ParseObjectRefPath. Kept as alias for call sites. */
+	static bool ParseRefString(
+		const FString& Ref,
+		FString& OutOperationId,
+		TArray<FString>& OutPath,
+		FString& OutError)
+	{
+		return ParseObjectRefPath(Ref, OutOperationId, OutPath, OutError);
+	}
 };

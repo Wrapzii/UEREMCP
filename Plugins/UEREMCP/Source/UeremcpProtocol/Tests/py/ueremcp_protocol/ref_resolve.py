@@ -1,13 +1,18 @@
-"""Provisional $ref resolution — mirrors FUeremcpRefResolve.
+"""Batch $ref resolution — mirrors FUeremcpRefResolve.
 
-Grammar is provisional pending WS-02 audit. See plan.schema.json $comment and
-docs/proposals/ws-05-batch-grammar-blocked.md.
+Final grammar (docs/proposals/ws-05-batch-ref-grammar.md):
+  1. Object form {"$ref": "op.path..."} — canonical
+  2. Dollar-string "$op_id" — REAgentTools prior art
+     [VERIFIED: batch_workflow_tools.py:37-48]
 """
 
 from __future__ import annotations
 
 import copy
+import re
 from typing import Any
+
+_DOLLAR_RE = re.compile(r"^\$[a-zA-Z0-9_-]+$")
 
 
 class RefResolveError(ValueError):
@@ -20,6 +25,10 @@ def is_ref_object(value: Any) -> bool:
         and set(value.keys()) == {"$ref"}
         and isinstance(value["$ref"], str)
     )
+
+
+def is_dollar_string_ref(value: Any) -> bool:
+    return isinstance(value, str) and bool(_DOLLAR_RE.match(value))
 
 
 def parse_ref(ref: str) -> tuple[str, list[str]]:
@@ -54,6 +63,31 @@ def lookup_path(root: Any, path: list[str]) -> Any:
     return current
 
 
+def resolve_dollar_shorthand(operation_id: str, completed: Any) -> str:
+    """result.primary_asset → label → path. Fail if none.
+
+    [VERIFIED: batch_workflow_tools.py:37-48] for label/path order on step bags;
+    primary_asset is the UEREMCP envelope equivalent of that primary identity.
+    """
+    if not isinstance(completed, dict):
+        raise RefResolveError(f"${operation_id}: completed result is not an object")
+
+    result = completed.get("result")
+    if isinstance(result, dict):
+        primary = result.get("primary_asset")
+        if isinstance(primary, str) and primary:
+            return primary
+
+    for key in ("label", "path"):
+        val = completed.get(key)
+        if isinstance(val, str) and val:
+            return val
+
+    raise RefResolveError(
+        f"${operation_id} has no result.primary_asset, label, or path"
+    )
+
+
 def _resolve(value: Any, completed: dict[str, Any]) -> Any:
     if is_ref_object(value):
         ref = value["$ref"]
@@ -67,6 +101,12 @@ def _resolve(value: Any, completed: dict[str, Any]) -> Any:
         except RefResolveError as exc:
             raise RefResolveError(f"$ref '{ref}': {exc}") from exc
 
+    if is_dollar_string_ref(value):
+        op_id = value[1:]
+        if op_id not in completed:
+            raise RefResolveError(f"${op_id}: operation has no completed result")
+        return resolve_dollar_shorthand(op_id, completed[op_id])
+
     if isinstance(value, dict):
         return {k: _resolve(v, completed) for k, v in value.items()}
     if isinstance(value, list):
@@ -75,7 +115,7 @@ def _resolve(value: Any, completed: dict[str, Any]) -> Any:
 
 
 def resolve_refs(specification: Any, completed_results: dict[str, Any]) -> Any:
-    """Return a deep-copied specification with $ref objects substituted.
+    """Deep-copy specification with both $ref forms substituted.
 
     Never substitutes null on failure — raises RefResolveError instead.
     """
