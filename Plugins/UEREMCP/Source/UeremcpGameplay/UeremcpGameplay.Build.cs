@@ -19,6 +19,8 @@ public class UeremcpGameplay : ModuleRules
 		{
 			"Json",
 			"JsonUtilities",
+			"AssetRegistry",
+			"FileSandboxCore",
 
 			"UeremcpProtocol",
 			"UeremcpSecurity",

@@ -8,7 +8,7 @@
 
 ## Implemented owned slice
 
-WS-09 now owns an independently testable `create_spell` preflight:
+WS-09 now owns an independently testable `create_spell` executor:
 
 - strict `schemas/domains/gameplay/create_spell.schema.json`;
 - deterministic semantic-to-`FREAbilityDef` row planning;
@@ -16,17 +16,20 @@ WS-09 now owns an independently testable `create_spell` preflight:
 - exact guarded DataTable write planning (request ownership, envelope controls,
   package/object/row-struct identity, revision/idempotency checks, and ordered
   acquire→sandbox→upsert→save→re-read→persist/discard steps);
+- sandboxed DataTable create/upsert, package save, normalized row re-read, content
+  revision comparison, and persist-or-discard rollback;
 - one envelope-shaped `AICallable` entry point;
 - schema, local-header drift, and C++ automation tests;
 - no Epic GAS/DataTable/Niagara/material primitives re-exposed.
 
 The planner maps only fields read from the RE row definition
-`[VERIFIED: REAbilityTypes.h:85-247]`. The tool returns
-`partially_completed` and does not mutate assets while the owned DataTable executor
-remains incomplete.
+`[VERIFIED: REAbilityTypes.h:85-247]`. Non-dry execution reports
+`created_and_validated` or `modified_and_validated` only after save, normalized
+re-read equality, FileSandbox change observation, and persist.
 Dry-run preflight explicitly returns empty `changes`, null write-validation fields,
-rollback unavailable/not performed, and a planning execution trace. It never emits
-`created_and_validated` or `modified_and_validated`.
+rollback unavailable/not performed, and a planning execution trace. No-change
+requests report `no_change_required`; failures report `rolled_back`,
+`failed_validation`, or `created_with_warnings` according to observed persistence.
 
 ## Resolved — module registration
 
@@ -61,25 +64,26 @@ the blocking response unchanged when permission, path, or queue admission fails.
 Every admitted terminal response is returned through `Complete`; Gameplay no longer
 forks queue or audit logic. Dry-run remains a no-mutation planning path.
 
-## Remaining owned implementation residual
+## Implemented — owned DataTable executor
 
-No upstream runtime gate remains. The following WS-09-owned DataTable executor work
-is still required before non-dry requests may report mutation:
+The executor enters FileSandbox while Core holds the mutator, dynamically loads the
+verified RE row struct, converts the planned JSON with strict struct conversion,
+creates or loads the test DataTable, upserts one row, saves the package, re-reads and
+hashes the normalized row, requires the package in FileSandbox changes, and only
+then persists and calls dispatcher `Complete`
+`[VERIFIED: JsonObjectConverter.h:239; DataTable.h:253-316;
+Package.h:1201-1202; ToolsetRegistry/SandboxLibrary.h:12-73]`.
 
-1. enter the proven Content/ FileSandbox path while the dispatcher holds the slot;
-2. create/load the test DataTable with row struct `/Script/RE.REAbilityDef`;
-3. row-upsert only (never whole-table delete/recreate);
-4. save;
-5. re-read and compare every normalized row field;
-6. persist or full-discard;
-7. populate the terminal response and call dispatcher `Complete`;
-8. return `*_validated` only after successful re-read.
+On failure before persist, it restores the previous in-memory row and discards the
+sandbox. It rejects a foreign active sandbox, mismatched row struct, create-mode row
+collision, unsafe option combinations, and unapproved revision conflict before
+claiming mutation.
 
 The prepared plan captures `request_id` for queue ownership, mode, `dry_run`,
 atomicity, save, validation, rollback, queue timeout, revision-conflict policy,
 optional `expected_revision`, and optional idempotency key. A plan can only become
 eligible for a validated mutation status when it is non-dry, saved, validated, and
-successfully re-read; the current preflight never makes that claim.
+successfully re-read; the executor enforces those conditions.
 
 `UDataTable::AddRow` copies one row into the table
 `[VERIFIED: Engine/DataTable.h:314-316; DataTable.cpp:519-555]`.
@@ -127,3 +131,6 @@ orchestration lane.
 - Production `DT_Abilities` mutation remains prohibited. The current tool accepts
   `/Game/__UeremcpTests/` targets only.
 - Gameplay-tag INI mutation remains out of POC D by accepted WS-01 guidance.
+- The idempotency key is preserved in the write plan and terminal audit, but durable
+  response replay remains a shared protocol/integration concern; row equality still
+  makes repeated execution a verified `no_change_required`.

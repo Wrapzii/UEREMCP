@@ -1,6 +1,7 @@
 #include "UeremcpGameplayToolset.h"
 
 #include "Dom/JsonValue.h"
+#include "UeremcpAbilityTableMutator.h"
 #include "UeremcpEnvelope.h"
 #include "UeremcpMutatingDispatch.h"
 #include "UeremcpPathPolicy.h"
@@ -143,17 +144,68 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		}
 	}
 
+	FUeremcpAbilityTableMutationResult MutationResult;
+	FString MutationError;
+	const bool bMutationSucceeded =
+		Request.bDryRun
+			|| FUeremcpAbilityTableMutator::Execute(
+				WritePlan,
+				Plan,
+				MutationResult,
+				MutationError);
+
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
-	Response.Status = TEXT("partially_completed");
-	Response.Summary = Request.bDryRun
-		? FString::Printf(
+	if (Request.bDryRun)
+	{
+		Response.Status = TEXT("partially_completed");
+		Response.Summary = FString::Printf(
 			TEXT("Prepared and statically validated RE spell row '%s' for '%s'; dry_run performed no mutation."),
 			*Plan.RowName,
-			*Request.TargetAssetPath)
-		: FString::Printf(
-			TEXT("Core mutating dispatch admitted RE spell row '%s'; DataTable mutation remains unimplemented, so no asset was changed."),
+			*Request.TargetAssetPath);
+	}
+	else if (bMutationSucceeded && MutationResult.bNoChange)
+	{
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = FString::Printf(
+			TEXT("RE spell row '%s' already matched the normalized specification."),
 			*Plan.RowName);
+	}
+	else if (bMutationSucceeded && MutationResult.bCreatedTable)
+	{
+		Response.Status = TEXT("created_and_validated");
+		Response.Summary = FString::Printf(
+			TEXT("Created, saved, re-read, and validated RE spell row '%s'."),
+			*Plan.RowName);
+	}
+	else if (bMutationSucceeded)
+	{
+		Response.Status = TEXT("modified_and_validated");
+		Response.Summary = FString::Printf(
+			TEXT("Updated, saved, re-read, and validated RE spell row '%s'."),
+			*Plan.RowName);
+	}
+	else if (MutationResult.bPersisted)
+	{
+		Response.Status = TEXT("created_with_warnings");
+		Response.Summary = FString::Printf(
+			TEXT("RE spell row persisted with a terminal warning: %s"),
+			*MutationError);
+	}
+	else if (MutationResult.bRolledBack)
+	{
+		Response.Status = TEXT("rolled_back");
+		Response.Summary = FString::Printf(
+			TEXT("RE spell row mutation failed and was rolled back: %s"),
+			*MutationError);
+	}
+	else
+	{
+		Response.Status = TEXT("failed_validation");
+		Response.Summary = FString::Printf(
+			TEXT("RE spell row mutation failed before persistence: %s"),
+			*MutationError);
+	}
 	Response.UnderstoodAction = Request.Action;
 	Response.UnderstoodTarget = Request.TargetAssetPath;
 	Response.InterpretationNotes.Add(FString::Printf(
@@ -183,7 +235,8 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 		Response.Dependencies.Add(MoveTemp(Dependency));
 	}
 	Response.Metrics.McpRoundTrips = 1;
-	Response.Metrics.InternalOperations = Request.bDryRun ? 2 : 3;
+	Response.Metrics.InternalOperations = Request.bDryRun ? 2 : 8;
+	Response.Metrics.AssetsAffected = MutationResult.bPersisted ? 1 : 0;
 	Response.CapabilityNotes = {
 		TEXT("Specification-to-FREAbilityDef planning and Pattern B static checks completed."),
 		TEXT("No gameplay-tag INI mutation is performed; RE Element, EffectTag, and ImpactStatus fields are used."),
@@ -192,14 +245,52 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	Response.CapabilityNotes.Add(
 		Request.bDryRun
 			? TEXT("dry_run intentionally did not acquire the mutator queue or write assets.")
-			: TEXT("FUeremcpMutatingDispatch owns permission, path, queue, audit, and release; no domain mutation success is claimed."));
+			: TEXT("FUeremcpMutatingDispatch held permission, path, queue, audit, and release around the complete DataTable executor."));
+
+	if (!Request.bDryRun)
+	{
+		FUeremcpAssetRef Asset;
+		Asset.AssetPath = Request.TargetAssetPath;
+		Asset.AssetClass = TEXT("/Script/Engine.DataTable");
+		Asset.Revision = MutationResult.RevisionAfter;
+		Asset.Role = TEXT("ability_table");
+		if (MutationResult.bNoChange)
+		{
+			Response.ReusedAssets.Add(Asset);
+		}
+		else if (MutationResult.bPersisted && MutationResult.bCreatedTable)
+		{
+			Response.CreatedAssets.Add(Asset);
+		}
+		else if (MutationResult.bPersisted)
+		{
+			Response.ModifiedAssets.Add(Asset);
+		}
+		Response.Revision = MutationResult.RevisionAfter;
+	}
 
 	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
 	Validation->SetNullField(TEXT("compiled"));
-	Validation->SetNullField(TEXT("saved"));
+	if (Request.bDryRun)
+	{
+		Validation->SetNullField(TEXT("saved"));
+	}
+	else
+	{
+		Validation->SetBoolField(TEXT("saved"), MutationResult.bSaved);
+	}
 	Validation->SetBoolField(TEXT("structurally_valid"), true);
 	Validation->SetNullField(TEXT("dependencies_resolved"));
-	Validation->SetNullField(TEXT("reread_after_write"));
+	if (Request.bDryRun)
+	{
+		Validation->SetNullField(TEXT("reread_after_write"));
+	}
+	else
+	{
+		Validation->SetBoolField(
+			TEXT("reread_after_write"),
+			MutationResult.bRereadAfterWrite);
+	}
 	Validation->SetNullField(TEXT("runtime_smoke_test"));
 	Validation->SetNullField(TEXT("editor_validation_run"));
 	TArray<FString> ChecksPerformed = Plan.StaticChecks;
@@ -207,40 +298,76 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	if (!Request.bDryRun)
 	{
 		ChecksPerformed.Add(TEXT("core_mutating_dispatch_admitted"));
+		if (MutationResult.bSaved)
+		{
+			ChecksPerformed.Add(TEXT("datatable_package_saved_in_sandbox"));
+		}
+		if (MutationResult.bRereadAfterWrite)
+		{
+			ChecksPerformed.Add(TEXT("normalized_row_reread_matches"));
+		}
+		if (MutationResult.bPersisted)
+		{
+			ChecksPerformed.Add(TEXT("sandbox_changes_persisted"));
+		}
+		if (MutationResult.bRolledBack)
+		{
+			ChecksPerformed.Add(TEXT("sandbox_changes_rolled_back"));
+		}
 	}
 	Validation->SetArrayField(TEXT("checks_performed"), StringValues(ChecksPerformed));
 	TArray<FString> ChecksSkipped = {
-		TEXT("save: no mutation performed"),
-		TEXT("reread_after_write: no mutation performed"),
 		TEXT("dependency_resolution: requires editor asset load"),
 		TEXT("runtime_smoke_test: WS-11/RB-14"),
 	};
-	ChecksSkipped.Insert(
-		Request.bDryRun
-			? TEXT("datatable_upsert: dry_run planning path does not mutate")
-			: TEXT("datatable_upsert: gameplay DataTable executor is not implemented"),
-		0);
+	if (Request.bDryRun)
+	{
+		ChecksSkipped.Insert(TEXT("reread_after_write: no mutation performed"), 0);
+		ChecksSkipped.Insert(TEXT("save: no mutation performed"), 0);
+		ChecksSkipped.Insert(
+			TEXT("datatable_upsert: dry_run planning path does not mutate"),
+			0);
+	}
+	else if (!bMutationSucceeded)
+	{
+		ChecksSkipped.Insert(
+			FString::Printf(TEXT("datatable_executor: %s"), *MutationError),
+			0);
+	}
 	Validation->SetArrayField(TEXT("checks_skipped"), StringValues(ChecksSkipped));
 
 	TSharedPtr<FJsonObject> Rollback = MakeShared<FJsonObject>();
-	Rollback->SetBoolField(TEXT("available"), false);
-	Rollback->SetBoolField(TEXT("performed"), false);
-	Rollback->SetStringField(TEXT("scope"), TEXT("none"));
+	Rollback->SetBoolField(TEXT("available"), MutationResult.bRolledBack);
+	Rollback->SetBoolField(TEXT("performed"), MutationResult.bRolledBack);
+	Rollback->SetStringField(
+		TEXT("scope"),
+		MutationResult.bRolledBack ? TEXT("full") : TEXT("none"));
 	Rollback->SetStringField(
 		TEXT("detail"),
 		Request.bDryRun
 			? TEXT("Dry-run preflight performed no mutation; nothing required discard.")
-			: TEXT("Dispatcher-gated preflight performed no mutation; rollback was not entered."));
+			: MutationResult.bRolledBack
+				? TEXT("FileSandbox changes were discarded and the in-memory row was restored.")
+				: TEXT("No rollback was required."));
 
 	TSharedPtr<FJsonObject> TraceStep = MakeShared<FJsonObject>();
 	TraceStep->SetStringField(TEXT("step"), TEXT("plan_create_spell"));
-	TraceStep->SetBoolField(TEXT("ok"), true);
+	TraceStep->SetBoolField(
+		TEXT("ok"),
+		Request.bDryRun || bMutationSucceeded);
 	TraceStep->SetStringField(
 		TEXT("detail"),
-		FString::Printf(
-			TEXT("Prepared %d ordered guarded-write steps for %s without executing them."),
-			WritePlan.OrderedSteps.Num(),
-			*WritePlan.TableObjectPath));
+		Request.bDryRun
+			? FString::Printf(
+				TEXT("Prepared %d ordered guarded-write steps for %s without executing them."),
+				WritePlan.OrderedSteps.Num(),
+				*WritePlan.TableObjectPath)
+			: FString::Printf(
+				TEXT("Executed guarded DataTable path for %s: saved=%s reread=%s persisted=%s."),
+				*WritePlan.TableObjectPath,
+				MutationResult.bSaved ? TEXT("true") : TEXT("false"),
+				MutationResult.bRereadAfterWrite ? TEXT("true") : TEXT("false"),
+				MutationResult.bPersisted ? TEXT("true") : TEXT("false")));
 	TArray<TSharedPtr<FJsonValue>> ExecutionTrace;
 	ExecutionTrace.Add(MakeShared<FJsonValueObject>(TraceStep));
 	TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
@@ -249,9 +376,38 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 
 	Response.ExtraFields = MakeShared<FJsonObject>();
 	Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
+	TArray<TSharedPtr<FJsonValue>> ChangeValues;
+	if (MutationResult.bPersisted)
+	{
+		TSharedPtr<FJsonObject> Change = MakeShared<FJsonObject>();
+		Change->SetStringField(
+			TEXT("kind"),
+			MutationResult.bCreatedTable ? TEXT("created") : TEXT("modified"));
+		Change->SetStringField(TEXT("asset_path"), Request.TargetAssetPath);
+		Change->SetStringField(TEXT("asset_class"), TEXT("/Script/Engine.DataTable"));
+		if (MutationResult.RevisionBefore.IsEmpty())
+		{
+			Change->SetNullField(TEXT("revision_before"));
+		}
+		else
+		{
+			Change->SetStringField(
+				TEXT("revision_before"),
+				MutationResult.RevisionBefore);
+		}
+		Change->SetStringField(
+			TEXT("revision_after"),
+			MutationResult.RevisionAfter);
+		Change->SetStringField(
+			TEXT("detail"),
+			FString::Printf(
+				TEXT("Sandbox reported %d persisted file change(s)."),
+				MutationResult.SandboxedFiles.Num()));
+		ChangeValues.Add(MakeShared<FJsonValueObject>(Change));
+	}
 	Response.ExtraFields->SetArrayField(
 		TEXT("changes"),
-		TArray<TSharedPtr<FJsonValue>>());
+		ChangeValues);
 	Response.ExtraFields->SetObjectField(TEXT("rollback"), Rollback);
 	Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
 

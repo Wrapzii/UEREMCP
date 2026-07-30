@@ -177,13 +177,17 @@ class GameplaySpecificationTests(unittest.TestCase):
         )
         self.assertEqual([], missing, f"planner fields missing from FREAbilityDef: {missing}")
 
-    def test_preflight_source_cannot_claim_mutation_success(self) -> None:
+    def test_mutation_success_claims_require_executor_verification(self) -> None:
         toolset = (
             GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpGameplayToolset.cpp"
         ).read_text(encoding="utf-8")
         self.assertIn('Response.Status = TEXT("partially_completed")', toolset)
-        self.assertNotIn("created_and_validated", toolset)
-        self.assertNotIn("modified_and_validated", toolset)
+        self.assertIn(
+            "bMutationSucceeded && MutationResult.bCreatedTable",
+            toolset,
+        )
+        self.assertIn('Response.Status = TEXT("created_and_validated")', toolset)
+        self.assertIn('Response.Status = TEXT("modified_and_validated")', toolset)
         for evidence in (
             'SetNullField(TEXT("saved"))',
             'SetNullField(TEXT("reread_after_write"))',
@@ -250,9 +254,11 @@ class GameplaySpecificationTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         non_dry = toolset.index("if (!Request.bDryRun)")
         begin = toolset.index("MutatingDispatch.TryBegin(", non_dry)
+        execute = toolset.index("FUeremcpAbilityTableMutator::Execute(", begin)
         complete = toolset.index("MutatingDispatch.Complete(Response)", begin)
         self.assertLess(non_dry, begin)
-        self.assertLess(begin, complete)
+        self.assertLess(begin, execute)
+        self.assertLess(execute, complete)
         self.assertIn('#include "UeremcpMutatingDispatch.h"', toolset)
         self.assertNotIn("FUeremcpMutatorQueue::TryAcquire(", toolset)
         self.assertNotIn("FUeremcpAuditLog::Append(", toolset)
@@ -260,6 +266,35 @@ class GameplaySpecificationTests(unittest.TestCase):
             GAMEPLAY_SOURCE_DIR / "UeremcpGameplay.Build.cs"
         ).read_text(encoding="utf-8")
         self.assertIn('"UeremcpCore"', build_rules)
+        self.assertIn('"FileSandboxCore"', build_rules)
+        self.assertIn('"AssetRegistry"', build_rules)
+
+    def test_datatable_executor_saves_rereads_then_persists(self) -> None:
+        mutator = (
+            GAMEPLAY_SOURCE_DIR / "Private" / "UeremcpAbilityTableMutator.cpp"
+        ).read_text(encoding="utf-8")
+        save = mutator.index("UPackage::SavePackage(")
+        reread = mutator.index("Table->FindRowUnchecked(RowName)", save)
+        compare = mutator.index(
+            "OutResult.RevisionAfter == DesiredRevision",
+            reread,
+        )
+        changes = mutator.index("FGlobalSandbox::GetChanges()", compare)
+        persist = mutator.index("FGlobalSandbox::Persist(", changes)
+        leave = mutator.index("FGlobalSandbox::Leave()", persist)
+        self.assertLess(save, reread)
+        self.assertLess(reread, compare)
+        self.assertLess(compare, changes)
+        self.assertLess(changes, persist)
+        self.assertLess(persist, leave)
+        for safety in (
+            "FGlobalSandbox::IsActive()",
+            "FGlobalSandbox::Discard()",
+            "ExistingBackup",
+            "expected_revision conflict",
+            "mode=create forbids replacement",
+        ):
+            self.assertIn(safety, mutator)
 
     def test_dry_run_response_golden_is_complete_and_schema_valid(self) -> None:
         response_schema = json.loads(

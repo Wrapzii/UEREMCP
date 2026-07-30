@@ -441,14 +441,19 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 	TestTrue(TEXT("queue-gated response parses"), Response.IsValid());
 	if (Response.IsValid())
 	{
-		TestEqual(
-			TEXT("no mutation success is claimed while Core gate is open"),
-			Response->GetStringField(TEXT("status")),
-			FString(TEXT("partially_completed")));
+		const FString Status = Response->GetStringField(TEXT("status"));
+		TestTrue(
+			TEXT("mutation reports only verified create, modify, or no-change"),
+			Status == TEXT("created_and_validated")
+				|| Status == TEXT("modified_and_validated")
+				|| Status == TEXT("no_change_required"));
 		const TSharedPtr<FJsonObject>* Validation = nullptr;
 		if (Response->TryGetObjectField(TEXT("validation"), Validation)
 			&& Validation && Validation->IsValid())
 		{
+			TestTrue(
+				TEXT("normalized row re-read matched"),
+				(*Validation)->GetBoolField(TEXT("reread_after_write")));
 			const TArray<TSharedPtr<FJsonValue>>* Checks = nullptr;
 			if ((*Validation)->TryGetArrayField(TEXT("checks_performed"), Checks) && Checks)
 			{
@@ -465,6 +470,38 @@ bool FUeremcpCreateSpellQueueGateLifecycleTest::RunTest(const FString& Parameter
 	}
 	TestFalse(
 		TEXT("request never leaks queue ownership"),
+		FUeremcpMutatorQueue::IsActive(FPaths::GetProjectFilePath()));
+
+	const FString RepeatRequest =
+		Request.Replace(TEXT("ws09-queue-lifecycle"), TEXT("ws09-repeat-no-change"));
+	const TSharedPtr<FJsonObject> RepeatResponse =
+		ParseObject(UUeremcpGameplayToolset::CreateSpell(RepeatRequest));
+	TestTrue(TEXT("repeat response parses"), RepeatResponse.IsValid());
+	if (RepeatResponse.IsValid())
+	{
+		TestEqual(
+			TEXT("repeat is idempotent after normalized re-read"),
+			RepeatResponse->GetStringField(TEXT("status")),
+			FString(TEXT("no_change_required")));
+	}
+
+	const FString ConflictRequest = RepeatRequest
+		.Replace(TEXT("ws09-repeat-no-change"), TEXT("ws09-revision-conflict"))
+		.Replace(
+			TEXT("\"mode\":\"create_or_update\""),
+			TEXT("\"mode\":\"create_or_update\",\"expected_revision\":\"sha256:wrong\""));
+	const TSharedPtr<FJsonObject> ConflictResponse =
+		ParseObject(UUeremcpGameplayToolset::CreateSpell(ConflictRequest));
+	TestTrue(TEXT("revision-conflict response parses"), ConflictResponse.IsValid());
+	if (ConflictResponse.IsValid())
+	{
+		TestEqual(
+			TEXT("revision conflict never claims mutation"),
+			ConflictResponse->GetStringField(TEXT("status")),
+			FString(TEXT("failed_validation")));
+	}
+	TestFalse(
+		TEXT("revision conflict releases queue"),
 		FUeremcpMutatorQueue::IsActive(FPaths::GetProjectFilePath()));
 
 	const FUeremcpMutatorQueue::FAcquireResult Blocker =
