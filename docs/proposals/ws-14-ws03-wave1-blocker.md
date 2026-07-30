@@ -35,14 +35,20 @@ and WS-06 cannot start POC A.
 
 ## Response
 
-**Accepted — Critical Wave 1 gate.** WS-03 has uncommitted work in `UEREMCP-ws03`;
-that must be committed and finished before any Wave 2 implementation.
+**Partially closed — 2026-07-29 (WS-01).**
 
-Required, in order:
-1. Commit current Core compile progress; restore/register modules honestly.
-2. Register `UeremcpTransport` and `UeremcpValidation` in `UEREMCP.uplugin` once
-   sources are present (merge from `ws-01-orch` / workstream branches as needed).
-3. `[VERIFIED-RUNTIME]` Ping/Echo via MCP `call_tool`, or exact negative finding.
-4. Capture RB-03 q6 schema verbatim.
+Done:
+1. WS-03 landed `595a73d` on `ws-03-plugin` — Core/Protocol/Transport/Validation
+   DLLs present; uplugin registers all four.
+2. Integrated into `ws-01-orch` as `56f5d36` (Protocol conflicts resolved by
+   taking WS-03 UE 5.8 `FSharedString` key fixes).
+3. RB-03 q6 schema captured verbatim (bare `type:string` + description).
+4. In-editor automation Ping/Echo/Schema previously 3/3 Success.
 
-R-04 / R-15 remain open until this lands. Wave 2 implementation stays gated.
+Still open (blocks R-04 full close):
+- MCP `call_tool` Ping/Echo against **target project RE**. Live `:8000` session
+  is `visualtest` — `PluginToolset` does not discover `UEREMCP` there
+  `[VERIFIED-RUNTIME: UnrealEditor.exe command line; ListDiscoveredPlugins]`.
+- Shipping `Rollback.MultiAssetDiscard` with `-KeepUeremcp` (R-03 residual).
+
+Wave 2 implementation stays gated until Phase 1 exit.

@@ -28,14 +28,14 @@ later agent reading the code does not "fix" a deliberate choice.
 | [0004](ADR-0004-graph-representation.md) | Complete graph representation and exchange | Accepted |
 | [0005](ADR-0005-transactions-rollback.md) | Transactions, sandboxing, and rollback | Accepted |
 | [0006](ADR-0006-idempotency-revisions.md) | Idempotency, revisions, and conflict handling | Accepted |
-| 0007 | Implementation language for domain services (C++ vs Python split) | **Unwritten** — needs RB-03 |
+| [0007](ADR-0007-implementation-language.md) | Implementation language (C++ primary, Python exploratory) | **Accepted** |
 | [0008](ADR-0008-template-substrate.md) | Template & pattern library substrate | **Accepted** |
 | [0009](ADR-0009-long-running-jobs.md) | Long-running job model (progress, cancellation, resumption) | **Accepted** |
 | 0010 | Security model and permission tiers | **Unwritten** — needs RB-13 |
 
-ADR-0008 is written from RB-10. ADR-0009 is written from RB-04. ADRs 0007 and
-0010 stay unwritten until their blocking briefs land — **WS-01 writes them then**;
-no other workstream should assume an answer in the meantime.
+ADR-0007 is written from RB-03. ADR-0008 is written from RB-10. ADR-0009 is
+written from RB-04. ADR-0010 stays unwritten until RB-13 lands — **WS-01 writes
+it then**; no other workstream should assume an answer in the meantime.
 
 ## Challenging a frozen ADR
 

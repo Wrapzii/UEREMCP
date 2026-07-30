@@ -87,10 +87,13 @@ cheap to live with and expensive to change.
 
 ## Open questions
 
-- How does an `AICallable` `UFUNCTION` taking one `FString` present its schema to the
-  agent? If UHT generates only "a string parameter," agents lose schema guidance and
-  we need `describe_action` to carry the real schema. **First thing WS-03 must
-  test.** (`RB-03`)
+- ~~How does an `AICallable` `UFUNCTION` taking one `FString` present its schema to the
+  agent?~~ **Closed by RB-03 q6** `[VERIFIED-RUNTIME: RegisterAndCaptureSchema]`:
+  UHT emits only `{"type":"string","description":"..."}` for the envelope
+  parameter — no nested envelope object schema at the MCP tool boundary. Agents
+  must get field guidance from `@param` / tool description text, `describe_action`,
+  or a future hybrid `USTRUCT` + JSON `specification` (RB-03 q7). Residual
+  discoverability risk remains **R-04**.
 - ~~Whether `expected_revision` belongs in the envelope or per-operation inside batches~~
   **Closed:** both — different scopes
   (`docs/proposals/ws-05-expected-revision-scope.md`).
