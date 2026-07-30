@@ -101,7 +101,7 @@ Write-Host "Exit code: $($proc.ExitCode)"
 # Surface automation summary lines for agents that cannot open the full log.
 if (Test-Path $LogFile) {
     Write-Host "---- automation result lines ----"
-    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|SKIP:|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|UEREMCP\.Transport|UEREMCP\.Niagara\.Inspect|UeremcpMaterial\.Toolset|created_and_validated|Sandbox\.Library|Automation Test Queue|UEREMCP_POC_B_GATE_OUTCOME|UEREMCP_POC_B_FIREBALL_OUTCOME|UEREMCP_POC_B10_(EVIDENCE|OUTCOME)" |
+    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|SKIP:|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|UEREMCP\.Transport|UEREMCP\.Niagara\.Inspect|UeremcpMaterial\.Toolset|created_and_validated|Sandbox\.Library|Automation Test Queue|UEREMCP_POC_B_GATE_OUTCOME|UEREMCP_POC_B_FIREBALL_OUTCOME|UEREMCP_POC_B10_(EVIDENCE|OUTCOME)|UEREMCP_D5_(EVIDENCE|OUTCOME)" |
         Select-Object -Last 80 |
         ForEach-Object { $_.Line }
 }

@@ -29,6 +29,7 @@ public class UeremcpValidation : ModuleRules
 			"Json",
 			"JsonUtilities",
 			"Projects",
+			"LevelEditor",
 
 			// ADR-0005 outer layer. [VERIFIED: $TR/.../Public/ToolsetRegistry/SandboxLibrary.h]
 			"ToolsetRegistry",
@@ -54,6 +55,10 @@ public class UeremcpValidation : ModuleRules
 
 			// E1 restart seed creates and validates POC C gameplay-bound variations.
 			"UeremcpTemplates",
+
+			// D5 genuine multi-client PIE proof exercises RE Pattern B directly.
+			// [VERIFIED: RECharacter.h:175-185; REPlayerVisualCombatComponent.h:252-269]
+			"RE",
 
 			// WS-06 MutatingDispatch adapter regression (skips until handoff header lands).
 			"UeremcpBlueprint",
