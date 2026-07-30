@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `a6ca454` (trail/B4 stack + residual readiness)
+- **Orch tip at writing:** `7594f46` (CompleteRoundTrip fixture + compile include)
 - **Date:** 2026-07-30
-- **Status:** Fireball editor gate **PASS** on `a6ca454`, including all six requested B4 roles; B2/B4 editor proof is green. **Overall POC-B remains unclaimed**: B1, B3, B5, B6, B8, and B9 still lack complete acceptance evidence; B10 remains optional/supplementary. CompleteRoundTrip currently fails because the fixture/filter is not yet on orch. No overall POC-A claim.
+- **Status:** WS-11 CompleteRoundTrip runner/fixture is on orch as `600c383` (`8bf7b0d`), with required K2 action include at `7594f46`; Validation builds successfully. **CRT re-run is next; no overall POC-A claim.** Fireball B2/B4 editor proof remains green, while overall POC-B remains open on B1/B3/B5/B6/B8/B9.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -71,10 +71,10 @@ Aggregate filter missing: no matching `editor_UEREMCP_Blueprint_POCA_CompleteRou
 | A1 / A2 / A5 MCP one-call / complete payload | WS-11 | Prior slice SKIP; code ready — needs CompleteRoundTrip editor/MCP run |
 | A9 MCP round-trip metrics | WS-11 | Slice SKIP |
 | A10 `fidelity.lossy_areas` | WS-11 | Prior slice SKIP; assertions expanded — needs CompleteRoundTrip run |
-| Aggregate `POCA.CompleteRoundTrip` marker | WS-11 | **FAIL / unavailable** — no tests matched because fixture/filter is not yet on orch; WS-11 commit pending |
+| Aggregate `POCA.CompleteRoundTrip` marker | WS-11 | Fixture/runner landed at `600c383` with compile fix `7594f46`; Validation green; **re-run next** |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** land the pending WS-11 fixture/filter commit, then run CompleteRoundTrip; refuse A1/A2/A5/A9/A10 and overall POC-A claims until PASS.
+**WS-01 next step:** run CompleteRoundTrip on `7594f46` lineage; refuse A1/A2/A5/A9/A10 and overall POC-A claims until PASS.
 
 ---
 
@@ -140,7 +140,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Land WS-11 CompleteRoundTrip fixture/filter, run it after `7cd6c93`, and close A1/A2/A5/A9/A10 | WS-11 | Current run FAIL: no tests matched; refuse overall POC-A |
+| P0 | Run CompleteRoundTrip after runner/fixture `600c383` + compile fix `7594f46` | WS-11 | Validation green; refuse A1/A2/A5/A9/A10 and overall POC-A until PASS |
 | P0 | Close remaining POC-B criteria B1/B3/B5/B6/B8/B9; B10 optional | WS-07 + WS-11 | B2/B4 editor gate PASS; refuse overall POC-B |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |

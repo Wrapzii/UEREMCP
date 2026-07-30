@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `a6ca454`
+- **Current orchestration tip:** `7594f46` (CompleteRoundTrip fixture + compile include)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Fireball B2/B4 editor gate **PASS** on `a6ca454`, including all six B4 roles. Overall POC-B remains unclaimed: B1/B3/B5/B6/B8/B9 remain open; B10 is optional. CompleteRoundTrip **FAILS unavailable** because its fixture/filter is not yet on orch. No overall POC-A claim.
+- **Status:** CompleteRoundTrip runner/fixture landed as `600c383` (`8bf7b0d`), compile-fixed at `7594f46`; Validation is green and CRT re-run is next. Fireball B2/B4 editor gate remains PASS. No overall POC-A/POC-B claim; POC-B remains open on B1/B3/B5/B6/B8/B9.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: B2/B4 editor gate is green on `a6ca454`; overall POC-B is not. WS-06 `7cd6c93` is ready, but CompleteRoundTrip fixture/filter is missing from orch, so A1/A2/A5/A9/A10 and overall POC A remain unclaimed.
+Residuals: B2/B4 editor gate is green on `a6ca454`; overall POC-B is not. CompleteRoundTrip fixture/runner and compile fix are now on orch; re-run is pending, so A1/A2/A5/A9/A10 and overall POC A remain unclaimed.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -88,7 +88,7 @@ This proves the B2/B4 editor gate only. Remaining overall POC-B criteria: B1, B3
 
 ## Blueprint CompleteRoundTrip current result
 
-**FAIL / unavailable:** `editor_UEREMCP_Blueprint_POCA_CompleteRoundTrip_20260730_053325.log` reports no automation tests matched `UEREMCP.Blueprint.POCA.CompleteRoundTrip`; fixture/filter is not yet on orch. WS-11 commit pending. No A1/A2/A5/A9/A10 or overall POC-A claim.
+Prior result was **FAIL / unavailable**: `editor_UEREMCP_Blueprint_POCA_CompleteRoundTrip_20260730_053325.log` reported no matching automation test. Runner/fixture is now landed as `600c383` (`8bf7b0d`) and compile-fixed at `7594f46`; Validation build succeeds. **Re-run next.** No A1/A2/A5/A9/A10 or overall POC-A claim.
 
 ## Templates editor result and handoff
 
@@ -299,7 +299,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | B2/B4 editor gate PASS with all six roles. Close remaining B1/B3/B5/B6/B8/B9 with WS-11. |
 | WS-08 | Trail graph + honest MI-absent fixes are proven by the B2/B4 editor gate PASS. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Land CompleteRoundTrip fixture/filter and re-run. Close remaining POC-B criteria B1/B3/B5/B6/B8/B9. Keep overall POC-A/POC-B unclaimed. |
+| WS-11 | Run CompleteRoundTrip on `7594f46` lineage. Close remaining POC-B criteria B1/B3/B5/B6/B8/B9. Keep overall POC-A/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
 POC A remains partial pending CompleteRoundTrip. B2/B4 editor gate passes, but overall POC-B remains open on B1/B3/B5/B6/B8/B9. No overall POC-A / overall POC-B claim. No junction retarget.
