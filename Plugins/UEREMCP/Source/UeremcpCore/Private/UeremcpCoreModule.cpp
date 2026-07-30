@@ -3,6 +3,7 @@
 #include "Misc/CoreDelegates.h"
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpPlanTransactionCoordinator.h"
 #include "UeremcpReferenceToolset.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcp, Log, All);
@@ -34,6 +35,8 @@ public:
 
 	virtual void ShutdownModule() override
 	{
+		FUeremcpPlanTransactionCoordinator::UnregisterFromExecutor();
+
 		if (OnPostEngineInitHandle.IsValid())
 		{
 			FCoreDelegates::GetOnPostEngineInit().Remove(OnPostEngineInitHandle);
@@ -62,6 +65,18 @@ private:
 				TEXT("UUeremcpReferenceToolset registration failed at PostEngineInit. "
 				     "Automation test UeremcpCore.ReferenceToolset.RegisterAndCaptureSchema "
 				     "can re-check."));
+		}
+
+		FString PlanTransactionError;
+		if (FUeremcpPlanTransactionCoordinator::RegisterWithExecutor(PlanTransactionError))
+		{
+			UE_LOG(LogUeremcp, Log, TEXT("execute_plan transaction callbacks registered."));
+		}
+		else
+		{
+			UE_LOG(LogUeremcp, Warning,
+				TEXT("execute_plan transaction callback registration failed: %s"),
+				*PlanTransactionError);
 		}
 	}
 
