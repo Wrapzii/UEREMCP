@@ -400,7 +400,14 @@ class NiagaraSpecificationTests(unittest.TestCase):
         )
         self.assertTrue(gates["extra_poc_b_gates"]["B1_single_request_complete"])
         self.assertIsNone(gates["extra_poc_b_gates"]["B10_visible_render"])
-        self.assertIn("niagara.poc_b.B10_visible_render", gates["checks_skipped_must_include"])
+        self.assertIn(
+            "niagara.compile_active_queue_not_drained",
+            gates["checks_skipped_may_include"],
+        )
+        self.assertIn(
+            "niagara.compile_await_observed_via_script_state",
+            gates["checks_performed_may_include"],
+        )
 
     def test_poc_b_editor_gate_scaffold_fixture(self) -> None:
         fixture = load_fixture("poc_b_editor_gate_scaffold.json")

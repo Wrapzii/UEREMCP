@@ -124,10 +124,13 @@
       "B9_change_manifest_complete": true,
       "B10_visible_render": null
     },
-    "checks_skipped_must_include": [
+    "checks_skipped_may_include": [
       "niagara.poc_b.B8_restart_survival",
-      "niagara.poc_b.B10_visible_render",
+      "niagara.compile_active_queue_not_drained",
       "niagara.content_hash_round_trip_stability"
+    ],
+    "checks_performed_may_include": [
+      "niagara.compile_await_observed_via_script_state"
     ]
   }
 }

@@ -19,11 +19,13 @@ Editor gates already PASS on `8a8c75d`:
 
 ## WS-07 fix (2026-07-30)
 
-**`AwaitCompile` MCP crash (132bb54 insufficient):** Poll-only still called `PollForCompilationComplete` → `QueryCompileComplete`, which dereferences `ActiveCompilations[0]` on hybrid verify compilations and crashes with SharedPointer IsValid during synchronous MCP HTTP tool dispatch (RE.log 11:10:29, line 593).
+**`AwaitCompile` MCP crash:** `QueryCompileComplete` on hybrid `ActiveCompilations` crashes during synchronous MCP dispatch (SharedPointer IsValid). **Never call** `PollForCompilationComplete` on live tool dispatch.
 
-**Follow-up:** On live tool dispatch (`!GIsAutomationTesting`), `RequestCompile` only — no `QueryCompileComplete` poll. Compile state read via `GetSystemCompileState`; `checks_skipped` includes `niagara.compile_await_deferred_tool_dispatch`. Editor automation retains bounded poll.
+**B1/B6 strategy (Option 1 — landed):** Observe-only poll via `UNiagaraExternalEditUtilities::GetSystemCompileState` until script VM `LastCompileStatus` aggregate is UpToDate — no `QueryCompileComplete`. When scripts are UpToDate but `HasActiveCompilations` queue remains undrained, honestly report `compile_active_queue_not_drained` in `checks_skipped` and clear `bIsCompiling` for gate evaluation. MCP adds `compile_await_observed_via_script_state` to `checks_performed`.
 
-WS-11: rerun one-call MCP fireball after orch rebuild.
+**Option 2 (not chosen for B1):** ADR-0009 `partially_completed` + `get_job_result` for compile drain would require `mcp_round_trips > 1` — document only; breaks current B1 transport bar of `mcp_round_trips == 1`.
+
+WS-11: rerun one-call MCP fireball after orch rebuild (~`c5cd3fc`).
 
 | Artifact | Purpose |
 |---|---|
