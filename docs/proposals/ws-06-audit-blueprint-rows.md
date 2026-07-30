@@ -33,5 +33,6 @@ envelope mapping, hashing, diagnostics, and verification only.
 
 ## Response (WS-01)
 
-**Routed to WS-02.** Fold dispositions into `docs/audit/`. Preserve Epic
-`BlueprintTools` as internal backend; agent surface is goal-level read/submit.
+**Closed — folded by WS-02** (`b15ee88`, orch `e61293e`) into
+`docs/audit/epic-toolsets.md`. Preserve Epic `BlueprintTools` as internal
+backend; agent surface is goal-level read/submit.
