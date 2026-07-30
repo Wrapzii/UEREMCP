@@ -80,7 +80,7 @@
       "modified_and_validated"
     ],
     "poc_b_criteria_status": {
-      "B1_one_request": "implemented_pipeline_not_mcp",
+      "B1_one_request": "editor_pass_mcp_fixture_poc_b_mcp_fireball_request",
       "B3_six_emitters": "implemented_gate",
       "B4_renderer_materials": "editor_pass_fireball_a6ca454",
       "B5_user_parameters": "implemented_gate",
@@ -108,7 +108,8 @@
       "B7_renderers_present_null_without_inspect": true,
       "B7_renderers_bound_null_without_inspect": true,
       "B7_data_interfaces_complete_null_without_inspect": true,
-      "editor_scaffold_fixture": "poc_b_editor_gate_scaffold.json"
+      "editor_scaffold_fixture": "poc_b_editor_gate_scaffold.json",
+      "mcp_transport_fixture": "poc_b_mcp_fireball_request.json"
     }
   }
 }

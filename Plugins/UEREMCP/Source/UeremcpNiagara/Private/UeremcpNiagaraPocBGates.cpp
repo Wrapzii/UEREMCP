@@ -337,6 +337,7 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 	}
 
 	Out.ChecksSkipped.Add(TEXT("niagara.content_hash_round_trip_stability"));
+	Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B10_visible_render"));
 
 	return Out;
 }
@@ -503,11 +504,14 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 		Gates->SetObjectField(TEXT("inspect_fidelity"), InspectFidelity);
 	}
 
+	Gates->SetField(TEXT("B10_visible_render"), MakeShared<FJsonValueNull>());
+
 	TArray<TSharedPtr<FJsonValue>> NeverClaims;
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("created_and_validated")));
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("modified_and_validated")));
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("mcp_transport_one_call")));
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("editor_restart_survival")));
+	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("B10_visible_render_supplementary")));
 	Gates->SetArrayField(TEXT("never_claims"), NeverClaims);
 
 	return Gates;

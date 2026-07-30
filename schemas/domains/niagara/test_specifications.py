@@ -303,12 +303,16 @@ class NiagaraSpecificationTests(unittest.TestCase):
             "poc_b_editor_gate_scaffold.json",
         )
         self.assertEqual(
+            expectations["poc_b_gates"]["mcp_transport_fixture"],
+            "poc_b_mcp_fireball_request.json",
+        )
+        self.assertEqual(
             expectations["poc_b_criteria_status"]["B7_renderers_bound"],
             "editor_pass_when_b4_true",
         )
         self.assertEqual(
             expectations["poc_b_criteria_status"]["B1_one_request"],
-            "implemented_pipeline_not_mcp",
+            "editor_pass_mcp_fixture_poc_b_mcp_fireball_request",
         )
         self.assertEqual(
             expectations["poc_b_criteria_status"]["B9_change_manifest"],
@@ -373,6 +377,30 @@ class NiagaraSpecificationTests(unittest.TestCase):
             "UEREMCP.Niagara.POCB.Restart.Verify",
         )
         self.assertEqual(fixture["checkpoint"]["id"], "poc-b8-fireball")
+
+    def test_poc_b_mcp_fireball_request_fixture(self) -> None:
+        fixture = load_fixture("poc_b_mcp_fireball_request.json")
+        handoff = fixture["mcp_handoff"]
+        request = fixture["request"]
+        gates = fixture["expected_response_gates"]
+
+        self.assertEqual(fixture["owner"], "WS-07")
+        self.assertEqual(handoff["toolset"], "UeremcpNiagara")
+        self.assertEqual(handoff["tool"], "CreateNiagaraEffect")
+        self.assertEqual(request["action"], "create_niagara_effect")
+        self.assertTrue(request["target"]["asset_path"].startswith("/Game/__UeremcpPoc/"))
+        self.assertEqual(len(request["specification"]["components"]), 6)
+        self.assertIn("ribbon_trail", request["specification"]["materials"])
+        self.assertTrue(request["options"]["validate"])
+        self.assertFalse(request["options"]["dry_run"])
+        self.assertTrue(
+            set(request["options"]).issubset(ENVELOPE_OPTIONS_ALLOWED),
+            msg=f"request.options must parse through envelope; unknown keys: "
+            f"{set(request['options']) - ENVELOPE_OPTIONS_ALLOWED}",
+        )
+        self.assertTrue(gates["extra_poc_b_gates"]["B1_single_request_complete"])
+        self.assertIsNone(gates["extra_poc_b_gates"]["B10_visible_render"])
+        self.assertIn("niagara.poc_b.B10_visible_render", gates["checks_skipped_must_include"])
 
     def test_poc_b_editor_gate_scaffold_fixture(self) -> None:
         fixture = load_fixture("poc_b_editor_gate_scaffold.json")

@@ -1,0 +1,133 @@
+{
+  "$comment": "WS-07 canonical single-call MCP request for POC B fireball (B1 transport proof). WS-11 loads this JSON and passes it to UeremcpNiagara.CreateNiagaraEffect via MCP call_tool.",
+  "owner": "WS-07",
+  "mcp_handoff": {
+    "toolset": "UeremcpNiagara",
+    "tool": "CreateNiagaraEffect",
+    "request_field": "RequestJson",
+    "allowed_target_roots": [
+      "/Game/__UeremcpPoc/",
+      "/Game/__UeremcpTests/"
+    ],
+    "poc_acceptance_target": "/Game/__UeremcpPoc/NS_POCB_Fireball",
+    "materials_contract": "poc_b_fireball_materials.json",
+    "b1_transport_assertions": [
+      "metrics.mcp_round_trips == 1",
+      "extra.validation.single_request_pipeline == true",
+      "extra.poc_b_gates.B1_single_request_complete == true",
+      "extra.poc_b_gates.never_claims includes mcp_transport_one_call (transport proof is WS-11 harness, not Niagara response)"
+    ],
+    "editor_parity_filter": "UEREMCP.Niagara.POCB.FireballInlineMaterials"
+  },
+  "request": {
+    "protocol_version": "1.0",
+    "request_id": "ws11-poc-b-mcp-fireball",
+    "action": "create_niagara_effect",
+    "mode": "replace",
+    "target": {
+      "asset_path": "/Game/__UeremcpPoc/NS_POCB_Fireball"
+    },
+    "specification": {
+      "name": "NS_POCB_Fireball",
+      "effect_type": "projectile",
+      "element": "fire",
+      "components": [
+        "core",
+        "flame_shell",
+        "sparks",
+        "smoke",
+        "ribbon_trail",
+        "impact_burst"
+      ],
+      "parameters": {
+        "primary_color": [1.0, 0.12, 0.01, 1.0],
+        "secondary_color": [1.0, 0.75, 0.05, 1.0],
+        "scale": 1.0,
+        "intensity": 8.0
+      },
+      "template_system": {
+        "asset_path": "/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight"
+      },
+      "materials": {
+        "core": {
+          "reuse_if_present": true,
+          "create_spec": {
+            "purpose": "elemental_projectile_core",
+            "element": "fire",
+            "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"]
+          }
+        },
+        "flame_shell": {
+          "reuse_if_present": true,
+          "create_spec": {
+            "purpose": "elemental_projectile_core",
+            "element": "fire"
+          }
+        },
+        "sparks": {
+          "reuse_if_present": true,
+          "create_spec": {
+            "purpose": "elemental_projectile_core",
+            "element": "fire"
+          }
+        },
+        "smoke": {
+          "reuse_if_present": true,
+          "create_spec": {
+            "purpose": "elemental_projectile_core",
+            "element": "fire"
+          }
+        },
+        "ribbon_trail": {
+          "reuse_if_present": true,
+          "create_spec": {
+            "purpose": "elemental_projectile_trail",
+            "element": "fire",
+            "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"],
+            "textures": {
+              "FlowMap": {
+                "generate": "flow_map",
+                "dimensions": [256, 256]
+              }
+            }
+          }
+        },
+        "impact_burst": {
+          "reuse_if_present": true,
+          "create_spec": {
+            "purpose": "elemental_projectile_core",
+            "element": "fire"
+          }
+        }
+      }
+    },
+    "options": {
+      "dry_run": false,
+      "atomic": true,
+      "rollback_on_failure": true,
+      "compile": true,
+      "validate": true,
+      "save": true,
+      "response_detail": "summary"
+    },
+    "idempotency_key": "poc-b-fireball-mcp-001"
+  },
+  "expected_response_gates": {
+    "status": "partially_completed_or_created_with_warnings",
+    "extra_poc_b_gates": {
+      "B1_single_request_complete": true,
+      "B3_six_emitters_present": true,
+      "B4_material_bindings_verified": true,
+      "B5_user_parameters_present": true,
+      "B6_compile_awaited": true,
+      "B8_assets_saved": true,
+      "B9_change_manifest_complete": true,
+      "B10_visible_render": null
+    },
+    "checks_skipped_must_include": [
+      "niagara.poc_b.B8_restart_survival",
+      "niagara.poc_b.B10_visible_render",
+      "niagara.content_hash_round_trip_stability"
+    ]
+  }
+}

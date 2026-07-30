@@ -126,6 +126,10 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("B8 field"), Diagnostics->TryGetBoolField(TEXT("B8_assets_saved"), bB8Saved));
 	TestTrue(TEXT("B8 true in diagnostics"), bB8Saved);
 	TestTrue(TEXT("B8 restart null"), Diagnostics->TryGetField(TEXT("B8_restart_survival"))->IsNull());
+	TestTrue(TEXT("B10 null"), Diagnostics->TryGetField(TEXT("B10_visible_render"))->IsNull());
+	TestTrue(
+		TEXT("B10 skipped"),
+		Gates.ChecksSkipped.Contains(TEXT("niagara.poc_b.B10_visible_render")));
 
 	bool bB9Complete = false;
 	TestTrue(TEXT("B9 complete field"), Diagnostics->TryGetBoolField(TEXT("B9_change_manifest_complete"), bB9Complete));
@@ -141,7 +145,7 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 
 	const TArray<TSharedPtr<FJsonValue>>* NeverClaims = nullptr;
 	TestTrue(TEXT("never_claims array"), Diagnostics->TryGetArrayField(TEXT("never_claims"), NeverClaims));
-	TestTrue(TEXT("never_claims populated"), NeverClaims && NeverClaims->Num() == 4);
+	TestTrue(TEXT("never_claims populated"), NeverClaims && NeverClaims->Num() == 5);
 
 	FUeremcpNiagaraCreateResult NoRoundTripCreate = CreateResult;
 	const FUeremcpNiagaraPocBGateResult NoInspectGates =
