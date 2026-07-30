@@ -1,13 +1,14 @@
 # POC metrics
 
 **Owner:** WS-14  
-**Status:** E7 rows recorded for A/B/C/D/E (measured or `unavailable` with machine-checkable reason). Overall POC E remains **not** claimed.  
+**Status:** E7 rows recorded for A/B/C/D/E (measured or `unavailable` with machine-checkable reason). Overall POC E **claimed** (2026-07-30); Domain Niagara/Material E3/E4 closed.  
 **Last updated:** 2026-07-30  
 **Harness:** [`metrics/`](metrics/) (parser + prepare script + unit tests)  
 **WS-11 evidence JSON:** `tests/integration/_logs/poc_e7_metrics_20260730.json`
 
-E7 means required cells are **reported** (measured or precisely `unavailable`). It does
-**not** mean overall POC E passes.
+E7 means required cells are **reported** (measured or precisely `unavailable`). Overall
+POC E is claimed under frozen E1–E7 wording; see
+`docs/proposals/ws-01-poc-closeout-2026-07-30.md`.
 
 ---
 
@@ -168,7 +169,7 @@ Harness evidence: `tests/integration/_logs/poc_e_acceptance_20260730_e7close.jso
 | C | closed | several cells unavailable with reasons |
 | D | closed | several cells unavailable with reasons |
 | E | closed (harness) | not a goal MCP scenario |
-| **Overall POC E** | **not claimed** | E1 full A–D (incl. C5/D5) unmet |
+| **Overall POC E** | **claimed** | E1 full A–D restart + E2–E7; Domain Niagara/Material E3/E4 closed 2026-07-30 |
 
 ---
 
