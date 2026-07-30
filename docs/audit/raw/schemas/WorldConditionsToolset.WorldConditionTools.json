@@ -1,0 +1,142 @@
+{
+  "name": "WorldConditionsToolset.WorldConditionTools",
+  "version": "1.0",
+  "description": "Inspect WorldCondition (FWorldConditionQueryDefinition, FWorldConditionBase) structs.",
+  "tools": [
+    {
+      "description": "Returns a human-readable description of a world condition query.",
+      "name": "WorldConditionsToolset.WorldConditionTools.GetQueryDescription",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "queryDefinition": {
+            "type": "object",
+            "title": "WorldConditionQueryDefinition",
+            "description": "The query definition to describe.",
+            "properties": {
+              "sharedDefinition": {
+                "title": "SharedStruct",
+                "description": "The definition used to initialize and execute world conditions.\nCreated from editable conditions during edit via Initialize().",
+                "type": "object"
+              },
+              "schemaClass": {
+                "type": "object",
+                "title": "Class@/Script/WorldConditions.WorldConditionSchema",
+                "description": "Schema of the definition, also stored in SharedDefinition.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "editableConditions": {
+                "type": "array",
+                "items": {
+                  "title": "WorldConditionEditable",
+                  "type": "object",
+                  "properties": {
+                    "expressionDepth": {
+                      "type": "integer",
+                      "description": "Expression depth controlling the parenthesis of the expression."
+                    },
+                    "operator": {
+                      "type": "string",
+                      "title": "EWorldConditionOperator",
+                      "enum": [
+                        "And",
+                        "Or",
+                        "Copy"
+                      ],
+                      "description": "Operator describing how the results of the condition is combined with other conditions."
+                    },
+                    "bInvert": {
+                      "type": "boolean",
+                      "description": "Controls whether the value of the expressions as calculated by IsTrue should be inverted."
+                    },
+                    "condition": {
+                      "type": "object",
+                      "title": "FInstancedStruct",
+                      "description": "Instance of a world condition.",
+                      "properties": {
+                        "_structType": {
+                          "type": "string",
+                          "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "expressionDepth",
+                    "operator",
+                    "bInvert",
+                    "condition"
+                  ]
+                },
+                "description": "Conditions used while editing, converted in to Conditions via Initialize().\nThose will be cleared for cooked builds but can still be used by hotfixes."
+              }
+            },
+            "required": [
+              "sharedDefinition",
+              "schemaClass",
+              "editableConditions"
+            ]
+          }
+        },
+        "required": [
+          "queryDefinition"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Text description of all conditions in the query."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a human-readable description of a single world condition.\nThe condition must be passed as an FInstancedStruct containing an FWorldConditionBase-derived struct.",
+      "name": "WorldConditionsToolset.WorldConditionTools.GetConditionDescription",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "condition": {
+            "type": "object",
+            "title": "FInstancedStruct",
+            "description": "The instanced struct holding the world condition.",
+            "properties": {
+              "_structType": {
+                "type": "string",
+                "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+              }
+            }
+          }
+        },
+        "required": [
+          "condition"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Text description of the condition, or empty if invalid."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

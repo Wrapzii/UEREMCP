@@ -1,0 +1,165 @@
+{
+  "name": "re_agent_tools.toolsets.blueprint_workflow_tools.REBlueprintWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite Blueprint workflows: inspect, create, defaults, compile.",
+  "tools": [
+    {
+      "description": "Idempotent: create Blueprint if missing else update class defaults.",
+      "name": "re_agent_tools.toolsets.blueprint_workflow_tools.REBlueprintWorkflowTools.create_or_update_blueprint",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "asset_name": {
+            "type": "string"
+          },
+          "parent_class_path": {
+            "type": "string"
+          },
+          "properties_json": {
+            "type": "string",
+            "default": "{}"
+          }
+        },
+        "required": [
+          "folder_path",
+          "asset_name",
+          "parent_class_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Compile list of Blueprint asset paths.",
+      "name": "re_agent_tools.toolsets.blueprint_workflow_tools.REBlueprintWorkflowTools.compile_blueprints",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint_paths_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint_paths_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set Blueprint class defaults, compile, save.",
+      "name": "re_agent_tools.toolsets.blueprint_workflow_tools.REBlueprintWorkflowTools.set_class_defaults_compile_save",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint_path": {
+            "type": "string"
+          },
+          "properties_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint_path",
+          "properties_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create Blueprint asset from parent class path.",
+      "name": "re_agent_tools.toolsets.blueprint_workflow_tools.REBlueprintWorkflowTools.create_blueprint_from_class",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "asset_name": {
+            "type": "string"
+          },
+          "parent_class_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_path",
+          "asset_name",
+          "parent_class_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Compact Blueprint inspect: class, parent, optional default properties.",
+      "name": "re_agent_tools.toolsets.blueprint_workflow_tools.REBlueprintWorkflowTools.inspect_blueprint_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint_path": {
+            "type": "string"
+          },
+          "properties_json": {
+            "type": "string",
+            "default": "[]"
+          }
+        },
+        "required": [
+          "blueprint_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "name": "re_agent_tools.toolsets.character_workflow_tools.RECharacterWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite character: inspect, set mesh, wire combat montages, list sockets.",
+  "tools": [
+    {
+      "description": "List socket names on a skeletal mesh (or character's current mesh).",
+      "name": "re_agent_tools.toolsets.character_workflow_tools.RECharacterWorkflowTools.list_mesh_sockets_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletal_mesh_path": {
+            "type": "string"
+          },
+          "blueprint_path": {
+            "type": "string",
+            "default": "/Game/RE/Core/BP_RECharacter"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 40
+          }
+        },
+        "required": [
+          "skeletal_mesh_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set Light/Heavy/Cast/Pickup montage refs on REVisualCombat component defaults.\n\n        montages_json example:\n          {\"LightAttackMontage\":\"/Game/.../AM_RE_Sword_Light_01\",\n           \"CastMontage\":\"/Game/.../AM_RE_Magecraft_LPalm_Cast\"}",
+      "name": "re_agent_tools.toolsets.character_workflow_tools.RECharacterWorkflowTools.set_visual_combat_montages",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "montages_json": {
+            "type": "string"
+          },
+          "blueprint_path": {
+            "type": "string",
+            "default": "/Game/RE/Core/BP_RECharacter"
+          },
+          "compile_save": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "montages_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set skeletal mesh on character CDO mesh component + optional compile/save.",
+      "name": "re_agent_tools.toolsets.character_workflow_tools.RECharacterWorkflowTools.set_character_mesh_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletal_mesh_path": {
+            "type": "string"
+          },
+          "blueprint_path": {
+            "type": "string",
+            "default": "/Game/RE/Core/BP_RECharacter"
+          },
+          "compile_save": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "skeletal_mesh_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Compact character BP inspect: mesh, visual combat montages, class.",
+      "name": "re_agent_tools.toolsets.character_workflow_tools.RECharacterWorkflowTools.inspect_character_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint_path": {
+            "type": "string",
+            "default": "/Game/RE/Core/BP_RECharacter"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

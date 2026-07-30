@@ -1,0 +1,475 @@
+{
+  "name": "animation_toolset.toolsets.import_export.SequencerImportExportTools",
+  "version": "1.0",
+  "description": "Tools for importing and exporting animation data to and from Sequencer.\n    Use when exporting bindings or Control Rig animation to FBX files,\n    importing FBX animation onto bindings or Control Rig tracks, exporting\n    animation to AnimSequence assets, or linking AnimSequences for\n    auto-updates.",
+  "tools": [
+    {
+      "description": "Get the content path of the LevelSequence linked to an AnimSequence.\n\n        Args:\n            anim_sequence: The AnimSequence to query.\n\n        Returns:\n            Content path of the linked LevelSequence, or empty string if\n            no link exists.",
+      "name": "animation_toolset.toolsets.import_export.SequencerImportExportTools.get_linked_level_sequence",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "anim_sequence": {
+            "type": "object",
+            "title": "/Script/Engine.AnimSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "anim_sequence"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get content paths of all AnimSequences linked to a LevelSequence.\n\n        Linked AnimSequences auto-update when the LevelSequence changes.\n        They are created via export_anim_sequence with create_link=True.\n\n        Args:\n            sequence: The LevelSequence to query.\n\n        Returns:\n            List of content paths (e.g. '/Game/Anim/Test_Anim') for each\n            linked AnimSequence. Empty list if no links exist.",
+      "name": "animation_toolset.toolsets.import_export.SequencerImportExportTools.get_linked_anim_sequences",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "object",
+            "title": "/Script/LevelSequence.LevelSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "sequence"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Link an AnimSequence asset to a level sequence binding.\n\n        When the sequence is modified, the linked AnimSequence can be\n        automatically updated.\n\n        Args:\n            sequence: The LevelSequence to link from.\n            anim_sequence: The AnimSequence to link to.\n            binding: The binding to associate the link with.\n\n        Returns:\n            True on success. Returns False (via the tool_call decorator) if\n            sequence or anim_sequence is None.",
+      "name": "animation_toolset.toolsets.import_export.SequencerImportExportTools.link_anim_sequence",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sequence": {
+            "type": "object",
+            "title": "/Script/LevelSequence.LevelSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "anim_sequence": {
+            "type": "object",
+            "title": "/Script/Engine.AnimSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          }
+        },
+        "required": [
+          "sequence",
+          "anim_sequence",
+          "binding"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Export animation from a sequence binding to an AnimSequence asset.\n\n        Args:\n            world: The world context.\n            sequence: The source LevelSequence.\n            anim_sequence: The destination AnimSequence asset.\n            binding: The binding whose animation to export.\n            create_link: Whether to create a link between the sequence and\n                the exported AnimSequence.\n\n        Returns:\n            True if the export succeeded, False otherwise.",
+      "name": "animation_toolset.toolsets.import_export.SequencerImportExportTools.export_anim_sequence",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "world": {
+            "type": "object",
+            "title": "/Script/Engine.World",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "sequence": {
+            "type": "object",
+            "title": "/Script/LevelSequence.LevelSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "anim_sequence": {
+            "type": "object",
+            "title": "/Script/Engine.AnimSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          },
+          "create_link": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "world",
+          "sequence",
+          "anim_sequence",
+          "binding"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Import FBX data into a level sequence.\n\n        Args:\n            world: The world context.\n            sequence: The LevelSequence to import into.\n            bindings: The bindings to apply the import to.\n            import_settings: The FBX import settings.\n            fbx_file_path: The input FBX file path.\n\n        Returns:\n            True if the import succeeded, False otherwise.",
+      "name": "animation_toolset.toolsets.import_export.SequencerImportExportTools.import_fbx",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "world": {
+            "type": "object",
+            "title": "/Script/Engine.World",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "sequence": {
+            "type": "object",
+            "title": "/Script/LevelSequence.LevelSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "bindings": {
+            "type": "array",
+            "items": {
+              "title": "MovieSceneBindingProxy",
+              "type": "object",
+              "properties": {
+                "bindingId": {
+                  "type": "string",
+                  "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "sequence": {
+                  "type": "object",
+                  "title": "/Script/MovieScene.MovieSceneSequence",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "bindingId",
+                "sequence"
+              ]
+            }
+          },
+          "import_settings": {
+            "type": "object",
+            "title": "/Script/MovieSceneTools.MovieSceneUserImportFBXSettings",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "fbx_file_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "world",
+          "sequence",
+          "bindings",
+          "import_settings",
+          "fbx_file_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Export a level sequence to FBX.\n\n        Args:\n            world: The world context.\n            sequence: The LevelSequence to export.\n            bindings: The bindings to include in the export.\n            fbx_file_path: The output FBX file path.\n            override_options: Optional FBX export options.\n\n        Returns:\n            True if the export succeeded, False otherwise.",
+      "name": "animation_toolset.toolsets.import_export.SequencerImportExportTools.export_fbx",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "world": {
+            "type": "object",
+            "title": "/Script/Engine.World",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "sequence": {
+            "type": "object",
+            "title": "/Script/LevelSequence.LevelSequence",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "bindings": {
+            "type": "array",
+            "items": {
+              "title": "MovieSceneBindingProxy",
+              "type": "object",
+              "properties": {
+                "bindingId": {
+                  "type": "string",
+                  "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "sequence": {
+                  "type": "object",
+                  "title": "/Script/MovieScene.MovieSceneSequence",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "bindingId",
+                "sequence"
+              ]
+            }
+          },
+          "fbx_file_path": {
+            "type": "string"
+          },
+          "override_options": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/UnrealEd.FbxExportOption",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "world",
+          "sequence",
+          "bindings",
+          "fbx_file_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

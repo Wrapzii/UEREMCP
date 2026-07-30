@@ -1,0 +1,1122 @@
+{
+  "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools",
+  "version": "1.0",
+  "description": "Tools for working with the Animation Mixer in Sequencer.",
+  "tools": [
+    {
+      "description": "Remove a decoration by class from a container.\n\n        Args:\n            container: The decoration container to modify.\n            decoration_class: The decoration class to remove.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.remove_decoration",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneDecorationContainerObject",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "decoration_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "container",
+          "decoration_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a decoration by class to a container.\n\n        If the decoration already exists, returns the existing one.\n\n        Args:\n            container: The decoration container to add the decoration to.\n            decoration_class: The decoration class to add.\n\n        Returns:\n            The decoration object (existing or newly created).",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_decoration",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneDecorationContainerObject",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "decoration_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "container",
+          "decoration_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Object",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Find a specific decoration by class on a container.\n\n        Args:\n            container: The decoration container to search.\n            decoration_class: The decoration class to find.\n\n        Returns:\n            The decoration object, or None if not present.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.find_decoration",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneDecorationContainerObject",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "decoration_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "container",
+          "decoration_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Object",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all decorations currently on a container.\n\n        Args:\n            container: The decoration container to query.\n\n        Returns:\n            List of decoration objects.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_decorations",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneDecorationContainerObject",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "container"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/CoreUObject.Object",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all decoration classes that can be added to a container.\n\n        Works on any decoration container, including Anim Mixer layers.\n\n        Args:\n            container: The decoration container to query.\n\n        Returns:\n            List of UClass objects representing compatible decoration types.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_compatible_decorations",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneDecorationContainerObject",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "container"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/CoreUObject.Class",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the display name of a transition.\n\n        Args:\n            transition: The transition to query.\n\n        Returns:\n            The transition's display name.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transition_name",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transition": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimTransitionSectionBase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "transition"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Change the type of a transition, preserving blend data where possible.\n\n        Args:\n            transition: The transition to change.\n            new_transition_class: The new transition class to switch to.\n\n        Returns:\n            The new transition object (the old one becomes invalid).",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.change_transition_type",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transition": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimTransitionSectionBase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "new_transition_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "transition",
+          "new_transition_class"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimTransitionSectionBase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get detailed information about a transition.\n\n        Args:\n            transition: The transition to inspect.\n\n        Returns:\n            JSON string with 'name', 'is_valid', 'from_section_name',\n            and 'to_section_name'.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transition_info",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transition": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimTransitionSectionBase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "transition"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the transition between two specific sections.\n\n        Args:\n            track: The Anim Mixer track.\n            from_section: The earlier section.\n            to_section: The later section.\n\n        Returns:\n            The transition object, or None if no transition exists.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transition_between",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "from_section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "to_section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "from_section",
+          "to_section"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimTransitionSectionBase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all transitions associated with a section.\n\n        Transitions are created automatically when sections overlap.\n\n        Args:\n            track: The Anim Mixer track containing the section.\n            section: The section to query transitions for.\n\n        Returns:\n            List of transition objects touching this section.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transitions_for_section",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "section"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimTransitionSectionBase",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Check whether an Anim Mixer layer has any content.\n\n        Args:\n            layer: The layer to check.\n\n        Returns:\n            True if the layer is empty, False if it has sections.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.is_layer_empty",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "layer": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "layer"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the index of a mixer layer within its parent track.\n\n        Args:\n            layer: The mixer layer to query.\n\n        Returns:\n            The layer index.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_layer_index",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "layer": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "layer"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all animation sections on an Anim Mixer layer.\n\n        Args:\n            layer: The layer to query.\n\n        Returns:\n            List of MovieSceneSection objects on the layer.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_layer_sections",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "layer": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "layer"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/MovieScene.MovieSceneSection",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set the display name of an Anim Mixer layer.\n\n        Args:\n            layer: The layer to rename.\n            name: The new display name.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.set_layer_name",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "layer": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "layer",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the display name of an Anim Mixer layer.\n\n        Args:\n            layer: The layer to query.\n\n        Returns:\n            The layer's display name.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_layer_name",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "layer": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "layer"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a child track (e.g. Control Rig) to a mixer layer.\n\n        The child track occupies the entire layer. Layers support either\n        animation sections or a single child track, not both. This is the\n        UI operation of adding a track type to an empty mixer layer.\n\n        Args:\n            track: The Anim Mixer track.\n            binding: The binding that owns this mixer track.\n            track_class: The track class to add (e.g. MovieSceneControlRigParameterTrack).\n            layer_index: The zero-based layer index to add the track to.\n\n        Returns:\n            The newly created child track.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_child_track_to_layer",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "binding": {
+            "title": "MovieSceneBindingProxy",
+            "type": "object",
+            "properties": {
+              "bindingId": {
+                "type": "string",
+                "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "sequence": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSequence",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "bindingId",
+              "sequence"
+            ]
+          },
+          "track_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "layer_index": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "binding",
+          "track_class",
+          "layer_index"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a skeletal animation to a specific layer in the Anim Mixer.\n\n        Args:\n            track: The Anim Mixer track.\n            layer_index: The zero-based index of the target layer.\n            start_frame: The frame at which the animation starts.\n            anim_sequence: The AnimSequence asset to add.\n\n        Returns:\n            The newly created MovieSceneSection for the animation.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_animation_to_mixer",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "layer_index": {
+            "type": "integer"
+          },
+          "start_frame": {
+            "type": "integer"
+          },
+          "anim_sequence": {
+            "type": "object",
+            "title": "/Script/Engine.AnimSequenceBase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track",
+          "layer_index",
+          "start_frame",
+          "anim_sequence"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Insert a new layer at a specific index in the Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to insert a layer into.\n            index: The zero-based index at which to insert the layer.\n\n        Returns:\n            The newly created MovieSceneAnimationMixerLayer.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.insert_mixer_layer",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "index": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "track",
+          "index"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a new empty layer at the end of the Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to add a layer to.\n\n        Returns:\n            The newly created MovieSceneAnimationMixerLayer.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_mixer_layer",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the number of layers in an Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to query.\n\n        Returns:\n            The layer count.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_mixer_layer_count",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all layers in an Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to query.\n\n        Returns:\n            List of MovieSceneAnimationMixerLayer objects.",
+      "name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_mixer_layers",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "type": "object",
+            "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerTrack",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "track"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/MovieSceneAnimMixer.MovieSceneAnimationMixerLayer",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

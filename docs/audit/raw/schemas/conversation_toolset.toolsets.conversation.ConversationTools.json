@@ -1,0 +1,407 @@
+{
+  "name": "conversation_toolset.toolsets.conversation.ConversationTools",
+  "version": "1.0",
+  "description": "Inspect Conversation Graph (UConversationDatabase) dialogue assets.",
+  "tools": [
+    {
+      "description": "Returns sub-nodes (requirements, choices) attached to a task node.\n\n        Args:\n            node: The conversation task node to query.\n        Returns:\n            A list of UConversationSubNode UObjects.",
+      "name": "conversation_toolset.toolsets.conversation.ConversationTools.get_sub_nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationTaskNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/CommonConversationRuntime.ConversationSubNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns output connection GUIDs for a conversation node.\n\n        Args:\n            node: The conversation node to query.\n        Returns:\n            A list of FGuid output connections.",
+      "name": "conversation_toolset.toolsets.conversation.ConversationTools.get_node_connections",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationNodeWithLinks",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a conversation node by its GUID.\n\n        Args:\n            conversation: The ConversationDatabase asset.\n            guid: The GUID (from get_node_guids or entry_points).\n        Returns:\n            The UConversationNode.",
+      "name": "conversation_toolset.toolsets.conversation.ConversationTools.get_node_by_guid",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationDatabase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "guid": {
+            "type": "string",
+            "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+            "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+          }
+        },
+        "required": [
+          "conversation",
+          "guid"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns GUIDs of all reachable nodes, in map iteration order.\n\n        Use with get_node_by_guid to look up specific nodes.\n\n        Args:\n            conversation: The ConversationDatabase asset.\n        Returns:\n            A list of FGuid structs.",
+      "name": "conversation_toolset.toolsets.conversation.ConversationTools.get_node_guids",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationDatabase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "conversation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all reachable nodes in the conversation.\n\n        Use ObjectTools.get_class and get_properties on each node\n        to inspect type and properties. Each node's GUID is\n        available via its compiled_node_guid attribute.\n\n        Args:\n            conversation: The ConversationDatabase asset.\n        Returns:\n            A list of UConversationNode UObjects.",
+      "name": "conversation_toolset.toolsets.conversation.ConversationTools.get_all_nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationDatabase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "conversation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/CommonConversationRuntime.ConversationNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns speaker/participant information.\n\n        Args:\n            conversation: The ConversationDatabase asset.\n        Returns:\n            A list of FCommonDialogueBankParticipant structs.",
+      "name": "conversation_toolset.toolsets.conversation.ConversationTools.list_speakers",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationDatabase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "conversation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "CommonDialogueBankParticipant",
+              "type": "object",
+              "properties": {
+                "fallbackName": {
+                  "type": "string"
+                },
+                "participantName": {
+                  "title": "GameplayTag",
+                  "description": "Identifier represented by the component",
+                  "type": "object",
+                  "properties": {
+                    "tagName": {
+                      "type": "string",
+                      "description": "This Tags Name"
+                    }
+                  },
+                  "required": [
+                    "tagName"
+                  ]
+                },
+                "nodeTint": {
+                  "type": "object",
+                  "title": "LinearColor",
+                  "properties": {
+                    "r": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "g": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "b": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "a": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "r",
+                    "g",
+                    "b",
+                    "a"
+                  ]
+                }
+              },
+              "required": [
+                "fallbackName",
+                "participantName",
+                "nodeTint"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns entry points (FConversationEntryList structs).\n\n        Args:\n            conversation: The ConversationDatabase asset.\n        Returns:\n            A list of FConversationEntryList structs.",
+      "name": "conversation_toolset.toolsets.conversation.ConversationTools.list_entry_points",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "conversation": {
+            "type": "object",
+            "title": "/Script/CommonConversationRuntime.ConversationDatabase",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "conversation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "ConversationEntryList",
+              "type": "object",
+              "properties": {
+                "entryTag": {
+                  "title": "GameplayTag",
+                  "type": "object",
+                  "properties": {
+                    "tagName": {
+                      "type": "string",
+                      "description": "This Tags Name"
+                    }
+                  },
+                  "required": [
+                    "tagName"
+                  ]
+                },
+                "destinationList": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                  }
+                },
+                "entryIdentifier": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "entryTag",
+                "destinationList",
+                "entryIdentifier"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite capture: disk path + optional downscale/JPEG — never return base64.",
+  "tools": [
+    {
+      "description": "What to use for agent visual QA: Epic tools that already work vs RECapture composites.",
+      "name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.visual_loop_tool_notes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "PIE: CastAbility on player REVisualCombat, wait, capture framed shot to disk.\n\n        aim_dir_json: optional JSON [pitch,yaw,roll] degrees OR unit direction [x,y,z].\n        Requires PIE (or start_pie_if_needed=true). Returns screenshot path only.",
+      "name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.pie_cast_and_capture",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ability_id": {
+            "type": "string"
+          },
+          "aim_dir_json": {
+            "type": "string"
+          },
+          "capture_delay_ms": {
+            "type": "integer",
+            "default": 400
+          },
+          "max_dimension": {
+            "type": "integer",
+            "default": 1280
+          },
+          "jpeg_quality": {
+            "type": "integer",
+            "default": 85
+          },
+          "filename": {
+            "type": "string"
+          },
+          "start_pie_if_needed": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "ability_id",
+          "aim_dir_json",
+          "filename"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Compact log tail via Saved/Logs/*.log (fallback when LogsToolset unavailable).\n\n        Prefer Epic `EditorToolset.LogsToolset.GetLogEntries` when MCP exposes it.",
+      "name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.get_recent_log_entries_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "default": "RE"
+          },
+          "max_entries": {
+            "type": "integer",
+            "default": 25
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lit preview of a Material/MI on a plane (forces readable Additive/Unlit FX mats).\n\n        Spawns temp plane + light, assigns a dynamic MI with param overrides (ParticleColor etc.),\n        captures to disk, cleans up. Does not permanently mutate shared assets.",
+      "name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.render_material_preview_to_disk",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "material_path": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "parameters_json": {
+            "type": "string",
+            "default": "{}"
+          },
+          "max_dimension": {
+            "type": "integer",
+            "default": 1280
+          },
+          "jpeg_quality": {
+            "type": "integer",
+            "default": 85
+          }
+        },
+        "required": [
+          "material_path",
+          "filename"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Capture level viewport to Saved/Screenshots and return path/size only.\n\n        jpeg_quality: 0 = keep PNG; 1–100 = write JPEG and delete PNG.\n        max_dimension: downscale longest edge after capture (0 = skip).",
+      "name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.capture_viewport_to_disk",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "max_dimension": {
+            "type": "integer",
+            "default": 1280
+          },
+          "jpeg_quality": {
+            "type": "integer",
+            "default": 0
+          },
+          "width": {
+            "type": "integer",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "default": 720
+          }
+        },
+        "required": [
+          "filename"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

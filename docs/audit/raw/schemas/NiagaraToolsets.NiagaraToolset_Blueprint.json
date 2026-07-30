@@ -1,0 +1,143 @@
+{
+  "name": "NiagaraToolsets.NiagaraToolset_Blueprint",
+  "version": "1.0",
+  "description": "Niagara Toolset for Niagara and Blueprint integration.\n\nProvides utilities for creating Blueprint wrappers around Niagara Systems,\nmaking it easier to expose Niagara effects as reusable Blueprint actors.\n\nUse this toolset when you need to create Blueprint-based FX actors from Niagara systems.",
+  "tools": [
+    {
+      "description": "Creates a Blueprint actor wrapper around a Niagara System.\nThis generates a new Blueprint actor with a Niagara component configured to use the specified system.\n\nNaming convention: NS_MyEffect -> B_MyEffect",
+      "name": "NiagaraToolsets.NiagaraToolset_Blueprint.ConstructNiagaraBPWrapperFromSystem",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "newAssetPath": {
+            "type": "string",
+            "description": "Full path for the new Blueprint asset (prefer same directory as System)"
+          },
+          "system": {
+            "type": "object",
+            "title": "/Script/Niagara.NiagaraSystem",
+            "description": "The Niagara System to wrap in the Blueprint",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "parentClass": {
+            "type": "object",
+            "title": "Class@/Script/CoreUObject.Object",
+            "description": "The parent Actor class for the Blueprint (e.g., AActor)",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "newAssetPath",
+          "system",
+          "parentClass"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "The newly created Blueprint actor asset",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a Blueprint actor wrapper from a Niagara Component.\nThis generates a new Blueprint actor and preserves all component property values and user variable overrides.\n\nNaming convention: NS_MyEffect -> B_MyEffect",
+      "name": "NiagaraToolsets.NiagaraToolset_Blueprint.ConstructNiagaraBPWrapperFromComponent",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "newAssetPath": {
+            "type": "string",
+            "description": "Full path for the new Blueprint asset (prefer same directory as System)"
+          },
+          "component": {
+            "type": "object",
+            "title": "/Script/Niagara.NiagaraComponent",
+            "description": "The Niagara Component with configured properties and overrides to preserve",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "parentClass": {
+            "type": "object",
+            "title": "Class@/Script/CoreUObject.Object",
+            "description": "The parent Actor class for the Blueprint (e.g., AActor)",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "newAssetPath",
+          "component",
+          "parentClass"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "The newly created Blueprint actor asset",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

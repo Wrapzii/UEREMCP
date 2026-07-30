@@ -1,0 +1,167 @@
+{
+  "name": "re_agent_tools.toolsets.niagara_workflow_tools.RENiagaraWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite Niagara: place system, assign, set user params, compact inspect.",
+  "tools": [
+    {
+      "description": "Compact Niagara component inspect (asset path, active, location) — no stack dump.",
+      "name": "re_agent_tools.toolsets.niagara_workflow_tools.RENiagaraWorkflowTools.inspect_niagara_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_label": {
+            "type": "string"
+          },
+          "component_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_label",
+          "component_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set Niagara User parameters on a placed component (no User. prefix required).",
+      "name": "re_agent_tools.toolsets.niagara_workflow_tools.RENiagaraWorkflowTools.set_niagara_user_parameters_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_label": {
+            "type": "string"
+          },
+          "parameters_json": {
+            "type": "string"
+          },
+          "component_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_label",
+          "parameters_json",
+          "component_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Assign a NiagaraSystem to an existing actor's NiagaraComponent + verify.",
+      "name": "re_agent_tools.toolsets.niagara_workflow_tools.RENiagaraWorkflowTools.assign_niagara_system_to_component",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_label": {
+            "type": "string"
+          },
+          "system_path": {
+            "type": "string"
+          },
+          "component_name": {
+            "type": "string"
+          },
+          "reset_overrides": {
+            "type": "boolean",
+            "default": false
+          },
+          "auto_activate": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "actor_label",
+          "system_path",
+          "component_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Spawn NiagaraActor (or StaticMeshActor+component fallback), assign system, optional params.",
+      "name": "re_agent_tools.toolsets.niagara_workflow_tools.RENiagaraWorkflowTools.place_niagara_system_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "system_path": {
+            "type": "string"
+          },
+          "actor_label": {
+            "type": "string"
+          },
+          "location_json": {
+            "type": "string",
+            "default": "[0,0,100]"
+          },
+          "rotation_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "scale_json": {
+            "type": "string",
+            "default": "[1,1,1]"
+          },
+          "folder_path": {
+            "type": "string",
+            "default": "RE/FX"
+          },
+          "auto_activate": {
+            "type": "boolean",
+            "default": true
+          },
+          "parameters_json": {
+            "type": "string",
+            "default": "{}"
+          }
+        },
+        "required": [
+          "system_path",
+          "actor_label"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

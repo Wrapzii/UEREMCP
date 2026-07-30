@@ -1,0 +1,184 @@
+{
+  "name": "AutomationTestToolset.AutomationTestToolset",
+  "version": "1.0",
+  "description": "Automation test discovery and execution toolset.\n\nWraps the IAutomationControllerManager API (the same backend the Session\nFrontend uses) to let MCP clients list available tests, run them, and\nretrieve results.\n\nTypical workflow:\n  1. DiscoverTests() once per session to initialize workers and load the test list.\n  2. ListTests() to find tests by name or tag.\n  3. RunTests() with the desired test names.\n  4. GetTestStatus() / GetTestResults() to monitor and retrieve results.\n  5. StopTests() to abort if needed.",
+  "tools": [
+    {
+      "description": "Stop all currently running tests. Requires DiscoverTests() to have completed.\nIf a RunTests async result is pending, it will be completed with an error.",
+      "name": "AutomationTestToolset.AutomationTestToolset.StopTests",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the stop request was issued successfully."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Run automation tests selected by a filter expression. Requires DiscoverTests()\nto have completed. Much faster than RunTests when targeting a large batch\nbecause the engine narrows the report tree in a single pass instead of\nrunning a per-leaf membership check against the requested name list.\n\nFilter syntax (multiple expressions joined by '+'):\n \"StartsWith:System.Engine\"  prefix match against the full test path\n \"^Foo\"                       prefix anchor (equivalent to StartsWith:)\n \"Bar$\"                       suffix anchor\n \"Substring\"                  bare token matches anywhere in the path\n \"Group:Smoke\"                expand a named group from\n                              AutomationControllerSettings ini Groups\n\nReturns an async result that completes with the same JSON summary as RunTests.",
+      "name": "AutomationTestToolset.AutomationTestToolset.RunTestsByFilter",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "filterExpression": {
+            "type": "string",
+            "description": "Filter expression as described above."
+          }
+        },
+        "required": [
+          "filterExpression"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Value of the result."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Run a set of automation tests by name. Requires DiscoverTests() to have completed.\nStarts executing the specified tests and returns an async result that\ncompletes with a JSON summary when all tests finish.",
+      "name": "AutomationTestToolset.AutomationTestToolset.RunTests",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "testNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of full test paths as returned by ListTests."
+          }
+        },
+        "required": [
+          "testNames"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Value of the result."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "List available automation tests. Requires DiscoverTests() to have completed.\nReturns a JSON object: {\"tests\": [\"path1\", ...], \"total\": N, \"returned\": N}.",
+      "name": "AutomationTestToolset.AutomationTestToolset.ListTests",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nameFilter": {
+            "type": "string",
+            "description": "Optional substring filter applied to the test's full path."
+          },
+          "tagFilter": {
+            "type": "string",
+            "description": "Optional substring filter applied to the test's tags."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of tests to return (0 = unlimited, default 200).",
+            "default": 200
+          }
+        },
+        "required": [
+          "nameFilter",
+          "tagFilter"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get a lightweight status snapshot of the automation controller.\nRequires DiscoverTests() to have completed.\nReturns a JSON object with the controller state, enabled test count,\nand completion/pass/fail counts.",
+      "name": "AutomationTestToolset.AutomationTestToolset.GetTestStatus",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get detailed results for the current or most recent test run.\nRequires DiscoverTests() to have completed.\nReturns a JSON object with per-test state, duration, errors, and warnings.",
+      "name": "AutomationTestToolset.AutomationTestToolset.GetTestResults",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Initialize automation worker discovery and load the test list.\nMust be called once before ListTests or RunTests. Takes several seconds\nas it discovers the local automation worker and enumerates all registered\ntests. Returns an async result that completes with a JSON status object\nwhen tests are available, or an error if discovery fails.",
+      "name": "AutomationTestToolset.AutomationTestToolset.DiscoverTests",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bForceRediscover": {
+            "type": "boolean",
+            "description": "When true, bypass the cached report tree and re-poll workers. Used after reloading Python test modules mid-session.",
+            "default": false
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Value of the result."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

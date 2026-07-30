@@ -1,0 +1,221 @@
+{
+  "name": "SemanticSearchToolset.SemanticSearchToolset",
+  "version": "1.0",
+  "description": "Toolset exposing the SemanticSearch plugin's hybrid vector + BM25 asset search\nto the AI Toolset Registry.",
+  "tools": [
+    {
+      "description": "Run a semantic search over the Content Browser assets indexed by the SemanticSearch plugin.",
+      "name": "SemanticSearchToolset.SemanticSearchToolset.Search",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Natural-language query. Must be non-empty."
+          },
+          "classFilter": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "Class@/Script/CoreUObject.Object",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "If non-empty, array of classes to filter by (provide full ref path of the class). Passing a base class covers all its subclasses. The SemanticSearch index currently covers these base classes: Blueprint, StaticMesh, SkeletalMesh, Texture, Material, MaterialInstance. Pass an empty array to consider all indexed classes."
+          },
+          "pathRegexes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "If non-empty, only assets whose soft object path matches at least one of these regular expressions are considered (e.g. \"^/Game/Blueprints/.*\"). Pass an empty array to consider all indexed paths."
+          },
+          "k": {
+            "type": "integer",
+            "description": "Maximum number of results to return. Must be >= 1. Defaults to 10.",
+            "default": 10
+          }
+        },
+        "required": [
+          "query",
+          "classFilter",
+          "pathRegexes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SemanticSearchResult",
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Full asset path, e.g. \"/Game/Blueprints/BP_Foo.BP_Foo\".",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "class": {
+                  "type": "object",
+                  "title": "Class@/Script/CoreUObject.Object",
+                  "description": "Class of the asset",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "caption": {
+                  "type": "string",
+                  "description": "Caption produced at index time by the SemanticSearch plugin."
+                }
+              },
+              "required": [
+                "path",
+                "class",
+                "caption"
+              ]
+            },
+            "description": "Array of FSemanticSearchResult sorted by relevance (highest Score first)"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Find assets whose embeddings are semantically similar to the given asset's embedding.\nVector-only (no BM25). The source asset must already be indexed by the SemanticSearch\nplugin.",
+      "name": "SemanticSearchToolset.SemanticSearchToolset.FindSimilar",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetPath": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Object",
+            "description": "SoftObjectPath of the reference asset.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "classFilter": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "Class@/Script/CoreUObject.Object",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "Same semantics as Search::ClassFilter. See Search for the list of currently-indexed base classes. Pass an empty array for no class filter."
+          },
+          "pathRegexes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Same semantics as Search::PathRegexes. Pass an empty array for no path filter."
+          },
+          "k": {
+            "type": "integer",
+            "description": "Maximum number of results to return. Must be >= 1. Defaults to 10.",
+            "default": 10
+          }
+        },
+        "required": [
+          "assetPath",
+          "classFilter",
+          "pathRegexes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SemanticSearchResult",
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Full asset path, e.g. \"/Game/Blueprints/BP_Foo.BP_Foo\".",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "class": {
+                  "type": "object",
+                  "title": "Class@/Script/CoreUObject.Object",
+                  "description": "Class of the asset",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "caption": {
+                  "type": "string",
+                  "description": "Caption produced at index time by the SemanticSearch plugin."
+                }
+              },
+              "required": [
+                "path",
+                "class",
+                "caption"
+              ]
+            },
+            "description": "Array of FSemanticSearchResult sorted by relevance (highest Score first)"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

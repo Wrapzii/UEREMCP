@@ -1,0 +1,121 @@
+{
+  "name": "re_agent_tools.toolsets.context_tools.REContextTools",
+  "version": "1.0",
+  "description": "RE composite context: capabilities, editor state, target resolution, compact inspect.",
+  "tools": [
+    {
+      "description": "Inspect explicit property list on resolved actors/assets only.",
+      "name": "re_agent_tools.toolsets.context_tools.REContextTools.inspect_targets_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_queries_json": {
+            "type": "string",
+            "default": "[]"
+          },
+          "asset_paths_json": {
+            "type": "string",
+            "default": "[]"
+          },
+          "properties_json": {
+            "type": "string",
+            "default": "[]"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Resolve actors by label/path and assets by path. On failure: candidates in recovery — retry via execute_editor_batch, never Epic find_actors.",
+      "name": "re_agent_tools.toolsets.context_tools.REContextTools.resolve_targets",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_queries_json": {
+            "type": "string",
+            "default": "[]"
+          },
+          "asset_paths_json": {
+            "type": "string",
+            "default": "[]"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Return compact editor context sections as JSON.",
+      "name": "re_agent_tools.toolsets.context_tools.REContextTools.get_editor_context",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "include_level": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_selection": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_pie": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_dirty": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Return REAgentTools version and registered workflow toolsets.",
+      "name": "re_agent_tools.toolsets.context_tools.REContextTools.get_plugin_capabilities",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

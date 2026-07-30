@@ -1,0 +1,933 @@
+{
+  "name": "DataflowAgent.DataflowAgentToolset",
+  "version": "1.0",
+  "description": "Dataflow Agent Toolset - exposes Dataflow graph editing operations as AI agent tools.",
+  "tools": [
+    {
+      "description": "Updates an existing node's editable properties via JSON.",
+      "name": "DataflowAgent.DataflowAgentToolset.UpdateNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The EdNode to modify",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "jsonParams": {
+            "type": "string",
+            "description": "JSON object of property overrides (e.g., {\"Value\": 3.14})"
+          }
+        },
+        "required": [
+          "node",
+          "jsonParams"
+        ]
+      }
+    },
+    {
+      "description": "Sets the value of an existing variable using its serialized string representation.\nThe format depends on the variable's type (e.g., \"3.14\" for float, \"true\" for bool,\n\"42\" for int, \"MyName\" for FName).",
+      "name": "DataflowAgent.DataflowAgentToolset.SetVariable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset to modify",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the variable to set"
+          },
+          "value": {
+            "type": "string",
+            "description": "Serialized string value to assign"
+          }
+        },
+        "required": [
+          "graph",
+          "name",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "true on success, false if the variable is not found or the value cannot be parsed"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Moves a node to a new position in the graph editor.",
+      "name": "DataflowAgent.DataflowAgentToolset.RepositionNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The EdNode to reposition",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "x": {
+            "type": "integer",
+            "description": "New X position"
+          },
+          "y": {
+            "type": "integer",
+            "description": "New Y position"
+          }
+        },
+        "required": [
+          "node",
+          "x",
+          "y"
+        ]
+      }
+    },
+    {
+      "description": "Removes a variable from the Dataflow graph.",
+      "name": "DataflowAgent.DataflowAgentToolset.RemoveVariable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset to modify",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the variable to remove"
+          }
+        },
+        "required": [
+          "graph",
+          "name"
+        ]
+      }
+    },
+    {
+      "description": "Removes a node and all its connections from the Dataflow graph.",
+      "name": "DataflowAgent.DataflowAgentToolset.RemoveNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset containing the node",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The EdNode to remove",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph",
+          "node"
+        ]
+      }
+    },
+    {
+      "description": "Removes a comment box node from the graph.",
+      "name": "DataflowAgent.DataflowAgentToolset.RemoveCommentBox",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset containing the comment",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "commentId": {
+            "type": "string",
+            "description": "The node GUID string returned by AddCommentBox"
+          }
+        },
+        "required": [
+          "graph",
+          "commentId"
+        ]
+      }
+    },
+    {
+      "description": "Returns all variables defined on the Dataflow graph as a JSON array.\nEach entry contains \"name\", \"type\", and \"value\" fields.",
+      "name": "DataflowAgent.DataflowAgentToolset.ListVariables",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset to inspect",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON array of variable descriptors, or empty string on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a JSON list of all registered Dataflow node types.",
+      "name": "DataflowAgent.DataflowAgentToolset.ListNodeTypes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "bCommonOnly": {
+            "type": "boolean",
+            "description": "When true, only return non-deprecated non-experimental nodes. Default is true.",
+            "default": true
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON array of node type names"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a JSON list of Dataflow templates registered for the given asset class.\nTemplates registered for parent classes are included (class hierarchy walk).",
+      "name": "DataflowAgent.DataflowAgentToolset.ListDataflowTemplatesForAssetClass",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "className": {
+            "type": "string",
+            "description": "Asset class name with or without the \"U\"/\"A\" prefix"
+          },
+          "bIncludeBlank": {
+            "type": "boolean",
+            "description": "When true, include a \"Blank\" option (empty graph) at the start",
+            "default": true
+          }
+        },
+        "required": [
+          "className"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON array of `{ \"templateId\", \"displayName\", \"tooltip\" }` objects. \"templateId\" is opaque - pass it back to AssignDataflowTemplate or CreateDataflowCompatibleAssetFromTemplate."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns a JSON list of every UClass that can host an embedded Dataflow graph\n(i.e. implements IDataflowInstanceInterface). Each entry has \"className\",\n\"displayName\", and \"modulePath\" fields.\n\nUse the \"className\" value as input to CreateDataflowCompatibleAsset or\nListDataflowTemplatesForAssetClass.",
+      "name": "DataflowAgent.DataflowAgentToolset.ListDataflowCompatibleAssetTypes",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON array of compatible asset type descriptors"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the schema for a Dataflow node type including its input/output pins\nand editable UPROPERTY parameters.",
+      "name": "DataflowAgent.DataflowAgentToolset.GetNodeTypeSchema",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "typeName": {
+            "type": "string",
+            "description": "The node type name (e.g., \"FAddFloatsDataflowNode\")"
+          }
+        },
+        "required": [
+          "typeName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON object with name, category, tooltip, inputPins, outputPins, and properties"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns information about a node as a JSON object (name, type, position, pins).",
+      "name": "DataflowAgent.DataflowAgentToolset.GetNodeInfo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The EdNode to query",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON string with node info, or error message on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the complete structure of a Dataflow graph including all nodes and connections.",
+      "name": "DataflowAgent.DataflowAgentToolset.GetGraphStructure",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset to inspect",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "JSON string with graph structure (nodes + connections), or error message on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes the connection between two node pins.",
+      "name": "DataflowAgent.DataflowAgentToolset.DisconnectNodePins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromNode": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The source EdNode",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "fromPin": {
+            "type": "string",
+            "description": "Name of the output pin on the source node"
+          },
+          "toNode": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The destination EdNode",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "toPin": {
+            "type": "string",
+            "description": "Name of the input pin on the destination node"
+          }
+        },
+        "required": [
+          "fromNode",
+          "fromPin",
+          "toNode",
+          "toPin"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new saved Dataflow graph asset.",
+      "name": "DataflowAgent.DataflowAgentToolset.CreateGraph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name for the new Dataflow asset (e.g., \"DF_Simulation\")"
+          },
+          "path": {
+            "type": "string",
+            "description": "Content folder path where the asset should be created. Defaults to \"/Game/Dataflow\""
+          }
+        },
+        "required": [
+          "name",
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The full asset path of the created graph, or empty string on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new Dataflow-compatible asset and initialises its embedded Dataflow graph\nfrom a registered template in one step.",
+      "name": "DataflowAgent.DataflowAgentToolset.CreateDataflowCompatibleAssetFromTemplate",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "className": {
+            "type": "string",
+            "description": "Asset class name with or without the \"U\"/\"A\" prefix"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new asset"
+          },
+          "path": {
+            "type": "string",
+            "description": "Content folder path"
+          },
+          "templateId": {
+            "type": "string",
+            "description": "Template identifier returned by ListDataflowTemplatesForAssetClass. Pass an empty string to create with an empty embedded graph (equivalent to CreateDataflowCompatibleAsset)."
+          }
+        },
+        "required": [
+          "className",
+          "name",
+          "path",
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The full asset path of the created asset, or empty string on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new Dataflow-compatible asset (e.g. ChaosClothAsset, GeometryCollection,\nFleshAsset, GroomAsset) with an empty embedded Dataflow graph.",
+      "name": "DataflowAgent.DataflowAgentToolset.CreateDataflowCompatibleAsset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "className": {
+            "type": "string",
+            "description": "Asset class name with or without the \"U\"/\"A\" prefix (e.g. \"ChaosClothAsset\" or \"UChaosClothAsset\")"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the new asset"
+          },
+          "path": {
+            "type": "string",
+            "description": "Content folder path where the asset should be created. Defaults to \"/Game/Dataflow\"",
+            "default": "/Game/Dataflow"
+          }
+        },
+        "required": [
+          "className",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The full asset path of the created asset, or empty string on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Connects an output pin of one node to an input pin of another.",
+      "name": "DataflowAgent.DataflowAgentToolset.ConnectNodePins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromNode": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The source EdNode",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "fromPin": {
+            "type": "string",
+            "description": "Name of the output pin on the source node"
+          },
+          "toNode": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The destination EdNode",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "toPin": {
+            "type": "string",
+            "description": "Name of the input pin on the destination node"
+          }
+        },
+        "required": [
+          "fromNode",
+          "fromPin",
+          "toNode",
+          "toPin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "true on success, false on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Assigns a Dataflow template to an existing Dataflow-compatible asset by duplicating\nthe template graph and embedding it. Replaces any existing embedded graph.",
+      "name": "DataflowAgent.DataflowAgentToolset.AssignDataflowTemplate",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Object",
+            "description": "The target asset (must implement IDataflowInstanceInterface)",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "templateId": {
+            "type": "string",
+            "description": "Template identifier returned by ListDataflowTemplatesForAssetClass. Pass an empty string to assign a fresh empty graph."
+          }
+        },
+        "required": [
+          "asset",
+          "templateId"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "true on success, false on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a new variable to the Dataflow graph.\n\nSupported type strings:\n  Primitives : \"Bool\", \"Int32\", \"Int64\", \"Float\", \"Double\", \"Name\", \"String\"\n  Structs    : UScriptStruct name with or without the \"F\" prefix\n               e.g. \"Vector\", \"FVector\", \"Transform\", \"FTransform\", \"Rotator\", \"LinearColor\"\n  Objects    : \"Object:<ClassName>\" where ClassName is with or without the \"U\"/\"A\" prefix\n               e.g. \"Object:StaticMesh\", \"Object:USkeletalMesh\"",
+      "name": "DataflowAgent.DataflowAgentToolset.AddVariable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset to modify",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Unique name for the new variable"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type string as described above"
+          }
+        },
+        "required": [
+          "graph",
+          "name",
+          "type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "true on success, false if the variable already exists or the type cannot be resolved"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a node of the given type to the Dataflow graph.",
+      "name": "DataflowAgent.DataflowAgentToolset.AddNode",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset to add the node to",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "typeName": {
+            "type": "string",
+            "description": "The node type name (e.g., \"FAddFloatsDataflowNode\")"
+          },
+          "nodeName": {
+            "type": "string",
+            "description": "Unique name for the node within this graph"
+          },
+          "jsonParams": {
+            "type": "string",
+            "description": "Optional JSON object of property overrides (e.g., {\"Value\": 3.14})"
+          },
+          "x": {
+            "type": "integer",
+            "description": "X position in the graph editor (default 0, typical node width ~200)",
+            "default": 0
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y position in the graph editor (default 0, typical node height ~100)",
+            "default": 0
+          }
+        },
+        "required": [
+          "graph",
+          "typeName",
+          "nodeName",
+          "jsonParams"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.DataflowEdNode",
+            "description": "The newly created UDataflowEdNode, or nullptr on failure",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a comment box around the given nodes.",
+      "name": "DataflowAgent.DataflowAgentToolset.AddCommentBox",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/DataflowEngine.Dataflow",
+            "description": "The Dataflow asset to add the comment to",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/DataflowEngine.DataflowEdNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "List of EdNodes to surround with the comment box"
+          },
+          "comment": {
+            "type": "string",
+            "description": "Text to display on the comment box",
+            "default": "/**\n\t * Adds a comment box around the given nodes.\n\t *\n\t * @param Graph   - The Dataflow asset to add the comment to\n\t * @param Nodes   - List of EdNodes to surround with the comment box\n\t * @param Comment - Text to display on the comment box\n\t * @param Color   - Background color of the comment box (defaults to White)\n\t * @return Node ID string of the created comment node, or empty string on failure\n\t */"
+          },
+          "color": {
+            "type": "object",
+            "title": "LinearColor",
+            "properties": {
+              "r": {
+                "type": "number",
+                "minimum": 0
+              },
+              "g": {
+                "type": "number",
+                "minimum": 0
+              },
+              "b": {
+                "type": "number",
+                "minimum": 0
+              },
+              "a": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "r",
+              "g",
+              "b",
+              "a"
+            ],
+            "description": "Background color of the comment box (defaults to White)",
+            "default": {
+              "r": 1,
+              "g": 1,
+              "b": 1,
+              "a": 1
+            }
+          }
+        },
+        "required": [
+          "graph",
+          "nodes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Node ID string of the created comment node, or empty string on failure"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

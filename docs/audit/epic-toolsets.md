@@ -1,22 +1,21 @@
 # Capability Matrix — Epic Engine Toolsets (UE 5.8)
 
 - **Owner:** WS-02
-- **Status:** **runtime_partial** — priority Epic + UEREMCP toolsets have `describe_toolset` JSON dumps; full 73-toolset matrix not schema-complete
+- **Status:** **runtime_complete** — all 73 toolsets in `list_toolsets` have `describe_toolset` JSON dumps (938 tools total)
 - **Brief:** [RB-02](../research/RB-02-epic-toolset-inventory.md)
-- **Last verified:** 2026-07-30 (runtime schemas for priority matrix)
+- **Last verified:** 2026-07-30 (full runtime schema matrix)
 
 ## Enumeration method
 
 | Layer | Result | Tag |
 |---|---|---|
-| Runtime `list_toolsets` / `describe_toolset` | **Partial** — full registry dump + 12 priority `describe_toolset` schemas on 2026-07-30; 61 toolsets still schema-only | [VERIFIED-RUNTIME: `docs/audit/raw/runtime/list_toolsets.json`, `docs/audit/raw/schemas/`, `capture-metadata.json` 2026-07-30] |
+| Runtime `list_toolsets` / `describe_toolset` | **Complete** — 73/73 toolsets schema-dumped; 938 registered tools `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]` | [VERIFIED-RUNTIME: `docs/audit/raw/runtime/list_toolsets.json`, `docs/audit/raw/schemas/`, `capture-metadata.json` 2026-07-30] |
 | Static source scan | **875 AICallable tools** across 25 toolset plugins (599 Python `@tool_call`, 274 C++ `UFUNCTION(meta=(AICallable))`) | [VERIFIED: `docs/audit/raw/source-scan-summary.json`] |
 | Per-plugin dumps | `docs/audit/raw/plugins/<PluginName>.json` | [VERIFIED: generated from scan 2026-07-29] |
 
-> **Cite JSON Schema shapes** from `docs/audit/raw/schemas/<toolset>.json` for the 12
-> priority toolsets listed in `docs/audit/raw/runtime/capture-metadata.json`
-> `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`. Other toolsets: tool *names* from
-> source scan; schemas still need runtime dumps.
+> **Cite JSON Schema shapes** from `docs/audit/raw/schemas/<toolset>.json` for any
+> registered toolset `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`. Tool *names* in
+> disposition tables may still cite source scan where runtime naming differs only by prefix.
 
 **Runtime MCP naming (verified):** Python EditorToolset classes register as
 `editor_toolset.toolsets.<module>.<Class>` (e.g.
@@ -46,9 +45,11 @@
 live RE — Epic AllToolsets members, C++ plugins, Python `editor_toolset.toolsets.*`, 15
 REAgentTools workflow toolsets, `UeremcpCore.UeremcpReferenceToolset`, and extras (MetaHuman,
 SequencerAnimMixer, MVVM, Conversation, AIModule BT) `[VERIFIED-RUNTIME: list_toolsets.json]`.
-Priority `describe_toolset` schemas captured for Blueprint, Niagara System/Assets, GAS,
-GameplayTags, Materials, ControlRig sample, Programmatic, and UEREMCP reference
-`[VERIFIED-RUNTIME: docs/audit/raw/schemas/ 2026-07-30]`.
+Full `describe_toolset` schema matrix captured for all 73 registered toolsets including
+Blueprint (53 tools), Niagara (all 5 classes), GAS, GameplayTags, Materials, PCG, UMG,
+StateTree, Sequencer family, EditorToolset Python classes, REAgentTools 15 workflow
+toolsets, and UEREMCP reference `[VERIFIED-RUNTIME: docs/audit/raw/schemas/ 2026-07-30]`.
+`MCPClientToolset` absent from registry as expected (0 AICallable tools).
 
 ---
 
@@ -73,7 +74,7 @@ Full dump: `docs/audit/raw/q7-programmatic-execute-tool-script.json`.
 
 ### q8 — Blueprint graph / node tools
 
-**No `BlueprintNodeTools` class.** All graph authoring is on `BlueprintTools` (52 tools).
+**No `BlueprintNodeTools` class.** All graph authoring is on `BlueprintTools` (53 tools at runtime).
 
 | Capability | Epic tool(s) | Altitude | Tag |
 |---|---|---|---|
@@ -97,7 +98,7 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 
 | Plugin | Toolset class(es) | Tools | Altitude mix | Disposition | Superseded by (UEREMCP) | Limitations | Tag |
 |---|---|---|---|---|---|---|---|
-| EditorToolset | `BlueprintTools` | 52 | primitive + DSL composite | preserve / supersede surface | `blueprints.submit_graph`, `blueprints.read_graph` (planned) | UObject pin refs; no envelope; DSL not JSON graph schema | [VERIFIED: source scan; WS-06 proposal] — detail: Blueprint WS-06 disposition |
+| EditorToolset | `BlueprintTools` | 53 | primitive + DSL composite | preserve / supersede surface | `blueprints.submit_graph`, `blueprints.read_graph` (planned) | UObject pin refs; no envelope; DSL not JSON graph schema | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] — detail: Blueprint WS-06 disposition |
 | EditorToolset | `ProgrammaticToolset` | 2 | composite (batch) | preserve | compose in `execute_plan` | Async only; script sandbox; no arbitrary imports | [VERIFIED: programmatic.py] |
 | EditorToolset | `MaterialTools` | 22 | primitive | internalise | compose in `create_vfx_material`, `retrieve/replace_material_graph` (WS-08) | Per-expression ops; UObject refs; no ADR-0004 graph JSON | [VERIFIED: material.py, source scan] |
 | EditorToolset | `MaterialInstanceTools` | 13 | primitive | preserve / improve via envelope | `create_vfx_material` batches MI params (WS-08) | Scalar/vector/texture/switch overrides; static switch recompile cost | [VERIFIED: material_instance.py, source scan] |
@@ -106,7 +107,7 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 | NiagaraToolsets | C++ Niagara BP API | 56 | primitive–composite | preserve / internalise | `niagara.submit_graph` (planned) | Stack/module topology ops; batched via execute_tool_script in REAgentTools | [VERIFIED: source scan] |
 | GASToolsets | `GameplayCueToolset`, `AttributeSetToolset`, `AbilitySystemInspectorToolset` | 14 | primitive–composite | preserve / improve (cue create) | WS-09 `create_spell`, `upsert_ability_row` | No `UGameplayAbility` / `UGameplayEffect` authoring; RE has no ASC on characters | [VERIFIED: source scan; WS-09 proposal] |
 | GameplayTagsToolset | C++ tag CRUD | 6 | primitive | preserve with policy | — | INI mutation; concurrency hazard on rename | [VERIFIED: source scan; GameplayTagsToolset.cpp:93-147] |
-| EditorToolset | `DataTableTools` | 7+ | mid | preserve | WS-09 `upsert_ability_row` (idempotency wrapper) | Whole-table JSON rewrite on `set_rows`; no revision API | [VERIFIED: data_table.py:59-241] |
+| EditorToolset | `DataTableTools` | 10 | mid | preserve | WS-09 `upsert_ability_row` (idempotency wrapper) | Whole-table JSON rewrite on `set_rows`; no revision API | [VERIFIED-RUNTIME: describe_toolset 2026-07-30] |
 | PCGToolset | C++ graph + instance | 31 | primitive–composite | preserve | defer | PCG graph authoring exists | [VERIFIED: source scan] |
 | AnimationAssistantToolset | `ControlRigTools` (44), Sequencer* (276) | 320 | primitive–composite | preserve / compose | `animation.*` / `control_rig.*` (Wave 3) | RigVM primitives; no AnimBP/montage/notify goal ops | [VERIFIED: controlrig.py + audit JSON; WS-10 proposal] |
 | UMGToolSet | C++ widget BP | 23 | primitive–composite | defer | — | Widget tree authoring | [VERIFIED: source scan] |
@@ -129,8 +130,9 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 Accepted from `docs/proposals/ws-06-audit-blueprint-rows.md` (WS-06 → WS-02, 2026-07-29).
 Evidence: [RB-05](../research/RB-05-blueprint-graph-ceiling.md); runtime probes noted in RB-05.
 Cross-checked against `docs/audit/raw/plugins/EditorToolset.json` and q8 dump
-`[VERIFIED: blueprint.py, helpers.py, source scan 2026-07-29]`. Per-tool MCP schemas
-still need runtime `describe_toolset` — dispositions are source + RB-05 only.
+`[VERIFIED: blueprint.py, helpers.py, source scan 2026-07-29]`. Runtime schemas in
+`docs/audit/raw/schemas/editor_toolset.toolsets.blueprint.BlueprintTools.json`
+`[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`.
 
 **Correction (propagate):** REAgentTools and older docs sometimes name `BlueprintNodeTools`.
 That class **does not exist** in UE 5.8 EditorToolset — only `BlueprintTools`
@@ -139,11 +141,11 @@ That class **does not exist** in UE 5.8 EditorToolset — only `BlueprintTools`
 **WS-06 commitment:** WS-06 will not reimplement create/connect/compile pin primitives.
 New work is envelope mapping, hashing, diagnostics, and verification only.
 
-### Epic `BlueprintTools` (52 tools)
+### Epic `BlueprintTools` (53 tools)
 
 | Toolset / tools | Altitude | Disposition | Superseded by (UEREMCP) | Limitations | Tag |
 |---|---|---|---|---|---|
-| `BlueprintTools` (52) | primitive + DSL composite | **preserve** primitives; **supersede** agent surface | `blueprints.read_graph`, `blueprints.submit_graph` | UObject pin refs; DSL ≠ `graph.schema.json`; no envelope/hash/revision | `[VERIFIED: blueprint.py]` + RB-05 |
+| `BlueprintTools` (53) | primitive + DSL composite | **preserve** primitives; **supersede** agent surface | `blueprints.read_graph`, `blueprints.submit_graph` | UObject pin refs; DSL ≠ `graph.schema.json`; no envelope/hash/revision | `[VERIFIED-RUNTIME: describe_toolset 2026-07-30]` + RB-05 |
 | `read_graph_dsl` / `write_graph_dsl` | composite | **preserve** as *internal* backend | composed under submit/read | MultiGate decompile fail; bind elision; no semantic_id | `[VERIFIED: blueprint.py:1454-1502]` `[VERIFIED-RUNTIME: RB-05]` |
 | `get_node_infos` / `find_nodes` / `get_connected_subgraph` | composite inspect | **preserve** / internalise | feed structured read | `PinInfo.type_id` is display string, not `FEdGraphPinType` | `[VERIFIED: blueprint.py:609-748]` |
 | `compile_blueprint` | primitive | **preserve** | validation pipeline | Sync; errors via `ErrorMsg` / `list_nodes_with_errors` | `[VERIFIED: helpers.py:30-44]` |
@@ -303,7 +305,7 @@ Tools already at composite/goal altitude or that would duplicate working Epic su
 
 1. **`ProgrammaticToolset.execute_tool_script`** — engine batching primitive with transaction safety `[VERIFIED: programmatic.py]`
 2. **`BlueprintTools.read_graph_dsl` / `write_graph_dsl`** — graph logic round-trip `[VERIFIED: blueprint.py:1454-1502]`
-3. **`BlueprintTools` node/pin primitives** — create/connect/compile pipeline `[VERIFIED: source scan — 52 tools]`
+3. **`BlueprintTools` node/pin primitives** — create/connect/compile pipeline `[VERIFIED-RUNTIME: describe_toolset 2026-07-30 — 53 tools]`
 4. **`NiagaraToolsets.*`** — system/emitter/module/renderer stack authoring (56 tools) `[VERIFIED: source scan]`
 5. **`MaterialTools.*`** — master material expression graph (22 tools); **internalise**, do not expose `[VERIFIED: material.py, WS-08 proposal]`
 6. **`MaterialInstanceTools.*`** — MI parameter CRUD (13 tools); improve via envelope, do not duplicate per-param agent tools `[VERIFIED: material_instance.py, WS-08 proposal]`
@@ -361,28 +363,27 @@ Planned UEREMCP surface must **cover every `supersede` row** above (envelope gra
 
 ## Runtime verification checklist
 
-Epic audit is **`runtime_partial`** for R-06 (priority matrix schema-complete; full matrix open).
+Epic audit is **`runtime_complete`** for R-06 schema matrix (73/73 toolsets dumped).
 
 - [x] `list_toolsets` — dump to `docs/audit/raw/runtime/list_toolsets.json` (73 toolsets, 2026-07-30)
-- [x] `describe_toolset` for priority disposition toolsets — `docs/audit/raw/schemas/` (12 files)
+- [x] `describe_toolset` for all registered toolsets — `docs/audit/raw/schemas/` (73 files, 938 tools)
 - [x] Confirm `GASToolsets` + `GameplayTagsToolset` in `list_toolsets` (2026-07-30)
 - [x] Confirm `UeremcpCore.UeremcpReferenceToolset` present with Ping/Echo schemas
 - [ ] Confirm full load set matches `AllToolsets` inference — **partial** (73 enumerated; HairModeling not seen)
 - [x] Verify dotted toolset names: Python `editor_toolset.toolsets.*` vs C++ `Plugin.Class` (documented above)
-- [ ] Classify async tools per tool — **partial** (`execute_tool_script` string return only)
-- [ ] Sample result payload sizes for composite tools
+- [ ] Classify async tools per tool — **partial** (schemas show `returnValue: string` on RE + `execute_tool_script`; sync/async not exhaustively tagged)
+- [ ] Sample result payload sizes for composite tools — **open** (schemas only; no live `tools/call` samples)
 - [x] Negative findings log updated — `docs/audit/raw/runtime-negative-findings.json` (success entry 2026-07-30)
 
-Until all checked: cite **schemas** only for toolsets in `capture-metadata.json`;
-other toolsets remain `[VERIFIED: source scan]` for names only.
+All registered toolsets have runtime schemas in `capture-metadata.json`
+`[VERIFIED-RUNTIME: describe_toolset 2026-07-30]`.
 
 ---
 
 ## Open blockers
 
-1. **Remaining schema dumps** — `describe_toolset` for ~61 non-priority toolsets (PCG, UMG, Sequencer*, REAgentTools 15, etc.).
-2. **Payload / async calibration** — live read-only calls for token budget and async classification.
-3. **Blueprint tool count** — runtime 53 vs source scan 52; reconcile on next source scan.
+1. **Payload / async calibration** — live read-only `tools/call` samples for token budget and async classification (schemas alone insufficient).
+2. **Registry drift** — re-run `list_toolsets` when plugins change; `HairModeling` still not in 73-toolset dump.
 
 ---
 

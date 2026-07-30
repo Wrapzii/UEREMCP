@@ -1,0 +1,101 @@
+{
+  "name": "re_agent_tools.toolsets.lighting_workflow_tools.RELightingWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite lighting: inventory existing lights, apply mood, set+verify.",
+  "tools": [
+    {
+      "description": "Set properties on a light actor / its LightComponent with listed keys applied.",
+      "name": "re_agent_tools.toolsets.lighting_workflow_tools.RELightingWorkflowTools.set_light_properties_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_label": {
+            "type": "string"
+          },
+          "properties_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_label",
+          "properties_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Apply named mood to existing DirectionalLight + ExponentialHeightFog (no duplicate sun).",
+      "name": "re_agent_tools.toolsets.lighting_workflow_tools.RELightingWorkflowTools.apply_mood_lighting",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mood": {
+            "type": "string",
+            "default": "cave_cool"
+          },
+          "create_if_missing": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "List Mood Presets",
+      "name": "re_agent_tools.toolsets.lighting_workflow_tools.RELightingWorkflowTools.list_mood_presets",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "List DirectionalLight / SkyLight / HeightFog / SkyAtmosphere labels (no spawn).",
+      "name": "re_agent_tools.toolsets.lighting_workflow_tools.RELightingWorkflowTools.get_environment_lights_compact",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,1188 @@
+{
+  "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools",
+  "version": "1.0",
+  "description": "Inspect StateTree (ST) assets.",
+  "tools": [
+    {
+      "description": "Returns a human-readable description for a node.\n\n        Args:\n            state_tree: The StateTree asset.\n            node: The editor node to describe.\n\n        Returns:\n            Formatted description string.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_node_description",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state_tree": {
+            "type": "object",
+            "title": "/Script/StateTreeModule.StateTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "title": "StateTreeEditorNode",
+            "type": "object",
+            "properties": {
+              "node": {
+                "type": "object",
+                "title": "FInstancedStruct",
+                "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                "properties": {
+                  "_structType": {
+                    "type": "string",
+                    "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                  }
+                }
+              },
+              "instance": {
+                "type": "object",
+                "title": "FInstancedStruct",
+                "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                "properties": {
+                  "_structType": {
+                    "type": "string",
+                    "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                  }
+                }
+              },
+              "instanceObject": {
+                "type": "object",
+                "title": "/Script/CoreUObject.Object",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "executionRuntimeData": {
+                "type": "object",
+                "title": "FInstancedStruct",
+                "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                "properties": {
+                  "_structType": {
+                    "type": "string",
+                    "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                  }
+                }
+              },
+              "executionRuntimeDataObject": {
+                "type": "object",
+                "title": "/Script/CoreUObject.Object",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "iD": {
+                "type": "string",
+                "description": "ID for the node instance.",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "expressionIndent": {
+                "type": "integer"
+              },
+              "expressionOperand": {
+                "type": "string",
+                "title": "EStateTreeExpressionOperand",
+                "enum": [
+                  "Copy",
+                  "And",
+                  "Or",
+                  "Multiply"
+                ]
+              }
+            },
+            "required": [
+              "node",
+              "instance",
+              "instanceObject",
+              "executionRuntimeData",
+              "executionRuntimeDataObject",
+              "iD",
+              "expressionIndent",
+              "expressionOperand"
+            ]
+          }
+        },
+        "required": [
+          "state_tree",
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns global evaluators.\n\n        Args:\n            state_tree: The StateTree asset.\n\n        Returns:\n            Evaluator editor nodes.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_evaluators",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state_tree": {
+            "type": "object",
+            "title": "/Script/StateTreeModule.StateTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "StateTreeEditorNode",
+              "type": "object",
+              "properties": {
+                "node": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instance": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instanceObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "executionRuntimeData": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "executionRuntimeDataObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "iD": {
+                  "type": "string",
+                  "description": "ID for the node instance.",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "expressionIndent": {
+                  "type": "integer"
+                },
+                "expressionOperand": {
+                  "type": "string",
+                  "title": "EStateTreeExpressionOperand",
+                  "enum": [
+                    "Copy",
+                    "And",
+                    "Or",
+                    "Multiply"
+                  ]
+                }
+              },
+              "required": [
+                "node",
+                "instance",
+                "instanceObject",
+                "executionRuntimeData",
+                "executionRuntimeDataObject",
+                "iD",
+                "expressionIndent",
+                "expressionOperand"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns global tasks that run across all states.\n\n        Args:\n            state_tree: The StateTree asset.\n\n        Returns:\n            Global task editor nodes.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_global_tasks",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state_tree": {
+            "type": "object",
+            "title": "/Script/StateTreeModule.StateTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "StateTreeEditorNode",
+              "type": "object",
+              "properties": {
+                "node": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instance": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instanceObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "executionRuntimeData": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "executionRuntimeDataObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "iD": {
+                  "type": "string",
+                  "description": "ID for the node instance.",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "expressionIndent": {
+                  "type": "integer"
+                },
+                "expressionOperand": {
+                  "type": "string",
+                  "title": "EStateTreeExpressionOperand",
+                  "enum": [
+                    "Copy",
+                    "And",
+                    "Or",
+                    "Multiply"
+                  ]
+                }
+              },
+              "required": [
+                "node",
+                "instance",
+                "instanceObject",
+                "executionRuntimeData",
+                "executionRuntimeDataObject",
+                "iD",
+                "expressionIndent",
+                "expressionOperand"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns transitions on a state.\n\n        Args:\n            state: The state to query.\n\n        Returns:\n            Transitions.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_transitions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object",
+            "title": "/Script/StateTreeEditorModule.StateTreeState",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "StateTreeTransition",
+              "type": "object",
+              "properties": {
+                "trigger": {
+                  "type": "string",
+                  "title": "EStateTreeTransitionTrigger",
+                  "enum": [
+                    "None",
+                    "OnStateCompleted",
+                    "OnStateSucceeded",
+                    "OnStateFailed",
+                    "OnTick",
+                    "OnEvent",
+                    "OnDelegate",
+                    "MAX"
+                  ],
+                  "description": "When to try trigger the transition."
+                },
+                "requiredEvent": {
+                  "title": "StateTreeEventDesc",
+                  "description": "Defines the event required to be present during state selection for the transition to trigger.",
+                  "type": "object",
+                  "properties": {
+                    "tag": {
+                      "title": "GameplayTag",
+                      "description": "Event Tag.",
+                      "type": "object",
+                      "properties": {
+                        "tagName": {
+                          "type": "string",
+                          "description": "This Tags Name"
+                        }
+                      },
+                      "required": [
+                        "tagName"
+                      ]
+                    },
+                    "payloadStruct": {
+                      "type": "object",
+                      "title": "/Script/CoreUObject.ScriptStruct",
+                      "description": "Event Payload Struct.",
+                      "properties": {
+                        "refPath": {
+                          "type": "string",
+                          "description": "The reference stored as a soft path string."
+                        }
+                      },
+                      "required": [
+                        "refPath"
+                      ]
+                    },
+                    "bConsumeEventOnSelect": {
+                      "type": "boolean",
+                      "description": "If set to true, the event is consumed (later state selection cannot react to it) if state selection can be made."
+                    },
+                    "temporaryEvent": {
+                      "title": "StateTreeEvent",
+                      "description": "Temporary event used as a source value in bindings.",
+                      "type": "object",
+                      "properties": {
+                        "tag": {
+                          "title": "GameplayTag",
+                          "description": "Tag describing the event",
+                          "type": "object",
+                          "properties": {
+                            "tagName": {
+                              "type": "string",
+                              "description": "This Tags Name"
+                            }
+                          },
+                          "required": [
+                            "tagName"
+                          ]
+                        },
+                        "payload": {
+                          "type": "object",
+                          "title": "FInstancedStruct",
+                          "description": "Optional payload for the event.",
+                          "properties": {
+                            "_structType": {
+                              "type": "string",
+                              "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                            }
+                          }
+                        },
+                        "origin": {
+                          "type": "string",
+                          "description": "Optional info to describe who sent the event."
+                        }
+                      },
+                      "required": [
+                        "tag",
+                        "payload",
+                        "origin"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "tag",
+                    "payloadStruct",
+                    "bConsumeEventOnSelect",
+                    "temporaryEvent"
+                  ]
+                },
+                "state": {
+                  "title": "StateTreeStateLink",
+                  "description": "Transition target state.",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Name of the state at the time of linking, used for error reporting."
+                    },
+                    "iD": {
+                      "type": "string",
+                      "description": "ID of the state linked to.",
+                      "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                    },
+                    "linkType": {
+                      "type": "string",
+                      "title": "EStateTreeTransitionType",
+                      "enum": [
+                        "None",
+                        "Succeeded",
+                        "Failed",
+                        "GotoState",
+                        "Parent",
+                        "NextState",
+                        "NextSelectableState",
+                        "NextParent",
+                        "NextSelectableParent",
+                        "NotSet"
+                      ],
+                      "description": "Type of the transition, used at edit time to describe e.g. next state (which is calculated at compile time)."
+                    },
+                    "stateHandle": {
+                      "title": "StateTreeStateHandle",
+                      "description": "Handle of the linked state.",
+                      "type": "object",
+                      "properties": {
+                        "index": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "index"
+                      ]
+                    },
+                    "fallback": {
+                      "type": "string",
+                      "title": "EStateTreeSelectionFallback",
+                      "enum": [
+                        "None",
+                        "NextSelectableSibling"
+                      ],
+                      "description": "Fallback of the transition if it fails to select the target state"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "iD",
+                    "linkType",
+                    "stateHandle",
+                    "fallback"
+                  ]
+                },
+                "iD": {
+                  "type": "string",
+                  "description": "Globally unique identifier in 8-4-4-4-12 hyphenated form, e.g. \"E05FCC13-4D37-9D7A-E238-83859F29AD74\".",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "delegateListener": {
+                  "title": "StateTreeTransitionDelegateListener",
+                  "description": "Listener to the selected delegate dispatcher.",
+                  "type": "object"
+                },
+                "priority": {
+                  "type": "string",
+                  "title": "EStateTreeTransitionPriority",
+                  "enum": [
+                    "None",
+                    "Low",
+                    "Normal",
+                    "Medium",
+                    "High",
+                    "Critical"
+                  ],
+                  "description": "Transition priority when multiple transitions happen at the same time.\nDuring transition handling, the transitions are visited from leaf to root.\nThe first visited transition, of highest priority, that leads to a state selection, will be activated."
+                },
+                "bDelayTransition": {
+                  "type": "boolean",
+                  "description": "Delay the triggering of the transition."
+                },
+                "delayDuration": {
+                  "type": "number",
+                  "description": "Transition delay duration in seconds.",
+                  "minimum": 0,
+                  "maximum": 25
+                },
+                "delayRandomVariance": {
+                  "type": "number",
+                  "description": "Transition delay random variance in seconds.",
+                  "minimum": 0,
+                  "maximum": 25
+                },
+                "conditions": {
+                  "type": "array",
+                  "items": {
+                    "title": "StateTreeEditorNode",
+                    "type": "object",
+                    "properties": {
+                      "node": {
+                        "type": "object",
+                        "title": "FInstancedStruct",
+                        "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                        "properties": {
+                          "_structType": {
+                            "type": "string",
+                            "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                          }
+                        }
+                      },
+                      "instance": {
+                        "type": "object",
+                        "title": "FInstancedStruct",
+                        "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                        "properties": {
+                          "_structType": {
+                            "type": "string",
+                            "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                          }
+                        }
+                      },
+                      "instanceObject": {
+                        "type": "object",
+                        "title": "/Script/CoreUObject.Object",
+                        "description": "Represents a reference to a UObject or UClass.",
+                        "properties": {
+                          "refPath": {
+                            "type": "string",
+                            "description": "The reference stored as a soft path string."
+                          }
+                        },
+                        "required": [
+                          "refPath"
+                        ]
+                      },
+                      "executionRuntimeData": {
+                        "type": "object",
+                        "title": "FInstancedStruct",
+                        "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                        "properties": {
+                          "_structType": {
+                            "type": "string",
+                            "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                          }
+                        }
+                      },
+                      "executionRuntimeDataObject": {
+                        "type": "object",
+                        "title": "/Script/CoreUObject.Object",
+                        "description": "Represents a reference to a UObject or UClass.",
+                        "properties": {
+                          "refPath": {
+                            "type": "string",
+                            "description": "The reference stored as a soft path string."
+                          }
+                        },
+                        "required": [
+                          "refPath"
+                        ]
+                      },
+                      "iD": {
+                        "type": "string",
+                        "description": "ID for the node instance.",
+                        "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                      },
+                      "expressionIndent": {
+                        "type": "integer"
+                      },
+                      "expressionOperand": {
+                        "type": "string",
+                        "title": "EStateTreeExpressionOperand",
+                        "enum": [
+                          "Copy",
+                          "And",
+                          "Or",
+                          "Multiply"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "node",
+                      "instance",
+                      "instanceObject",
+                      "executionRuntimeData",
+                      "executionRuntimeDataObject",
+                      "iD",
+                      "expressionIndent",
+                      "expressionOperand"
+                    ]
+                  },
+                  "description": "Expression of conditions that need to evaluate to true to allow transition to be triggered."
+                },
+                "reactivateTargetState": {
+                  "type": "string",
+                  "title": "EStateTreeTransitionChangeTypeRules",
+                  "enum": [
+                    "ForceChanged",
+                    "ForceSustained",
+                    "Default"
+                  ],
+                  "description": "The target state and all the following states will be reactivated. Their instance data will be reinstantiated and will receive EnterState.\nNote: Only enabled when target state is within the nested state (Parent or self). As this only changes behavior for nested states."
+                },
+                "bTransitionEnabled": {
+                  "type": "boolean",
+                  "description": "True if the Transition is Enabled (i.e. not explicitly disabled in the asset)."
+                }
+              },
+              "required": [
+                "trigger",
+                "requiredEvent",
+                "state",
+                "iD",
+                "delegateListener",
+                "priority",
+                "bDelayTransition",
+                "delayDuration",
+                "delayRandomVariance",
+                "conditions",
+                "reactivateTargetState",
+                "bTransitionEnabled"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns enter conditions on a state.\n\n        Args:\n            state: The state to query.\n\n        Returns:\n            Condition editor nodes.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_enter_conditions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object",
+            "title": "/Script/StateTreeEditorModule.StateTreeState",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "StateTreeEditorNode",
+              "type": "object",
+              "properties": {
+                "node": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instance": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instanceObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "executionRuntimeData": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "executionRuntimeDataObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "iD": {
+                  "type": "string",
+                  "description": "ID for the node instance.",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "expressionIndent": {
+                  "type": "integer"
+                },
+                "expressionOperand": {
+                  "type": "string",
+                  "title": "EStateTreeExpressionOperand",
+                  "enum": [
+                    "Copy",
+                    "And",
+                    "Or",
+                    "Multiply"
+                  ]
+                }
+              },
+              "required": [
+                "node",
+                "instance",
+                "instanceObject",
+                "executionRuntimeData",
+                "executionRuntimeDataObject",
+                "iD",
+                "expressionIndent",
+                "expressionOperand"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns tasks on a state.\n\n        Args:\n            state: The state to query.\n\n        Returns:\n            Task editor nodes.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_tasks",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object",
+            "title": "/Script/StateTreeEditorModule.StateTreeState",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "StateTreeEditorNode",
+              "type": "object",
+              "properties": {
+                "node": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instance": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "instanceObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "executionRuntimeData": {
+                  "type": "object",
+                  "title": "FInstancedStruct",
+                  "description": "Polymorphic struct. Provide _structType with the UScriptStruct path (e.g. /Script/Module.StructName) to create from scratch.",
+                  "properties": {
+                    "_structType": {
+                      "type": "string",
+                      "description": "UScriptStruct path name for polymorphic type identification (e.g. /Script/Module.StructName)."
+                    }
+                  }
+                },
+                "executionRuntimeDataObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "iD": {
+                  "type": "string",
+                  "description": "ID for the node instance.",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "expressionIndent": {
+                  "type": "integer"
+                },
+                "expressionOperand": {
+                  "type": "string",
+                  "title": "EStateTreeExpressionOperand",
+                  "enum": [
+                    "Copy",
+                    "And",
+                    "Or",
+                    "Multiply"
+                  ]
+                }
+              },
+              "required": [
+                "node",
+                "instance",
+                "instanceObject",
+                "executionRuntimeData",
+                "executionRuntimeDataObject",
+                "iD",
+                "expressionIndent",
+                "expressionOperand"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns child states of a state.\n\n        Args:\n            state: The state to query.\n\n        Returns:\n            Child states.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_children",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "object",
+            "title": "/Script/StateTreeEditorModule.StateTreeState",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/StateTreeEditorModule.StateTreeState",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns top-level states of a StateTree.\n\n        Args:\n            state_tree: The StateTree asset.\n\n        Returns:\n            Root-level states.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_root_states",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state_tree": {
+            "type": "object",
+            "title": "/Script/StateTreeModule.StateTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/StateTreeEditorModule.StateTreeState",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the editor data for a StateTree asset.\n\n        Args:\n            state_tree: The StateTree asset.\n\n        Returns:\n            The editor data object.",
+      "name": "state_tree_toolset.toolsets.state_tree.StateTreeTools.get_editor_data",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "state_tree": {
+            "type": "object",
+            "title": "/Script/StateTreeModule.StateTree",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "state_tree"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/StateTreeEditorModule.StateTreeEditorData",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

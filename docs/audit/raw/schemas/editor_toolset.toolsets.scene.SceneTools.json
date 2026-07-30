@@ -1,0 +1,1205 @@
+{
+  "name": "editor_toolset.toolsets.scene.SceneTools",
+  "version": "1.0",
+  "description": "Provides tools for working with the currently loaded level, including\n    loading levels, placing and removing actors, controlling the level camera,\n    and organizing actors in the outliner.",
+  "tools": [
+    {
+      "description": "Saves the actor to disk.\n\n        Args:\n            actor: The actor to save.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.save_actor",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      }
+    },
+    {
+      "description": "Checks whether an actor is checked out by the current user.\n\n        Args:\n            actor: The actor to check.\n\n        Returns:\n            True if the actor is currently checked out by the current user.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.is_checked_out",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Checks whether an actor can be edited.\n\n        Args:\n            actor: The actor to check.\n\n        Returns:\n            True if the actor can be edited, False if it is checked out\n            or locked by another user in source control.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.can_edit",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Saves or discards edits to a level instance and exits edit mode.\n\n        Args:\n            level_instance: The level instance actor to commit.\n            discard: If True, discards all changes without saving. Defaults to False.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.commit_level_instance",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "level_instance": {
+            "type": "object",
+            "title": "/Script/Engine.LevelInstance",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "discard": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "level_instance"
+        ]
+      }
+    },
+    {
+      "description": "Opens a level instance for editing.\n\n        While in edit mode, scene tools such as add_to_scene_from_class and\n        remove_from_scene operate within the level instance's sub-level. Only one\n        level instance can be in edit mode at a time. Call commit_level_instance\n        when done to save or discard changes.\n\n        Args:\n            level_instance: The level instance actor to open for editing.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.edit_level_instance",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "level_instance": {
+            "type": "object",
+            "title": "/Script/Engine.LevelInstance",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "level_instance"
+        ]
+      }
+    },
+    {
+      "description": "Creates a Level Instance actor in the scene referencing an existing level asset.\n\n        Args:\n            level_path: The content path to the level asset (e.g. '/Game/Maps/MyLevel').\n            name: The label for the new Level Instance actor.\n            xform: The transform for the new actor.\n            parent: If set, the new actor will be a child of this actor.\n\n        Returns:\n            The created LevelInstance actor.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.create_level_instance",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "level_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "xform": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          },
+          "parent": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "level_path",
+          "name",
+          "xform"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.LevelInstance",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Merges multiple StaticMesh actors into a single mesh asset and actor.\n\n        Args:\n            actors: The StaticMeshActors to merge. All must be in the same level.\n            output_path: Content path for the merged mesh asset (e.g. '/Game/Meshes/Merged').\n            name: Label for the new merged actor. Defaults to the last segment of output_path.\n            destroy_source_actors: If True, removes the source actors after merging.\n\n        Returns:\n            The merged StaticMeshActor.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.merge_actors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.StaticMeshActor",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          },
+          "output_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "destroy_source_actors": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "actors",
+          "output_path",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.StaticMeshActor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Traces a line through the world and returns the distance to the first hit.\n\n        Args:\n            start: The start point of the trace in world space.\n            end: The end point of the trace in world space.\n\n        Returns:\n            The distance from start to the hit point, or None if nothing was hit.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.trace_world",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "title": "Vector",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "end": {
+            "title": "Vector",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    {
+      "description": "Deletes a folder from the outliner.\n\n        Actors directly in the folder are moved to the parent folder. Sub-folders and\n        their actors are preserved by re-rooting them under the parent. For example,\n        deleting 'Lighting' with a sub-folder 'Lighting/Spotlights' leaves 'Spotlights'\n        intact under the parent.\n\n        Args:\n            folder_path: The folder path to delete (e.g. 'Lighting/Spotlights').\n\n        Returns:\n            The number of actors that were moved.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.delete_folder",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Renames a folder in the outliner.\n\n        Updates the folder path for all actors in the folder and any sub-folders.\n        For example, renaming 'Lighting' to 'Lights' also updates actors in\n        'Lighting/Spotlights' to 'Lights/Spotlights'. If the new path already\n        exists then the affected actors will be merged into it.\n\n        Args:\n            old_path: The current folder path (e.g. 'Lighting').\n            new_path: The new folder path (e.g. 'Lights').\n\n        Returns:\n            The number of actors whose folder path was updated.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.rename_folder",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "old_path": {
+            "type": "string"
+          },
+          "new_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "old_path",
+          "new_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Assigns an actor to the specified folder in the outliner.\n\n        Creates the folder implicitly if it does not already exist. Pass an empty string\n        to move the actor to the root of the outliner.\n\n        Args:\n            actor: The actor to move.\n            folder_path: The folder path to assign (e.g. 'Lighting/Spotlights').\n                         Pass an empty string to move the actor to the root.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.set_actor_folder",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "folder_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor",
+          "folder_path"
+        ]
+      }
+    },
+    {
+      "description": "Returns the actors in the specified outliner folder.\n\n        Args:\n            folder_path: The folder path to query (e.g. 'Lighting/Spotlights').\n            recursive: If True, also includes actors in sub-folders.\n\n        Returns:\n            A list of actors in the specified folder.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.get_actors_in_folder",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "folder_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.Actor",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all folder paths currently in use in the outliner.\n\n        Includes all intermediate parent paths. For example, if an actor is assigned to\n        'Lighting/Spotlights', both 'Lighting' and 'Lighting/Spotlights' are returned.\n\n        Returns:\n            A sorted list of unique folder path strings.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.get_folders",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Deletes an actor from the scene.\n\n        Args:\n            actor: The actor to remove.\n\n        Returns:\n            True if the actor was removed.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.remove_from_scene",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "actor"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new actor in the scene from an asset.\n\n        Args:\n            asset_path: The path to the asset to spawn (e.g. '/Game/Blueprints/MyActor').\n            name: The name of the actor instance.\n            xform: The transform for the new actor. Parent-local when `parent` is set;\n                world-space otherwise.\n            parent: If set, the new actor will be a child of this actor. If unset the Actor will\n                be a child of the world.\n            snap_to_ground: If set to true, will attempt to adjust the actors Z position so that\n                the bottom of its bounding box is on the ground.\n\n        Returns:\n            The created actor or nothing if creation was unsuccessful.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.add_to_scene_from_asset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset_path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "xform": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          },
+          "parent": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "snap_to_ground": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "asset_path",
+          "name",
+          "xform"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new instance of the specified object at the specified transform.\n\n        Args:\n            actor_type: The Actor class to instantiate.\n            name: The name of the actor instance.\n            xform: The transform for the new actor. Parent-local when `parent` is set;\n                world-space otherwise.\n            parent: If set, the new actor will be a child of this actor. If unset the Actor will\n                be a child of the world.\n            snap_to_ground: If set to true, will attempt to adjust the actors Z position so that\n                the bottom of its bounding box is on the ground.\n\n        Returns:\n            The created actor or nothing if creation was unsuccessful.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.add_to_scene_from_class",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_type": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "xform": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          },
+          "parent": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "snap_to_ground": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "actor_type",
+          "name",
+          "xform"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Searches the scene for actors that match specific criteria.\n\n        Args:\n            root: If set, will only search this actor and its children.\n            name: If set, will only return actors whose label contains this string\n                (case-insensitive).\n            actor_type: If set, will only return actors that are of this type.\n            tag: If set, will only return actors that have this tag.\n            bounds: If set, only returns actors whose bounds overlap this world-space AABB.\n            collision_channels: If set, bounds checks will uses a native physics overlap query\n                restricted to these channels. Non-collision actors will be ignored.\n\n        Returns:\n            A list of actors that match the criteria.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.find_actors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.Actor",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "actor_type": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "tag": {
+            "type": "string"
+          },
+          "bounds": {
+            "default": null,
+            "title": "Box",
+            "type": "object",
+            "properties": {
+              "min": {
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "max": {
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "isValid": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "min",
+              "max",
+              "isValid"
+            ]
+          },
+          "collision_channels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "title": "EObjectTypeQuery",
+              "enum": [
+                "ObjectTypeQuery1",
+                "ObjectTypeQuery2",
+                "ObjectTypeQuery3",
+                "ObjectTypeQuery4",
+                "ObjectTypeQuery5",
+                "ObjectTypeQuery6",
+                "ObjectTypeQuery7",
+                "ObjectTypeQuery8",
+                "ObjectTypeQuery9",
+                "ObjectTypeQuery10",
+                "ObjectTypeQuery11",
+                "ObjectTypeQuery12",
+                "ObjectTypeQuery13",
+                "ObjectTypeQuery14",
+                "ObjectTypeQuery15",
+                "ObjectTypeQuery16",
+                "ObjectTypeQuery17",
+                "ObjectTypeQuery18",
+                "ObjectTypeQuery19",
+                "ObjectTypeQuery20",
+                "ObjectTypeQuery21",
+                "ObjectTypeQuery22",
+                "ObjectTypeQuery23",
+                "ObjectTypeQuery24",
+                "ObjectTypeQuery25",
+                "ObjectTypeQuery26",
+                "ObjectTypeQuery27",
+                "ObjectTypeQuery28",
+                "ObjectTypeQuery29",
+                "ObjectTypeQuery30",
+                "ObjectTypeQuery31",
+                "ObjectTypeQuery32",
+                "ObjectTypeQuery33",
+                "ObjectTypeQuery34",
+                "ObjectTypeQuery35",
+                "ObjectTypeQuery36",
+                "ObjectTypeQuery37",
+                "ObjectTypeQuery38",
+                "ObjectTypeQuery39",
+                "ObjectTypeQuery40",
+                "ObjectTypeQuery41",
+                "ObjectTypeQuery42",
+                "ObjectTypeQuery43",
+                "ObjectTypeQuery44",
+                "ObjectTypeQuery45",
+                "ObjectTypeQuery46",
+                "ObjectTypeQuery47",
+                "ObjectTypeQuery48",
+                "ObjectTypeQuery49",
+                "ObjectTypeQuery50",
+                "ObjectTypeQuery51",
+                "ObjectTypeQuery52",
+                "ObjectTypeQuery53",
+                "ObjectTypeQuery54",
+                "ObjectTypeQuery55",
+                "ObjectTypeQuery56",
+                "ObjectTypeQuery57",
+                "ObjectTypeQuery58",
+                "ObjectTypeQuery59",
+                "ObjectTypeQuery60",
+                "ObjectTypeQuery61",
+                "ObjectTypeQuery62",
+                "ObjectTypeQuery63",
+                "ObjectTypeQuery64"
+              ]
+            }
+          }
+        },
+        "required": [
+          "name",
+          "tag",
+          "collision_channels"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.Actor",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all available collision channels for use with find_actors.\n\n        Returns:\n            A list of all collision channels.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.get_collision_channels",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "title": "EObjectTypeQuery",
+              "enum": [
+                "ObjectTypeQuery1",
+                "ObjectTypeQuery2",
+                "ObjectTypeQuery3",
+                "ObjectTypeQuery4",
+                "ObjectTypeQuery5",
+                "ObjectTypeQuery6",
+                "ObjectTypeQuery7",
+                "ObjectTypeQuery8",
+                "ObjectTypeQuery9",
+                "ObjectTypeQuery10",
+                "ObjectTypeQuery11",
+                "ObjectTypeQuery12",
+                "ObjectTypeQuery13",
+                "ObjectTypeQuery14",
+                "ObjectTypeQuery15",
+                "ObjectTypeQuery16",
+                "ObjectTypeQuery17",
+                "ObjectTypeQuery18",
+                "ObjectTypeQuery19",
+                "ObjectTypeQuery20",
+                "ObjectTypeQuery21",
+                "ObjectTypeQuery22",
+                "ObjectTypeQuery23",
+                "ObjectTypeQuery24",
+                "ObjectTypeQuery25",
+                "ObjectTypeQuery26",
+                "ObjectTypeQuery27",
+                "ObjectTypeQuery28",
+                "ObjectTypeQuery29",
+                "ObjectTypeQuery30",
+                "ObjectTypeQuery31",
+                "ObjectTypeQuery32",
+                "ObjectTypeQuery33",
+                "ObjectTypeQuery34",
+                "ObjectTypeQuery35",
+                "ObjectTypeQuery36",
+                "ObjectTypeQuery37",
+                "ObjectTypeQuery38",
+                "ObjectTypeQuery39",
+                "ObjectTypeQuery40",
+                "ObjectTypeQuery41",
+                "ObjectTypeQuery42",
+                "ObjectTypeQuery43",
+                "ObjectTypeQuery44",
+                "ObjectTypeQuery45",
+                "ObjectTypeQuery46",
+                "ObjectTypeQuery47",
+                "ObjectTypeQuery48",
+                "ObjectTypeQuery49",
+                "ObjectTypeQuery50",
+                "ObjectTypeQuery51",
+                "ObjectTypeQuery52",
+                "ObjectTypeQuery53",
+                "ObjectTypeQuery54",
+                "ObjectTypeQuery55",
+                "ObjectTypeQuery56",
+                "ObjectTypeQuery57",
+                "ObjectTypeQuery58",
+                "ObjectTypeQuery59",
+                "ObjectTypeQuery60",
+                "ObjectTypeQuery61",
+                "ObjectTypeQuery62",
+                "ObjectTypeQuery63",
+                "ObjectTypeQuery64"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the path to the current level asset.\n\n        Returns:\n            The name of the loaded level, if any.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.get_current_level",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Loads a level in the editor.\n\n        Args:\n            level_path: The path to the level asset.",
+      "name": "editor_toolset.toolsets.scene.SceneTools.load_level",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "level_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "level_path"
+        ]
+      }
+    }
+  ]
+}

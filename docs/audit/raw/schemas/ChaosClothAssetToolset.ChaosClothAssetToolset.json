@@ -1,0 +1,261 @@
+{
+  "name": "ChaosClothAssetToolset.ChaosClothAssetToolset",
+  "version": "1.0",
+  "description": "Provides tools for creating and assigning ChaosClothAsset clothing data to skeletal meshes.\nReplicates the workflow available via the SkeletalMesh Editor viewport context menu.",
+  "tools": [
+    {
+      "description": "Removes the clothing binding from a specific LOD section on the skeletal mesh.\nMirrors the SkeletalMesh Editor's \"Remove Clothing Data\" action.",
+      "name": "ChaosClothAssetToolset.ChaosClothAssetToolset.RemoveClothingFromSection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Object path to the target USkeletalMesh asset."
+          },
+          "lodIndex": {
+            "type": "integer",
+            "description": "Skeletal mesh LOD index."
+          },
+          "sectionIndex": {
+            "type": "integer",
+            "description": "Section index within the LOD."
+          }
+        },
+        "required": [
+          "skeletalMeshPath",
+          "lodIndex",
+          "sectionIndex"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if a binding was found and removed."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns information about all Clothing Assets on a skeletal mesh.\nUse AssetName with AssignClothingToSection.\nCheck bRequiresMatchingLodIndex to determine how to supply ClothingLodIndex:\n  - true  (ChaosClothAsset): pass the same value as LodIndex\n  - false (UClothingAssetCommon): pass any value in [0, NumClothingLods-1]",
+      "name": "ChaosClothAssetToolset.ChaosClothAssetToolset.ListClothingAssets",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Object path to the target USkeletalMesh asset."
+          }
+        },
+        "required": [
+          "skeletalMeshPath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "ClothingAssetInfo",
+              "type": "object",
+              "properties": {
+                "assetName": {
+                  "type": "string",
+                  "description": "Name of the clothing asset. Pass to AssignClothingToSection."
+                },
+                "bRequiresMatchingLodIndex": {
+                  "type": "boolean",
+                  "description": "If true, ClothingLodIndex passed to AssignClothingToSection must match the skeletal mesh\nLodIndex. This is the case for ChaosClothAsset-derived types.\nIf false (UClothingAssetCommon), any value in [0, NumClothingLods-1] is valid."
+                },
+                "numClothingLods": {
+                  "type": "integer",
+                  "description": "Number of LODs available in this clothing asset.\nOnly relevant when bRequiresMatchingLodIndex is false."
+                }
+              },
+              "required": [
+                "assetName",
+                "bRequiresMatchingLodIndex",
+                "numClothingLods"
+              ]
+            },
+            "description": "Array of clothing asset info structs."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the name of clothing bound for a specific LOD section (if any).",
+      "name": "ChaosClothAssetToolset.ChaosClothAssetToolset.GetSectionClothing",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Object path to the target USkeletalMesh asset."
+          },
+          "lodIndex": {
+            "type": "integer",
+            "description": "Skeletal mesh LOD index."
+          },
+          "sectionIndex": {
+            "type": "integer",
+            "description": "Section index within the LOD."
+          }
+        },
+        "required": [
+          "skeletalMeshPath",
+          "lodIndex",
+          "sectionIndex"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The name of the clothing asset, or empty if none bound."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a UChaosClothAssetSKMClothingAsset from a Chaos Cloth/Outfit Asset and adds it\nto the skeletal mesh's clothing asset array, making it available to assign to sections.",
+      "name": "ChaosClothAssetToolset.ChaosClothAssetToolset.CreateClothingAsset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Object path to the target USkeletalMesh asset."
+          },
+          "chaosClothAssetPath": {
+            "type": "string",
+            "description": "Object path to the source UChaosClothAssetBase (cloth or outfit asset)."
+          }
+        },
+        "required": [
+          "skeletalMeshPath",
+          "chaosClothAssetPath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of created clothing assets, or empty if failed."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Converts a legacy UClothingAssetCommon (the cloth asset created via UChaosClothingSimulationFactory)\ninto a new UChaosClothAsset whose embedded Dataflow graph mirrors the legacy UChaosClothConfig and\nUChaosClothSharedSimConfig values, with one WeightMap node per legacy weight map.",
+      "name": "ChaosClothAssetToolset.ChaosClothAssetToolset.ConvertClothingAssetCommonToChaosClothAsset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Object path to the USkeletalMesh that owns the legacy clothing asset."
+          },
+          "clothingAssetName": {
+            "type": "string",
+            "description": "Name of the UClothingAssetCommon on the mesh (from ListClothingAssets)."
+          },
+          "outputPackagePath": {
+            "type": "string",
+            "description": "Folder where the new asset should be created (e.g. \"/Game/Cloth/\")."
+          },
+          "assetName": {
+            "type": "string",
+            "description": "Name of the new asset; empty for default (\"CA_Converted_<source>\")."
+          }
+        },
+        "required": [
+          "skeletalMeshPath",
+          "clothingAssetName",
+          "outputPackagePath",
+          "assetName"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Object path of the new UChaosClothAsset; empty on failure."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Binds a clothing asset to a specific LOD and section on the skeletal mesh.\nMirrors the SkeletalMesh Editor's \"Apply Clothing Data\" action.\nAny clothing already bound to the section is unbound first.",
+      "name": "ChaosClothAssetToolset.ChaosClothAssetToolset.AssignClothingToSection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "skeletalMeshPath": {
+            "type": "string",
+            "description": "Object path to the target USkeletalMesh asset."
+          },
+          "clothingAssetName": {
+            "type": "string",
+            "description": "Name of the Clothing Asset on the mesh (e.g., from CreateClothingAsset or ListClothingAssets)."
+          },
+          "lodIndex": {
+            "type": "integer",
+            "description": "Skeletal mesh LOD index to bind to."
+          },
+          "sectionIndex": {
+            "type": "integer",
+            "description": "Section index within the LOD to bind to."
+          },
+          "clothingLodIndex": {
+            "type": "integer",
+            "description": "LOD index within the clothing asset to bind. For ChaosClothAsset-derived types (bRequiresMatchingLodIndex == true in ListClothingAssets), pass the same value as LodIndex. For UClothingAssetCommon, pass the desired clothing LOD (0 to NumClothingLods-1 as reported by ListClothingAssets)."
+          }
+        },
+        "required": [
+          "skeletalMeshPath",
+          "clothingAssetName",
+          "lodIndex",
+          "sectionIndex",
+          "clothingLodIndex"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if the binding succeeded."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

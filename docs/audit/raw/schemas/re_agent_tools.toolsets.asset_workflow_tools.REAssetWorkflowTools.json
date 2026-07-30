@@ -1,0 +1,97 @@
+{
+  "name": "re_agent_tools.toolsets.asset_workflow_tools.REAssetWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite asset workflows: find, bulk edit, save.",
+  "tools": [
+    {
+      "description": "Save exact asset path list only.",
+      "name": "re_agent_tools.toolsets.asset_workflow_tools.REAssetWorkflowTools.save_assets",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset_paths_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_paths_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Bulk edit assets: JSON list of {path, properties_json}.",
+      "name": "re_agent_tools.toolsets.asset_workflow_tools.REAssetWorkflowTools.bulk_edit_asset_properties_and_save",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "edits_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "edits_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Find assets under path with optional class/name filters (max 25).",
+      "name": "re_agent_tools.toolsets.asset_workflow_tools.REAssetWorkflowTools.find_assets_compact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "default": "/Game"
+          },
+          "class_name": {
+            "type": "string"
+          },
+          "name_filter": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 25
+          }
+        },
+        "required": [
+          "class_name",
+          "name_filter"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

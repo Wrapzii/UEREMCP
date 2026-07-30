@@ -1,0 +1,948 @@
+{
+  "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools",
+  "version": "1.0",
+  "description": "Tools for keyframing and animating properties on the Sequencer\n    timeline. Use when adding, querying, or removing keyframes on channels,\n    setting default values, evaluating channels at specific times, working\n    with the Curve Editor, or managing channel selection. Covers float, bool,\n    integer, and string key types with configurable interpolation.",
+  "tools": [
+    {
+      "description": "Get specific keys on a channel by their indices, returned as JSON.\n\n        Useful for resolving the keys behind a Curve Editor selection,\n        which provides indices rather than key objects.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n            indices: Key indices to look up (0-based).\n\n        Returns:\n            JSON string with a list of key objects, each with 'frame',\n            'value', and 'index' fields. An entry is emitted for EVERY\n            requested index in the input order; out-of-range indices are\n            reported with 'frame': None and 'value': None so callers can\n            correlate results with the request. Value uses a native JSON\n            number for numeric channels and a string for exotic types.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.get_keys_by_index",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "indices"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Bake a channel's values over a frame range.\n\n        Evaluates the channel curve at every frame in the range and\n        returns the computed values. Useful for extracting animation\n        data or verifying interpolation results.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel (e.g. 'Location.X').\n            start_frame: Start of the evaluation range.\n            end_frame: End of the evaluation range.\n\n        Returns:\n            List of float values, one per frame in the range.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.bake_channel_keys",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "start_frame": {
+            "type": "integer"
+          },
+          "end_frame": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "start_frame",
+          "end_frame"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Check if a curve is visible in the Curve Editor.\n\n        Args:\n            channel: The channel proxy to check.\n\n        Returns:\n            True if the curve is displayed.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.is_curve_shown",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "title": "SequencerChannelProxy",
+            "type": "object",
+            "properties": {
+              "channelName": {
+                "type": "string"
+              },
+              "section": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSection",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "channelName",
+              "section"
+            ]
+          }
+        },
+        "required": [
+          "channel"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Show or hide a curve in the Curve Editor.\n\n        Args:\n            channel: The channel proxy for the curve.\n            show: True to show, False to hide.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.show_curve",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "title": "SequencerChannelProxy",
+            "type": "object",
+            "properties": {
+              "channelName": {
+                "type": "string"
+              },
+              "section": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSection",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "channelName",
+              "section"
+            ]
+          },
+          "show": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "channel",
+          "show"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Clear all key selection in the Curve Editor.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.curve_editor_empty_selection",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Select keys by index in the Curve Editor.\n\n        Args:\n            channel: The channel proxy containing the keys.\n            indices: List of integer key indices to select.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.curve_editor_select_keys",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "title": "SequencerChannelProxy",
+            "type": "object",
+            "properties": {
+              "channelName": {
+                "type": "string"
+              },
+              "section": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSection",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "channelName",
+              "section"
+            ]
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "channel",
+          "indices"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get selected key indices for a channel in the Curve Editor.\n\n        Args:\n            channel: The channel proxy to query.\n\n        Returns:\n            List of integer key indices that are selected.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.get_curve_editor_selected_keys",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "title": "SequencerChannelProxy",
+            "type": "object",
+            "properties": {
+              "channelName": {
+                "type": "string"
+              },
+              "section": {
+                "type": "object",
+                "title": "/Script/MovieScene.MovieSceneSection",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "channelName",
+              "section"
+            ]
+          }
+        },
+        "required": [
+          "channel"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get channels that have selected keys in the Curve Editor.\n\n        Returns:\n            List of SequencerChannelProxy objects with selected keys.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.get_selected_key_channels",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerChannelProxy",
+              "type": "object",
+              "properties": {
+                "channelName": {
+                  "type": "string"
+                },
+                "section": {
+                  "type": "object",
+                  "title": "/Script/MovieScene.MovieSceneSection",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "channelName",
+                "section"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Check whether the Curve Editor panel is currently open.\n\n        Returns:\n            True if the Curve Editor is open.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.is_curve_editor_open",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Close the Sequencer Curve Editor panel.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.close_curve_editor",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Open the Sequencer Curve Editor panel.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.open_curve_editor",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set the channel selection in the Sequencer editor.\n\n        Args:\n            channels: List of SequencerChannelProxy objects to select.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.select_channels",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "channels": {
+            "type": "array",
+            "items": {
+              "title": "SequencerChannelProxy",
+              "type": "object",
+              "properties": {
+                "channelName": {
+                  "type": "string"
+                },
+                "section": {
+                  "type": "object",
+                  "title": "/Script/MovieScene.MovieSceneSection",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "channelName",
+                "section"
+              ]
+            }
+          }
+        },
+        "required": [
+          "channels"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the currently selected channels in the Sequencer editor.\n\n        Returns:\n            List of selected SequencerChannelProxy objects.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.get_selected_channels",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "SequencerChannelProxy",
+              "type": "object",
+              "properties": {
+                "channelName": {
+                  "type": "string"
+                },
+                "section": {
+                  "type": "object",
+                  "title": "/Script/MovieScene.MovieSceneSection",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "channelName",
+                "section"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the default value of a float channel.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n\n        Returns:\n            The default value of the channel.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.get_default_value",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set the default value of a channel.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n            value: The default value.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.set_default_value",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Remove a key at a specific frame from a channel.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n            frame: The frame number of the key to remove.\n\n        Returns:\n            True if a key was found and removed, False if no key at that frame.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.remove_key_at_frame",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "frame"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all keys on a channel, returned as a JSON array.\n\n        Each key entry includes its frame number and value.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n\n        Returns:\n            JSON string with a list of key objects, each with 'frame'\n            and 'value' fields. For numeric channels the value is a\n            native JSON number; for exotic channel types that don't\n            round-trip through JSON natively, the value is stringified.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.get_keys",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a string key to a channel on a section.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n            frame: The frame number for the key.\n            value: The string value.\n\n        Returns:\n            True when the key was added successfully.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.add_key_string",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "frame",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add an integer key to a channel on a section.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n            frame: The frame number for the key.\n            value: The integer value.\n\n        Returns:\n            True when the key was added successfully.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.add_key_integer",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "frame",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a bool key to a channel on a section.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel.\n            frame: The frame number for the key.\n            value: The bool value.\n\n        Returns:\n            True when the key was added successfully.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.add_key_bool",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "frame",
+          "value"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a float key to a channel on a section.\n\n        Args:\n            section: The section containing the channel.\n            channel_name: Name of the channel (e.g. 'Location.X').\n            frame: The frame number for the key.\n            value: The float value.\n            interpolation: Key interpolation mode as a string:\n                \"cubic\", \"linear\", \"constant\", \"break\", or \"\" for default (smart auto).\n\n        Returns:\n            True when the key was added successfully.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.add_key_float",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "channel_name": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "integer"
+          },
+          "value": {
+            "type": "number"
+          },
+          "interpolation": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "channel_name",
+          "frame",
+          "value",
+          "interpolation"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the names of all channels on a section.\n\n        For example, a 3D Transform section has channels named\n        'Location.X', 'Location.Y', 'Location.Z', 'Rotation.X', etc.\n\n        Args:\n            section: The section to query.\n\n        Returns:\n            List of channel name strings.",
+      "name": "animation_toolset.toolsets.keyframing.SequencerKeyframingTools.get_channel_names",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "object",
+            "title": "/Script/MovieScene.MovieSceneSection",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "section"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

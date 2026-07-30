@@ -1,0 +1,422 @@
+{
+  "name": "metahuman_toolset.metahuman.MetaHumanToolset",
+  "version": "1.0",
+  "description": "Tools for creating and editing MetaHuman characters",
+  "tools": [
+    {
+      "description": "Create a new MetaHuman character asset.\n\n        Args:\n            asset_path: Asset path where the MetaHuman will be created\n\n        Returns:\n            Created MetaHuman character asset",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.create",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/MetaHumanCharacter.MetaHumanCharacter",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set MetaHuman eye color.\n\n        Args:\n            session: Session from begin_edit()\n            eye_color: Eye color parameters to apply",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.set_eye_color",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "eye_color": {
+            "title": "EyeColor",
+            "type": "object",
+            "properties": {
+              "brightness": {
+                "type": "number",
+                "description": "Brightness: 0.0=dark, 1.0=light",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "temperature": {
+                "type": "number",
+                "description": "Temperature: 0.0=cool (blue, gray, green), 1.0=warm (brown, amber, hazel)",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "brightness",
+              "temperature"
+            ]
+          }
+        },
+        "required": [
+          "session",
+          "eye_color"
+        ]
+      }
+    },
+    {
+      "description": "Get MetaHuman eye color.\n\n        Args:\n            session: Session from begin_edit()\n\n        Returns:\n            Current eye color parameters",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.get_eye_color",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "session"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "EyeColor",
+            "type": "object",
+            "properties": {
+              "brightness": {
+                "type": "number",
+                "description": "Brightness: 0.0=dark, 1.0=light",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "temperature": {
+                "type": "number",
+                "description": "Temperature: 0.0=cool (blue, gray, green), 1.0=warm (brown, amber, hazel)",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "brightness",
+              "temperature"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set MetaHuman skin tone.\n\n        Args:\n            session: Session from begin_edit()\n            skin_tone: Skin tone parameters to apply",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.set_skin_tone",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "skin_tone": {
+            "title": "SkinTone",
+            "type": "object",
+            "properties": {
+              "redness": {
+                "type": "number",
+                "description": "Redness (0..1). 0=cool, 1=red",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "lightness": {
+                "type": "number",
+                "description": "Lightness (0..1). 0=light, 1=dark",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "redness",
+              "lightness"
+            ]
+          }
+        },
+        "required": [
+          "session",
+          "skin_tone"
+        ]
+      }
+    },
+    {
+      "description": "Get MetaHuman skin tone.\n\n        Args:\n            session: Session from begin_edit()\n\n        Returns:\n            Current skin tone parameters",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.get_skin_tone",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "session"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "SkinTone",
+            "type": "object",
+            "properties": {
+              "redness": {
+                "type": "number",
+                "description": "Redness (0..1). 0=cool, 1=red",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "lightness": {
+                "type": "number",
+                "description": "Lightness (0..1). 0=light, 1=dark",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "redness",
+              "lightness"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set MetaHuman body shape.\n\n        Args:\n            session: Session from begin_edit()\n            body_shape: Body shape parameters to apply",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.set_body_shape",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "body_shape": {
+            "title": "BodyShape",
+            "type": "object",
+            "properties": {
+              "height_cm": {
+                "description": "Height in centimeters",
+                "type": "number"
+              },
+              "muscularity": {
+                "description": "Muscle definition (0..1). 0=no muscle, 1=extreme muscle",
+                "type": "number"
+              },
+              "fat": {
+                "description": "Body fat (0..1). 0=lean, 1=overweight",
+                "type": "number"
+              },
+              "masculine_feminine": {
+                "description": "Masculine/feminine (0..1). 0=masculine, 1=feminine",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": [
+          "session",
+          "body_shape"
+        ]
+      }
+    },
+    {
+      "description": "Get MetaHuman body shape parameters.\n\n        Args:\n            session: Session from begin_edit()\n\n        Returns:\n            Current body shape parameters",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.get_body_shape",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "session"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "BodyShape",
+            "type": "object",
+            "properties": {
+              "height_cm": {
+                "description": "Height in centimeters",
+                "type": "number"
+              },
+              "muscularity": {
+                "description": "Muscle definition (0..1). 0=no muscle, 1=extreme muscle",
+                "type": "number"
+              },
+              "fat": {
+                "description": "Body fat (0..1). 0=lean, 1=overweight",
+                "type": "number"
+              },
+              "masculine_feminine": {
+                "description": "Masculine/feminine (0..1). 0=masculine, 1=feminine",
+                "type": "number"
+              }
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "End editing a MetaHuman character. Call this LAST after all modifications.\n\n        Args:\n            session: Session from begin_edit()",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.end_edit",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "session"
+        ]
+      }
+    },
+    {
+      "description": "Begin editing a MetaHuman character. Call this FIRST before any other MetaHuman tools.\n\n        Args:\n            object_path: Asset path\n\n        Returns:\n            Session to pass to other tools\n\n        IMPORTANT: Always call end_edit() when done to commit changes.",
+      "name": "metahuman_toolset.metahuman.MetaHumanToolset.begin_edit",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "object_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "object_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/MetaHumanGenerator/Python/metahuman_toolset/session_PY.MetaHumanEditSession",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

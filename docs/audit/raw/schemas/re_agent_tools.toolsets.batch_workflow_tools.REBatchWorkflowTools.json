@@ -1,0 +1,41 @@
+{
+  "name": "re_agent_tools.toolsets.batch_workflow_tools.REBatchWorkflowTools",
+  "version": "1.0",
+  "description": "RE batch executor for allowlisted editor operations with $ref chaining.",
+  "tools": [
+    {
+      "description": "Execute allowlisted ops from JSON array string. Actions: resolve_actor, spawn_actor, set_actor_properties, set_actor_transform, save_level, compile_blueprint, set_asset_properties, save_asset. Actor field aliases: label|actor_label|name.",
+      "name": "re_agent_tools.toolsets.batch_workflow_tools.REBatchWorkflowTools.execute_editor_batch",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "operations_json": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": false
+          },
+          "stop_on_error": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "operations_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,283 @@
+{
+  "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools",
+  "version": "1.0",
+  "description": "RE composite actor workflows: set/verify, spawn, batch transform, delete, organize.",
+  "tools": [
+    {
+      "description": "Batch rotate: [{label, rotation:[pitch,yaw,roll]} or {label, add_yaw:deg}].",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.rotate_actors_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "rotations_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "rotations_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Place actor from StaticMesh / Blueprint / class-like asset path + verify transform.",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.place_from_asset_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset_path": {
+            "type": "string"
+          },
+          "actor_label": {
+            "type": "string"
+          },
+          "location_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "rotation_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "scale_json": {
+            "type": "string",
+            "default": "[1,1,1]"
+          },
+          "folder_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_path",
+          "actor_label",
+          "folder_path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Organize actors: JSON list of {label, folder?, new_label?, add_tags?, remove_tags?}.",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.organize_actors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "organization_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "organization_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Delete actors by label. dry_run defaults true.",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.delete_actors_validated",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_labels_json": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "actor_labels_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Batch transform actors: JSON list of {label, location, rotation, scale}.",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.batch_transform_actors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transforms_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "transforms_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Spawn actor from class, set transform/props, optional attach and label.",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.spawn_configure_attach_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "class_path": {
+            "type": "string"
+          },
+          "location_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "rotation_json": {
+            "type": "string",
+            "default": "[0,0,0]"
+          },
+          "scale_json": {
+            "type": "string",
+            "default": "[1,1,1]"
+          },
+          "properties_json": {
+            "type": "string",
+            "default": "{}"
+          },
+          "actor_label": {
+            "type": "string"
+          },
+          "folder_path": {
+            "type": "string"
+          },
+          "attach_parent_label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "class_path",
+          "actor_label",
+          "folder_path",
+          "attach_parent_label"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set properties on a named actor component with readback.",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.set_component_properties_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_label": {
+            "type": "string"
+          },
+          "component_name": {
+            "type": "string"
+          },
+          "properties_json": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_label",
+          "component_name",
+          "properties_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set actor properties from JSON, read back, optional save level.",
+      "name": "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools.set_actor_properties_and_verify",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actor_label": {
+            "type": "string"
+          },
+          "properties_json": {
+            "type": "string"
+          },
+          "save_level": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "actor_label",
+          "properties_json"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

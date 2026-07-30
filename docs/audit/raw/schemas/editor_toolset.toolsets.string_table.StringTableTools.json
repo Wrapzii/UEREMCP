@@ -1,0 +1,314 @@
+{
+  "name": "editor_toolset.toolsets.string_table.StringTableTools",
+  "version": "1.0",
+  "description": "Provides tools for creating and editing StringTable assets.",
+  "tools": [
+    {
+      "description": "Removes an entry from the string table.\n\n        Args:\n            string_table: The StringTable asset to modify.\n            key: The key of the entry to remove.",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.remove_entry",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "string_table": {
+            "type": "object",
+            "title": "/Script/Engine.StringTable",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "string_table",
+          "key"
+        ]
+      }
+    },
+    {
+      "description": "Adds or updates an entry in the string table.\n\n        If the key already exists its value is replaced; otherwise a new entry\n        is created.\n\n        Args:\n            string_table: The StringTable asset to modify.\n            key: The key for the entry.\n            value: The source string value for the entry.",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.set_entry",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "string_table": {
+            "type": "object",
+            "title": "/Script/Engine.StringTable",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "string_table",
+          "key",
+          "value"
+        ]
+      }
+    },
+    {
+      "description": "Returns the source string for a specific key.\n\n        Args:\n            string_table: The StringTable asset to query.\n            key: The key whose string value to retrieve.\n\n        Returns:\n            The source string for the key.",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.get_entry",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "string_table": {
+            "type": "object",
+            "title": "/Script/Engine.StringTable",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "string_table",
+          "key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists all keys in the string table.\n\n        Args:\n            string_table: The StringTable asset to query.\n\n        Returns:\n            A list of key strings.",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.list_keys",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "string_table": {
+            "type": "object",
+            "title": "/Script/Engine.StringTable",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "string_table"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the namespace of a StringTable asset.\n\n        Args:\n            string_table: The StringTable asset to query.\n\n        Returns:\n            The namespace string.",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.get_namespace",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "string_table": {
+            "type": "object",
+            "title": "/Script/Engine.StringTable",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "string_table"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the table ID for a StringTable asset.\n\n        The table ID is derived from the asset's package path and is used\n        to reference the string table in text properties and localisation.\n\n        Args:\n            string_table: The StringTable asset to query.\n\n        Returns:\n            The table ID as a string.",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.get_table_id",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "string_table": {
+            "type": "object",
+            "title": "/Script/Engine.StringTable",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "string_table"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new StringTable asset.\n\n        Args:\n            folder_path: The path to the folder that will contain the asset.\n            asset_name: The name of the asset.\n\n        Returns:\n            The created StringTable.",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.create",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "asset_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_path",
+          "asset_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.StringTable",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Imports a file from disk as a StringTable asset.\n\n        The file must have a header row with at least 'Key' and 'SourceString'\n        columns. Additional meta-data columns are imported but the namespace\n        is not - the StringTable's namespace is derived from its asset path.\n\n        Args:\n            folder_path: The content-browser folder to create the asset in.\n            asset_name: The name of the new asset.\n            source_file: The absolute path to the source file on disk.\n\n        Returns:\n            The assets produced by the import (a single StringTable).",
+      "name": "editor_toolset.toolsets.string_table.StringTableTools.import_file",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "asset_name": {
+            "type": "string"
+          },
+          "source_file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "folder_path",
+          "asset_name",
+          "source_file"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/CoreUObject.Object",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

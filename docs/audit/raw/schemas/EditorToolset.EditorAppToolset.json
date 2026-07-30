@@ -1,0 +1,1159 @@
+{
+  "name": "EditorToolset.EditorAppToolset",
+  "version": "1.0",
+  "description": "Tools for querying and modifying Unreal Editor state: console variables, asset imaging,\nactor and asset selection, viewport camera, content browser navigation, and Play-In-Editor\nsession control.",
+  "tools": [
+    {
+      "description": "Converts a world-space position into normalized screen space based on the editor viewport camera.",
+      "name": "EditorToolset.EditorAppToolset.WorldPosToScreenCoords",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "title": "Vector",
+            "description": "The world space position to convert.",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          }
+        },
+        "required": [
+          "position"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "Vector2D",
+            "description": "The normalized screen-space coordinates for the position if it is in view.",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Stops the currently running play session (PIE or Simulate).\nRaises an error if no play session is running.",
+      "name": "EditorToolset.EditorAppToolset.StopPIE",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "description": "Always null",
+            "type": "null"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Starts a Play-In-Editor or Simulate-In-Editor session using the current level.\nCompletes after the engine fires PostPIEStarted (session fully started,\nBeginPlay called) and Options.WarmupSeconds have elapsed, giving project-\nspecific initialization (services, authentication, plugin warmup) time to\nsettle before the agent inspects state or logs.\nRaises an error if a play session is already running.",
+      "name": "EditorToolset.EditorAppToolset.StartPIE",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "options": {
+            "title": "PIESessionOptions",
+            "description": "Session configuration: PIE vs Simulate, play mode, optional spawn transform override, warmup duration. See FPIESessionOptions.",
+            "type": "object",
+            "properties": {
+              "bSimulate": {
+                "type": "boolean",
+                "description": "If true, starts Simulate-In-Editor: the world ticks and AI / physics /\nsubsystems run, but no player pawn is spawned or possessed. Useful for\nobserving initialization, autonomous agents, and physics state\nindependently of player input.\nIf false (default), starts standard PIE with the player pawn possessed."
+              },
+              "playMode": {
+                "type": "string",
+                "title": "EPlayModeType",
+                "enum": [
+                  "PlayMode_InViewPort",
+                  "PlayMode_InEditorFloating",
+                  "PlayMode_InMobilePreview",
+                  "PlayMode_InTargetedMobilePreview",
+                  "PlayMode_InVulkanPreview",
+                  "PlayMode_InNewProcess",
+                  "PlayMode_InVR",
+                  "PlayMode_Simulate",
+                  "PlayMode_QuickLaunch",
+                  "PlayMode_Count"
+                ],
+                "description": "Editor play mode (in-viewport, floating window, etc.). Out-of-process\nmodes (NewProcess, MobilePreview, VR, QuickLaunch) are downgraded to\nPlayMode_InViewPort with a log warning since this tool requires\nin-process PIE for delegate-based completion tracking."
+              },
+              "startTransform": {
+                "description": "Optional spawn override. When set, the player pawn (PIE) or simulation\nreference (Simulate) spawns at this transform instead of the level's\nPlayerStart / GameMode default. To spawn at the editor viewport camera,\nretrieve the current editor camera properties and use the result here.",
+                "type": "object",
+                "title": "ToolsetTransform",
+                "properties": {
+                  "location": {
+                    "description": "The world-space location.",
+                    "title": "Vector",
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
+                  },
+                  "rotation": {
+                    "description": "The world-space rotation.",
+                    "title": "Rotator",
+                    "type": "object",
+                    "properties": {
+                      "pitch": {
+                        "type": "number",
+                        "description": "Pitch (degrees) around Y axis"
+                      },
+                      "yaw": {
+                        "type": "number",
+                        "description": "Yaw (degrees) around Z axis"
+                      },
+                      "roll": {
+                        "type": "number",
+                        "description": "Roll (degrees) around X axis"
+                      }
+                    },
+                    "required": [
+                      "pitch",
+                      "yaw",
+                      "roll"
+                    ]
+                  },
+                  "scale": {
+                    "description": "The scale.",
+                    "title": "Vector",
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
+                  }
+                }
+              },
+              "warmupSeconds": {
+                "type": "number",
+                "description": "Seconds to wait after the engine fires PostPIEStarted (BeginPlay called)\nbefore this call completes. Heuristic for project-specific initialization\n(services, authentication, plugin warmup) to settle before the agent\ninspects state or logs. Pass 0 to complete as soon as PIE is up."
+              }
+            },
+            "required": [
+              "bSimulate",
+              "playMode",
+              "warmupSeconds"
+            ]
+          }
+        },
+        "required": [
+          "options"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "description": "Always null",
+            "type": "null"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Navigates the active content browser to the specified folder path.",
+      "name": "EditorToolset.EditorAppToolset.SetContentBrowserPath",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "The internal path to navigate to, e.g. '/Game/Meshes'."
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "description": "Sets the position and rotation of the level viewport camera.",
+      "name": "EditorToolset.EditorAppToolset.SetCameraTransform",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "transform": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "The transform to apply to the viewport camera.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "transform"
+        ]
+      }
+    },
+    {
+      "description": "Selects the specified assets in the content browser.\nCompletes once the content browser has applied the selection.",
+      "name": "EditorToolset.EditorAppToolset.SelectAssets",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetPaths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The package paths of the assets to select."
+          }
+        },
+        "required": [
+          "assetPaths"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "description": "Always null",
+            "type": "null"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Selects the specified actors in the current scene.",
+      "name": "EditorToolset.EditorAppToolset.SelectActors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.Actor",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "The actors to select."
+          }
+        },
+        "required": [
+          "actors"
+        ]
+      }
+    },
+    {
+      "description": "Finds all console variables that contain a given name.",
+      "name": "EditorToolset.EditorAppToolset.SearchCVars",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The partial or full name to search for."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "A JSON dict with info about matching cvars."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Finds the world position of the nearest solid object at a given set of normalized view space coords.",
+      "name": "EditorToolset.EditorAppToolset.ScreenCoordsToWorld",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "coords": {
+            "title": "Vector2D",
+            "description": "The normalized screen-space coordinates to trace from.",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          },
+          "traceDistance": {
+            "type": "number",
+            "description": "The maximum distance to trace within the scene.",
+            "default": 100000
+          }
+        },
+        "required": [
+          "coords"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "Vector",
+            "description": "The world-space coordinates of the intersection point.",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "z": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Opens an asset editor for the specified asset.",
+      "name": "EditorToolset.EditorAppToolset.OpenEditorForAsset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetPath": {
+            "type": "string",
+            "description": "The path to the asset to open, e.g. '/Game/Meshes/SM_Cube'."
+          }
+        },
+        "required": [
+          "assetPath"
+        ]
+      }
+    },
+    {
+      "description": "Returns whether a Play In Editor session is currently running.",
+      "name": "EditorToolset.EditorAppToolset.IsPIERunning",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "boolean",
+            "description": "True if PIE is active, false otherwise."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all actors in the current level whose bounds intersect the viewport frustum.",
+      "name": "EditorToolset.EditorAppToolset.GetVisibleActors",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.Actor",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "The actors that are at least partially in view."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the list of assets selected in the content browser.",
+      "name": "EditorToolset.EditorAppToolset.GetSelectedAssets",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A list of package paths to the assets selected in the content browser."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the currently selected actors in the level editor.",
+      "name": "EditorToolset.EditorAppToolset.GetSelectedActors",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.Actor",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "A list of the currently selected actors."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the list of assets currently open in asset editors.",
+      "name": "EditorToolset.EditorAppToolset.GetOpenAssets",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A list of package paths to the assets open in asset editors."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the current path of the active content browser.",
+      "name": "EditorToolset.EditorAppToolset.GetContentBrowserPath",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "The path to the folder currently shown in the content browser."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the position and rotation of the level viewport camera.",
+      "name": "EditorToolset.EditorAppToolset.GetCameraTransform",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "The transform for the level viewport camera.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Repositions the level editor camera to focus on the specified actors.\nCannot be called while PIE is active.",
+      "name": "EditorToolset.EditorAppToolset.FocusOnActors",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "actors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.Actor",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            },
+            "description": "The actors to focus the level camera on."
+          }
+        },
+        "required": [
+          "actors"
+        ]
+      }
+    },
+    {
+      "description": "Captures the level viewport with optional annotations.\n\nAnnotations rendering overlays a projected 3D world-space grid plus\nname + position labels on visible actors. The grid is drawn at a configurable\nground-plane Z and projected through the camera, with coordinate numbers at\nintersections (shown in meters). Each labeled actor gets a crosshair at its\nprojected screen position with a leader-line callout placed to avoid overlap. This\ngives a vision-capable agent spatial awareness: it can reference grid\ncoordinates to direct placement and identify scene contents by label.",
+      "name": "EditorToolset.EditorAppToolset.CaptureViewport",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "captureTransform": {
+            "description": "Optional pose to capture from. If unset, uses the viewport's current camera.",
+            "type": "object",
+            "title": "ToolsetTransform",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          },
+          "annotations": {
+            "description": "Optional annotation overlay configuration. Only use this when you need the information in order to perform spatial actions.",
+            "title": "ViewportAnnotationConfig",
+            "type": "object",
+            "properties": {
+              "gridSpacing": {
+                "type": "number",
+                "description": "World-space distance between grid lines (cm). Pass 0 to disable the grid overlay while still drawing actor labels."
+              },
+              "gridExtent": {
+                "type": "number",
+                "description": "How far the grid extends from the origin in each axis (cm)."
+              },
+              "gridHeight": {
+                "type": "number",
+                "description": "Height of the ground-plane grid in world space."
+              },
+              "maxLabelDistance": {
+                "type": "number",
+                "description": "Maximum distance (cm) for labeling actors and grid coordinates. Pass 0 to disable actor labels while still drawing the grid."
+              },
+              "classFilter": {
+                "type": "object",
+                "title": "Class@/Script/Engine.Actor",
+                "description": "If non-null, only actors of this class (or a subclass) are labeled.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "maxLabels": {
+                "type": "integer",
+                "description": "Maximum number of actor labels to draw. Nearest-to-camera wins. Don't draw too many or the image becomes incoherent."
+              }
+            },
+            "required": [
+              "gridSpacing",
+              "gridExtent",
+              "gridHeight",
+              "maxLabelDistance",
+              "classFilter",
+              "maxLabels"
+            ]
+          },
+          "bShowUI": {
+            "type": "boolean",
+            "description": "If false (default), editor UI overlays such as transform gizmos and selection outlines are hidden in the captured image. Set true to capture exactly what's on screen, gizmos and all.",
+            "default": false
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "ViewportCapture",
+            "description": "The captured image and associated metadata.",
+            "type": "object",
+            "properties": {
+              "image": {
+                "title": "ToolsetImage",
+                "description": "The captured screenshot (PNG encoded as base64). Empty on failure. Pixel dimensions are available via FToolsetImage.",
+                "type": "object",
+                "properties": {
+                  "mimeType": {
+                    "type": "string",
+                    "description": "The format the image is encoded in."
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "The image data encoded as a base64 string."
+                  }
+                },
+                "required": [
+                  "mimeType",
+                  "data"
+                ]
+              },
+              "cameraLocation": {
+                "title": "Vector",
+                "description": "Level viewport camera location (world space, cm).",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "cameraRotation": {
+                "title": "Rotator",
+                "description": "Level viewport camera rotation (world space).",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "cameraFOV": {
+                "type": "number",
+                "description": "Level viewport camera field of view, in degrees."
+              },
+              "grid": {
+                "title": "ViewportGrid",
+                "description": "Grid parameters used for the annotation. SpacingCm is zero when the grid was disabled.",
+                "type": "object",
+                "properties": {
+                  "spacingCm": {
+                    "type": "number",
+                    "description": "World-space distance between grid lines (cm). Zero if the grid was disabled."
+                  },
+                  "extentCm": {
+                    "type": "number",
+                    "description": "How far the grid extends from the origin in each axis (cm)."
+                  },
+                  "height": {
+                    "type": "number",
+                    "description": "Height of the ground-plane grid in world space."
+                  }
+                },
+                "required": [
+                  "spacingCm",
+                  "extentCm",
+                  "height"
+                ]
+              },
+              "labeledActors": {
+                "type": "array",
+                "items": {
+                  "title": "ViewportLabel",
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Canonical, level-unique name of the actor (AActor::GetName). Use this to reference the actor later."
+                    },
+                    "label": {
+                      "type": "string",
+                      "description": "Display label that was drawn on the image (actor label + position in meters). Not guaranteed unique."
+                    },
+                    "class": {
+                      "type": "object",
+                      "title": "Class@/Script/Engine.Actor",
+                      "description": "Class of the actor.",
+                      "properties": {
+                        "refPath": {
+                          "type": "string",
+                          "description": "The reference stored as a soft path string."
+                        }
+                      },
+                      "required": [
+                        "refPath"
+                      ]
+                    },
+                    "screenPosition": {
+                      "title": "IntPoint",
+                      "description": "Screen-space pixel position of the actor origin in the returned image.",
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer"
+                        },
+                        "y": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ]
+                    },
+                    "worldLocation": {
+                      "title": "Vector",
+                      "description": "World-space location of the actor origin (cm).",
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        },
+                        "z": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
+                    },
+                    "distanceCm": {
+                      "type": "number",
+                      "description": "Distance from the camera to the actor origin (cm)."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "label",
+                    "class",
+                    "screenPosition",
+                    "worldLocation",
+                    "distanceCm"
+                  ]
+                },
+                "description": "One entry per labeled actor in the image."
+              }
+            },
+            "required": [
+              "image",
+              "cameraLocation",
+              "cameraRotation",
+              "cameraFOV",
+              "grid",
+              "labeledActors"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Captures an image of the entire editor application as the user sees it.",
+      "name": "EditorToolset.EditorAppToolset.CaptureEditorImage",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "ToolsetImage",
+            "description": "An image of editor windows as they appear on the users' desktop.",
+            "type": "object",
+            "properties": {
+              "mimeType": {
+                "type": "string",
+                "description": "The format the image is encoded in."
+              },
+              "data": {
+                "type": "string",
+                "description": "The image data encoded as a base64 string."
+              }
+            },
+            "required": [
+              "mimeType",
+              "data"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Renders a thumbnail for the specified asset (e.g. static meshes, skeletal meshes,\nskeletons, animations, montages, materials, textures).",
+      "name": "EditorToolset.EditorAppToolset.CaptureAssetImage",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetPath": {
+            "type": "string",
+            "description": "The path to the asset, e.g. '/Game/Meshes/SM_Cube'."
+          }
+        },
+        "required": [
+          "assetPath"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "ToolsetImage",
+            "description": "An image of the asset.",
+            "type": "object",
+            "properties": {
+              "mimeType": {
+                "type": "string",
+                "description": "The format the image is encoded in."
+              },
+              "data": {
+                "type": "string",
+                "description": "The image data encoded as a base64 string."
+              }
+            },
+            "required": [
+              "mimeType",
+              "data"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}
