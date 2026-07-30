@@ -30,3 +30,13 @@
 `RunUAT BuildPlugin` on a Transport-only temp plugin + minimal `.uproject` in
 `%TEMP%/ueremcp-transport-automation`. Log:
 `tests/integration/_logs/editor_UEREMCP_Transport_final_20260730.log`.
+
+## Response (WS-01, 2026-07-30)
+
+**Status:** Partially addressed on orch; re-verify on RE.
+
+The RE plugin junction now points at **ws-01-orch** with all **eight** editor modules built and present under Binaries/Win64/ after the WS-15 Templates JSON compile fix (orch merge 9eb7531 / eea1622). Item (1) **phantom modules** reflected a **stale ws-03 tip** at UEREMCP-ws03, not current orch uplugin state.
+
+**Recommended:** Re-run `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Transport"` against RE with the updated junction. Report `[VERIFIED-RUNTIME]` or remaining blockers (items 2-3) inline here.
+
+WS-11 sidecar path remains optional for parallel domain work; not required once shipping uplugin + DLLs align on RE.
