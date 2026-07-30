@@ -5,9 +5,9 @@
 The registry of every agent-facing `action`. An action that is not listed here does not
 exist as far as agents are concerned.
 
-**Freshness:** 2026-07-30 — statuses refreshed from registered `AICallable` toolsets and
-the acceptance-gap audit (`docs/proposals/ws-01-acceptance-gap-audit-2026-07-30.md`).
-**No overall POC-B claim.** Do not invent `available` without tests + verification.
+**Freshness:** 2026-07-30 — post POC A–E closeout
+(`docs/proposals/ws-01-poc-closeout-2026-07-30.md`). Overall POC A–E claimed under
+accepted criteria. **Not production-ready.**
 
 ## How to register an action
 
@@ -75,16 +75,16 @@ names below are the semantic actions; notes map to the live tool surface.
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
 | `inspect_system` | niagara | WS-07 | partial | RB-07 — AICallable registered; editor Inspect filter PASS on recorded tips; topology intentionally lossy |
-| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — MCP B1/B6 structural PASS; editor B2–B9 structural PASS; B10 production FAIL (0 warm pixels); create returns `partially_completed` until B10+metrics close. **No overall POC-B.** |
-| `create_niagara_template` | niagara | WS-07 | research | RB-07, RB-10 — POC C not started |
-| `create_effect_variation` | niagara | WS-07 | research | RB-07, RB-10 — POC C not started |
+| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — POC B structural create live; ADR-0006 repeated-create + stale `expected_revision` gated (`UEREMCP.Validation.Domain.Niagara.*`); MutatingDispatch wired. B10 warm-pixel / production visibility remains a residual — do not claim visual perfection. |
+| `create_niagara_template` | niagara | WS-07 | partial | POC C variation path landed via create + Templates; see POC C claim docs |
+| `create_effect_variation` | niagara | WS-07 | partial | POC C ice/wind variation + C7 third generation claimed |
 
 ### Materials and VFX assets
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_vfx_material` | materials | WS-08 | partial | RB-08 — AICallable; Material Toolset editor PASS 14/14 on `d691316`; POC-B material reuse is structural — visibility ownership stays with WS-07 unless materials prove invisible |
-| `create_procedural_texture` | materials | WS-08 | partial | AICallable registered; test-root `/Game/__UeremcpTests/` |
+| `create_vfx_material` | materials | WS-08 | partial | RB-08 — AICallable; MutatingDispatch wired; ADR-0006 repeated-create + stale `expected_revision` gated (`UEREMCP.Validation.Domain.Material.*`) |
+| `create_procedural_texture` | materials | WS-08 | partial | AICallable registered; test-root `/Game/__UeremcpTests/`; MutatingDispatch wired |
 | `create_material` | materials | WS-08 | planned | RB-08 |
 | `create_material_family` | materials | WS-08 | planned | RB-08 |
 | `import_and_configure_asset` | import_export | WS-08 | planned | RB-11 |
@@ -93,7 +93,7 @@ names below are the semantic actions; notes map to the live tool surface.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_spell` | gameplay | WS-09 | partial | RB-12 — AICallable preflight only; **no asset mutation**; POC D not started. Do not read as a finished spell pipeline. |
+| `create_spell` | gameplay | WS-09 | partial | RB-12 — live `execute_plan` / upsert under `/Game/__UeremcpTests/`; POC D MET under accepted D5 static Pattern B wording; multi-client optional/deferred |
 | `create_gameplay_ability` | gameplay_abilities | WS-09 | research | RB-12 — textbook GAS out of RE POC D scope |
 | `create_gameplay_effect` | gameplay_abilities | WS-09 | research | RB-12 |
 | `create_player_ability` | gameplay | WS-09 | planned | RB-12 |

@@ -7,9 +7,11 @@ materials, gameplay tags, damage, and animation"* — submits **one** structured
 request, and receives **one** validated structured response with a complete change
 manifest. Instead of several hundred primitive editor calls.
 
-> **Status: Phase 0.** Architecture, protocol, and research plan are complete and
-> frozen. Implementation has not started. The plugin under `Plugins/UEREMCP/` is an
-> uncompiled scaffold. Nothing here has been run against the editor yet.
+> **Status: POC A–E claimed on local tip (2026-07-30).** Goal-level create/inspect
+> surfaces are implemented and live-verified under NullRHI against the RE project.
+> This is **POC-complete, not production-ready** — see
+> `docs/proposals/ws-01-poc-closeout-2026-07-30.md` for residuals (B10 warm pixels,
+> D5 multi-client optional, Epic MCP cancel unwired, metrics gaps).
 
 ## The problem
 
