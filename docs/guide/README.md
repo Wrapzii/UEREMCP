@@ -22,10 +22,10 @@ call a tool.
 |---|---|---|
 | [`tool-selection-policy.md`](tool-selection-policy.md) | AI agents | **Routing policy** — when to pick which UEREMCP tool vs Epic |
 | [`tool-selection-contract.json`](tool-selection-contract.json) | machines / tests | Inventory, prefer_for tags, intent→tool benchmark |
-| [`agent-usage.md`](agent-usage.md) | AI agents | Discovery, request envelope, one semantic operation, `dry_run`, `idempotency_key`, `expected_revision`, timeout / poll |
-| [`capability-reference.md`](capability-reference.md) | agents + humans | Worked examples for live tools; links to fixtures + [`examples/`](examples/) |
-| [`limitations.md`](limitations.md) | both | Honest ceilings — Blueprint scope, B10 vs perfection, visual capture, metrics, security, cooperative cancel, durable idempotency |
-| [`troubleshooting.md`](troubleshooting.md) | both | Status vocabulary, manifests, next-tool guidance |
+| [`agent-usage.md`](agent-usage.md) | AI agents | Discovery (full MCP toolset names), request envelope, one semantic operation, `dry_run`, `idempotency_key`, `expected_revision`, timeout / poll, visual capture |
+| [`capability-reference.md`](capability-reference.md) | agents + humans | Worked examples for live tools on this tip; links to canonical fixtures + [`examples/`](examples/) |
+| [`limitations.md`](limitations.md) | both | Honest ceilings — Blueprint scope, B10 vs perfection, visual capture, metrics, security adoption, cooperative cancel and immutable Epic adapter limit, durable idempotency caveats |
+| [`troubleshooting.md`](troubleshooting.md) | both | Status vocabulary, manifests, `validation` / diagnostics, next-tool guidance |
 | [`developer-setup.md`](developer-setup.md) | humans + agents | Local checks that do **not** require a running editor |
 | [`template-authoring.md`](template-authoring.md) | humans + agents | Thin pointer into `templates/` + WS-15 authoring rules |
 

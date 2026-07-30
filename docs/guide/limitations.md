@@ -25,6 +25,7 @@ asset, scene, renderer, or hardware configuration.
 | Visual capture | `capture_effect_frames` is available with warm and fresh-editor cold-job evidence. It requires a renderer/RHI and editor world; a cold request may require one `get_job_result` poll. A second zero-pixel capture remains an honest `failed_validation`, because some systems do not render standalone. Pixel deltas do not judge appearance. |
 | Topology inspect | Intentionally lossy (event handler stacks, etc.) |
 | POC C | Claimed under accepted criteria; variation + C7 third generation proven |
+| Visual capture | `capture_effect_frames` is **partial→available on deploy tip**: renderer pixel-delta gate; cold path may return ADR-0009 `partially_completed` (poll `get_job_result`, non-cancellable). UHT schema is opaque `requestJson` — load `schemas/domains/validation/capture-effect-frames.schema.json` + guide §9. Does not prove compile or appearance quality |
 
 ## POC-B metrics (WS-14)
 

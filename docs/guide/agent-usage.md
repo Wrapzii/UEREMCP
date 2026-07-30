@@ -39,7 +39,7 @@ surface — not a UEREMCP invent:
 
 | Epic tool | Use |
 |---|---|
-| `list_toolsets` | Prefer toolsets whose names start with `Ueremcp` for §0 intents |
+| `list_toolsets` | See registered toolsets (full names, e.g. `UeremcpCore.UeremcpReferenceToolset`); prefer names starting with `Ueremcp` for §0 intents |
 | `describe_toolset` | List `AICallable` tools and parameter schemas |
 | `call_tool` | Invoke one tool with its JSON argument(s) |
 
@@ -49,16 +49,26 @@ methods on the toolset (e.g. `ReadGraph`, `CreateNiagaraEffect`). Map them via
 [`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) and the tool-selection
 contract.
 
+**Call shape that works on the live Epic MCP proxy:**
+
+```
+call_tool(
+  toolset_name = "UeremcpCore.UeremcpReferenceToolset",  // full list_toolsets name
+  tool_name    = "Ping",                                 // short name, no toolset prefix
+  arguments    = { }                                     // or { "requestJson": "<envelope string>" }
+)
+```
+
 UEREMCP discovery actions (`list_domains`, `describe_action`, …) are still
 **planned** in the catalog — do not wait for them.
 
-Reachability smoke (no assets):
+Reachability smoke (no assets): Ping on `UeremcpCore.UeremcpReferenceToolset`,
+or `Echo` with a minimal envelope (see §2). Do **not** invent a short toolset
+name like `UeremcpReference` — `list_toolsets` is authoritative.
 
-```json
-{ "toolset": "UeremcpReference", "tool": "Ping" }
-```
-
-Or `Echo` with a minimal envelope (see §2).
+UHT-generated MCP schemas for `requestJson: string` do **not** embed the
+envelope or `specification` fields. Load the domain schema / guide example
+before the first mutating call.
 
 ## 2. Request envelope
 
@@ -184,5 +194,52 @@ SSE as a client risk even when the envelope default is higher.
 ## 8. Scratch roots
 
 Prefer `/Game/__UeremcpTests/` (and POC paths under `/Game/__UeremcpPoc/` only when
-running an accepted POC harness). Do not write into production content paths unless
-the human explicitly asked.
+running an accepted POC harness). Ad-hoc agent scratch may use
+`/Game/__UeremcpPoc/FreshAgent/` when the domain allows both roots — confirm with
+`describe_toolset` / catalog notes (some tools still document `__UeremcpTests/`
+only). Do not write into production content paths unless the human explicitly asked.
+
+## 9. Visual capture (`capture_effect_frames`)
+
+MCP toolset: `UeremcpValidation.UeremcpVisualCaptureToolset` → `CaptureEffectFrames`.
+
+```json
+{
+  "protocol_version": "1.0",
+  "request_id": "agent-capture-1",
+  "action": "capture_effect_frames",
+  "target": {
+    "asset_path": "/Game/__UeremcpPoc/FreshAgent/NS_FreshAgent_Probe"
+  },
+  "specification": {
+    "frame_count": 4,
+    "duration_seconds": 1.0,
+    "camera": "three_quarter",
+    "width": 640,
+    "height": 360
+  },
+  "options": {
+    "validate": true,
+    "dry_run": false,
+    "response_detail": "summary"
+  }
+}
+```
+
+Requirements the UHT schema does **not** spell out (see
+[`capture-effect-frames.schema.json`](../../schemas/domains/validation/capture-effect-frames.schema.json)
+and [`capability-reference.md`](capability-reference.md)):
+
+- Editor world + functioning renderer/RHI (not a NullRHI automation pass)
+- `options.validate` must be `true` or the call is `rejected`
+- Outputs land under `<Project>/Saved/UEREMCP/VfxCapture/<asset>/<request-id>/`
+  as PNG files; the response returns paths and measurements, never image bytes
+- Display evidence by opening those PNG paths (Read tool / image viewer) — do not
+  expect base64 in the MCP payload
+- Cold editor: first capture may return `partially_completed` with a
+  process-local ADR-0009 `job` (`cancellable: false`) and
+  `capability_notes` telling you to poll `get_job_result`. Do that once before
+  concluding the Niagara asset is blank. A second zero-pixel result remains
+  `failed_validation`.
+- Pixel-delta success proves “something rendered vs empty stage,” not look quality
+  or Niagara compile correctness

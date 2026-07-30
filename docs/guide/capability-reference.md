@@ -16,14 +16,18 @@ payloads into chat — load fixtures or [`examples/`](examples/).
 call_tool(toolset=<MCP toolset name>, tool=<PascalCase method>, arguments={ requestJson: "<envelope>" })
 ```
 
-Exact toolset registration names come from `list_toolsets` at runtime. Headers below
-document the C++ toolset class and method
+Exact toolset registration names come from `list_toolsets` at runtime (full names
+like `UeremcpBlueprint.UeremcpBlueprintToolset`). Headers below document the C++
+toolset class and method
 `[VERIFIED: Plugins/UEREMCP/Source/Ueremcp*/Public/*Toolset.h]`.
 
 Published examples (valid minimal + complete shapes):
 
 - [`examples/minimal/`](examples/minimal/)
 - [`examples/complete/`](examples/complete/)
+
+Pass `tool_name` **without** the toolset prefix (`ReadGraph`, not
+`…Toolset.ReadGraph`). Envelope argument key is camelCase `requestJson`.
 
 ---
 
@@ -32,10 +36,14 @@ Published examples (valid minimal + complete shapes):
 | | |
 |---|---|
 | Status | **partial** |
-| Toolset / tools | `UUeremcpBlueprintToolset` → `ReadGraph`, `SubmitGraph` |
+| Toolset / tools | MCP `UeremcpBlueprint.UeremcpBlueprintToolset` → `ReadGraph`, `SubmitGraph` |
 | Spec schemas | [`read_graph.schema.json`](../../schemas/domains/blueprints/read_graph.schema.json), [`submit_graph.schema.json`](../../schemas/domains/blueprints/submit_graph.schema.json) |
 
 ### Read (minimal envelope)
+
+Do **not** assume a fixed scratch Blueprint path exists in RE. Discover with
+`AssetTools.find_assets` under `/Game/__UeremcpTests/` / `/Game/__UeremcpPoc/`, or
+submit/create under those roots first. The guide example path below is illustrative.
 
 ```json
 {
@@ -43,7 +51,7 @@ Published examples (valid minimal + complete shapes):
   "request_id": "bp-read-1",
   "action": "read_graph",
   "target": {
-    "asset_path": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch"
+    "asset_path": "/Game/__UeremcpTests/<discovered_or_created_blueprint>"
   },
   "specification": {
     "graph_id": "EventGraph"
@@ -72,7 +80,7 @@ Envelope sketch:
   "action": "submit_graph",
   "mode": "replace",
   "target": {
-    "asset_path": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch",
+    "asset_path": "/Game/__UeremcpTests/<discovered_or_created_blueprint>",
     "graph_id": "EventGraph"
   },
   "expected_revision": "<revision from prior read>",
@@ -310,6 +318,44 @@ Minimal fixtures: [`examples/minimal/get_job_result.json`](examples/minimal/get_
 | Tools | `Ping`, `Echo` on Reference (+ domain Echo/Ping where registered) |
 
 Use these to separate protocol/registration failures from domain failures.
+
+---
+
+## Visual capture — `capture_effect_frames`
+
+| | |
+|---|---|
+| Status | **partial** |
+| Toolset / tools | MCP `UeremcpValidation.UeremcpVisualCaptureToolset` → `CaptureEffectFrames` |
+| Spec schema | [`capture-effect-frames.schema.json`](../../schemas/domains/validation/capture-effect-frames.schema.json) |
+
+```json
+{
+  "protocol_version": "1.0",
+  "request_id": "visual-capture-1",
+  "action": "capture_effect_frames",
+  "target": { "asset_path": "/Game/__UeremcpPoc/FreshAgent/NS_FreshAgent_Probe" },
+  "specification": {
+    "frame_count": 4,
+    "duration_seconds": 1.0,
+    "camera": "three_quarter",
+    "width": 640,
+    "height": 360
+  },
+  "options": { "validate": true, "dry_run": false }
+}
+```
+
+- Output directory: `<Project>/Saved/UEREMCP/VfxCapture/<asset>/<request-id>/`
+  (`baseline.png`, `age_XX.png`, …). Response carries paths + luminance/pixel
+  deltas — **not** image bytes. Open the PNGs to display them.
+- Requires editor renderer (not NullRHI). `options.validate` must be `true`.
+- Cold vs warm: cold may return `partially_completed` + ADR-0009 job
+  (`cancellable: false`); poll `get_job_result` once. A second zero-pixel
+  result remains `failed_validation`.
+- Read-only on the Niagara asset; does not compile or author it.
+- Catalog / guide: see [`agent-usage.md`](agent-usage.md) §9 and
+  [`limitations.md`](limitations.md).
 
 ---
 

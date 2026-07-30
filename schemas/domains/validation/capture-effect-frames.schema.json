@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/validation/capture-effect-frames.schema.json",
+  "title": "capture_effect_frames specification",
+  "description": "Observe an existing Niagara system: build a transient editor-world stage, step simulation ages, export PNG frames under Saved/UEREMCP/VfxCapture/<asset>/<request-id>/, reread each file, and report baseline pixel deltas. Does not author, modify, save, or compile the target asset. Requires a functioning editor renderer/RHI (not headless NullRHI). Cold editor sessions may export valid PNGs with zero changed pixels (status failed_validation); retry after an editor tick / warm capture. Owned by WS-11; catalog/schema registration WS-01.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "frame_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64,
+      "default": 8,
+      "description": "Number of age-stepped frames to capture after the empty-stage baseline."
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 30,
+      "default": 1.5,
+      "description": "Simulation span in seconds across which frame ages are distributed."
+    },
+    "camera": {
+      "type": "string",
+      "enum": ["front", "three_quarter", "side", "top"],
+      "default": "three_quarter",
+      "description": "Fixed stage camera preset."
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 64,
+      "maximum": 4096,
+      "default": 960,
+      "description": "Capture width in pixels."
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 64,
+      "maximum": 4096,
+      "default": 540,
+      "description": "Capture height in pixels."
+    }
+  },
+  "examples": [
+    {
+      "frame_count": 4,
+      "duration_seconds": 1.0,
+      "camera": "three_quarter",
+      "width": 640,
+      "height": 360
+    }
+  ]
+}
