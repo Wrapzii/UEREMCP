@@ -7,9 +7,56 @@
 #include "Serialization/JsonSerializer.h"
 
 #include "UeremcpNiagaraInspect.h"
+#include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraToolset.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
+
+namespace UeremcpNiagaraInspectTest
+{
+	static constexpr const TCHAR* GInspectProbePath =
+		TEXT("/Game/__UeremcpTests/NS_WS07_Probe");
+
+	static bool EnsureInspectProbeAsset(FAutomationTestBase& Test)
+	{
+		if (UeremcpNiagaraProbeAssets::AssetExistsAtPath(GInspectProbePath))
+		{
+			return true;
+		}
+
+		const FString CreateRequest = TEXT(
+			R"({"protocol_version":"1.0","request_id":"ws07-inspect-probe-bootstrap","action":"create_niagara_effect","mode":"replace","target":{"asset_path":"/Game/__UeremcpTests/NS_WS07_Probe"},"specification":{"effect_type":"projectile","element":"fire","components":["sparks"],"parameters":{"scale":1.0,"intensity":4.0},"template_system":{"asset_path":"/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight"}},"options":{"dry_run":false,"compile":true,"validate":false,"save":true}})");
+
+		const FString CreateJson = UUeremcpNiagaraToolset::CreateNiagaraEffect(CreateRequest);
+		TSharedPtr<FJsonObject> CreateRoot;
+		const TSharedRef<TJsonReader<>> CreateReader = TJsonReaderFactory<>::Create(CreateJson);
+		if (!FJsonSerializer::Deserialize(CreateReader, CreateRoot) || !CreateRoot.IsValid())
+		{
+			Test.AddError(TEXT("inspect probe bootstrap returned invalid JSON."));
+			return false;
+		}
+
+		FString CreateStatus;
+		CreateRoot->TryGetStringField(TEXT("status"), CreateStatus);
+		if (CreateStatus == TEXT("rejected"))
+		{
+			FString Summary;
+			CreateRoot->TryGetStringField(TEXT("summary"), Summary);
+			Test.AddError(FString::Printf(
+				TEXT("inspect probe bootstrap rejected: %s"),
+				*Summary));
+			return false;
+		}
+
+		if (!UeremcpNiagaraProbeAssets::AssetExistsAtPath(GInspectProbePath))
+		{
+			Test.AddError(TEXT("inspect probe bootstrap completed but NS_WS07_Probe is still missing."));
+			return false;
+		}
+
+		return true;
+	}
+}
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpNiagaraInspectPathGuardTest,
@@ -32,6 +79,13 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FUeremcpNiagaraInspectSystemRuntimeTest::RunTest(const FString& Parameters)
 {
+	using namespace UeremcpNiagaraInspectTest;
+
+	if (!EnsureInspectProbeAsset(*this))
+	{
+		return false;
+	}
+
 	const FString Request = TEXT(
 		R"({"protocol_version":"1.0","request_id":"ws07-inspect-1","action":"inspect_system","target":{"asset_path":"/Game/__UeremcpTests/NS_WS07_Probe"},"options":{"response_detail":"complete"}})");
 

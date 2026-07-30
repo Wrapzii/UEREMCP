@@ -172,7 +172,7 @@ bool FUeremcpNiagaraMaterialBinding::ResolveDirectMaterialPaths(
 	OutUnresolved.Reset();
 	OutError.Reset();
 
-	for (const FUeremcpNiagaraMaterialRequest& Request : Requests)
+		for (const FUeremcpNiagaraMaterialRequest& Request : Requests)
 	{
 		if (Request.CreateSpec.IsValid())
 		{
@@ -196,15 +196,12 @@ bool FUeremcpNiagaraMaterialBinding::ResolveDirectMaterialPaths(
 			return false;
 		}
 
-		FString CanonicalPath;
-		UMaterialInterface* Material = LoadMaterialInterface(Request.ExistingAssetPath, CanonicalPath);
-		if (!Material || CanonicalPath.IsEmpty())
+		FString CanonicalPath = Request.ExistingAssetPath;
+		if (!CanonicalPath.Contains(TEXT(".")))
 		{
-			OutUnresolved.Add(FString::Printf(
-				TEXT("%s: could not load UMaterialInterface at '%s'"),
-				*Request.Role,
-				*Request.ExistingAssetPath));
-			continue;
+			const FString AssetName = UeremcpNiagaraPaths::AssetNameFromAssetPath(CanonicalPath);
+			const FString PackagePath = UeremcpNiagaraPaths::PackageFolderFromAssetPath(CanonicalPath);
+			CanonicalPath = FString::Printf(TEXT("%s/%s.%s"), *PackagePath, *AssetName, *AssetName);
 		}
 
 		OutRoleToCanonicalPath.Add(Request.Role, CanonicalPath);

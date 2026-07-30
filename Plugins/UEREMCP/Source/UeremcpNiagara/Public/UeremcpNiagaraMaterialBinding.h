@@ -66,7 +66,7 @@ public:
 		TArray<FUeremcpNiagaraMaterialRequest>& OutRequests,
 		FString& OutError);
 
-	/** Resolve direct asset paths to canonical UMaterialInterface object paths (probe root only). */
+	/** Validate direct asset paths under probe root and canonicalize object paths (no UObject load). */
 	static bool ResolveDirectMaterialPaths(
 		const TArray<FUeremcpNiagaraMaterialRequest>& Requests,
 		TMap<FString, FString>& OutRoleToCanonicalPath,

@@ -139,8 +139,20 @@ bool FUeremcpNiagaraMaterialBindingOfflineTest::RunTest(const FString& Parameter
 			DirectOnlyResolved,
 			DirectOnlyUnresolved,
 			Error));
-	TestEqual(TEXT("direct resolver skips create_spec"), DirectOnlyResolved.Num(), 0);
+	TestEqual(TEXT("direct resolver skips create_spec"), DirectOnlyResolved.Num(), 1);
 	TestEqual(TEXT("direct resolver no unresolved create_spec"), DirectOnlyUnresolved.Num(), 0);
+	if (DirectOnlyResolved.Num() == 1)
+	{
+		const FString* SparksCanonical = DirectOnlyResolved.Find(TEXT("sparks"));
+		TestNotNull(TEXT("sparks canonical path"), SparksCanonical);
+		if (SparksCanonical)
+		{
+			TestEqual(
+				TEXT("sparks canonical object path"),
+				*SparksCanonical,
+				FString(TEXT("/Game/__UeremcpTests/Materials/MI_Sparks.MI_Sparks")));
+		}
+	}
 
 	return true;
 }

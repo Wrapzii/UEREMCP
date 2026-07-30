@@ -341,13 +341,23 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		OutResult.bSuccess = true;
 		OutResult.CreatedAssetPath = CreatedPath;
-		if (bReplaceMode && bAssetExists)
+		if (bReplaceMode)
 		{
-			OutResult.Summary = FString::Printf(
-				TEXT("Dry run: would replace existing probe asset '%s' (effect_type=%s) by deleting and recreating with %d emitter role(s). No editor state touched."),
-				*CreatedPath,
-				*Spec.EffectType,
-				Spec.ComponentRoles.Num());
+			if (bAssetExists)
+			{
+				OutResult.Summary = FString::Printf(
+					TEXT("Dry run: would replace existing probe asset '%s' (effect_type=%s) by deleting and recreating with %d emitter role(s). No editor state touched."),
+					*CreatedPath,
+					*Spec.EffectType,
+					Spec.ComponentRoles.Num());
+			}
+			else
+			{
+				OutResult.Summary = FString::Printf(
+					TEXT("Dry run: replace mode on '%s' (no existing asset; would create from template with %d emitter role(s)). No editor state touched."),
+					*CreatedPath,
+					Spec.ComponentRoles.Num());
+			}
 			OutResult.ChecksSkipped.Add(TEXT("niagara.replace_delete_and_create_dry_run"));
 		}
 		else
