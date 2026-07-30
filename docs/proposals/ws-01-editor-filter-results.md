@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `2f40f24` (B10 Validation compile fixed; B10 executed and **FAILED**)
+- **Current orchestration tip:** `0049153` (B10 harness now ticks/dark-backdrop; production fireball still FAIL)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. Post-`d07f8f1` MCP proves B1 and B6 in one round trip. B10 now compiles and **executed for the first time on `2f40f24`: FAIL** — the fireball renders no visible output. **No overall POC-B claim, and B3–B7 must now be read as structural proofs only.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). B10 harness methodology defect is closed on `0049153` (canary PASS). Production `/Game/__UeremcpPoc/NS_POCB_Fireball` still FAIL: particles spawn (`185`) but warm fire signature is absent (`0`). **No overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,37 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; post-`d07f8f1` MCP B1/B6 PASS. Remaining: B10 and complete metrics/baseline. No overall POC-B claim.
+Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; post-`d07f8f1` MCP B1/B6 PASS. B10 harness can observe particles (canary PASS on `0049153`); production fireball still has no warm signature. Complete metrics/baseline remain open. No overall POC-B claim.
+
+## B10 harness fixed — canary PASS, production still FAIL (WS-11, tip `0049153`)
+
+WS-11 closed the methodology defect identified in the first B10 run:
+
+- Latent ~1.5s editor-frame warm-up so Niagara can simulate
+  [VERIFIED: `AutomationTest.h` latent helpers; editor frame pump].
+- Settled dark backdrop + forced Niagara show flags.
+- Particle-count evidence in the outcome markers.
+- Canary path against a known-good flame system.
+
+| Path | Outcome | changed | warm | particles |
+|---|---|---:|---:|---:|
+| Production `/Game/__UeremcpPoc/NS_POCB_Fireball` | **FAIL** `visible_fire_signature_not_observed` | 5405 | **0** | **185** |
+| Known-good canary | **PASS** `viewport_pixel_delta_with_fire_signature` | 5405 | **22** | 43 |
+
+Artifacts:
+- `tests/integration/_artifacts/poc_b10_fireball.png` (30,370 bytes)
+- `tests/integration/_artifacts/poc_b10_canary.png` (30,835 bytes)
+
+### Consequence for the prior "zero particles" diagnosis
+
+The first B10 run's "system completed in 62 ms / no particles" observation was partly a
+harness artifact (no world tick). With ticks, the production system reports **185 live
+particles** but still **0 warm pixels**. Remaining defect ownership:
+
+- **WS-07:** generated emitters/renderers/colors produce no warm fire signature (and any
+  residual system-state fast-path / scaffold issues in create).
+- **WS-08:** only if WS-07 proves materials are the invisible layer (opacity/emissive/blend).
+- **WS-11:** harness methodology closed; do not soften warm thresholds to manufacture PASS.
 
 ## B10 visible render — first actual execution (WS-11, tip `2f40f24`): FAIL
 
@@ -479,11 +509,10 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Overall POC A claimed via Python-free CRT on `3756244`; support only if regressions appear. |
-| WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
-| WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
+| WS-07 | Production fireball now reports **185 particles** under the fixed B10 harness but **0 warm pixels**. Finish create-path runtime scaffold (`bAllowSystemStateFastPath=false`, remove template emitters, spawn/color/renderer visibility) until B10 warm signature appears; keep B1–B9 structural gates green. |
+| WS-08 | Stand by: engage only if WS-07 proves bound materials are invisible (opacity/emissive/blend) rather than particle attributes/renderers. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | B10 compile fixed and executed on `2f40f24`: **FAIL**. Next: make the gate tick the world so particles can spawn, and use a background against which a warm signature is detectable. Then rerun MCP for `timing_ms` and execute the WS-07 primitive sequence with WS-14 metrics capture. |
-| WS-07 | `NS_POCB_Fireball` reports `completed` 62 ms after `initialized` and emits no particles. Determine whether the generated emitters carry functional spawn/lifetime/velocity/renderer modules, or only structural scaffolding. |
+| WS-11 | B10 methodology closed on `0049153` (canary PASS). Production still FAIL. Next after visible fire: MCP `timing_ms` rerun + WS-07 primitive baseline with WS-14 metrics capture. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS as structural proofs. B10 executed for the first time on `2f40f24` and **FAILED**: the fireball renders no visible output, and the gate as written cannot observe particles because it never ticks the world. Complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS as structural proofs. B10 harness can observe particles (`0049153` canary PASS). Production fireball still fails warm signature (`185` particles, `0` warm). Complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
