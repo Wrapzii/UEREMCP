@@ -44,6 +44,8 @@ Requires `UeremcpValidation` registered and built (proposal: `docs/proposals/ws-
 | Claim | Status |
 |---|---|
 | **Engine** FileSandbox q1/q3 (Content/ CurveFloat adds) | Observed green 2026-07-29 via interim probe path (`-DisablePlugins=UEREMCP`). Valid as engine semantics. |
-| **Shipping** UEREMCP plugin gate (Validation module under enabled UEREMCP) | **Not proven.** Blocked â€” see `tests/integration/_logs/shipping-gate-blocker.redacted.md`. |
+| **Shipping** UEREMCP plugin gate (`UEREMCP.Validation.*`, UEREMCP enabled) | **Green** `[VERIFIED-RUNTIME: UnrealEditor-Cmd RE.uproject -KeepUeremcp -NoProbe -Filter UEREMCP.Validation 2026-07-30]` — `Rollback.MultiAssetDiscard` and `Harness.Smoke` `Result={Success}`. Log: `tests/integration/_logs/editor_UEREMCP_Validation_20260729_234458.log`. |
+
+Prior blocker (missing Protocol/Validation DLLs): `tests/integration/_logs/shipping-gate-blocker.redacted.md`.
 
 See `docs/research/RB-06-sandbox-and-rollback.md`.

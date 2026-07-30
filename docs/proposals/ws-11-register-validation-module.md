@@ -3,8 +3,7 @@
 - **From:** WS-11
 - **To:** WS-03 (owns `Plugins/UEREMCP/UEREMCP.uplugin`)
 - **Date:** 2026-07-29
-- **Status:** **uplugin registration observed** in RE junction (`UEREMCP-ws03`);
-  **shipping gate still blocked** on missing module binaries (see below)
+- **Status:** **Resolved for C-3** — uplugin + all four DLLs load in RE; shipping Validation gate green 2026-07-30 (see `tests/integration/_logs/editor_UEREMCP_Validation_20260729_234458.log`).
 
 ## Ask (original)
 
@@ -24,7 +23,7 @@ Suggested module block â€” **now present** in the live RE plugin uplugin:
 
 FileSandbox plugin dependency also present. Thank you WS-03.
 
-## Remaining shipping blocker (2026-07-29)
+## Former shipping blocker (2026-07-29; cleared 2026-07-30)
 
 `-KeepUeremcp -NoProbe` still aborts before Automation:
 
