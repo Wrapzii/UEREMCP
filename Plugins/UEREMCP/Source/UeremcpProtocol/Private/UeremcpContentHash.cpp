@@ -5,6 +5,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
 
 namespace
 {
@@ -63,7 +64,11 @@ namespace
 	{
 		TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
 		TArray<FString> Keys;
-		Pin->Values.GetKeys(Keys);
+		Keys.Reserve(Pin->Values.Num());
+		for (const auto& Pair : Pin->Values)
+		{
+			Keys.Add(FString(Pair.Key));
+		}
 		Keys.Sort();
 		for (const FString& Key : Keys)
 		{
@@ -88,7 +93,11 @@ namespace
 		Out->SetStringField(TEXT("_stable_key"), StableNodeKey(Node));
 
 		TArray<FString> Keys;
-		Node->Values.GetKeys(Keys);
+		Keys.Reserve(Node->Values.Num());
+		for (const auto& Pair : Node->Values)
+		{
+			Keys.Add(FString(Pair.Key));
+		}
 		Keys.Sort();
 		for (const FString& Key : Keys)
 		{
@@ -181,7 +190,11 @@ namespace
 
 		TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
 		TArray<FString> Keys;
-		Obj->Values.GetKeys(Keys);
+		Keys.Reserve(Obj->Values.Num());
+		for (const auto& Pair : Obj->Values)
+		{
+			Keys.Add(FString(Pair.Key));
+		}
 		Keys.Sort();
 
 		for (const FString& Key : Keys)
@@ -317,7 +330,11 @@ namespace
 			}
 			TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
 			TArray<FString> Keys;
-			Obj->Values.GetKeys(Keys);
+			Keys.Reserve(Obj->Values.Num());
+			for (const auto& Pair : Obj->Values)
+			{
+				Keys.Add(FString(Pair.Key));
+			}
 			Keys.Sort();
 			for (const FString& Key : Keys)
 			{

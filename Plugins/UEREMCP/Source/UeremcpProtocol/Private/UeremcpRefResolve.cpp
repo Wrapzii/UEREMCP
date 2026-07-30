@@ -186,7 +186,11 @@ static bool ResolveObject(
 	FString& OutError)
 {
 	TArray<FString> Keys;
-	Obj->Values.GetKeys(Keys);
+	Keys.Reserve(Obj->Values.Num());
+	for (const auto& Pair : Obj->Values)
+	{
+		Keys.Add(FString(Pair.Key));
+	}
 	for (const FString& Key : Keys)
 	{
 		TSharedPtr<FJsonValue> Child = Obj->TryGetField(Key);

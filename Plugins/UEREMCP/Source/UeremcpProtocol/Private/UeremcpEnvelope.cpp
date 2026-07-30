@@ -190,9 +190,9 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 	};
 	for (const auto& Pair : Root->Values)
 	{
-		if (!Allowed.Contains(Pair.Key))
+		if (!Allowed.Contains(FString(Pair.Key)))
 		{
-			OutError = FString::Printf(TEXT("unknown top-level field '%s'"), *Pair.Key);
+			OutError = FString::Printf(TEXT("unknown top-level field '%s'"), *FString(Pair.Key));
 			return false;
 		}
 	}
@@ -244,9 +244,9 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		};
 		for (const auto& Pair : Target->Values)
 		{
-			if (!TargetAllowed.Contains(Pair.Key))
+			if (!TargetAllowed.Contains(FString(Pair.Key)))
 			{
-				OutError = FString::Printf(TEXT("unknown target field '%s'"), *Pair.Key);
+				OutError = FString::Printf(TEXT("unknown target field '%s'"), *FString(Pair.Key));
 				return false;
 			}
 		}
@@ -286,9 +286,9 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		};
 		for (const auto& Pair : Options->Values)
 		{
-			if (!OptAllowed.Contains(Pair.Key))
+			if (!OptAllowed.Contains(FString(Pair.Key)))
 			{
-				OutError = FString::Printf(TEXT("unknown options field '%s'"), *Pair.Key);
+				OutError = FString::Printf(TEXT("unknown options field '%s'"), *FString(Pair.Key));
 				return false;
 			}
 		}
