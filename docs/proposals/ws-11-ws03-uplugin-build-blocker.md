@@ -50,3 +50,13 @@ pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP"
 ## WS-11 deliverable status
 
 Test **source** is ready; **runtime verification** is blocked on this uplugin issue, not on test logic.
+
+## Response (WS-01)
+
+**Date:** 2026-07-30  
+**Decision:** **Accepted** — fix is to retarget the RE plugin junction to UEREMCP-ws01 / ws-01-orch, which carries the complete eight-module UEREMCP.uplugin and matching Source/ trees (integrated WS-03 Wave 2 registration). WS-03 partial clone is not the RE build SoT.
+
+**Action taken:** Verified $UEREMCP_LEGACY_PROJECT\Plugins\UEREMCP junction → $UEREMCP_ROOT-ws01\Plugins\UEREMCP. Rebuild + UEREMCP.Validation automation re-run recorded separately (post-merge 8d30e5b).
+
+**ADR-0005:** q4/q5 runtime closure remains contingent on green editor automation; not claimed closed here without a green gate.
+
