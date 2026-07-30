@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `0e79641` (WS-07 B1/B8-save/B9 + emitter_added gates)
+- **Orch tip at writing:** `eccc282` (WS-11 CompleteRoundTrip selector correction)
 - **Date:** 2026-07-30
-- **Status:** WS-07 `0e79641` (`501aff6`) extends `poc_b_gates` for B1, B8-save, B9, and `emitter_added` evidence. **WS-11 next:** assert B3/B5/B6/B9 from create response, run B8 restart harness, and re-run CompleteRoundTrip. B2/B4 editor gate remains PASS. **No overall POC-B claim.**
+- **Status:** CompleteRoundTrip on the `600c383` lineage **FAILS overall**: A1/A2/A10 PASS; A5 fails because changed submit cannot find Epic `BlueprintTools`; A9 fails at 2/3 MCP calls. Selector correction `eccc282` (`69654dd`) is landed. **Overall POC A unclaimed.** B8 remains open because `UEREMCP.Niagara.POCB.Restart.Create/Verify` filters are missing; no overall POC-B claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -58,7 +58,19 @@ Those Wave 2 tests alone do not prove A6. The later dedicated `PocA6Reread` PASS
 | A10 | **SKIP** | `lossy_areas` not asserted |
 | A11 | **PASS** | |
 
-Aggregate filter missing: no matching `editor_UEREMCP_Blueprint_POCA_CompleteRoundTrip_...` marker. **Overall POC A unclaimed.**
+At that slice, the aggregate filter was missing. A later transport run is recorded below; overall POC A remains unclaimed.
+
+### CompleteRoundTrip transport run (`600c383` lineage)
+
+| Criterion | Result | Evidence |
+|---|---|---|
+| A1 | **PASS** | One complete read call |
+| A2 | **PASS** | Complete payload assertions |
+| A5 | **FAIL** | Changed submit returned `failed_validation`: Epic `BlueprintTools` toolset not found |
+| A9 | **FAIL** | Only 2/3 planned MCP calls completed |
+| A10 | **PASS** | Honest `fidelity.lossy_areas` asserted |
+
+Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`. Downstream changed-submit criteria were not completed in this aggregate run; prior dedicated A6/A8/A11 proofs remain separate. Selector-key correction landed as `eccc282` (`69654dd`). **No overall POC-A claim.**
 
 ### Missing A6 / POC A evidence (owners)
 
@@ -68,13 +80,14 @@ Aggregate filter missing: no matching `editor_UEREMCP_Blueprint_POCA_CompleteRou
 | **A6 selector/no-op fix** | WS-06 | Landed `7b2ed34` (`90b8a6d`): multi-event endpoint IDs + hash-based no-op. |
 | Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **PASS on `c87b1db`** — `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_052810.log`; test Success, exit 0 |
 | Complete submit evidence scaffolding | WS-06 | Landed `7cd6c93` (`eded4f8`): complete payloads + expanded A1/A2/A5/A8/A10 assertions; proposal `ws-06-a1-a2-a5-ws11-complete-round-trip.md`. **Not a POC-A claim.** |
-| A1 / A2 / A5 MCP one-call / complete payload | WS-11 | Prior slice SKIP; code ready — needs CompleteRoundTrip editor/MCP run |
-| A9 MCP round-trip metrics | WS-11 | Slice SKIP |
-| A10 `fidelity.lossy_areas` | WS-11 | Prior slice SKIP; assertions expanded — needs CompleteRoundTrip run |
-| Aggregate `POCA.CompleteRoundTrip` marker | WS-11 | Fixture/runner landed at `600c383` with compile fix `7594f46`; Validation green; **re-run next** |
+| A1 / A2 complete read payload | WS-11 | **PASS** in CRT transport run |
+| A5 changed submit | WS-06 + WS-11 | **FAIL** — Epic `BlueprintTools` not found |
+| A9 MCP round-trip metrics | WS-11 | **FAIL** — 2/3 calls completed |
+| A10 `fidelity.lossy_areas` | WS-11 | **PASS** in CRT transport run |
+| Aggregate `POCA.CompleteRoundTrip` | WS-11 | **FAIL overall**; selector correction `eccc282` landed, but BlueprintTools blocker remains |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** run CompleteRoundTrip on `7594f46` lineage; refuse A1/A2/A5/A9/A10 and overall POC-A claims until PASS.
+**WS-01 next step:** resolve Epic `BlueprintTools` discovery for changed submit, then re-run CRT; retain A1/A2/A10 slice PASS but refuse A5/A9 and overall POC-A claims.
 
 ---
 
@@ -129,7 +142,7 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 | B5 | User params for colour, scale, intensity | **Gate present; WS-11 must assert** | WS-07 + WS-11 |
 | B6 | System compiles; compile genuinely awaited | **Gate present; WS-11 must assert** | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
-| B8 | Assets saved and survive editor restart | **Save half gated** at `0e79641`; restart survival still open (`ws-07-ws11-poc-b8-restart-harness.md`) | WS-07 + WS-11 |
+| B8 | Assets saved and survive editor restart | **OPEN** — save half gated at `0e79641`, but `UEREMCP.Niagara.POCB.Restart.Create/Verify` filters are missing | WS-07 + WS-11 |
 | B9 | One structured response with complete change manifest | **Gate + `emitter_added` scaffolding landed**; WS-11 must assert | WS-07 + WS-11 |
 | B10 | Visibly renders as fireball when placed — screenshot supplementary only | **Not required as validation**; optional after B1–B9 | WS-07 / WS-11 |
 
@@ -141,9 +154,9 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Run CompleteRoundTrip after runner/fixture `600c383` + compile fix `7594f46` | WS-11 | Validation green; refuse A1/A2/A5/A9/A10 and overall POC-A until PASS |
+| P0 | Fix Epic `BlueprintTools` discovery and re-run CRT after selector correction `eccc282` | WS-06 + WS-11 | A1/A2/A10 PASS; A5/A9 FAIL; refuse overall POC-A |
 | P0 | Assert B3/B5/B6/B9 (+ B1 editor gate) from fireball create after `0e79641` | WS-11 | Gate scaffolding landed; refuse overall POC-B |
-| P0 | B8 restart survival harness (`ws-07-ws11-poc-b8-restart-harness.md`) | WS-11 | Save half only; restart still open |
+| P0 | Add `UEREMCP.Niagara.POCB.Restart.Create/Verify` filters and run B8 restart harness | WS-11 | Filters missing; B8 open |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after A6 + POC B |
