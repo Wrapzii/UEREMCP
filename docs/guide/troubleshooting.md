@@ -61,11 +61,11 @@ issuing a repair call — that is the cost-model win (`docs/WHY.md`).
 |---|---|---|
 | `rejected` + revision text | Stale `expected_revision` | Re-read; merge; resubmit with new revision |
 | `rejected` + dry_run / destructive | Security forced dry-run or missing `allow_destructive` | See [`SECURITY.md`](../SECURITY.md); explicit `dry_run: false` only when intentional |
-| `partially_completed` on Niagara create | Expected until B10/metrics | Read `capability_notes`; do not claim POC-B |
-| `partially_completed` + `job` | Timeout path (ADR-0009) | Poll `get_job_result` |
+| `partially_completed` on Niagara create | Domain skipped a check, timed out, or queued | Read `capability_notes` / `checks_skipped`; B10 warm-pixel is a separate gate — do not invent visual PASS from this status |
+| `partially_completed` + `job` | Timeout path (ADR-0009) | Poll `get_job_result`; cancel via `cancel_job` if `cancellable: true` |
 | MCP cancel returned HTTP 202 but work continues | UE 5.8's private ToolsetRegistry adapter has no `CancelAsync`; 202 proves notification acceptance only | Use UEREMCP `cancel_job(job_id)`, then poll `get_job_result`; see [`limitations.md`](limitations.md) |
 | Tool not in `list_toolsets` | Plugin module not loaded / Live Coding | Human: rebuild/enable UEREMCP; agent: Ping Reference |
-| `execute_plan` missing as tool | Not AICallable | Use `InstantiateTemplate` or domain tools |
+| `execute_plan` missing as tool | Module not loaded / Live Coding | Rebuild/enable UEREMCP; `list_toolsets` for `UeremcpReference` / `ExecutePlan` |
 
 ## Metrics fields (do not over-interpret)
 

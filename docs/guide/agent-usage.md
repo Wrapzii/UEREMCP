@@ -116,6 +116,13 @@ On completion the service may store `(idempotency_key → response)`. A repeat w
 the retention window returns the **stored** response with `metrics.replayed: true`
 and performs no work (ADR-0006).
 
+For `execute_plan`, production uses durable Claim/Complete under
+`Saved/UEREMCP/idempotency` (fingerprint-bound; restart replay verified). Caveats:
+metadata + package files are not one atomic transaction; crash-after-mutation leaves
+a reclaimable in-progress claim; legacy `Put`/`TryGetReplay` call sites lack
+fingerprint conflict detection until migrated — see
+[`limitations.md`](limitations.md).
+
 Use a stable key per logical attempt. Changing `request_id` alone does **not** create
 a new attempt if the idempotency key is reused.
 

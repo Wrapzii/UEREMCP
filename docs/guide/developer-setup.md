@@ -13,7 +13,7 @@ Unreal Editor is running. Editor automation is documented but optional.
 
 ## Always-safe local checks
 
-From the repo root (this worktree: `UEREMCP-ws13`):
+From the repo root of your clone / worktree:
 
 ```bash
 # Frozen schema contract

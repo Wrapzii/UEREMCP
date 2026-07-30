@@ -1,8 +1,9 @@
 # Capability reference
 
 **Owner:** WS-13. Statuses are from
-[`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) on tip `dae0e5c` /
-`ws-11-poc-b10-render`. **No overall POC-B.**
+[`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) on the post-hardening tip
+(parent `6a611cf`). **POC A–E claimed; not production-ready.** B10 warm-pixel PASS
+does not equal production visual perfection or a full metrics close.
 
 Do not paste full graph payloads into chat. Load the linked fixture; this page names
 the tool, the `action`, the fields that matter, and the ceiling.
@@ -119,8 +120,11 @@ Key `specification` fields: `name`, `effect_type`, `element`, `components[]`,
 `parameters`, `template_system`, `materials` (reuse / create_spec). Target roots
 allowed by the fixture handoff: `/Game/__UeremcpPoc/`, `/Game/__UeremcpTests/`.
 
-Expect **`partially_completed`** until B10 + metrics close — never treat create as
-overall POC-B success. Materials contract companion:
+B10 rendered warm-pixel / particle gate is **PASS** via
+`UEREMCP.Niagara.POCB.VisibleRender`. Structural create can still return
+`partially_completed` when a domain check is skipped — read `capability_notes` /
+`checks_skipped`. Do not equate B10 PASS with production visual perfection or E7
+metrics close. Materials contract companion:
 [`poc_b_fireball_materials.json`](../../schemas/domains/niagara/fixtures/poc_b_fireball_materials.json).
 
 ---
@@ -202,15 +206,19 @@ Preview-oriented until cross-domain security / schema gates bind. Spec:
 
 ---
 
-## `execute_plan` — **not** a direct agent-facing tool on this tip
+## `execute_plan` — agent-facing on Reference
 
-| Catalog status | **partial** — internal plan executor + domain handlers |
+| Catalog status | **partial** — durable Claim/Complete + honest caveats |
 |---|---|
-| AICallable? | **No** — audit P1; templates / tests call the interpreter |
+| AICallable? | **Yes** — `UUeremcpReferenceToolset::ExecutePlan` `[VERIFIED: Plugins/UEREMCP/Source/UeremcpCore/Public/UeremcpReferenceToolset.h]` |
 
-Agents should **not** invent an `ExecutePlan` MCP tool. Use `InstantiateTemplate`
-(or domain goal tools). Offline plan-shaped fixtures exist for harnesses, e.g.
+Prefer goal tools / `InstantiateTemplate` when a template fits. `ExecutePlan` is the
+ADR-0008 path for multi-step plans. Offline plan-shaped fixtures exist for harnesses,
+e.g.
 [`schemas/domains/niagara/fixtures/execute_plan_create_niagara_effect_dry.json`](../../schemas/domains/niagara/fixtures/execute_plan_create_niagara_effect_dry.json).
+
+Durable idempotency caveats (metadata/package non-atomicity, stale claim reclaim,
+legacy `Put`/`TryGetReplay` sites): [`limitations.md`](limitations.md).
 
 ---
 
@@ -256,7 +264,7 @@ Use these to separate protocol/registration failures from domain failures.
 | Action | Why |
 |---|---|
 | Blueprint `patch` / `analyze_blueprint` / `create_blueprint` | planned |
-| `create_spell` | partial — live plan upsert under scratch; POC D MET (D5 static) |
+| `create_spell` | partial — live plan upsert under scratch; POC D MET; D5 live multi-client proof |
 | Animation inspect / AnimBP read | partial read-only; authoring unsupported |
 | `list_domains` / `describe_action` | planned |
 

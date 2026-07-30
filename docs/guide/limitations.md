@@ -1,10 +1,12 @@
 # Limitations
 
-**Owner:** WS-13. Aggregated from catalog, SECURITY, reviews, and hardening
-consolidation tip `164a300`. An undocumented limitation is a defect (`AGENTS.md`
-rule 6).
+**Owner:** WS-13. Aggregated from catalog, SECURITY, reviews, and the
+post-hardening tip (parent `6a611cf` / documentation certification). An
+undocumented limitation is a defect (`AGENTS.md` rule 6).
 
-**Do not claim overall POC-B.** Structural B1–B9 progress does not equal B10 or E7.
+**POC A–E claimed; not production-ready.** Structural POC B is claimed with B10
+warm-pixel PASS — that is **not** production visual perfection or a full metrics
+close (E7 / R-17).
 
 ## Blueprint
 
@@ -19,7 +21,7 @@ rule 6).
 
 | Limit | Detail |
 |---|---|
-| B10 production residual | Warm-pixel / render signature gaps may remain; structural create is live. See closeout. |
+| B10 | Programmatic warm-pixel / particle gate **PASS** via `UEREMCP.Niagara.POCB.VisibleRender` (`tests/run_poc_b10_visible_render.ps1`). Does **not** claim correct look on every scene/hardware/quality setting |
 | Topology inspect | Intentionally lossy (event handler stacks, etc.) |
 | POC C | Claimed under accepted criteria; variation + C7 third generation proven |
 
@@ -28,8 +30,8 @@ rule 6).
 [`docs/reviews/poc-metrics.md`](../reviews/poc-metrics.md) is **partial**:
 
 - Measured: some `mcp_round_trips`, server-side interval lower bound
-- **Unavailable / open:** client wall clock, full token totals, measured primitive baseline, overall POC-B completion
-- E7 not satisfied for a full metrics close
+- **Unavailable / open:** client wall clock, full token totals, measured primitive baseline, overall metrics close
+- E7 not satisfied for a full metrics close — do not equate B10 PASS with E7
 
 ## Security adoption (ADR-0010)
 
@@ -42,7 +44,9 @@ From [`docs/SECURITY.md`](../SECURITY.md) domain adoption table (2026-07-30):
 | Niagara `CreateNiagaraEffect` | **yes** — MutatingDispatch + Domain E3/E4 gates |
 | Material `CreateVfxMaterial` / `CreateProceduralTexture` | **yes** — MutatingDispatch + Domain E3/E4 gates |
 
-**R-07 closed** for Niagara and Material live mutators on the POC closeout tip.
+**R-07 mitigated** for those wired live mutators. **R-07 residual remains** for
+mutate paths that skip the gate (Animation writes if added; Templates promote;
+future domains). **R-12 mitigated** via `FUeremcpMutatorQueue` for gated writers.
 
 ## Cooperative cancellation and the Epic adapter limit
 
@@ -59,18 +63,26 @@ ToolsetRegistry/AICallable work in UE 5.8. Epic's private ToolsetRegistry adapte
 tool-search `FCallTool` do not override `CancelAsync`
 `[VERIFIED: $UE_ROOT/Engine/Plugins/Experimental/ModelContextProtocol/Source/ModelContextProtocolEditor/Private/ModelContextProtocolToolsetRegistryAdapter.h:13-26;
 $UE_ROOT/Engine/Plugins/Experimental/ModelContextProtocol/Source/ModelContextProtocolEditor/Private/ModelContextProtocolToolSearch.h:61-80]`.
-This is an immutable adapter limitation, not an open transport SKIP residual. HTTP
-202 for the MCP notification proves only notification acceptance. Operators and
+This is an immutable adapter limitation, not an open UEREMCP `cancel_job` residual.
+HTTP 202 for the MCP notification proves only notification acceptance. Operators and
 agents must use UEREMCP `cancel_job(job_id)` and poll `get_job_result`.
 
-## `execute_plan`
+## `execute_plan` and durable idempotency
 
-Agent-facing `UUeremcpReferenceToolset::ExecutePlan` is registered; Templates also bind
-the executor. Prefer live plan evidence in POC D claim docs.
+Agent-facing `UUeremcpReferenceToolset::ExecutePlan` is registered (`AICallable`).
+Durable Claim/Complete under `Saved/UEREMCP/idempotency` is verified for
+`execute_plan` (restart Create/Verify pair). Honest caveats:
+
+- metadata + package files are **not** one atomic transaction
+- crash-after-mutation-before-completion leaves a reclaimable in-progress claim (~1h)
+- legacy `Put` / `TryGetReplay` call sites lack fingerprint conflict detection until
+  migrated (`execute_plan` is migrated)
 
 ## Gameplay / Animation / discovery
 
-- `create_spell`: live upsert via plan under scratch paths; POC D MET (D5 static)
+- `create_spell`: live upsert via plan under scratch paths; POC D MET; D5 static
+  Pattern B minimum **plus** live multi-client listen-server proof
+  (`tests/run_d5_multiclient.ps1`)
 - Animation: inspect / AnimBP read partial; Control Rig may prove read-only
 - UEREMCP `list_domains` / `describe_action`: planned — use Epic `list_toolsets`
 
@@ -78,5 +90,5 @@ the executor. Prefer live plan evidence in POC D claim docs.
 
 Repository root [`README.md`](../../README.md) reflects POC A–E claimed /
 not-production-ready. Prefer [`CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) and
-[`ws-01-poc-closeout-2026-07-30.md`](../proposals/ws-01-poc-closeout-2026-07-30.md)
+[`ws-01-hardening-consolidation-2026-07-30.md`](../proposals/ws-01-hardening-consolidation-2026-07-30.md)
 for capability truth.
