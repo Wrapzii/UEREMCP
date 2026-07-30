@@ -1,8 +1,7 @@
 # WS-01 full-use readiness (2026-07-30)
 
 **Owner:** WS-01  
-**Final tip:** `f7b64a1` (`[WS-01] Record full-use readiness verdict` on
-`ws-01-full-use-integration`; this file’s containing commit).  
+**Final tip:** `ecee2c2` (local `main` after full-use FF).  
 **Deploy model:** RE `Plugins/UEREMCP` junction →
 `$UEREMCP_DEPLOY\Plugins\UEREMCP`  
 **Do not push.**
