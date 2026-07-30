@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `5ec7e02` (WS-08 trail UV + WS-07 proposal closed; residual commit follows)
+- **Orch tip at writing:** `8a8c75d` (WS-08 trail UV + WS-07 proposal closed + POC-A residual)
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Trail UV fix landed as `cf7e6d3` (`2187d69`); proposal closed as `5ec7e02` (`ff648ab`). Fireball/B8 still pending after UV rebuild — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Trail UV fix landed as `cf7e6d3` (`2187d69`); proposal closed as `5ec7e02` (`ff648ab`). The post-UV editor fireball gate now passes, but MCP transport B1 and B8 restart survival remain unproven — **no overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -124,7 +124,8 @@ Evidence: `tests/integration/_logs/poc_a_complete_round_trip_3756244.json`.
 | Aggregate CRT A1–A11 | WS-11 | **PASS** — overall POC A claimed |
 | Metrics file (`poc-metrics.md`) | WS-11 / WS-14 | Still open for POC **E7** only — not a POC A blocker |
 
-**WS-01 next step:** fireball/B8 after trail UV `cf7e6d3`; keep overall POC-B unclaimed.
+**WS-01 next step:** one-request MCP fireball B1 plus WS-11 B8
+Create→restart→Verify; keep overall POC-B unclaimed.
 
 ---
 
@@ -178,18 +179,28 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 
 **Runtime result on fresh post-`886d09d` DLLs:** fireball **FAIL** — `ribbon_trail` remains absent/broken after both stale-master defenses. Evidence: `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_063745.log`. B8 was **SKIPPED**. WS-08 `FireballRibbonTrailPoc` / trail graph is the critical blocker. **No overall POC-B claim.**
 
+**Runtime result after loading WS-08 `2187d69` (orch `cf7e6d3`):** editor
+`FireballInlineMaterials` **PASS** with all six MIs, including `ribbon_trail`; the
+isolated `FireballRibbonTrailPoc` also passed. Evidence:
+`editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_064451.log`.
+The expanded editor filter reports B1/B3/B5/B6/`B8_assets_saved`/B9 PASS and
+an aggregate PASS. This closes the trail UV/editor-create blocker and provides
+current B2/B4 evidence. It does **not** prove acceptance B1's one-MCP-request
+transport requirement: the test directly executes one editor create pipeline.
+Its B8 field proves only package save; it does **not** prove restart survival.
+
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
-| B1 | One MCP request produces the complete effect — no follow-ups | **FAIL on fresh DLLs** — blocked by `ribbon_trail` | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | Prior fresh-DLL FAIL; trail UV `cf7e6d3` landed — **fireball re-run required** | WS-08 + WS-07 |
+| B1 | One MCP request produces the complete effect — no follow-ups | **OPEN** — editor single-create pipeline PASS after UV, but no MCP transport one-call proof | WS-07 + WS-11 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS in post-UV editor fireball gate** — all six MI roles represented | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **PASS on `70cc348`** | WS-07 + WS-11 |
-| B4 | Renderers configured and bound to valid materials | Prior fresh-DLL FAIL on `ribbon_trail`; UV `cf7e6d3` awaits fireball re-run | WS-07 + WS-08 |
+| B4 | Renderers configured and bound to valid materials | **PASS in post-UV editor fireball gate** — all six, including `ribbon_trail` | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B6 | System compiles; compile genuinely awaited | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
-| B8 | Assets saved and survive editor restart | **SKIPPED after fresh-DLL fireball failure**; prior Create failed on same MI; restart Verify unproven | WS-11 |
+| B8 | Assets saved and survive editor restart | **OPEN** — `B8_assets_saved` PASS proves save only; WS-11 Create→restart→Verify remains required | WS-11 |
 | B9 | One structured response with complete change manifest | **PASS on `70cc348`** | WS-07 + WS-11 |
 | B10 | Visibly renders as fireball when placed — screenshot supplementary only | **Not required as validation**; optional after B1–B9 | WS-07 / WS-11 |
 
@@ -201,8 +212,8 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Re-run fireball after trail UV `cf7e6d3`, then B8 Create→restart→Verify | WS-11 | UV landed + Material rebuilt; refuse overall POC-B until PASS |
-| P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
+| P0 | B8 Create→restart→Verify after post-UV editor fireball PASS | WS-11 | Save gate is insufficient; refuse B8 until fresh-process Verify passes |
+| P0 | Full POC B fireball through one MCP request, covering B1–B9 | WS-07 (+ WS-08) + WS-11 | Editor single-create is not MCP transport proof; refuse overall POC-B |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
 

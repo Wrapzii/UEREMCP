@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Trail UV `cf7e6d3` (`2187d69`) + proposal close `5ec7e02` (`ff648ab`) landed; Material rebuilt. Fireball/B8 still pending — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball is PASS. MCP B1 and B8 restart survival remain open — **no overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: **overall POC A claimed** on CRT `3756244`. Fireball/B8 pending after trail UV `cf7e6d3`. No overall POC-B claim.
+Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball PASS; one-request MCP B1 and fresh-process B8 Verify remain open. No overall POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -105,6 +105,19 @@ Stacked defenses now on tip: `7a417bb` (`dbb3638`) + `886d09d` (`ee905ed`). Re-r
 
 Both stale-master defenses were present in the rebuilt DLLs, so stale binaries no longer explain the failure. Trail UV fix later landed as `cf7e6d3` (`2187d69`); fireball/B8 must re-run. No overall POC-B claim.
 
+## Post-UV fireball editor gate (`2187d69` / orch `cf7e6d3`)
+
+| Proof | Result | Evidence / residual |
+|---|---|---|
+| `FireballInlineMaterials` | **PASS** | `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_064451.log`: all six MIs, including `ribbon_trail`; B1/B3/B5/B6/`B8_assets_saved`/B9 gates and aggregate outcome PASS |
+| `FireballRibbonTrailPoc` | **PASS** | Isolated trail proof passed after loading `2187d69` |
+
+This closes the editor fireball/trail UV blocker and supplies current B2/B4
+evidence. The filter's B1 is a direct editor single-create pipeline, **not** proof
+that one MCP transport request produced the effect. `B8_assets_saved` proves the
+save half only; POC_ACCEPTANCE B8 still requires WS-11
+Create→restart→Verify. **Overall POC B remains unclaimed.**
+
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
 | Proof | Result | Evidence |
@@ -120,7 +133,9 @@ Prior transport run on `600c383` / `70cc348`: **FAIL overall** (A5 blocked). Sup
 
 ## B8 restart current result
 
-**SKIPPED pending trail UV re-run:** prior fresh-DLL fireball failed `ribbon_trail`; UV fix `cf7e6d3` (`2187d69`) landed and Material rebuilt. Re-run Create→restart→Verify after fireball green. No B8 / POC-B claim until PASS.
+**OPEN after post-UV editor fireball PASS:** `B8_assets_saved` is green, but
+restart survival has not run. WS-11 must execute Create→restart→Verify and prove
+fresh-process registry reload before B8 can pass. No overall POC-B claim.
 
 ## Templates editor result and handoff
 
@@ -331,7 +346,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run fireball + B8 after UV `cf7e6d3`. Keep overall POC-B unclaimed. |
+| WS-11 | Run one-request MCP fireball and B8 Create→restart→Verify. Keep overall POC-B unclaimed until both pass. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. Fireball/B8 still pending after UV land. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball PASS; MCP B1 and B8 restart survival remain open. No overall POC-B claim. No junction retarget.
