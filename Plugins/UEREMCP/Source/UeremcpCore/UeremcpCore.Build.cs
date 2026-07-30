@@ -1,4 +1,4 @@
-// UEREMCP — goal-level Unreal agent interface.
+// UEREMCP — goal-level Unreal agent interface (WS-03 / UeremcpCore).
 
 using UnrealBuildTool;
 
@@ -22,18 +22,18 @@ public class UeremcpCore : ModuleRules
 			"JsonUtilities",
 			"Projects",
 
-			// Epic's tool-declaration layer. ADR-0002: we register into this rather
-			// than standing up our own MCP server.
+			// Epic's tool-declaration layer. ADR-0002.
+			// [VERIFIED: $TR/ToolsetRegistry.uplugin — Editor module]
 			"ToolsetRegistry",
-
-			// UEREMCP envelope parse/serialise/validate. ADR-0003.
-			"UeremcpProtocol",
 		});
 
-		// NOTE (RB-03 q10): ToolsetRegistry keeps RunOnMainThread.h, JsonSchema.h and
-		// ValueOrErrorFuture.h under Private/. If an out-of-tree plugin cannot reach
-		// them, we need public equivalents in this module. Do NOT add a private-include
-		// path hack without recording the decision in docs/proposals/ first — that is
-		// exactly the kind of coupling ADR-0001's churn mitigation exists to avoid.
+		// UeremcpProtocol is registered in .uplugin and now links as its own module.
+		// Ping/Echo still use Private/UeremcpMinimalEnvelope.h until Core is rewired
+		// to FUeremcpEnvelope (see docs/proposals/ws-03-protocol-module-blocker.md).
+		//
+		// RB-03 q10: ToolsetRegistry Private headers are NOT on the public include path.
+		// [VERIFIED: ToolsetRegistry.Build.cs PublicIncludePaths empty]
+		// Public equivalents: Async(TaskGraphMainThread), TValueOrError, FJsonSchemaGenerator,
+		// UToolsetRegistry::RegisterToolsetClass.
 	}
 }

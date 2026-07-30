@@ -1,0 +1,44 @@
+# UeremcpProtocol tests
+
+**Owner:** WS-05.
+
+## Outside-editor Python (regression / golden generator)
+
+```bash
+python Plugins/UEREMCP/Source/UeremcpProtocol/Tests/py/run_tests.py
+```
+
+Covers unit tests plus `test_golden.py`, which asserts against `Tests/golden/`.
+
+**Python green is not C++ parity** (WS-14 C-2). See `../Docs/CPP_PARITY.md`.
+
+## Golden vectors (`Tests/golden/`)
+
+Fixed JSON inputs + expected outputs shared by Python and C++:
+
+| Suite | Files |
+|---|---|
+| envelope | `request.in.json`, `request.parsed.expected.json`, `response_fields.in.json`, `response.out.expected.json` |
+| content_hash | `graph.in.json`, `graph_cosmetic.in.json`, `hash.expected.txt`, `canonical.expected.json` |
+| ref | `spec.in.json`, `completed.in.json`, `resolved.expected.json` |
+| topo | `nodes.in.json`, `order.expected.json` |
+
+Regenerate expected outputs (then re-run both sides):
+
+```bash
+python Plugins/UEREMCP/Source/UeremcpProtocol/Tests/golden/generate_goldens.py
+```
+
+## C++ AutomationTests (production `FUeremcp*`)
+
+Source: `Private/Tests/UeremcpProtocolGoldenTests.cpp`  
+Filter prefix: `UEREMCP.Protocol.Golden`
+
+```bat
+UnrealEditor-Cmd.exe "<Project>.uproject" -unattended -NullRHI -nop4 ^
+  -ExecCmds="Automation RunTests UEREMCP.Protocol.Golden;Quit"
+```
+
+Optional: `set UEREMCP_PROTOCOL_GOLDEN_ROOT=<abs path to Tests/golden>`
+
+Do **not** claim C++/Python parity until these AutomationTests pass.

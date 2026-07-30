@@ -1,0 +1,24 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "3f1c2e40-8a11-4c2b-9b7e-2e5d1a0c9f31",
+  "action": "create_niagara_effect",
+  "project": {
+    "path": "$UEREMCP_LEGACY_PROJECT/RE.uproject",
+    "engine_version": "5.8"
+  },
+  "target": {
+    "asset_path": "/Game/VFX/Spells/NS_Fireball"
+  },
+  "mode": "create_or_update",
+  "specification": {
+    "name": "Fireball"
+  },
+  "options": {
+    "dry_run": false,
+    "atomic": true,
+    "response_detail": "summary",
+    "timeout_ms": 120000
+  },
+  "expected_revision": null,
+  "idempotency_key": "poc-b-fireball-001"
+}

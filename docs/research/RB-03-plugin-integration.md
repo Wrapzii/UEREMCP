@@ -1,103 +1,184 @@
 # RB-03: `UToolsetDefinition` / `AICallable` mechanics from an out-of-tree plugin
 
 - **Owner:** WS-03
-- **Status:** not_started
+- **Status:** findings_recorded (compile + automation verified; MCP client call blocked)
 - **Blocks:** ADR-0002 confidence, ADR-0007, every tool in the project
-- **Priority:** highest — start immediately
+- **Priority:** highest
+- **Date:** 2026-07-29 / 2026-07-30
 
 ## Why this is first
 
 ADR-0002 commits the entire project to hosting goal-level tools as static
 `AICallable` `UFUNCTION`s on `UToolsetDefinition` subclasses inside an out-of-tree
 editor plugin. That decision is grounded in headers
-(`GROUNDED_FACTS.md §2.1`) but **has not been executed once**. If it does not work as
-read, every downstream decision changes. Find out in week one.
+(`GROUNDED_FACTS.md §2.1`) but **had not been executed once**. This brief records
+the first execution.
 
-The deliverable is not a document. It is **a compiling plugin with one working tool**,
-plus this brief recording what you learned.
+The deliverable is not only this document. It is a compiling plugin with Ping/Echo
+plus these findings.
 
-## Questions
+## Answers
 
 ### A. Does the basic path work at all?
 
-1. Can an out-of-tree editor plugin subclass `UToolsetDefinition` and have UHT accept
-   static `UFUNCTION`s marked `meta = (AICallable)`?
-2. Does the tool appear to an MCP client connected to `http://127.0.0.1:8000/mcp`?
-3. What exactly must the plugin declare — module dependencies in `Build.cs`, plugin
-   dependencies in `.uplugin`, loading phase, `TargetAllowList`?
-4. Is registration automatic via reflection, or must something call
-   `FToolsetRegistry::RegisterToolset`? The Python path uses an explicit
-   `Registration(...).register()` `[VERIFIED: $TR/Content/Python/toolset_registry/registration.py]`
-   — determine the C++ equivalent, and whether UHT-discovered `UToolsetDefinition`
-   subclasses self-register.
+1. **Yes.** Out-of-tree `UUeremcpReferenceToolset : UToolsetDefinition` with static
+   `UFUNCTION(meta = (AICallable))` compiles and UHT generates wrappers.
+   `[VERIFIED-RUNTIME: Build.bat REEditor -Module=UeremcpCore Result: Succeeded;
+    Intermediate/.../UHT/UeremcpReferenceToolset.gen.cpp]`
 
-### B. Envelope viability — the critical question
+2. **MCP client call: not yet verified.** Editor must load `UEREMCP` (needs
+   `Binaries/Win64/UnrealEditor.modules` + often `-EnablePlugins=UEREMCP` after a
+   prior load failure). Headless `UnrealEditor-Cmd` does not keep MCP `:8000`
+   serving for the Cursor `user-unreal-mcp` client. Interactive editor launch was
+   requested; at commit time `list_toolsets` against `127.0.0.1:8000/mcp` returned
+   connection refused / transport error.
+   `[VERIFIED-RUNTIME: user-unreal-mcp list_toolsets → WinError 10061;
+    automation confirmed tools register via UToolsetRegistry::GetToolsetJsonSchema]`
 
-ADR-0003 requires one JSON string in, one JSON string out. Verify:
+3. **Plugin declare:**
+   - `.uplugin`: `EditorOnly`, modules `Type: Editor`, `LoadingPhase: Default`,
+     `TargetAllowList: ["Editor"]`; plugins `ToolsetRegistry` + `ModelContextProtocol`
+     enabled.
+   - `UeremcpCore.Build.cs`: private deps `UnrealEd`, `Json`, `JsonUtilities`,
+     `Projects`, `ToolsetRegistry`.
+   - After module-only builds, **write** `Binaries/Win64/UnrealEditor.modules`
+     (`BuildId` matching engine, e.g. `55116800`) or the editor reports
+     `module 'UeremcpCore' could not be found`.
+     `[VERIFIED-RUNTIME: load failure without .modules; success after creating it]`
 
-5. Does a signature like
-   `static FString ExecuteFoo(const FString& RequestJson)` work as an `AICallable` tool?
-6. **What JSON Schema does UHT/the registry generate for it?** If the agent only sees
-   "a string parameter," it has no schema guidance and the envelope's discoverability
-   collapses. This is the one finding most likely to force an ADR-0003 revision.
-7. If (6) is a problem, what are the options? Candidates to evaluate:
-   - a `USTRUCT` parameter, letting the registry generate a real schema
-     (`UToolsetLibrary::ListStructProperties` suggests struct→schema exists
-     `[VERIFIED: ToolsetLibrary.h]`)
-   - a hybrid: typed `USTRUCT` for common envelope fields plus a JSON string for
-     `specification`
-   - carrying the real schema in `describe_action` instead
-8. How are `TMap`, `TArray`, and nested `USTRUCT` parameters represented? Note that
-   `UAgentSkillToolset` uses `TMap<FString, FString>` and
-   `TMap<FString, FAgentSkillDetails>` return types successfully
-   `[VERIFIED: AgentSkill.h]` — so structs in signatures demonstrably work.
+4. **Registration is NOT automatic.** Must call
+   `UToolsetRegistry::RegisterToolsetClass`. Do **not** call it from bare
+   `StartupModule` — `UToolsetRegistrySubsystem` / `GEditor` are unavailable
+   (`AIToolsetRegistrySubsystem unavailable`). Defer to
+   `FCoreDelegates::GetOnPostEngineInit()`.
+   `[VERIFIED: $TR/.../ToolsetRegistrySubsystem.cpp:49 — UAgentSkillToolset]`
+   `[VERIFIED-RUNTIME: StartupModule warning; PostEngineInit path in UeremcpCoreModule.cpp]`
 
-### C. Async and threading
+### B. Envelope viability — q6 FIRST
 
-9. How does a tool return asynchronously? Which `UToolCallAsyncResult` derivative
-   fits a JSON-returning tool — `ToolCallAsyncResultString`, or do we need our own?
-10. Are `Private` headers (`RunOnMainThread.h`, `JsonSchema.h`, `ValueOrErrorFuture.h`)
-    reachable from an out-of-tree plugin? If not, what is the public equivalent, and do
-    we need to write our own main-thread dispatch? **Answer this before WS-05 designs
-    the job model.**
-11. What thread does a tool body run on? Editor asset APIs are largely main-thread-only.
-12. How does `ToolCallExceptionHandler` behave — does a C++ exception or a `check()`
-    failure inside a tool crash the editor, or is it converted to an error result?
+5. **Yes.** `static FString Echo(const FString& RequestJson)` works as `AICallable`.
+   `[VERIFIED-RUNTIME: UeremcpCore.ReferenceToolset.Echo automation Success]`
 
-### D. Discovery and filtering
+6. **VERBATIM generated JSON Schema for the single `requestJson` (FString) parameter**
+   captured via `UToolsetRegistry::GetToolsetJsonSchema(UUeremcpReferenceToolset::StaticClass())`
+   then extracting `tools[Echo].inputSchema.properties.requestJson`
+   `[VERIFIED-RUNTIME: automation RegisterAndCaptureSchema; files under Plugins/UEREMCP/Saved/]`:
 
-13. With `bEnableToolSearch = true` (the default), how does our toolset appear through
-    `list_toolsets` / `describe_toolset` / `call_tool`? Confirm the tool names, the
-    description text source, and how much of `GetToolsetDescription()` reaches the agent.
-14. Does `FToolset::SetNameFilters` reliably hide internal primitives while keeping them
-    callable internally? This is our mechanism for ADR-0002 rule 5.
+```json
+{
+	"type": "string",
+	"description": "Request envelope JSON string (schemas/envelope/request.schema.json)."
+}
+```
 
-### E. Iteration cost
+   Full tool `inputSchema` for Echo (verbatim fragment of toolset schema):
 
-15. Does Live Coding work for adding or changing an `AICallable` `UFUNCTION`, or does
-    every signature change need a full editor restart? This directly determines whether
-    ADR-0007 should recommend a Python layer for exploratory work.
+```json
+{
+	"type": "object",
+	"properties": {
+		"requestJson": {
+			"type": "string",
+			"description": "Request envelope JSON string (schemas/envelope/request.schema.json)."
+		}
+	},
+	"required": ["requestJson"]
+}
+```
 
-## Method
+   **Implication for ADR-0003:** the agent sees a bare string (plus our `@param`
+   description). There is **no** structured envelope schema at the MCP tool
+   boundary — discoverability of required fields (`protocol_version`, `action`, …)
+   does **not** come from UHT. Envelope schema must be carried elsewhere
+   (`describe_action` / docs / a `USTRUCT` parameter — see q7).
 
-Build `Plugins/UEREMCP` with one module and one toolset exposing two tools: a trivial
-`ping` returning a fixed envelope, and an `echo` taking the full request envelope and
-returning it inside a response envelope. Connect a real MCP client. Observe.
+7. **Recommendation (no ADR challenge yet):** keep `FString` envelope for Ping/Echo
+   proof; for production tools evaluate a hybrid (`USTRUCT` common fields + JSON
+   `specification` string) or publish the frozen `schemas/envelope/request.schema.json`
+   through `describe_action` / tool description text. Epic FakeToolset confirms
+   FString → `{"type":"string"}` only
+   `[VERIFIED: FunctionLibraryToolsetTest.cpp GetFakeToolsetExpectedSchema]`.
 
-Start from the scaffold at `Plugins/UEREMCP/` and from `UAgentSkillToolset` as the
-reference implementation.
+8. Deferred (not blocking Wave 1 Core). Epic FakeToolset covers TArray/TMap/TSet
+   schema shapes in the same test file — cite when domain WSs need them.
+
+### C. Async / private headers
+
+9. Deferred beyond Wave 1 reference tools (sync `FString` return is enough for Ping/Echo).
+
+10. **Private headers are NOT reachable** from an out-of-tree plugin without hacking
+    include paths. `ToolsetRegistry.Build.cs` has empty `PublicIncludePaths`;
+    `RunOnMainThread.h`, `JsonSchema.h`, `ValueOrErrorFuture.h` live under
+    `.../Private/ToolsetRegistry/`.
+    **Public equivalents:**
+    - main-thread dispatch → `Async(EAsyncExecution::TaskGraphMainThread, ...)`
+    - futures → `TValueOrError` / `TPromise` / `MakeFulfilledPromise`
+    - schema → public `UToolsetRegistry::GetToolsetJsonSchema` / `FJsonSchemaGenerator`
+    - registration → public `UToolsetRegistry::RegisterToolsetClass` only
+    `[VERIFIED: ToolsetRegistry.Build.cs; header tree under Private/]`
+
+11–12. Deferred (sync tools; no exception-path experiment this session).
+
+### D. Discovery
+
+13. Toolset schema name: `UeremcpCore.UeremcpReferenceToolset`; tools
+    `...Ping` / `...Echo`. Descriptions come from class / UFUNCTION comment text
+    (including verification tags in the class comment — trim those for production).
+    `[VERIFIED-RUNTIME: rb03_echo_tool_schema.json]`
+
+14. `SetNameFilters` not exercised this session.
+
+### E. Iteration cost — q15
+
+15. **Live Coding / hot reload blocks `Build.bat` while the editor holds modules.**
+    Successful compiles required `-NoHotReloadFromIDE` and no competing editor lock
+    (or editor closed). Changing `AICallable` signatures needs UHT + full module
+    rebuild; do not rely on Live Coding for tool signature iteration.
+    `[VERIFIED-RUNTIME: Build.bat ... -NoHotReloadFromIDE; prior session hang when
+     editor held hot-reload lock]`
+    ADR-0007 may still recommend Python for exploratory signatures; C++ remains
+    correct for frozen tools.
+
+## Compile / automation evidence
+
+| Check | Result | Tag |
+|---|---|---|
+| `UeremcpCore` link | Succeeded — `UnrealEditor-UeremcpCore.dll` | `[VERIFIED-RUNTIME]` |
+| `UeremcpTransport` link | Succeeded — `UnrealEditor-UeremcpTransport.dll` | `[VERIFIED-RUNTIME]` |
+| `UeremcpProtocol` | Succeeded after mechanical UE 5.8 `FSharedString` key fixes — `UnrealEditor-UeremcpProtocol.dll` | `[VERIFIED-RUNTIME]`; see `docs/proposals/ws-03-protocol-ue58-json-keys.md` |
+| `UeremcpValidation` | Succeeded — `UnrealEditor-UeremcpValidation.dll` | `[VERIFIED-RUNTIME]` |
+| Automation Ping/Echo/Schema | 3/3 Success, exit 0 | `[VERIFIED-RUNTIME: automation_rb03.log]` |
+| MCP Ping via `:8000` | Not verified (connection refused / proxy busy) | negative finding recorded |
+
+## Temporary Core helpers
+
+`Private/UeremcpMinimalEnvelope.h` — Ping/Echo only, until WS-05 ships a compiling
+`UeremcpProtocol`. Not an ADR-0003 fork.
+
+## Module registration (`.uplugin`)
+
+| Module | Status |
+|---|---|
+| `UeremcpCore` | registered (owned) |
+| `UeremcpTransport` | registered; sources checked out from `ws-04-transport` verbatim |
+| `UeremcpProtocol` | **not** registered — non-compiling on UE 5.8 |
+| `UeremcpValidation` | **pending** — sources only uncommitted on WS-11 worktree |
 
 ## API availability summary
 
-Fill in:
-
 | API / capability | Public | Editor-only | C++ | Python | Notes | Tag |
 |---|---|---|---|---|---|---|
+| `UToolsetDefinition` + `AICallable` | Y | Y | Y | Y | Out-of-tree works | `[VERIFIED-RUNTIME]` |
+| `UToolsetRegistry::RegisterToolsetClass` | Y | Y | Y | — | Explicit; PostEngineInit | `[VERIFIED]` / `[VERIFIED-RUNTIME]` |
+| `GetToolsetJsonSchema` | Y | Y | Y | — | FString → type+description only | `[VERIFIED-RUNTIME]` |
+| Private `RunOnMainThread.h` etc. | N | Y | — | — | Use Engine public APIs | `[VERIFIED]` |
+| Epic MCP HTTP `:8000` | Y | Y | — | — | Server plugin; client not verified this session | `[DOCS]` / negative runtime |
 
 ## Deliverables
 
-- [ ] `Plugins/UEREMCP` compiles against UE 5.8
-- [ ] `ping` and `echo` callable from an MCP client — `[VERIFIED-RUNTIME]`
-- [ ] The generated JSON Schema for the envelope parameter, pasted verbatim
-- [ ] A recommendation on question 7, if needed, as a proposal against ADR-0003
-- [ ] Findings on 10 and 15, which WS-05 and WS-01 are waiting on
+- [x] `Plugins/UEREMCP` Core (+ Transport) compiles against UE 5.8
+- [ ] `ping` and `echo` callable from an MCP client — blocked; schema/registration verified in-editor automation instead
+- [x] Generated JSON Schema for envelope parameter pasted verbatim (q6)
+- [x] q7 note recorded (no ADR challenge yet)
+- [x] Findings on q10 and q15
+

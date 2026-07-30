@@ -1,0 +1,13 @@
+{
+  "material": {
+    "result": {
+      "primary_asset": "/Game/VFX/Materials/MI_Core"
+    },
+    "status": "created_and_validated"
+  },
+  "fx": {
+    "result": {
+      "primary_asset": "/Game/VFX/Spells/NS_Fireball"
+    }
+  }
+}
