@@ -2,10 +2,17 @@
 
 #include "BlueprintEditorLibrary.h"
 #include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
+#include "EdGraphSchema_K2_Actions.h"
 #include "Engine/Blueprint.h"
+#include "GameFramework/Actor.h"
 #include "HAL/PlatformProcess.h"
+#include "K2Node_CallFunction.h"
+#include "K2Node_Event.h"
+#include "K2Node_IfThenElse.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
-#include "Modules/ModuleManager.h"
 #include "ToolsetRegistry/ToolCallAsyncResultString.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 
@@ -14,47 +21,97 @@ namespace
 	static const FString EpicBlueprintToolsetName =
 		TEXT("editor_toolset.toolsets.blueprint.BlueprintTools");
 
-	static FString EscapeBlueprintBridgeJsonString(const FString& In)
+	static bool ParseQuotedDslArgument(
+		const FString& DslCode,
+		const FString& ArgumentName,
+		FString& OutValue)
 	{
-		FString Out;
-		Out.Reserve(In.Len() + 8);
-		for (const TCHAR C : In)
+		const FString Marker = FString::Printf(TEXT(":%s"), *ArgumentName);
+		const int32 MarkerIndex = DslCode.Find(Marker, ESearchCase::CaseSensitive);
+		if (MarkerIndex == INDEX_NONE)
 		{
-			switch (C)
+			return false;
+		}
+
+		const int32 QuoteStart = DslCode.Find(
+			TEXT("\""),
+			ESearchCase::CaseSensitive,
+			ESearchDir::FromStart,
+			MarkerIndex + Marker.Len());
+		if (QuoteStart == INDEX_NONE)
+		{
+			return false;
+		}
+
+		bool bEscaped = false;
+		for (int32 Index = QuoteStart + 1; Index < DslCode.Len(); ++Index)
+		{
+			const TCHAR Character = DslCode[Index];
+			if (Character == TEXT('"') && !bEscaped)
 			{
-			case TEXT('\\'): Out += TEXT("\\\\"); break;
-			case TEXT('"'): Out += TEXT("\\\""); break;
-			case TEXT('\n'): Out += TEXT("\\n"); break;
-			case TEXT('\r'): Out += TEXT("\\r"); break;
-			case TEXT('\t'): Out += TEXT("\\t"); break;
-			default: Out += C; break;
+				OutValue = DslCode.Mid(QuoteStart + 1, Index - QuoteStart - 1);
+				OutValue.ReplaceInline(TEXT("\\\""), TEXT("\""));
+				OutValue.ReplaceInline(TEXT("\\\\"), TEXT("\\"));
+				return true;
+			}
+			bEscaped = Character == TEXT('\\') && !bEscaped;
+			if (Character != TEXT('\\'))
+			{
+				bEscaped = false;
 			}
 		}
-		return Out;
+		return false;
 	}
 
-	static bool EnsureEpicBlueprintToolsRegistered(FString& OutError)
+	static UEdGraphNode* SpawnK2Node(
+		UK2Node* Template,
+		UEdGraph* Graph,
+		const FVector2f& Position)
 	{
-		if (UToolsetRegistry::IsToolsetRegistered(EpicBlueprintToolsetName))
+		TSharedPtr<FEdGraphSchemaAction_K2NewNode> Action =
+			MakeShared<FEdGraphSchemaAction_K2NewNode>();
+		Action->NodeTemplate = Template;
+		return Action->PerformAction(Graph, nullptr, Position, false);
+	}
+
+	struct FNativeWriteIntent
+	{
+		bool bHasBranch = false;
+		bool bCondition = false;
+		FString PrintString;
+	};
+
+	static bool ParseNativeWriteIntent(
+		const FString& DslCode,
+		FNativeWriteIntent& OutIntent,
+		FString& OutError)
+	{
+		const bool bHasBeginPlay =
+			DslCode.Contains(TEXT("(event EventBeginPlay"), ESearchCase::CaseSensitive);
+		const bool bConditionTrue =
+			DslCode.Contains(TEXT("(if true"), ESearchCase::CaseSensitive);
+		const bool bConditionFalse =
+			DslCode.Contains(TEXT("(if false"), ESearchCase::CaseSensitive);
+		const bool bHasAnyBranch =
+			DslCode.Contains(TEXT("(if "), ESearchCase::CaseSensitive);
+		const bool bHasPrintString =
+			DslCode.Contains(TEXT("(Development|PrintString"), ESearchCase::CaseSensitive);
+		if (!bHasBeginPlay
+			|| (bHasAnyBranch && bConditionTrue == bConditionFalse)
+			|| !bHasPrintString
+			|| !ParseQuotedDslArgument(DslCode, TEXT("InString"), OutIntent.PrintString))
 		{
-			return true;
+			OutError =
+				TEXT("native Blueprint writer supports ")
+				TEXT("(event EventBeginPlay (Development|PrintString :InString \"...\")) ")
+				TEXT("and the same call nested in (if <bool> ...); ")
+				TEXT("no Python or Epic BlueprintTools fallback is used");
+			return false;
 		}
 
-		// EditorToolset registers its Python-backed BlueprintTools from init_unreal.py.
-		// [VERIFIED: Engine/Plugins/Experimental/Toolsets/EditorToolset/Content/Python/init_unreal.py:3-9]
-		FModuleManager::Get().LoadModule(TEXT("PythonScriptPlugin"));
-
-		if (UToolsetRegistry::IsToolsetRegistered(EpicBlueprintToolsetName))
-		{
-			return true;
-		}
-
-		OutError = FString::Printf(
-			TEXT("Required Epic toolset '%s' is not registered after loading PythonScriptPlugin. ")
-			TEXT("The public MCP operation is toolset 'UeremcpBlueprint.UeremcpBlueprintToolset', ")
-			TEXT("tool 'SubmitGraph', with envelope action 'submit_graph' and mode 'replace'."),
-			*EpicBlueprintToolsetName);
-		return false;
+		OutIntent.bHasBranch = bHasAnyBranch;
+		OutIntent.bCondition = bConditionTrue;
+		return true;
 	}
 }
 
@@ -69,11 +126,6 @@ bool FUeremcpBlueprintEpicBridge::ExecuteToolSync(
 		OutError = TEXT("ToolsetRegistry is not available");
 		return false;
 	}
-	if (!EnsureEpicBlueprintToolsRegistered(OutError))
-	{
-		return false;
-	}
-
 	UToolCallAsyncResultString* AsyncResult = UToolsetRegistry::ExecuteTool(
 		EpicBlueprintToolsetName,
 		ToolName,
@@ -139,6 +191,14 @@ UEdGraph* FUeremcpBlueprintEpicBridge::ResolveGraph(
 	return nullptr;
 }
 
+bool FUeremcpBlueprintEpicBridge::ValidateWriteGraphDsl(
+	const FString& DslCode,
+	FString& OutError)
+{
+	FNativeWriteIntent Intent;
+	return ParseNativeWriteIntent(DslCode, Intent, OutError);
+}
+
 bool FUeremcpBlueprintEpicBridge::WriteGraphDsl(UEdGraph* Graph, const FString& DslCode, FString& OutError)
 {
 	if (!Graph)
@@ -147,17 +207,103 @@ bool FUeremcpBlueprintEpicBridge::WriteGraphDsl(UEdGraph* Graph, const FString& 
 		return false;
 	}
 
-	const FString Input = FString::Printf(
-		TEXT("{\"graph\":{\"refPath\":\"%s\"},\"code\":\"%s\"}"),
-		*Graph->GetPathName(),
-		*EscapeBlueprintBridgeJsonString(DslCode));
-
-	FString Result;
-	if (!ExecuteToolSync(TEXT("write_graph_dsl"), Input, Result, OutError))
+	FNativeWriteIntent Intent;
+	if (!ParseNativeWriteIntent(DslCode, Intent, OutError))
 	{
 		return false;
 	}
 
+	UBlueprint* Blueprint = FBlueprintEditorUtils::FindBlueprintForGraph(Graph);
+	if (!Blueprint)
+	{
+		OutError = TEXT("graph has no owning Blueprint");
+		return false;
+	}
+
+	UEdGraph* Templates = NewObject<UEdGraph>(GetTransientPackage(), NAME_None, RF_Transient);
+	UK2Node_Event* BeginPlayTemplate = NewObject<UK2Node_Event>(Templates);
+	BeginPlayTemplate->EventReference.SetExternalMember(
+		TEXT("ReceiveBeginPlay"),
+		AActor::StaticClass());
+	BeginPlayTemplate->bOverrideFunction = true;
+
+	UK2Node_IfThenElse* BranchTemplate =
+		Intent.bHasBranch ? NewObject<UK2Node_IfThenElse>(Templates) : nullptr;
+
+	UFunction* PrintFunction =
+		UKismetSystemLibrary::StaticClass()->FindFunctionByName(TEXT("PrintString"));
+	if (!PrintFunction)
+	{
+		OutError = TEXT("UKismetSystemLibrary.PrintString was not found");
+		return false;
+	}
+	UK2Node_CallFunction* PrintTemplate = NewObject<UK2Node_CallFunction>(Templates);
+	PrintTemplate->FunctionReference.SetFromField<UFunction>(PrintFunction, false);
+
+	Blueprint->Modify();
+	Graph->Modify();
+	const TArray<TObjectPtr<UEdGraphNode>> ExistingNodes = Graph->Nodes;
+	for (UEdGraphNode* Node : ExistingNodes)
+	{
+		if (Node)
+		{
+			Node->Modify();
+			Node->DestroyNode();
+		}
+	}
+
+	UEdGraphNode* BeginPlay =
+		SpawnK2Node(BeginPlayTemplate, Graph, FVector2f(0.0f, 0.0f));
+	UEdGraphNode* Branch = Intent.bHasBranch
+		? SpawnK2Node(BranchTemplate, Graph, FVector2f(300.0f, 0.0f))
+		: nullptr;
+	UEdGraphNode* Print =
+		SpawnK2Node(
+			PrintTemplate,
+			Graph,
+			Intent.bHasBranch ? FVector2f(600.0f, 0.0f) : FVector2f(300.0f, 0.0f));
+	if (!BeginPlay || (Intent.bHasBranch && !Branch) || !Print)
+	{
+		OutError = TEXT("native Blueprint writer failed to spawn required K2 nodes");
+		return false;
+	}
+
+	UEdGraphPin* BeginPlayThen = BeginPlay->FindPin(UEdGraphSchema_K2::PN_Then);
+	UEdGraphPin* BranchExecute =
+		Branch ? Branch->FindPin(UEdGraphSchema_K2::PN_Execute) : nullptr;
+	UEdGraphPin* BranchThen =
+		Branch ? Branch->FindPin(UEdGraphSchema_K2::PN_Then) : nullptr;
+	UEdGraphPin* BranchCondition =
+		Branch ? Branch->FindPin(UEdGraphSchema_K2::PN_Condition) : nullptr;
+	UEdGraphPin* PrintExecute = Print->FindPin(UEdGraphSchema_K2::PN_Execute);
+	UEdGraphPin* PrintValue = Print->FindPin(TEXT("InString"));
+	if (!BeginPlayThen
+		|| (Intent.bHasBranch && (!BranchExecute || !BranchThen || !BranchCondition))
+		|| !PrintExecute
+		|| !PrintValue)
+	{
+		OutError = TEXT("native Blueprint writer could not resolve required K2 pins");
+		return false;
+	}
+
+	if (BranchCondition)
+	{
+		BranchCondition->DefaultValue = Intent.bCondition ? TEXT("true") : TEXT("false");
+	}
+	PrintValue->DefaultValue = Intent.PrintString;
+	const UEdGraphSchema* Schema = Graph->GetSchema();
+	const bool bConnected = Schema
+		&& (Intent.bHasBranch
+			? Schema->TryCreateConnection(BeginPlayThen, BranchExecute)
+				&& Schema->TryCreateConnection(BranchThen, PrintExecute)
+			: Schema->TryCreateConnection(BeginPlayThen, PrintExecute));
+	if (!bConnected)
+	{
+		OutError = TEXT("native Blueprint writer failed to connect the requested execution chain");
+		return false;
+	}
+
+	FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 	return true;
 }
 
@@ -169,16 +315,7 @@ bool FUeremcpBlueprintEpicBridge::CompileBlueprint(UBlueprint* Blueprint, FStrin
 		return false;
 	}
 
-	const FString Input = FString::Printf(
-		TEXT("{\"blueprint\":{\"refPath\":\"%s\"}}"),
-		*Blueprint->GetPathName());
-
-	FString Result;
-	if (!ExecuteToolSync(TEXT("compile_blueprint"), Input, Result, OutError))
-	{
-		return false;
-	}
-
+	FKismetEditorUtilities::CompileBlueprint(Blueprint);
 	if (Blueprint->Status == BS_Error)
 	{
 		OutError = TEXT("Blueprint compile finished with BS_Error");

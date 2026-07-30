@@ -58,7 +58,9 @@ public:
 	 * MCP toolset: UeremcpBlueprint.UeremcpBlueprintToolset
 	 * MCP tool: SubmitGraph
 	 * Argument: requestJson containing action=submit_graph and mode=replace.
+	 * Changed replace is native C++ and does not require PythonScriptPlugin.
 	 * [VERIFIED-RUNTIME: user-unreal-mcp list_toolsets, 2026-07-30]
+	 * [VERIFIED: UeremcpBlueprintEpicBridge.cpp:194-323]
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
 	static FString SubmitGraph(const FString& RequestJson);

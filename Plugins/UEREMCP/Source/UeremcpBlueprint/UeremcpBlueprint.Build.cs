@@ -1,5 +1,5 @@
 // UEREMCP — Blueprint domain module (WS-06).
-// Composes Epic BlueprintTools; agent-facing read/submit graph operations (ADR-0002).
+// Native C++ submit plus optional Epic BlueprintTools read enrichment (ADR-0002).
 
 using UnrealBuildTool;
 

@@ -19,6 +19,8 @@ public:
 
 	static bool WriteGraphDsl(UEdGraph* Graph, const FString& DslCode, FString& OutError);
 
+	static bool ValidateWriteGraphDsl(const FString& DslCode, FString& OutError);
+
 	static bool CompileBlueprint(UBlueprint* Blueprint, FString& OutError);
 
 	static UEdGraph* ResolveGraph(UBlueprint* Blueprint, const FString& GraphId, FString& OutGraphName);

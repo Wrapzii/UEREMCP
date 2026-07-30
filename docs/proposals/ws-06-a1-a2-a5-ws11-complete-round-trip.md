@@ -3,7 +3,7 @@
 **Status:** Proposed  
 **From:** WS-06  
 **To:** WS-11  
-**Baseline:** orchestrator tip `0dfb6b4` plus the WS-06 commit carrying this update
+**Baseline:** orchestrator tip `886d09d` plus the WS-06 commit carrying this update
 
 ## Exact public MCP names
 
@@ -18,14 +18,20 @@ For the initial read, use the same toolset with `tool_name: ReadGraph`,
 `requestJson`, and envelope `action: "read_graph"`.
 
 [VERIFIED-RUNTIME: `user-unreal-mcp list_toolsets`, 2026-07-30; WS-11 transport
-evidence `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`]
+evidence `tests/integration/_logs/poc_a_complete_round_trip_70cc348.json`]
 
-`SubmitGraph` internally composes Epic
-`editor_toolset.toolsets.blueprint.BlueprintTools.write_graph_dsl` and
-`compile_blueprint`; those are implementation dependencies, not the public POC A
-tool names. The WS-06 bridge now loads `PythonScriptPlugin` and rechecks that
-official Epic toolset before dispatch, returning an actionable dependency error if
-it is still absent.
+The A5 changed-replace path is Python-free. It constructs the currently supported
+`EventBeginPlay → Branch → PrintString` semantic DSL slice with native K2 nodes,
+connects pins with the graph schema, compiles with
+`FKismetEditorUtilities::CompileBlueprint`, saves, and re-reads. It does not load
+`PythonScriptPlugin` and does not call Epic `BlueprintTools`.
+[VERIFIED: `EdGraphSchema.h:828`]
+[VERIFIED: `KismetEditorUtilities.h:169`]
+[VERIFIED: `K2Node_IfThenElse.h:22-44`]
+
+This is deliberately a bounded native writer, not a claim that every Epic
+Blueprint DSL expression is implemented. Unsupported changed-write DSL is rejected
+before graph mutation with the supported shape in the error.
 
 ## What WS-06 now exposes
 

@@ -814,6 +814,14 @@ bool FUeremcpBlueprintGraphWriter::ReplaceGraph(
 		return false;
 	}
 	OutResult.LossyAreas.Append(DslLossyNotes);
+	if (!FUeremcpBlueprintEpicBridge::ValidateWriteGraphDsl(
+			OutResult.DslUsed,
+			DslError))
+	{
+		OutResult.Error = DslError;
+		OutResult.CapabilityNotes.Add(TEXT("submit_graph.native_cpp_dsl_unsupported"));
+		return false;
+	}
 
 	FString GraphName;
 	UEdGraph* Graph = FUeremcpBlueprintEpicBridge::ResolveGraph(Blueprint, Options.GraphId, GraphName);
@@ -839,22 +847,23 @@ bool FUeremcpBlueprintGraphWriter::ReplaceGraph(
 		OutResult.Error = WriteError;
 		return false;
 	}
+	OutResult.CapabilityNotes.Add(TEXT("submit_graph.native_cpp_event_if_print_slice"));
 
-	OutResult.bCompiled = Blueprint->Status == BS_UpToDate || Blueprint->Status == BS_UpToDateWithWarnings;
 	if (Options.bCompile)
 	{
 		++OutResult.InternalOperations;
-		if (Blueprint->Status == BS_Error)
+		FString CompileError;
+		if (!FUeremcpBlueprintEpicBridge::CompileBlueprint(Blueprint, CompileError))
 		{
-			OutResult.Error = TEXT("Blueprint compile finished with BS_Error after write_graph_dsl");
-			return false;
-		}
-		if (!OutResult.bCompiled)
-		{
-			OutResult.Error = TEXT("Blueprint is not up to date after write_graph_dsl");
+			OutResult.Error = CompileError.IsEmpty()
+				? TEXT("Blueprint compile failed after native graph replace")
+				: CompileError;
 			return false;
 		}
 	}
+	OutResult.bCompiled =
+		Blueprint->Status == BS_UpToDate
+		|| Blueprint->Status == BS_UpToDateWithWarnings;
 
 	if (Options.bSave)
 	{

@@ -33,19 +33,22 @@ class CompleteSubmitEvidenceContractTests(unittest.TestCase):
         self.assertIn('SetBoolField(TEXT("saved"), WriteResult.bSaved)', body)
         self.assertIn("AttachGraphDiagnostics(Response, WriteResult.RereadGraph)", body)
 
-    def test_changed_replace_bootstraps_official_epic_toolset(self) -> None:
+    def test_changed_replace_is_python_free_native_cpp(self) -> None:
         body = EPIC_BRIDGE_CPP.read_text(encoding="utf-8")
-        self.assertIn(
-            'TEXT("editor_toolset.toolsets.blueprint.BlueprintTools")',
-            body,
-        )
-        self.assertIn(
-            'FModuleManager::Get().LoadModule(TEXT("PythonScriptPlugin"))',
-            body,
-        )
-        self.assertIn(
-            "UToolsetRegistry::IsToolsetRegistered(EpicBlueprintToolsetName)",
-            body,
+        write_start = body.index("bool FUeremcpBlueprintEpicBridge::WriteGraphDsl")
+        submit_backend = body[write_start:]
+        self.assertNotIn("PythonScriptPlugin", body)
+        self.assertNotIn("ExecuteToolSync", submit_backend)
+        self.assertIn("UK2Node_IfThenElse", submit_backend)
+        self.assertIn("TryCreateConnection", submit_backend)
+        self.assertIn("FKismetEditorUtilities::CompileBlueprint", submit_backend)
+        writer = (
+            repo_root()
+            / "Plugins/UEREMCP/Source/UeremcpBlueprint/Private/UeremcpBlueprintGraphWriter.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertLess(
+            writer.index("ValidateWriteGraphDsl"),
+            writer.index("if (Options.bDryRun)"),
         )
 
 

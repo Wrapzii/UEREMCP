@@ -1,7 +1,7 @@
 # UeremcpBlueprint
 
-**Owner:** WS-06 (Blueprint Specialist). **Status:** P1 `read_graph` and P2
-scratch changed/unchanged replace implemented; live A6 editor evidence pending orch merge.
+**Owner:** WS-06 (Blueprint Specialist). **Status:** P1 `read_graph` and bounded P2
+scratch changed/unchanged replace implemented; A6 editor proof passed.
 
 ## Purpose
 
@@ -11,9 +11,13 @@ implements graph read/submit.
 
 ## Design constraints (do not violate)
 
-1. **Compose Epic `BlueprintTools`** — preserve primitives (`create_node`, `connect_pins`,
-   `read_graph_dsl`, `write_graph_dsl`, `compile_blueprint`, …). Do **not** rebuild
-   pin-level primitives on the agent surface.
+1. **Keep primitives internal** — compose Epic `BlueprintTools` for optional reads when
+   registered. Changed replace uses a bounded native C++ semantic writer because the
+   MCP-enabled validation editor runs with `-DisablePython`; pin-level primitives remain
+   hidden from the agent surface.
+   [VERIFIED-RUNTIME: `tests/integration/_logs/poc_a_complete_round_trip_70cc348.json`]
+   [VERIFIED: `EdGraphSchema.h:828`]
+   [VERIFIED: `KismetEditorUtilities.h:169`]
 2. **Hash structured JSON** — `content_hash` and `revision` use
    `FUeremcpContentHash` over ADR-0004 canonical graph JSON, not DSL text or display
    strings.
@@ -37,7 +41,7 @@ implements graph read/submit.
 | Tool / action | Purpose |
 |---|---|
 | `ReadGraph` / `read_graph` | One call → complete `graph.schema.json` + diagnostics + `content_hash`; empty variables/dependencies remain explicit arrays |
-| `SubmitGraph` / `submit_graph` | Scratch-only changed/unchanged `replace` via `write_graph_dsl`; changed responses include compile/save evidence and the complete re-read graph, unchanged responses include the complete current graph; optional `expected_after_write` selectors assert re-read nodes and links before `modified_and_validated`; dry_run-first; stale revisions rejected |
+| `SubmitGraph` / `submit_graph` | Python-free scratch-only changed/unchanged `replace`; the native changed-write slice supports `EventBeginPlay → Branch → PrintString`, compiles/saves/re-reads, and returns complete evidence; optional `expected_after_write` selectors assert re-read nodes and links before `modified_and_validated`; dry_run-first; stale revisions rejected |
 
 ## Planned (P2+)
 
