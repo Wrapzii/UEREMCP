@@ -1,14 +1,14 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `942e8bc` (WS-08 MI disk-save fix)
+- **Current orchestration tip:** `7535e6c` (WS-08 animated-noise and MI-save hardening)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
-- **Latest Material re-run tip:** `942e8bc`
+- **Latest Material re-run tip:** `7535e6c`
 - **Latest Templates re-run tip:** `f15ea96`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Blueprint, Animation, Niagara, and Templates listed filters are green on current-tip or unchanged-source proofs. Templates is **PASS 4/4** on `f15ea96`. Material remains **FAIL 10/11** on `942e8bc`; `CreateVfxMaterial.ValidateFalse` still leaves the MI absent on disk after `5c5cde8`. No A6 / overall POC-B completion claim.
+- **Status:** Wave 2 listed editor filters are green on current-tip or unchanged-source proofs. Material is **PASS 11/11** on `7535e6c`, including ValidateFalse disk persistence; Templates is **PASS 4/4** on `f15ea96`; Niagara Create/Inspect/B7 are green. No A6 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -26,14 +26,14 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Filter / gate | Recorded result | Proof tip | Freshness / residual |
 |---|---:|---|---|
 | `UeremcpBlueprint.Toolset` | **PASS, 4/4** | `35b4cab` | Blueprint sources unchanged since proof. |
-| `UeremcpMaterial.Toolset` | **FAIL, 10/11** | `942e8bc` | `CreateVfxMaterial.ValidateFalse`: MI remains absent on disk after `5c5cde8`; next WS-08 fix required. |
+| `UeremcpMaterial.Toolset` | **PASS, 11/11** | `7535e6c` | ValidateFalse and MI/master disk persistence are green; closes the T1a-related filter residual. |
 | `UEREMCP.Animation` | **PASS, 10/10** | `5ea9277` | Animation sources unchanged since proof. |
 | `UEREMCP.Niagara.Create` | **PASS, 10/10** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: Material requires a ValidateFalse MI-only disk-save fix and fresh editor re-run. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
+Residuals: a live VisualTest MCP re-proof of `BENCHMARK_PROTOCOL` T1a against `7535e6c` remains optional freshness work if not yet run; the editor filter proof is green. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
 
 ## Templates editor result and handoff
 
@@ -128,6 +128,14 @@ Standing by for the WS-07 B7 fix on the `e4ea58d` lineage.
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **INCOMPLETE** | WS-07 | Hang persists after the same AwaitCompile fix; no completion marker and no timeout-honest result. Not a B7 / POC-B claim. |
 
 Standing by for a deeper WS-07 fix before another Inspect/B7 re-run.
+
+## Update on tip `7535e6c` (WS-11 Material re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UeremcpMaterial.Toolset` | **PASS, 11/11** | WS-08 | `CreateVfxMaterial.ValidateFalse` and MI/master disk-persistence checks passed. The T1a-related editor-filter residual is closed. |
+
+Optional freshness only: run live VisualTest MCP `BENCHMARK_PROTOCOL` T1a against `7535e6c` if that proof has not yet been captured.
 
 ## Update on tip `942e8bc` (WS-11 Material re-run)
 
@@ -224,9 +232,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-07 | B7 PASS on `825e4f4`; no remaining B7 failure in this filter record. |
-| WS-08 | Provide the next `CreateVfxMaterial.ValidateFalse` MI disk-save fix: Material remains FAIL 10/11 on `942e8bc` after `5c5cde8`. |
+| WS-08 | Material Toolset PASS 11/11 on `7535e6c`; no remaining Material editor-filter failure in this record. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Create/Inspect freshness closed on `2384112`; keep A6 / overall POC-B claims gated separately. |
+| WS-11 | Listed editor filters are green. Live VisualTest MCP T1a re-proof on `7535e6c` is optional freshness if not already captured; keep A6 / overall POC-B claims gated separately. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Templates is green: its registered editor filter is PASS 4/4 on `f15ea96`. Material is not green: its current editor result is FAIL 10/11 on `942e8bc`, pending the next WS-08 MI disk-save fix. A6 / overall POC-B remain separate criteria. No junction retarget.
+Wave 2 listed editor filters are green: Material PASS 11/11 on `7535e6c`, Templates PASS 4/4 on `f15ea96`, and Niagara Create/Inspect/B7 green on their recorded proof tips. Remaining optional freshness: live VisualTest MCP `BENCHMARK_PROTOCOL` T1a against `7535e6c` if not already run. A6 / overall POC-B remain separate criteria. No junction retarget.
