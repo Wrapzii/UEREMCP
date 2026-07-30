@@ -248,7 +248,7 @@ Use these to separate protocol/registration failures from domain failures.
 | Action | Why |
 |---|---|
 | Blueprint `patch` / `analyze_blueprint` / `create_blueprint` | planned |
-| `create_spell` | partial **preflight only** — no asset mutation; POC D not started |
+| `create_spell` | partial — live plan upsert under scratch; POC D MET (D5 static) |
 | Animation inspect / AnimBP read | partial read-only; authoring unsupported |
 | `list_domains` / `describe_action` | planned |
 

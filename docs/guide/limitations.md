@@ -19,9 +19,9 @@
 
 | Limit | Detail |
 |---|---|
-| B10 production failure | Visible warm-pixel / render signature **FAIL** on production fireball; create returns `partially_completed` until B10 + metrics close ([catalog](../CAPABILITY_CATALOG.md), [`poc-metrics.md`](../reviews/poc-metrics.md)) |
+| B10 production residual | Warm-pixel / render signature gaps may remain; structural create is live. See closeout. |
 | Topology inspect | Intentionally lossy (event handler stacks, etc.) |
-| POC C | `create_niagara_template` / `create_effect_variation` still **research** |
+| POC C | Claimed under accepted criteria; variation + C7 third generation proven |
 
 ## POC-B metrics (WS-14)
 
@@ -39,12 +39,10 @@ From [`docs/SECURITY.md`](../SECURITY.md) domain adoption table (2026-07-30):
 |---|---|
 | Blueprint `SubmitGraph` / `ReadGraph` | **yes** |
 | Gameplay `CreateSpell` | **yes** (still preflight-only mutation semantics) |
-| Niagara `CreateNiagaraEffect` | **no** — handoff proposal exists |
-| Material `CreateVfxMaterial` / `CreateProceduralTexture` | **no** — handoff proposal exists |
+| Niagara `CreateNiagaraEffect` | **yes** — MutatingDispatch + Domain E3/E4 gates |
+| Material `CreateVfxMaterial` / `CreateProceduralTexture` | **yes** — MutatingDispatch + Domain E3/E4 gates |
 
-**R-07 stays open** until Niagara and Material call the shared dispatch on live mutate
-paths. Agents must not assume those domains enforce the same queue / audit / path gate
-as Blueprint.
+**R-07 closed** for Niagara and Material live mutators on the POC closeout tip.
 
 ## Transport cancel adapter
 
@@ -61,18 +59,18 @@ cancel SKIP residuals tracked in transport tests).
 
 ## `execute_plan`
 
-Internal interpreter exists; **not** a direct `AICallable` on this tip. Agents that
-call a fictional `ExecutePlan` tool will fail discovery.
+Agent-facing `UUeremcpReferenceToolset::ExecutePlan` is registered; Templates also bind
+the executor. Prefer live plan evidence in POC D claim docs.
 
 ## Gameplay / Animation / discovery
 
-- `create_spell`: AICallable preflight only — **no** asset mutation; POC D not started
+- `create_spell`: live upsert via plan under scratch paths; POC D MET (D5 static)
 - Animation: inspect / AnimBP read partial; Control Rig may prove read-only
 - UEREMCP `list_domains` / `describe_action`: planned — use Epic `list_toolsets`
 
-## Root README staleness
+## Root README
 
-Repository root [`README.md`](../../README.md) still says Phase 0 / "implementation has
-not started." That is **stale relative to this tip** (owned by WS-01 — WS-13 does not
-edit it). Prefer [`CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) and these guides
+Repository root [`README.md`](../../README.md) reflects POC A–E claimed /
+not-production-ready. Prefer [`CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) and
+[`ws-01-poc-closeout-2026-07-30.md`](../proposals/ws-01-poc-closeout-2026-07-30.md)
 for capability truth.
