@@ -286,11 +286,11 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 #endif
 		Tech.Add(MakeTech(
 			TEXT("foliage_scatter"),
-			TEXT(Spec.MeshPath.IsEmpty() ? "approximated" : "real"),
+			Spec.MeshPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
 			TEXT("Seeded HISMC / InstancedFoliageActor scatter with exclusion corridor")));
 		Tech.Add(MakeTech(
 			TEXT("rain_camera_follow"),
-			TEXT(Spec.RainSystemPath.IsEmpty() ? "approximated" : "real"),
+			Spec.RainSystemPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
 			TEXT("Niagara component attach to viewport/player camera when system path provided")));
 		Tech.Add(MakeTech(
 			TEXT("structures_geometryscript"),
