@@ -1,0 +1,53 @@
+{
+  "template_id": "niagara.emitter.core.v1",
+  "domain": "niagara",
+  "category": "emitter_archetype",
+  "version": 1,
+  "description": "Core glow / REF emitter archetype for projectile VFX.",
+  "purpose": "Bright projectile read; maps to Firebolt REF emitter role.",
+  "authored_by": "human",
+  "engine_compatibility": {
+    "min_version": "5.8.0",
+    "verified_on": ["5.8.0"]
+  },
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "color": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+      "scale": { "type": "number", "minimum": 0 },
+      "intensity": { "type": "number", "minimum": 0 }
+    },
+    "required": ["color", "scale", "intensity"]
+  },
+  "required_components": ["core_emitter", "sprite_renderer"],
+  "supported_modifiers": ["boost_intensity", "reduce_glow"],
+  "construction_plan": [
+    {
+      "id": "emitter",
+      "action": "create_niagara_effect",
+      "specification": {
+        "effect_type": "emitter_archetype",
+        "archetype_role": "core",
+        "emitter_template_path": "/Niagara/DefaultAssets/Templates/Emitters/Minimal/MinimalEmitter",
+        "parameters": {
+          "primary_color": [1.0, 0.5, 0.1, 1.0],
+          "scale": 1.0,
+          "intensity": 5.0
+        }
+      }
+    }
+  ],
+  "validation_rules": [
+    {
+      "rule_id": "core_emitter_present",
+      "check": "emitter_count >= 1 && has_renderer('Sprite')",
+      "severity": "error",
+      "message": "Core archetype must include at least one sprite renderer emitter."
+    }
+  ],
+  "typical_ranges": {
+    "scale": { "min": 0.25, "max": 3.0, "typical": 1.0 },
+    "intensity": { "min": 1.0, "max": 20.0, "typical": 5.0 }
+  },
+  "search_terms": ["core", "glow", "ref", "projectile", "niagara emitter"]
+}

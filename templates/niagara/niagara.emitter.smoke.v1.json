@@ -1,0 +1,54 @@
+{
+  "template_id": "niagara.emitter.smoke.v1",
+  "domain": "niagara",
+  "category": "emitter_archetype",
+  "version": 1,
+  "description": "Smoke trail / residual emitter archetype.",
+  "purpose": "Lingering smoke read; maps to Firebolt Smoke emitter role.",
+  "authored_by": "human",
+  "engine_compatibility": {
+    "min_version": "5.8.0",
+    "verified_on": ["5.8.0"]
+  },
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "color": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+      "scale": { "type": "number", "minimum": 0 },
+      "shape": { "type": "string" },
+      "velocity": { "type": "number" }
+    },
+    "required": ["color", "scale"]
+  },
+  "required_components": ["smoke_emitter"],
+  "supported_modifiers": ["reduce_trail_persistence", "increase_drag"],
+  "construction_plan": [
+    {
+      "id": "emitter",
+      "action": "create_niagara_effect",
+      "specification": {
+        "effect_type": "emitter_archetype",
+        "archetype_role": "smoke",
+        "emitter_template_path": "/Niagara/DefaultAssets/Templates/Emitters/Fountain/FountainEmitter",
+        "parameters": {
+          "primary_color": [0.2, 0.2, 0.2, 0.6],
+          "scale": 1.0,
+          "shape": "sphere",
+          "velocity": 80.0
+        }
+      }
+    }
+  ],
+  "validation_rules": [
+    {
+      "rule_id": "smoke_alpha",
+      "check": "material_opacity < 1.0",
+      "severity": "warning",
+      "message": "Smoke archetype should use translucent materials."
+    }
+  ],
+  "typical_ranges": {
+    "velocity": { "min": 20.0, "max": 300.0, "typical": 80.0 }
+  },
+  "search_terms": ["smoke", "trail", "fountain", "projectile"]
+}
