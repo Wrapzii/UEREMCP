@@ -5,7 +5,7 @@
 Do not duplicate the full authoring rules here. Canonical text:
 
 - [`templates/README.md`](../../templates/README.md)
-- ADR-0008 — JSON + `UeremcpTemplates` + internal `execute_plan` (not `UAgentSkill`)
+- ADR-0008 â€” JSON + `UeremcpTemplates` + internal `execute_plan` (not `UAgentSkill`)
 - Schemas: [`schemas/template-library/template.schema.json`](../../schemas/template-library/template.schema.json),
   [`schemas/domains/templates/`](../../schemas/domains/templates/)
 
@@ -14,7 +14,7 @@ Do not duplicate the full authoring rules here. Canonical text:
 | Action | Tool | Notes |
 |---|---|---|
 | `search_templates` | `SearchTemplates` | Filter by query / domain / element |
-| `instantiate_template` | `InstantiateTemplate` | Materializes plan → WS-05 interpreter |
+| `instantiate_template` | `InstantiateTemplate` | Materializes plan â†’ WS-05 interpreter |
 | `promote_to_template` | `PromoteToTemplate` | Preview / quarantine until gates bind |
 
 Worked envelopes: [`capability-reference.md`](capability-reference.md).
@@ -27,4 +27,4 @@ Worked envelopes: [`capability-reference.md`](capability-reference.md).
 4. Fill `validation_rules`, `typical_ranges`, and `known_failure_cases` as you learn them
 5. Prefer `inherits_from` / modifiers over copy-paste elemental variants
 
-POC C (variation + C7 third instantiate) is **claimed** on the POC closeout tip � see `docs/proposals/ws-01-poc-closeout-2026-07-30.md`.
+POC C (variation + C7 third instantiate) is **claimed** on the POC closeout tip — see `docs/proposals/ws-01-poc-closeout-2026-07-30.md`.
