@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/niagara/graph-ext.schema.json",
+  "title": "Niagara graph extensions",
+  "description": "Shape of graph.schema.json extensions.niagara per ADR-0004. Referenced from the shared graph schema pressure valve. Owned by WS-07.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "script_usage": {
+      "type": "string",
+      "enum": [
+        "EmitterSpawnScript",
+        "EmitterUpdateScript",
+        "ParticleSpawnScript",
+        "ParticleUpdateScript",
+        "ParticleEventScript",
+        "SystemSpawnScript",
+        "SystemUpdateScript"
+      ]
+    },
+    "emitter_name": { "type": "string" },
+    "system_name": { "type": "string" },
+    "stack_index": { "type": "integer", "minimum": 0 },
+    "bIsSetParametersModule": { "type": "boolean" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["mode"],
+        "additionalProperties": true,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "linked",
+              "hlsl_expression",
+              "data_interface",
+              "dynamic_input",
+              "enum",
+              "unsupported"
+            ]
+          },
+          "linked_variable": { "type": "string" },
+          "dynamic_chain": { "type": "object" },
+          "data_interface": { "type": "object" },
+          "hlsl_expression": { "type": "string" },
+          "enum_value": { "type": "string" },
+          "local_value": {}
+        }
+      },
+      "description": "Per pin_id: value mode + payload. Parameter bindings are not peer module links (RB-07)."
+    },
+    "renderers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["renderer_index", "renderer_class"],
+        "additionalProperties": true,
+        "properties": {
+          "renderer_index": { "type": "integer", "minimum": 0 },
+          "renderer_class": { "type": "string" },
+          "property_values": { "type": "object" },
+          "material_path": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" }
+        }
+      }
+    },
+    "emitter": {
+      "type": "object",
+      "description": "FVersionedNiagaraEmitterData fields from GetEmitterData.propertyValues.",
+      "additionalProperties": true
+    },
+    "system": {
+      "type": "object",
+      "description": "System-level property blob from GetSystemData.",
+      "additionalProperties": true
+    },
+    "event_handlers": {
+      "type": "array",
+      "description": "Lossy until GetEmitterTopology exposes ParticleEventScript stacks (RB-07 A.1 gap).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_name": { "type": "string" },
+          "source_emitter": { "type": "string" },
+          "usage_guid": { "type": "string" },
+          "modules": { "type": "array", "items": { "type": "object" } }
+        },
+        "additionalProperties": true
+      }
+    },
+    "inheritance": {
+      "type": "object",
+      "properties": {
+        "parent_emitter_path": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "bIsInheritable": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "user_parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "default_value": {}
+        },
+        "additionalProperties": false
+      }
+    },
+    "compile": {
+      "type": "object",
+      "properties": {
+        "aggregate_status": { "type": "string" },
+        "bIsCompiling": { "type": "boolean" },
+        "bHasErrors": { "type": "boolean" },
+        "per_script": { "type": "array", "items": { "type": "object" } }
+      },
+      "additionalProperties": true
+    }
+  },
+  "examples": [
+    {
+      "script_usage": "ParticleUpdateScript",
+      "emitter_name": "Sparks1",
+      "inputs": {
+        "Scale Alpha": {
+          "mode": "dynamic_input",
+          "dynamic_chain": { "script": "/Niagara/DynamicInputs/UniformRange/Float" }
+        }
+      }
+    }
+  ]
+}

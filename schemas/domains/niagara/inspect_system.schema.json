@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/niagara/inspect_system.schema.json",
+  "title": "inspect_system specification",
+  "description": "Optional knobs for niagara.inspect_system (read a Niagara system into graph.schema.json). Target asset path lives on the envelope target, not here. Owned by WS-07.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "emitters": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "If set, restrict inspection to these emitter names. Omit for all emitters."
+    },
+    "stacks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "EmitterSpawnScript",
+          "EmitterUpdateScript",
+          "ParticleSpawnScript",
+          "ParticleUpdateScript",
+          "ParticleEventScript"
+        ]
+      },
+      "description": "Module stacks to include. ParticleEventScript requires extensions.niagara.event_handlers (lossy until Epic topology exposes usage GUIDs — RB-07)."
+    },
+    "include_input_values": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true, resolved module input values are returned (GetEmitterInputValues / GetModuleInputValues)."
+    },
+    "include_renderers": {
+      "type": "boolean",
+      "default": true
+    },
+    "include_dependencies": {
+      "type": "boolean",
+      "default": true,
+      "description": "GetSystemDependencies: modules, DIs, dynamic inputs, renderers."
+    },
+    "include_compile_state": {
+      "type": "boolean",
+      "default": true,
+      "description": "Await in-flight compile via GetSystemCompileState before returning."
+    },
+    "include_stack_issues": {
+      "type": "boolean",
+      "default": true
+    },
+    "response_detail": {
+      "$ref": "../../common/defs.schema.json#/$defs/responseDetail",
+      "description": "Overrides envelope options.response_detail for graph payload size."
+    }
+  },
+  "examples": [
+    {
+      "include_input_values": true,
+      "include_compile_state": true,
+      "stacks": [
+        "EmitterSpawnScript",
+        "EmitterUpdateScript",
+        "ParticleSpawnScript",
+        "ParticleUpdateScript"
+      ],
+      "response_detail": "summary"
+    },
+    {
+      "emitters": ["Sparks1"],
+      "stacks": ["ParticleUpdateScript"],
+      "include_input_values": true,
+      "response_detail": "complete"
+    }
+  ]
+}
