@@ -1,12 +1,12 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `8c7cd8d` (`[WS-07] Fix mesh override edit conditions and probe cleanup for B7`)
+- **Current orchestration tip:** `eff241c` (`[WS-07] Stop probe DI release before post-create inspect`)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `8c7cd8d`
+- **Latest Niagara re-run tip:** `eff241c`
 - **Latest Material re-run tip:** `c881742`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Material, Animation, and Niagara Inspect green; Niagara B7 crashes during round-trip inspection. No A6 / POC-B completion claims.
+- **Status:** Material, Animation, and Niagara Inspect green; Niagara B7 no longer crashes but still fails override/cleanup assertions. No A6 / POC-B completion claims.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -18,6 +18,14 @@ pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter
 ```
 
 The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
+
+## Update on tip `eff241c` (WS-11 Niagara B7 re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **FAIL, assertion_failure** | WS-07 | Inspect null AV is resolved. `bOverrideMaterials` still emits `LogEditCondition`, followed by a `ForceDeleteObjects` cleanup ensure. Not a B7 / POC-B completion claim. |
+
+Standing by for a deeper WS-07 override/cleanup fix.
 
 ## Update on tip `8c7cd8d` (WS-11 Niagara B7 re-run)
 
@@ -113,9 +121,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-07 | Fix the B7 round-trip null access violation in `FUeremcpNiagaraInspect::Run` at line 412; Inspect filter remains PASS 4/4. |
+| WS-07 | Fix the persistent B7 `bOverrideMaterials` `LogEditCondition` and `ForceDeleteObjects` cleanup ensure; Inspect filter remains PASS 4/4. |
 | WS-08 | Material Toolset PASS on `c881742` — no further Material filter work from this triage. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
 | WS-11 | Re-run B7 after WS-07 fix; keep POC-B claims gated to their own criteria. |
 
-Standing by on orch for the WS-07 B7 crash fix. No junction retarget.
+Standing by on orch for the deeper WS-07 B7 override/cleanup fix. No junction retarget.
