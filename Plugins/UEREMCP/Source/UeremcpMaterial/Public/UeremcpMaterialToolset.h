@@ -24,7 +24,7 @@ class UEREMCPMATERIAL_API UUeremcpMaterialToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.1.0-wave2-scaffold"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.2.0-procedural-texture"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.
@@ -45,4 +45,12 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
 	static FString CreateVfxMaterial(const FString& RequestJson);
+
+	/**
+	 * Generate a procedural Texture2D under /Game/__UeremcpTests/ via FImageUtils::CreateTexture2D.
+	 *
+	 * @param RequestJson  Request with action create_procedural_texture and target.asset_path set.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
+	static FString CreateProceduralTexture(const FString& RequestJson);
 };

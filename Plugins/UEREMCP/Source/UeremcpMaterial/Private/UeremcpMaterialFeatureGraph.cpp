@@ -15,6 +15,7 @@
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionSphereMask.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
+#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialExpressionVectorParameter.h"
 #include "UeremcpMaterialFeatures.h"
@@ -271,7 +272,25 @@ namespace
 				Result.WiredFeatures.Add(TEXT("fresnel"));
 			}
 
-			if (Has(TEXT("panning_textures")) && TexCoord && FlowSpeed)
+			UMaterialExpressionTextureSampleParameter2D* MainTextureSample =
+				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 640);
+			UMaterialExpressionTextureSampleParameter2D* NoiseTextureSample =
+				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 760);
+			UMaterialExpressionTextureSampleParameter2D* FlowMapSample =
+				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 880);
+			UMaterialExpressionTextureSampleParameter2D* MaskTextureSample =
+				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 1000);
+			if (!MainTextureSample || !NoiseTextureSample || !FlowMapSample || !MaskTextureSample)
+			{
+				Result.Error = TEXT("Failed to create MI texture parameter samples.");
+				return false;
+			}
+			MainTextureSample->ParameterName = FName(TEXT("MainTexture"));
+			NoiseTextureSample->ParameterName = FName(TEXT("NoiseTexture"));
+			FlowMapSample->ParameterName = FName(TEXT("FlowMap"));
+			MaskTextureSample->ParameterName = FName(TEXT("MaskTexture"));
+
+			if (Has(TEXT("panning_textures")) && TexCoord && FlowSpeed && MainTextureSample)
 			{
 				UMaterialExpressionPanner* PannerExpr = AddExpression<UMaterialExpressionPanner>(-350, 660);
 				if (!PannerExpr)
@@ -282,15 +301,17 @@ namespace
 				PannerExpr->SpeedX = 0.5f;
 				PannerExpr->SpeedY = 0.0f;
 				if (!Connect(TexCoord, TEXT(""), PannerExpr, TEXT("Coordinate")) ||
-					!Connect(FlowSpeed, TEXT(""), PannerExpr, TEXT("Speed")))
+					!Connect(FlowSpeed, TEXT(""), PannerExpr, TEXT("Speed")) ||
+					!Connect(PannerExpr, TEXT(""), MainTextureSample, TEXT("Coordinates")))
 				{
 					Result.Error = TEXT("Failed to wire panning_textures.");
 					return false;
 				}
-				UMaterialExpressionMultiply* PanMod = Multiply(EmissiveChain, TEXT(""), PannerExpr, TEXT(""), -120, 440);
+				UMaterialExpressionMultiply* PanMod =
+					Multiply(EmissiveChain, TEXT(""), MainTextureSample, TEXT("RGB"), -120, 440);
 				if (!PanMod)
 				{
-					Result.Error = TEXT("Failed to multiply by panner.");
+					Result.Error = TEXT("Failed to multiply emissive by MainTexture.");
 					return false;
 				}
 				EmissiveChain = PanMod;

@@ -4,6 +4,7 @@
 
 #include "UeremcpEnvelope.h"
 #include "UeremcpMaterialService.h"
+#include "UeremcpProceduralTextureService.h"
 
 FString UUeremcpMaterialToolset::Echo(const FString& RequestJson)
 {
@@ -97,6 +98,64 @@ FString UUeremcpMaterialToolset::CreateVfxMaterial(const FString& RequestJson)
 	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
 	Response.Metrics.AssetsAffected =
 		CreateResult.CreatedAssets.Num() + CreateResult.ModifiedAssets.Num();
+
+	return FUeremcpEnvelope::SerializeResponse(Response);
+}
+
+FString UUeremcpMaterialToolset::CreateProceduralTexture(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
+				*Request.ProtocolVersion,
+				*FUeremcpEnvelope::ProtocolVersion()));
+	}
+
+	if (!Request.Action.Equals(TEXT("create_procedural_texture"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("create_procedural_texture tool received action '%s'."),
+				*Request.Action));
+	}
+
+	if (Request.TargetAssetPath.IsEmpty())
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("create_procedural_texture requires target.asset_path (Texture2D package path under /Game/__UeremcpTests/Textures/)."));
+	}
+
+	const FUeremcpProceduralTextureResult CreateResult =
+		UeremcpProceduralTextureService::ExecuteFromEnvelope(Request);
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.Status = CreateResult.Status;
+	Response.Summary = CreateResult.Summary;
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = CreateResult.PrimaryAsset;
+	Response.CreatedAssets = CreateResult.CreatedAssets;
+	Response.CapabilityNotes = CreateResult.CapabilityNotes;
+	Response.InterpretationNotes = CreateResult.InterpretationNotes;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
+	Response.Metrics.AssetsAffected = CreateResult.CreatedAssets.Num();
 
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }

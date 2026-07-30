@@ -79,7 +79,7 @@
           }
         ]
       },
-      "description": "Texture slot bindings: MainTexture, NoiseTexture, FlowMap, MaskTexture. Path or procedural generate spec (delegates to create_procedural_texture when implemented)."
+      "description": "Texture slot bindings: MainTexture, NoiseTexture, FlowMap, MaskTexture. Path or procedural generate spec (delegates to create_procedural_texture)."
     },
     "modifiers": {
       "type": "array",

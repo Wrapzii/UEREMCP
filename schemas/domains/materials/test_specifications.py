@@ -37,7 +37,7 @@ EXPECTED_LOSSY_AREAS = frozenset({
 
 EXPECTED_CAPABILITY_SNIPPETS = frozenset({
     "feature_graph_v1",
-    "textures.generate",
+    "procedural_texture_v1",
 })
 
 WS15_ELEMENTAL_PURPOSES = frozenset({

@@ -21,6 +21,7 @@ public class UeremcpMaterial : ModuleRules
 		{
 			"UnrealEd",
 			"AssetTools",
+			"AssetRegistry",
 			"Json",
 			"JsonUtilities",
 			"Projects",

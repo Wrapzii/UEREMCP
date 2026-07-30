@@ -7,6 +7,7 @@
 | Action | Specification schema | Status |
 |---|---|---|
 | `create_vfx_material` | `create_vfx_material.schema.json` | Wave 2 slice — elemental projectile core/trail wired via MaterialEditingLibrary |
+| `create_procedural_texture` | `create_procedural_texture.schema.json` | Wave 2 slice — CPU pixel fill via FImageUtils::CreateTexture2D; also invoked from `textures.generate` slots |
 
 Register `create_vfx_material` in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 when the tool leaves scaffold status.
 
@@ -55,14 +56,16 @@ Elemental VFX materials use **one tooling surface** (`create_vfx_material`) with
 | `radial_falloff` | `SphereMask` × `TextureCoordinate`, `SoftEdge` → hardness | `[VERIFIED: MaterialExpressionSphereMask.h]` |
 | `animated_noise` | Time + Panner → `Noise` × emissive, `Turbulence` → filter width | `[VERIFIED: MaterialExpressionNoise.h]` |
 | `fresnel` | `Fresnel` × emissive | `[VERIFIED: MaterialExpressionFresnel.h]` |
-| `panning_textures` | `Panner`(`FlowSpeed`) × emissive | `[VERIFIED: MaterialExpressionPanner.h]` |
+| `panning_textures` | Panner(`FlowSpeed`) × `MainTexture` sample → emissive | `[VERIFIED: MaterialExpressionPanner.h]`, `[VERIFIED: MaterialExpressionTextureSampleParameter2D.h]` |
 | `depth_fade` | `DepthFade`(`DepthFade` param) → `MP_Opacity` | `[VERIFIED: MaterialExpressionDepthFade.h]` |
 | `erosion` | `OneMinus`(`DissolveAmount`) × opacity | `[VERIFIED: MaterialExpressionOneMinus.h]` |
 
 Masters are named `{M_Ueremcp_ProjCore|ProjTrail}_{FeatureSignature}` so graph variants do not collide.
 Purpose defaults live in `element_presets.v1.json` → `purpose_default_features` (mirrored in C++).
 
-Not yet wired: `distortion`, `flow_maps`, `flipbook_subuv`, engine MaterialFunctions, `textures.generate`.
+Not yet wired: `distortion`, `flow_maps`, `flipbook_subuv`, engine MaterialFunctions.
+
+`textures.generate` slots (`noise`, `gradient`, `voronoi`, `ring_mask`, `flow_map`) execute via `create_procedural_texture` and bind to MI texture parameters (`MainTexture`, `NoiseTexture`, `FlowMap`, `MaskTexture`).
 
 ## Epic tool composition (implementation note)
 
@@ -90,7 +93,7 @@ These keys match `UeremcpMaterialCapabilityNotes.h` and `create_vfx_material` `c
 |---|---|---|
 | MaterialTools omits blend/shading/domain | Mitigated | Set on `UMaterial` before recompile in feature graph builder |
 | Feature tokens not wired | Mitigated (projectile slice) | See feature table above; unimplemented tokens → `created_with_warnings` |
-| No procedural texture Epic tool | Medium | `create_procedural_texture` semantic op (WS-08) |
+| Procedural texture generation | Mitigated | `create_procedural_texture` + `textures.generate` slots (CPU FImageUtils path) |
 | Element presets from JSON at runtime | Medium | C++ mirrors `element_presets.v1.json`; loader proposal pending |
 | Substrate shading overrides | Medium | Per-material runtime check in RE project |
 | Graph round-trip unproven | Medium | WS-11 harness under `/Game/__UeremcpTests/` |
@@ -106,6 +109,7 @@ python tools/validate_schemas.py
 python schemas/domains/materials/test_specifications.py
 python schemas/domains/materials/test_element_presets.py
 python schemas/domains/materials/test_features.py
+python schemas/domains/materials/test_procedural_texture.py
 python tools/check_ownership.py --ws WS-08
 ```
 

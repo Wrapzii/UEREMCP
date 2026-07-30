@@ -34,6 +34,7 @@ namespace UeremcpMaterialTests
 	{
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileCore_Fire"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileTrail_Ice"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map"));
 
 		UEditorAssetSubsystem* Subsystem = GetAssetSubsystem();
 		if (!Subsystem)
@@ -159,7 +160,8 @@ bool FUeremcpMaterialCreateVfxProjectileTrailTest::RunTest(const FString& Parame
 			"purpose":"elemental_projectile_trail",
 			"element":"ice",
 			"modifiers":["crystalline_fragments","reduce_trail_persistence"],
-			"features":["panning_textures","erosion","depth_fade","dynamic_color"]
+			"features":["panning_textures","erosion","depth_fade","dynamic_color"],
+			"textures":{"FlowMap":{"generate":"flow_map","dimensions":[256,256]}}
 		},
 		"options":{"compile":true,"validate":true,"save":true}
 	})"), *Target);
@@ -173,9 +175,46 @@ bool FUeremcpMaterialCreateVfxProjectileTrailTest::RunTest(const FString& Parame
 	if (Subsystem)
 	{
 		TestTrue(TEXT("trail MI exists"), Subsystem->DoesAssetExist(Target));
+		const FString FlowMapPath =
+			TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map");
+		TestTrue(TEXT("generated FlowMap texture exists"), Subsystem->DoesAssetExist(FlowMapPath));
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCreateProceduralTextureTest,
+	"UeremcpMaterial.Toolset.CreateProceduralTexture.Noise",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialCreateProceduralTextureTest::RunTest(const FString& Parameters)
+{
+	const FString Target = TEXT("/Game/__UeremcpTests/Textures/T_WS08_Noise_Probe");
+	UeremcpMaterialTests::DeleteIfExists(Target);
+
+	const FString Request = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-tex-noise",
+		"action":"create_procedural_texture",
+		"target":{"asset_path":"%s"},
+		"specification":{"generate":"noise","dimensions":[128,128],"seed":7},
+		"options":{"save":true}
+	})"), *Target);
+
+	const FString Json = UUeremcpMaterialToolset::CreateProceduralTexture(Request);
+	FString Status;
+	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
+	TestEqual(TEXT("created_and_validated"), Status, FString(TEXT("created_and_validated")));
+
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	if (Subsystem)
+	{
+		TestTrue(TEXT("texture asset exists"), Subsystem->DoesAssetExist(Target));
+	}
+
+	UeremcpMaterialTests::DeleteIfExists(Target);
 	return true;
 }
 

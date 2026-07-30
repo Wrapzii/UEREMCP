@@ -235,6 +235,34 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	MasterDep.Role = TEXT("master_template");
 	Result.Dependencies.Add(MasterDep);
 
+	FString MiFolder;
+	FString MiName;
+	if (!UeremcpMaterialPaths::SplitPackagePath(Request.TargetAssetPath, MiFolder, MiName))
+	{
+		Result.Status = TEXT("rejected");
+		Result.Summary = FString::Printf(TEXT("Invalid target.asset_path '%s'."), *Request.TargetAssetPath);
+		return Result;
+	}
+
+	TArray<FTextureSlotBinding> TextureBindings;
+	FString TextureError;
+	if (!ResolveTextureSlotsFromSpec(
+		Spec,
+		MiName,
+		Request.bDryRun,
+		Request.bSave,
+		TextureBindings,
+		Result.CreatedAssets,
+		Result.InterpretationNotes,
+		Result.CapabilityNotes,
+		Result.InternalOperations,
+		TextureError))
+	{
+		Result.Status = TEXT("rejected");
+		Result.Summary = TextureError;
+		return Result;
+	}
+
 	if (Request.bDryRun)
 	{
 		Result.bSuccess = true;
@@ -309,15 +337,6 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
-	FString MiFolder;
-	FString MiName;
-	if (!UeremcpMaterialPaths::SplitPackagePath(Request.TargetAssetPath, MiFolder, MiName))
-	{
-		Result.Status = TEXT("rejected");
-		Result.Summary = FString::Printf(TEXT("Invalid target.asset_path '%s'."), *Request.TargetAssetPath);
-		return Result;
-	}
-
 	const bool bExisted = AssetSubsystem->DoesAssetExist(Request.TargetAssetPath);
 	UMaterialInstanceConstant* Instance = nullptr;
 	bool bCreatedInstance = false;
@@ -355,6 +374,19 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.Status = TEXT("failed_validation");
 		Result.Summary = TEXT("Failed to apply MI parameters.");
 		return Result;
+	}
+
+	if (TextureBindings.Num() > 0)
+	{
+		FString TextureApplyError;
+		if (!ApplyTextureSlotsToInstance(Instance, TextureBindings, AssetSubsystem, Result.InternalOperations, TextureApplyError))
+		{
+			Result.Status = TEXT("failed_validation");
+			Result.Summary = TextureApplyError;
+			return Result;
+		}
+		Result.InterpretationNotes.Add(
+			FString::Printf(TEXT("Applied %d MI texture slot binding(s)."), TextureBindings.Num()));
 	}
 
 	Instance->MarkPackageDirty();
