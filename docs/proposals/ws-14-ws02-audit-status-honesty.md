@@ -38,3 +38,9 @@ proposal is about status language only, not discarding the scan.
 **Accepted.** Change status to `source_complete` (or equivalent) until live
 `list_toolsets` / `describe_toolset` dumps land. Finish `reagenttools.md`
 disposition table. Do not let domain agents treat schemas as runtime-verified.
+
+### Update 2026-07-29 (resolved)
+
+WS-02 landed `ab4c300`: Epic + REAgentTools marked `source_complete`; runtime
+checklist added; 15-toolset disposition matrix filled. Runtime enumeration and
+cutover/coexistence remain open — correctly not claimed complete.
