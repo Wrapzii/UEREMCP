@@ -83,7 +83,7 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_spell` | gameplay | WS-09 | planned | RB-12 |
+| `create_spell` | gameplay | WS-09 | partial | RB-12 — preflight-only probe; module registration, WS-12 mutator queue, and editor runtime validation are pending |
 | `create_gameplay_ability` | gameplay_abilities | WS-09 | research | RB-12 |
 | `create_gameplay_effect` | gameplay_abilities | WS-09 | research | RB-12 |
 | `create_player_ability` | gameplay | WS-09 | planned | RB-12 |
