@@ -64,12 +64,36 @@ FString UeremcpMaterialNiagaraExport::SanitizeAssetToken(const FString& Token)
 
 FString UeremcpMaterialNiagaraExport::ResolveMaterialInstancePath(
 	const FString& NiagaraAssetName,
-	const FString& Role)
+	const FString& Role,
+	const FString& ScratchContentRoot)
 {
 	const FString SafeName = SanitizeAssetToken(NiagaraAssetName);
 	const FString SafeRole = SanitizeAssetToken(Role);
 	const FString AssetName = FString::Printf(TEXT("MI_%s_%s"), *SafeName, *SafeRole);
-	return UeremcpMaterialPaths::JoinPackagePath(UeremcpMaterialPaths::MaterialsFolder, AssetName);
+	return UeremcpMaterialPaths::JoinPackagePath(
+		UeremcpMaterialPaths::MaterialsFolderForContentRoot(ScratchContentRoot),
+		AssetName);
+}
+
+FString UeremcpMaterialNiagaraExport::ResolveMaterialInstancePathForNiagaraSystem(
+	const FString& NiagaraSystemPackagePath,
+	const FString& Role)
+{
+	FString Folder;
+	FString SystemName;
+	if (!UeremcpMaterialPaths::SplitPackagePath(NiagaraSystemPackagePath, Folder, SystemName))
+	{
+		return FString();
+	}
+
+	const FString ScratchContentRoot =
+		UeremcpMaterialPaths::ResolveScratchContentRoot(NiagaraSystemPackagePath);
+	if (ScratchContentRoot.IsEmpty())
+	{
+		return FString();
+	}
+
+	return ResolveMaterialInstancePath(SystemName, Role, ScratchContentRoot);
 }
 
 bool UeremcpMaterialNiagaraExport::ResolvePurposeForNiagaraRole(const FString& Role, FString& OutPurpose)

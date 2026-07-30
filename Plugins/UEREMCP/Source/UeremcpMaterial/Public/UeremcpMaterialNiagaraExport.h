@@ -7,6 +7,7 @@
 
 #include "CoreMinimal.h"
 #include "UeremcpEnvelope.h"
+#include "UeremcpMaterialPaths.h"
 #include "UeremcpMaterialService.h"
 
 namespace UeremcpMaterialNiagaraExport
@@ -16,10 +17,16 @@ namespace UeremcpMaterialNiagaraExport
 
 	/**
 	 * Deterministic MI package path for inline Niagara material creation.
-	 * Pattern: /Game/__UeremcpTests/Materials/MI_<NiagaraName>_<Role>
+	 * Pattern: <ScratchContentRoot>/Materials/MI_<NiagaraName>_<Role>
 	 */
 	UEREMCPMATERIAL_API FString ResolveMaterialInstancePath(
 		const FString& NiagaraAssetName,
+		const FString& Role,
+		const FString& ScratchContentRoot = UeremcpMaterialPaths::TestsContentRoot);
+
+	/** Derive scratch content root from a Niagara system package path and build MI path. */
+	UEREMCPMATERIAL_API FString ResolveMaterialInstancePathForNiagaraSystem(
+		const FString& NiagaraSystemPackagePath,
 		const FString& Role);
 
 	/**

@@ -77,7 +77,7 @@ FString UUeremcpMaterialToolset::CreateVfxMaterial(const FString& RequestJson)
 	{
 		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
-			TEXT("create_vfx_material requires target.asset_path (material instance package path, e.g. /Game/__UeremcpTests/Materials/MI_Fireball_Core)."));
+			TEXT("create_vfx_material requires target.asset_path (material instance under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/)."));
 	}
 
 	const FUeremcpMaterialCreateResult CreateResult = UeremcpMaterialService::ExecuteCreateVfxMaterial(Request);
@@ -138,7 +138,7 @@ FString UUeremcpMaterialToolset::CreateProceduralTexture(const FString& RequestJ
 	{
 		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
-			TEXT("create_procedural_texture requires target.asset_path (Texture2D package path under /Game/__UeremcpTests/Textures/)."));
+			TEXT("create_procedural_texture requires target.asset_path (Texture2D under /Game/__UeremcpTests/Textures/ or /Game/__UeremcpPoc/Textures/)."));
 	}
 
 	const FUeremcpProceduralTextureResult CreateResult =

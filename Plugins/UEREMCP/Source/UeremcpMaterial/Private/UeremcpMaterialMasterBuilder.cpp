@@ -63,9 +63,9 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 	FUeremcpMaterialMasterBuildResult Result;
 	Result.MasterPackagePath = Request.MasterPackagePath;
 
-	if (!UeremcpMaterialPaths::IsUnderTestsRoot(Request.MasterPackagePath))
+	if (!UeremcpMaterialPaths::IsUnderAllowedScratchRoot(Request.MasterPackagePath))
 	{
-		Result.Error = TEXT("Master materials may only be created under /Game/__UeremcpTests/.");
+		Result.Error = TEXT("Master materials may only be created under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/.");
 		return Result;
 	}
 

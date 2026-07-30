@@ -319,6 +319,7 @@ namespace
 	static bool ResolveTextureSlotsFromSpec(
 		const TSharedPtr<FJsonObject>& Spec,
 		const FString& MiAssetName,
+		const FString& ScratchContentRoot,
 		bool bDryRun,
 		bool bSave,
 		bool bValidate,
@@ -358,10 +359,10 @@ namespace
 			if (Value->Type == EJson::String)
 			{
 				ResolvedPath = Value->AsString();
-				if (!UeremcpMaterialPaths::IsUnderTestsRoot(ResolvedPath))
+				if (!UeremcpMaterialPaths::IsUnderAllowedScratchRoot(ResolvedPath))
 				{
 					OutError = FString::Printf(
-						TEXT("Texture slot '%s' path '%s' must be under /Game/__UeremcpTests/."),
+						TEXT("Texture slot '%s' path '%s' must be under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/."),
 						*SlotName,
 						*ResolvedPath);
 					return false;
@@ -395,7 +396,9 @@ namespace
 				}
 
 				const FString AssetName = ProceduralTextureAssetName(MiAssetName, SlotName, Kind);
-				ResolvedPath = UeremcpMaterialPaths::JoinPackagePath(UeremcpMaterialPaths::TexturesFolder, AssetName);
+				ResolvedPath = UeremcpMaterialPaths::JoinPackagePath(
+					UeremcpMaterialPaths::TexturesFolderForContentRoot(ScratchContentRoot),
+					AssetName);
 
 				if (bDryRun)
 				{
@@ -661,10 +664,20 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
-	if (!UeremcpMaterialPaths::IsUnderTestsRoot(Request.TargetAssetPath))
+	if (!UeremcpMaterialPaths::IsUnderAllowedScratchRoot(Request.TargetAssetPath))
 	{
 		Result.Status = TEXT("rejected");
-		Result.Summary = TEXT("create_vfx_material only writes under /Game/__UeremcpTests/ until WS-12 tier policy extends allowed roots.");
+		Result.Summary = TEXT(
+			"create_vfx_material only writes under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/.");
+		return Result;
+	}
+
+	const FString ScratchContentRoot =
+		UeremcpMaterialPaths::ResolveScratchContentRoot(Request.TargetAssetPath);
+	if (ScratchContentRoot.IsEmpty())
+	{
+		Result.Status = TEXT("rejected");
+		Result.Summary = TEXT("create_vfx_material target is not under an allowed scratch root.");
 		return Result;
 	}
 
@@ -743,7 +756,8 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.InterpretationNotes.Add(TEXT("Merged specification.parameter_overrides."));
 	}
 
-	const FString MasterPath = UeremcpMaterialFeatures::ResolveMasterPackagePath(Purpose, Features);
+	const FString MasterPath =
+		UeremcpMaterialFeatures::ResolveMasterPackagePath(Purpose, Features, ScratchContentRoot);
 	Result.InterpretationNotes.Add(
 		FString::Printf(
 			TEXT("purpose '%s' → master '%s' (features: %s)."),
@@ -780,6 +794,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	if (!ResolveTextureSlotsFromSpec(
 		Spec,
 		MiName,
+		ScratchContentRoot,
 		Request.bDryRun,
 		Request.bSave,
 		Request.bValidate,

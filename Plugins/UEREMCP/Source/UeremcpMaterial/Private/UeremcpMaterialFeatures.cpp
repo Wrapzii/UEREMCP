@@ -118,12 +118,15 @@ FString UeremcpMaterialFeatures::MasterBaseAssetName(const FString& Purpose)
 
 FString UeremcpMaterialFeatures::ResolveMasterPackagePath(
 	const FString& Purpose,
-	const TArray<FString>& Features)
+	const TArray<FString>& Features,
+	const FString& ScratchContentRoot)
 {
 	const FString Base = MasterBaseAssetName(Purpose);
 	const FString Signature = ComputeFeatureSignature(Features);
 	const FString AssetName = FString::Printf(TEXT("%s_%s"), *Base, *Signature);
-	return UeremcpMaterialPaths::JoinPackagePath(UeremcpMaterialPaths::MastersFolder, AssetName);
+	return UeremcpMaterialPaths::JoinPackagePath(
+		UeremcpMaterialPaths::MastersFolderForContentRoot(ScratchContentRoot),
+		AssetName);
 }
 
 bool UeremcpMaterialFeatures::IsImplementedFeature(const FString& Feature)

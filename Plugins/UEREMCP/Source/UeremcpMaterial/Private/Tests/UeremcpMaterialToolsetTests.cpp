@@ -293,6 +293,99 @@ bool FUeremcpMaterialSplitPackagePathTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialAllowedScratchRootTest,
+	"UeremcpMaterial.Toolset.Paths.AllowedScratchRoot",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialAllowedScratchRootTest::RunTest(const FString& Parameters)
+{
+	TestTrue(
+		TEXT("tests root allowed"),
+		UeremcpMaterialPaths::IsUnderAllowedScratchRoot(TEXT("/Game/__UeremcpTests/Materials/MI_Foo")));
+	TestTrue(
+		TEXT("poc root allowed"),
+		UeremcpMaterialPaths::IsUnderAllowedScratchRoot(TEXT("/Game/__UeremcpPoc/Materials/MI_Fireball_Core")));
+	TestTrue(
+		TEXT("exact poc root allowed"),
+		UeremcpMaterialPaths::IsUnderAllowedScratchRoot(TEXT("/Game/__UeremcpPoc")));
+	TestFalse(
+		TEXT("game content denied"),
+		UeremcpMaterialPaths::IsUnderAllowedScratchRoot(TEXT("/Game/MyProject/Materials/MI_Foo")));
+	TestFalse(
+		TEXT("prefix trap denied"),
+		UeremcpMaterialPaths::IsUnderAllowedScratchRoot(TEXT("/Game/__UeremcpTestsExtra/Materials/MI_Foo")));
+
+	TestEqual(
+		TEXT("resolve tests scratch root"),
+		UeremcpMaterialPaths::ResolveScratchContentRoot(TEXT("/Game/__UeremcpTests/Textures/T_Foo")),
+		FString(UeremcpMaterialPaths::TestsContentRoot));
+	TestEqual(
+		TEXT("resolve poc scratch root"),
+		UeremcpMaterialPaths::ResolveScratchContentRoot(TEXT("/Game/__UeremcpPoc/Materials/MI_Core")),
+		FString(UeremcpMaterialPaths::PocContentRoot));
+
+	TestEqual(
+		TEXT("poc masters folder"),
+		UeremcpMaterialPaths::MastersFolderForContentRoot(UeremcpMaterialPaths::PocContentRoot),
+		FString(TEXT("/Game/__UeremcpPoc/Materials/Masters")));
+
+	const FString NiagaraMi = UeremcpMaterialNiagaraExport::ResolveMaterialInstancePathForNiagaraSystem(
+		TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball"),
+		TEXT("core"));
+	TestEqual(
+		TEXT("niagara system resolves poc MI path"),
+		NiagaraMi,
+		FString(TEXT("/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_core")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialPocPathPolicyTest,
+	"UeremcpMaterial.Toolset.CreateVfxMaterial.PocPathPolicy",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialPocPathPolicyTest::RunTest(const FString& Parameters)
+{
+	const FString PocTarget = TEXT("/Game/__UeremcpPoc/Materials/MI_WS08_PocDry");
+	const FString DryRequest = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-poc-dry",
+		"action":"create_vfx_material",
+		"target":{"asset_path":"%s"},
+		"specification":{
+			"purpose":"fireball_core",
+			"element":"fire",
+			"features":["radial_falloff","animated_noise","fresnel","dynamic_color","dynamic_intensity"]
+		},
+		"options":{"dry_run":true}
+	})"), *PocTarget);
+
+	const FString DryJson = UUeremcpMaterialToolset::CreateVfxMaterial(DryRequest);
+	FString DryStatus;
+	TestTrue(TEXT("poc dry_run parseable"), UeremcpMaterialTests::ParseStatus(DryJson, DryStatus));
+	TestEqual(TEXT("poc dry_run accepted"), DryStatus, FString(TEXT("no_change_required")));
+	TestTrue(
+		TEXT("poc dry_run mentions poc master folder"),
+		DryJson.Contains(TEXT("/Game/__UeremcpPoc/Materials/Masters/")));
+
+	const FString BadRequest = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-bad-root",
+		"action":"create_vfx_material",
+		"target":{"asset_path":"/Game/MyGame/Materials/MI_Bad"},
+		"specification":{"purpose":"fireball_core","element":"fire"},
+		"options":{"dry_run":true}
+	})");
+	const FString BadJson = UUeremcpMaterialToolset::CreateVfxMaterial(BadRequest);
+	FString BadStatus;
+	TestTrue(TEXT("bad root parseable"), UeremcpMaterialTests::ParseStatus(BadJson, BadStatus));
+	TestEqual(TEXT("bad root rejected"), BadStatus, FString(TEXT("rejected")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpMaterialToolsetEchoTest,
 	"UeremcpMaterial.Toolset.Echo",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

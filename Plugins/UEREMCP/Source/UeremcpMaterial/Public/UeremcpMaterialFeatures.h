@@ -6,6 +6,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UeremcpMaterialPaths.h"
 
 class UMaterial;
 
@@ -29,8 +30,11 @@ namespace UeremcpMaterialFeatures
 	/** Master base name without signature, e.g. M_Ueremcp_ProjCore. */
 	FString MasterBaseAssetName(const FString& Purpose);
 
-	/** Full package path including feature signature. */
-	FString ResolveMasterPackagePath(const FString& Purpose, const TArray<FString>& Features);
+	/** Full package path including feature signature under the given scratch content root. */
+	FString ResolveMasterPackagePath(
+		const FString& Purpose,
+		const TArray<FString>& Features,
+		const FString& ScratchContentRoot = UeremcpMaterialPaths::TestsContentRoot);
 
 	/** Feature tokens we can wire in Wave 2 feature-graph slice. */
 	bool IsImplementedFeature(const FString& Feature);

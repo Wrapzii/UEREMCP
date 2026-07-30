@@ -245,10 +245,11 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 		return Result;
 	}
 
-	if (!UeremcpMaterialPaths::IsUnderTestsRoot(Request.TargetAssetPath))
+	if (!UeremcpMaterialPaths::IsUnderAllowedScratchRoot(Request.TargetAssetPath))
 	{
 		Result.Status = TEXT("rejected");
-		Result.Summary = TEXT("Procedural textures may only be written under /Game/__UeremcpTests/.");
+		Result.Summary = TEXT(
+			"Procedural textures may only be written under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/.");
 		return Result;
 	}
 
