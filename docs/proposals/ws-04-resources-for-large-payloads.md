@@ -30,7 +30,6 @@ data while keeping default `summary` responses small (ADR-0003 rule 1).
 Confirm in ADR-0004 addendum or ADR-0009 whether resource URIs are normative for
 `complete` detail, and assign implementation to the domain workstream that owns
 the graph serializer.
-
 ## Response
 
 **Accepted (allowed, not mandatory).** ADR-0009 records MCP resources as a

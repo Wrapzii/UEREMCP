@@ -1,76 +1,345 @@
 # RB-04: Transport options, progress, cancellation, long-running jobs
 
 - **Owner:** WS-04
-- **Status:** not_started
-- **Blocks:** ADR-0009 (long-running job model), WS-05's job design
+- **Status:** complete (Wave 1 handoff)
+- **Blocks:** ADR-0009 (long-running job model), WS-05 job design
 - **Priority:** high
+- **Handoff artifact:** `Plugins/UEREMCP/Source/UeremcpTransport/constraints/transport_job_handoff.json`
 
-## Framing
+## Executive summary
 
-ADR-0002 removed the "which language for the external server" question by adopting
-Epic's in-process server. That inherits Epic's transport characteristics, whatever they
-are. Master prompt §18 asks for queued jobs, job IDs, progress, cancellation, timeouts,
-heartbeat, crash recovery, and resumable operations — and the response envelope has a
-`job` block reserving space for them.
+Epic's `ModelContextProtocol` is **HTTP-only** (no stdio), implements **Streamable
+HTTP with SSE** for `tools/call`, negotiates protocol **`2025-11-25`**, supports
+**resources**, **progress notifications** (heartbeat-style), and **cancellation**
+at the MCP layer — but **ToolsetRegistry-backed tools do not wire `CancelAsync`**.
+There are **no engine job IDs**; UEREMCP must implement the envelope `job` block as
+an in-process poll model (`get_job_result`). Progress from Epic is **not**
+semantic percent-complete — only interval heartbeats when the client sends
+`progressToken`.
 
-Whether any of that is achievable depends on facts we do not have.
+**Recommended job model for ADR-0009:** `options.timeout_ms == 0` → complete inline
+on the MCP SSE stream; `timeout_ms > 0` → return `partially_completed` with `job`
+handle before client/MCP timeout, continue work in-process, poll via
+`get_job_result`. Map MCP `notifications/cancelled` to cooperative domain
+cancellation when implemented.
 
-## Questions
+---
 
-### A. Transport
+## A. Transport
 
-1. Does `ModelContextProtocol` support **stdio** in addition to HTTP? Settings expose
-   only `ServerUrlPath`, `ServerPortNumber`, `bAutoStartServer`
-   `[VERIFIED: ModelContextProtocolSettings.h]`, which suggests HTTP only. Confirm from
-   `ModelContextProtocolServer.h` / `Session.h`.
-2. Does it implement Streamable HTTP / SSE, or plain request-response? This determines
-   whether progress can be *pushed* or must be *polled*.
-3. What MCP protocol version does it implement, and what capabilities does it negotiate
-   (`ModelContextProtocolCapabilities.h`)?
-4. Does it support MCP **resources** (`IModelContextProtocolResourceProvider.h`)? If so,
-   large graph payloads might be served as resources rather than tool results — a
-   potentially significant answer for the payload-size problem in ADR-0004 and
-   `docs/WHY.md`. **Follow this up; it could change the design.**
-5. Does it support MCP **notifications** / server-initiated messages? Required for
-   pushed progress.
-6. Multiple concurrent clients — supported? Relevant because the owner intends to run a
-   swarm of agents against one editor. **Directly relevant to ADR-0006's concurrency
-   assumptions.**
-7. What happens to an in-flight tool call if the client disconnects?
+### A1. stdio vs HTTP
 
-### B. Long-running work
+| Verdict | HTTP only. No stdio transport in engine MCP plugin. |
+|---|---|
 
-8. How long can a tool call take before something times out — HTTP layer, MCP client, or
-   engine? Measure, do not assume.
-9. Is there existing job/async infrastructure, or only `TFuture` per call
-   (`ModelContextProtocolToolAsyncAction.h`, `UToolCallAsyncResult`)?
-10. Can progress be reported mid-call? If not, the `job` block in the response envelope
-    must be implemented by us as an explicit poll model: return immediately with a
-    `job_id`, and the agent calls `get_job_result`.
-11. Can a running tool call be cancelled?
-12. Does the editor stay responsive during a long tool call, or does main-thread work
-    block the UI? A tool that freezes the editor for 90 seconds is a usability failure
-    even when it succeeds.
-13. What happens on editor crash mid-job? Any recovery, or is state lost?
+**Evidence:**
 
-### C. Practicalities
+- `FModelContextProtocolServer` comment: *"Serves MCP tools over HTTP"*
+  `[VERIFIED: ModelContextProtocolServer.h:23-24]`
+- Settings expose only `ServerUrlPath`, `ServerPortNumber`, `bAutoStartServer`
+  `[VERIFIED: ModelContextProtocolSettings.h:23-42]`
+- `StartServer` binds HTTP routes (POST/GET/DELETE) via `IHttpRouter`
+  `[VERIFIED: ModelContextProtocolServer.cpp:416-447]`
+- Repository-wide search for `stdio` under `$MCP`: **zero matches**
+  `[VERIFIED: grep ModelContextProtocol]`
 
-14. Does the server need `bAutoStartServer = true` for our workflow, and what are the
-    implications of enabling it by default in project config?
-15. How does an MCP client discover the server — is `$PROJ/.mcp.json` the whole story?
-16. What logging does the server emit, and is it enough for the observability
-    requirements in master prompt §19?
-17. Is `Optional/UnrealWatchMCP` in REAgentTools (Slate dialog / lockup detection)
-    solving a real problem we will also hit — a modal dialog blocking a tool call
-    indefinitely? Almost certainly yes. Determine whether we need equivalent protection.
+Client config generation writes `"type": "http"` URLs to `http://127.0.0.1:<port><path>`
+`[VERIFIED: ModelContextProtocolClientConfig.cpp:158]`.
 
-## Deliverables
+### A2. Streamable HTTP / SSE vs plain request-response
 
-- [ ] A transport capability table: stdio / SSE / notifications / resources / concurrency
-- [ ] A measured maximum practical tool-call duration — `[VERIFIED-RUNTIME]`
-- [ ] A recommended job model for ADR-0009, with a clear statement of what the engine
-      gives us versus what we must build
-- [ ] A verdict on question 4 (resources for large payloads) flagged to WS-01
-- [ ] A verdict on question 6 (concurrent clients) flagged to WS-01 — ADR-0006 assumes
-      multiple agents share a project
-- [ ] A recommendation on modal-dialog/lockup protection, to WS-12
+| Verdict | Hybrid. JSON-RPC POST for control; `tools/call` returns `text/event-stream` with SSE `data:` frames. |
+|---|---|
+
+**Evidence:**
+
+- `tools/call` creates `ContentTypeEventStream` response with `MultipleWriteStream`
+  `[VERIFIED: ModelContextProtocolServer.cpp:840-846, 892-895]`
+- `FormatSSEMessage` emits `event: message\r\ndata: ...`
+  `[VERIFIED: ModelContextProtocolServer.cpp:278-280]`
+- `initialize`, `tools/list`, `resources/*` return plain JSON HTTP bodies via
+  `CompleteWithResult` `[VERIFIED: ModelContextProtocolServer.cpp:182-198]`
+- GET on MCP path returns **405 BadMethod** — no standalone SSE listen endpoint
+  `[VERIFIED: ModelContextProtocolServer.cpp:1066-1075]`
+- Epic tests note UE HTTP server uses raw TCP without Content-Length for streams;
+  clients should use short `SetActivityTimeout` (~2s) when tool completes quickly
+  `[VERIFIED: ModelContextProtocolEngineSubsystemTests.cpp:557-561]`
+
+**Implication:** Progress and final results are **pushed on the open `tools/call`
+stream**, not on a separate persistent channel.
+
+### A3. Protocol version and capabilities
+
+| Field | Value |
+|---|---|
+| Server latest | `2025-11-25` `[VERIFIED: ModelContextProtocol.h:19]` |
+| Also supported | `2025-06-18`, `2024-11-05` `[VERIFIED: ModelContextProtocol.h:24-28]` |
+| Negotiation | Client version if supported, else server latest `[VERIFIED: ModelContextProtocol.h:33-42]` |
+| Header | `Mcp-Protocol-Version` must match post-init `[VERIFIED: ModelContextProtocolServer.cpp:597-602]` |
+
+**Server capabilities advertised at initialize:**
+
+- `tools.listChanged = true` `[VERIFIED: ModelContextProtocolServer.cpp:677-679]`
+- `resources` capability object set (list/read implemented)
+  `[VERIFIED: ModelContextProtocolServer.cpp:680]`
+- Logging, prompts, sampling, elicitation structs exist in
+  `ModelContextProtocolCapabilities.h` but are not all advertised at init from
+  the snippet read — tools + resources are the active surface.
+
+### A4. MCP resources (flagged WS-01)
+
+| Verdict | **Yes — viable for large payloads.** Register `IModelContextProtocolResourceProvider`. |
+|---|---|
+
+**Evidence:**
+
+- `resources/list`, `resources/read` methods dispatched
+  `[VERIFIED: ModelContextProtocolServer.cpp:35-36, 627-634]`
+- `IModelContextProtocolResourceProvider::ListResources` / `ReadResource`
+  `[VERIFIED: IModelContextProtocolResourceProvider.h:30-33]`
+- Module API: `AddResourceProvider` / `GetResourceProviders`
+  `[VERIFIED: IModelContextProtocolModule.h:105-119]`
+
+See `docs/proposals/ws-04-resources-for-large-payloads.md`.
+
+### A5. Notifications / server-initiated messages
+
+| Notification | Supported when |
+|---|---|
+| `notifications/progress` | Active `tools/call` SSE + client `progressToken` in `_meta` `[VERIFIED: ModelContextProtocolServer.cpp:821-828, 1036-1057]` |
+| `notifications/tools/list_changed` | Deferred to next tick; delivered only on sessions with active SSE stream `[VERIFIED: ModelContextProtocolServer.cpp:1006-1034]` |
+| `notifications/cancelled` | Client → server; cancels via `CancelAsync` `[VERIFIED: ModelContextProtocolServer.cpp:697-728]` |
+
+**CVar:** `ModelContextProtocol.ProgressIntervalSeconds` (default 1.0s) controls
+heartbeat interval `[VERIFIED: ModelContextProtocol.cpp:57-61]`.
+
+Progress values are **monotonic integers**, not 0–1 fractions; comment says *"simply a
+heartbeat as the total duration is unknown"* `[VERIFIED: ModelContextProtocolServer.cpp:1052-1053]`.
+
+### A6. Multiple concurrent clients (flagged WS-01)
+
+| Verdict | **Transport: yes. Safe parallel writes: no guarantee.** |
+|---|---|
+
+Each `initialize` allocates a new session GUID `[VERIFIED: ModelContextProtocolServer.cpp:664-671]`.
+No max-session cap in server code. ToolsetRegistry executes tools without a global
+queue `[VERIFIED: ModelContextProtocolToolsetRegistryAdapter.cpp:66-78]`.
+
+See `docs/proposals/ws-04-concurrent-clients.md`.
+
+### A7. Client disconnect during in-flight tool call
+
+| Verdict | Tool may continue; result discarded if session/request removed. |
+|---|---|
+
+On completion, if `ActiveRequests` no longer contains the request id, result is
+**silently dropped** (cancelled per MCP spec) `[VERIFIED: ModelContextProtocolServer.cpp:866-870]`.
+`DELETE` with `Mcp-Session-Id` removes session `[VERIFIED: ModelContextProtocolServer.cpp:1078-1105]`.
+No automatic `CancelAsync` on disconnect.
+
+---
+
+## B. Long-running work
+
+### B8. Timeouts — layers
+
+| Layer | Finding |
+|---|---|
+| Epic HTTP server | **No tool-duration timeout** in server code reviewed. |
+| UE HTTP client (tests) | Default activity timeout ~**30s** for SSE streams that never close cleanly `[VERIFIED: ModelContextProtocolEngineSubsystemTests.cpp:559-561]` |
+| MCP clients (Cursor, etc.) | **Not measured** — editor was not running this session. |
+| Envelope `options.timeout_ms` | UEREMCP-owned; schema describes poll on exceed `[VERIFIED: schemas/envelope/request.schema.json:89]` |
+
+`[VERIFIED-RUNTIME]` **Not obtained** — Unreal Editor was not reachable
+(`user-unreal-watch` timed out). Timeout table above is from Epic test comments and
+header inspection only.
+
+### B9. Existing async infrastructure
+
+| Mechanism | Role |
+|---|---|
+| `IModelContextProtocolTool::RunAsync` + `FResultCallback` | MCP tool async contract `[VERIFIED: IModelContextProtocolTool.h:80-95]` |
+| `TFuture<TValueOrError<FString,FString>>` | ToolsetRegistry `ExecuteTool` `[VERIFIED: Toolset.h via GROUNDED_FACTS.md §2.2]` |
+| `UToolCallAsyncResult` + `UToolCallAsyncResultFutureHandler` | UObject promise pattern; `CanceledError` on unsubscribe `[VERIFIED: ToolCallAsyncResultFutureHandler.h:35-36, 61-62]` |
+| `UModelContextProtocolToolAsyncAction` | **Deprecated** legacy path `[VERIFIED: ModelContextProtocolToolAsyncAction.h:19-22]` |
+
+No first-class job registry in Epic MCP.
+
+### B10. Mid-call progress
+
+| Engine provides | UEREMCP must build |
+|---|---|
+| Heartbeat `notifications/progress` on SSE when `progressToken` set | Map domain milestones to `job.progress` / `progress_message` in envelope |
+| | Do not rely on Epic heartbeat as percent-complete |
+
+ToolsetRegistry adapter does **not** forward progress to MCP
+`[VERIFIED: ModelContextProtocolToolsetRegistryAdapter.cpp — no progress calls]`.
+
+### B11. Cancellation
+
+| Layer | Works? |
+|---|---|
+| MCP `notifications/cancelled` | Yes — calls `IModelContextProtocolTool::CancelAsync` `[VERIFIED: ModelContextProtocolServer.cpp:717-719]` |
+| Default `CancelAsync` | Empty no-op `[VERIFIED: IModelContextProtocolTool.h:97]` |
+| Legacy async actions | `UCancellableAsyncAction::Cancel()` `[VERIFIED: ModelContextProtocolToolAsyncAction.cpp:347-355]` |
+| **ToolsetRegistry / AICallable tools** | **Not wired** — adapter has no `CancelAsync` override `[VERIFIED: ModelContextProtocolToolsetRegistryAdapter.h:13-26]` |
+
+UEREMCP must implement cooperative cancellation inside domain services and expose
+`cancellable: true` only when honored.
+
+### B12. Editor responsiveness
+
+Tool results consumed on **game thread** `[VERIFIED: ModelContextProtocolServer.cpp:851-853]`.
+Long synchronous work on game thread **blocks UI and MCP**. ToolsetRegistry documents
+main-thread marshalling for async results `[VERIFIED: ToolCallAsyncResult.h:81-83]`.
+
+Domain services must offload heavy work to background threads and complete on game
+thread only for editor mutations.
+
+### B13. Crash mid-job
+
+No persistence. Sessions and `ActiveRequests` are in-memory
+`[VERIFIED: ModelContextProtocolSession.h:128-138]`. Crash loses all in-flight work.
+Wave 1 job model: **in-memory only**; resumable jobs are a later ADR scope.
+
+---
+
+## C. Practicalities
+
+### C14. `bAutoStartServer`
+
+Default `false` `[VERIFIED: ModelContextProtocolSettings.h:42]`.
+Editor module starts server when `ShouldAutoStartServer()` true
+`[VERIFIED: ModelContextProtocolEditor.cpp:64-68]`.
+CLI overrides: `-ModelContextProtocolStartServer`, `-ModelContextProtocolPort=N`
+`[VERIFIED: ModelContextProtocolSettings.cpp:19-49]`.
+Console: `ModelContextProtocol.StartServer` `[VERIFIED: ModelContextProtocolModule.cpp:31-33]`.
+
+**Workflow:** Agents need server running — enable auto-start in project settings, CLI
+flag, or manual console command. UEREMCP should not second-guess Epic startup.
+
+### C15. Client discovery
+
+Epic generates per-client configs (`.mcp.json`, `.cursor/mcp.json`, etc.) via
+`ModelContextProtocol.GenerateClientConfig` `[VERIFIED: ModelContextProtocolClientConfig.h:38-48]`.
+RE project uses `http://127.0.0.1:8000/mcp` `[VERIFIED: GROUNDED_FACTS.md §1.1]`.
+
+### C16. Logging / observability
+
+`LogModelContextProtocol` category; analytics via `IModelContextProtocolModule::RecordAnalyticsEvent`
+`[VERIFIED: IModelContextProtocolModule.h:95-99]`.
+Session/tool events in `ModelContextProtocolAnalytics.h`.
+Sufficient for transport debugging; UEREMCP adds envelope `metrics` per ADR-0003.
+
+### C17. Modal dialog protection (WS-12)
+
+Documented in REAgentTools UnrealWatchMCP — host-side, not in-editor
+`[VERIFIED: REAgentTools/Optional/UnrealWatchMCP/README.md]`.
+See `docs/proposals/ws-04-modal-protection.md`.
+
+---
+
+## Transport capability table
+
+| Capability | Epic MCP | UEREMCP action |
+|---|---|---|
+| stdio | No | N/A (ADR-0002) |
+| HTTP | Yes | Use as-is |
+| SSE tool streams | Yes | Use as-is |
+| Persistent server push | No (GET 405) | Poll model for jobs |
+| MCP resources | Yes | Optional provider for `complete` payloads |
+| MCP progress push | Heartbeat only | Semantic progress in `job` block |
+| MCP cancel notification | Yes | Wire cooperative cancel in tools |
+| ToolsetRegistry cancel | No | Must implement |
+| Job IDs | No | In-process registry |
+| Auth | Origin guard only | WS-12 |
+| Concurrent sessions | Yes | Document write hazards |
+
+---
+
+## Recommended job model (ADR-0009 input)
+
+Machine-readable: `Plugins/UEREMCP/Source/UeremcpTransport/constraints/transport_job_handoff.json`
+
+C++ mirror: `UeremcpJobConstraints.h`, `UeremcpTransportProbe.h`
+
+```
+Agent tools/call (SSE open)
+    │
+    ├─ work completes within timeout_ms (or 0 = default inline)
+    │     └─► final JSON envelope on SSE (status *_validated / etc.)
+    │
+    └─ timeout_ms exceeded while work continues
+          ├─► close SSE with partially_completed + job { job_id, state: running, poll_action }
+          ├─► background: domain service on worker thread, editor mutations on game thread
+          └─► agent polls get_job_result(job_id) until terminal state
+```
+
+**Rules for WS-05:**
+
+1. Never hold MCP SSE open past practical client timeout (~30s observed in Epic tests).
+2. `job_id` is UEREMCP-scoped (UUID), not MCP JSON-RPC request id.
+3. `metrics.mcp_round_trips` counts polls.
+4. `notifications/cancelled` should map to `job.state: cancelled` when cooperative cancel succeeds.
+5. Epic progress heartbeats are optional UX only; envelope `job.progress` is authoritative.
+
+---
+
+## What is public to an out-of-tree plugin
+
+| API | Reachable | Notes |
+|---|---|---|
+| `IModelContextProtocolModule` | Yes | `ModelContextProtocol` module, public header |
+| `FModelContextProtocolServer` | Yes | `IsServerRunning`, `GetServerPort` |
+| `UE::ModelContextProtocol::GetServerPortNumber` etc. | Yes | `ModelContextProtocolEngine` |
+| `IModelContextProtocolResourceProvider` | Yes | Register resources |
+| `IModelContextProtocolTool` | Yes | Custom tools (not our primary path) |
+| `FToolsetRegistryToolAdapter` | **No** | `ModelContextProtocolEditor` private |
+| `ModelContextProtocolServer.cpp` internals | **No** | Source visible on disk but not linkable API |
+
+UEREMCP transport adapter uses **public module API only** — no fork, no private includes.
+
+---
+
+## Negative findings
+
+1. **No stdio** — external stdio MCP clients cannot attach without a proxy (REAgentTools `UnrealMcpProxy` pattern).
+2. **No engine job queue** — master prompt §18 job features are entirely UEREMCP-owned.
+3. **Cancel does not stop ToolsetRegistry tools** — MCP cancel is cosmetic until we wire it.
+4. **No measured end-to-end tool duration** — runtime blocked; use conservative `timeout_ms` defaults (120s default in handoff JSON).
+5. **No modal detection API** in public MCP/ToolsetRegistry headers.
+
+---
+
+## Deliverables checklist
+
+- [x] Transport capability table (above)
+- [ ] Measured maximum practical tool-call duration — **blocked**: editor not running (`[VERIFIED-RUNTIME]` deferred)
+- [x] Recommended job model for ADR-0009 (`transport_job_handoff.json`)
+- [x] Resources verdict → `docs/proposals/ws-04-resources-for-large-payloads.md`
+- [x] Concurrent clients verdict → `docs/proposals/ws-04-concurrent-clients.md`
+- [x] Modal protection → `docs/proposals/ws-04-modal-protection.md`
+- [x] Transport adapter module `UeremcpTransport` (probe + constraints, no Epic reimplementation)
+
+---
+
+## ADR alignment / contradictions
+
+| ADR | Alignment |
+|---|---|
+| ADR-0001 | Confirmed — build on Epic MCP substrate |
+| ADR-0002 | Confirmed — no external server; HTTP in-process |
+| ADR-0003 | `job` block and `timeout_ms` are UEREMCP responsibilities — schema assumes features Epic does not provide |
+| ADR-0006 | Concurrent sessions OK at transport; write serialization not provided — see proposal, not a contradiction |
+
+No accepted ADR is contradicted by evidence. ADR-0009 (pending) should adopt the poll model above.
+
+---
+
+## Tests run
+
+- `python Plugins/UEREMCP/Source/UeremcpTransport/scripts/test_transport_constraints.py`
+- `python tools/validate_schemas.py`
+- `python tools/check_ownership.py --ws WS-04`
+
+C++ module compile: **pending** WS-03 uplugin registration (`docs/proposals/ws-04-uplugin-module-registration.md`).

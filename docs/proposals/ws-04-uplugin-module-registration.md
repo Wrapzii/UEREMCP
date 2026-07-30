@@ -30,7 +30,6 @@ uplugin lists the module.
 
 Do not move transport logic into `UeremcpCore`. This module stays a thin adapter
 over Epic's public MCP API per ADR-0002.
-
 ## Response
 
 **Accepted; assigned to WS-03.** `UEREMCP.uplugin` is WS-03-owned. Register

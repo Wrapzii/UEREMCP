@@ -34,7 +34,6 @@ editor. For swarm use:
 
 ADR-0002/0006 do not promise parallel safe writes; this finding tightens operational
 guidance for multi-agent setups.
-
 ## Response
 
 **Accepted as operational guidance.** Document for swarm use:

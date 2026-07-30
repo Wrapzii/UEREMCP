@@ -32,7 +32,6 @@ until the tool completes or the client disconnects; there is no engine timeout.
 No public Epic API exposes "is modal dialog blocking game thread" to MCP plugins
 `[UNVERIFIED for exhaustive search — no matches in ModelContextProtocol or
 ToolsetRegistry public headers]`.
-
 ## Response
 
 **Accepted; routed to WS-12.** Do not put modal dismissal inside UEREMCP transport
