@@ -1,9 +1,10 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `c234606` (`[WS-10] Validate animation rejection responses structurally`)
-- **Latest re-run tip:** `c234606`
+- **Current orchestration tip:** `c881742` (`[WS-08] Return UTexture2D from TryLoadTexture to fix C2440`)
+- **Latest Material re-run tip:** `c881742`
+- **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Mixed after triage fixes. No A6 / POC-B completion claims.
+- **Status:** Material Toolset green; Niagara Inspect/B7 still incomplete. No A6 / POC-B completion claims.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -16,7 +17,17 @@ pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter
 
 The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
 
-## Re-run on tip `c234606` (WS-11)
+## Update on tip `c881742` (WS-11 Material re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UeremcpMaterial.Toolset` | **PASS, 10/10** | WS-08 | LoadAsset gate (`af02b15`) + C2440 `TryLoadTexture` fix (`4944eeb` → orch `c881742`). |
+| `UEREMCP.Niagara.Inspect` | still INCOMPLETE | WS-07 | Post-compile stall remains; not a PASS. |
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | still INCOMPLETE | WS-07 | Post-compile stall remains; not a B7 / POC-B claim. |
+
+Standing by for WS-07 AwaitCompile stall revise before Inspect/B7 re-run.
+
+## Re-run on tip `c234606` (WS-11; historical)
 
 ### PASS
 
@@ -32,11 +43,11 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.Inspect` | 1/4 then stalled | WS-07 | Stalled after `NS_WS07_Probe` compile. Not a PASS. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | stalled | WS-07 | Stalled after creating/compiling `NS_POCB_FireballProbe`. Not a B7 or POC-B completion claim. |
 
-### FAIL
+### FAIL (as of `c234606`; Material superseded by `c881742`)
 
 | Filter | Result | Owner | Evidence |
 |---|---:|---|---|
-| `UeremcpMaterial.Toolset` | 5/10 | WS-08 | VFX tests returned `failed_validation` (missing generated master/MI) where expected status was `partially_completed`. |
+| `UeremcpMaterial.Toolset` | 5/10 (superseded: now PASS on `c881742`) | WS-08 | VFX tests returned `failed_validation` (missing generated master/MI) where expected status was `partially_completed`. |
 | `UEREMCP.Animation` | 8/10 | WS-10 | `InspectMontage.NotifyOrdering`: invalid track name did not degrade to empty. `InspectMontage.StructuredState`: transient asset had no Movie Scene; notify duration assert failed. |
 
 ### Not claimed by this re-run
@@ -68,9 +79,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-07 | Diagnose Niagara Inspect / B7 stalls after probe compile; re-run after fix. |
-| WS-08 | Align NullRHI / missing-master VFX status ladder to honest `partially_completed` (or generate assets) for Material Toolset failures. |
-| WS-10 | Fix NotifyOrdering empty-track degrade and StructuredState Movie Scene / notify duration asserts. |
-| WS-11 | Re-run affected filters after domain fixes; keep A6 / POC-B claims gated to their own criteria. |
+| WS-07 | Revise AwaitCompile post-compile stall; re-run Niagara Inspect + B7 after orch land + Niagara green. |
+| WS-08 | Material Toolset PASS on `c881742` — no further Material filter work from this triage. |
+| WS-10 | Fix NotifyOrdering empty-track degrade and StructuredState Movie Scene / notify duration asserts (if still open after later Animation commits). |
+| WS-11 | Re-run Inspect/B7 after WS-07 stall fix; keep A6 / POC-B claims gated to their own criteria. |
 
-Standing by on orch for domain fix commits. No junction retarget.
+Standing by on orch for WS-07 stall revise. No junction retarget.
