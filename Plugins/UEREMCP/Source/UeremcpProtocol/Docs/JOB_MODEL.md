@@ -56,6 +56,7 @@ a polled job was a single round trip.
 | `FUeremcpJobDefaults` | Timeout / poll defaults |
 | `FUeremcpJobRegistry` | Thread-safe process-local lifecycle, poll, cooperative cancel, progress, capacity, and expiry |
 | `FUeremcpJobSnapshot` | Non-polling state inspection for Core/tests |
+| `FUeremcpPlanActions::ExecutePlan` | Agent-facing string adapter (Core AICallable target) |
 | `FUeremcpJobRegistry::GetTimeoutResponse` | Initiating-call response without counting a poll |
 | `FUeremcpEnvelope::MakeJobTimeoutResponse` | `partially_completed` + running job handle |
 | `FUeremcpJobUtil::ShouldDispatchInline` | `timeout_ms == 0` → inline |

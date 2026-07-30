@@ -3,8 +3,11 @@
 **Owner:** WS-05  
 **Authority:** ADR-0008 and `schemas/batch/plan.schema.json`
 
-`FUeremcpPlanExecutor` is the fail-closed protocol interpreter behind the
-`UeremcpTemplates::SetExecutePlanDelegate` seam.
+`FUeremcpPlanExecutor` is the fail-closed protocol interpreter behind both:
+
+1. `UeremcpTemplates::SetExecutePlanDelegate` (template instantiation), and
+2. `FUeremcpPlanActions::ExecutePlan` (agent-facing string adapter for Core's
+   forthcoming `AICallable` wrapper — see `docs/proposals/ws-05-execute-plan-aicallable.md`).
 
 ## Public integration API
 
@@ -12,6 +15,8 @@
 - `SetTransactionCallbacks` — integration-owned begin/commit/rollback.
 - `ExecuteRequest` — accepts one normal `action: execute_plan` request and
   returns one consolidated response envelope.
+- `FUeremcpPlanActions::ExecutePlan` — same request → response **string**, plus
+  idempotency replay and ADR-0009 timeout/partial handling for the initiating call.
 
 Registration and execution snapshots are lock-protected. Handlers and
 transaction callbacks run outside that lock.
@@ -75,5 +80,8 @@ outside-editor regression. Run via `Tests/py/run_tests.py`
   forced inline so `$ref` never reads an unfinished result.
 - Template `validation_rules` remain a separate post-step contract owned by
   WS-15/WS-11.
-- Production `timeout_ms` dispatcher for long single operations is Core/Transport
-  (`docs/proposals/ws-05-timeout-dispatcher.md`), not this interpreter.
+- Production `timeout_ms` **async scheduler** for long single operations is
+  Core/Transport (`docs/proposals/ws-05-timeout-dispatcher.md`). The Protocol
+  adapter exposes the ADR-0009 envelope behaviour (inline vs
+  `partially_completed` + job) and a deterministic force-timeout test probe;
+  it does not replace Core's production dispatcher.

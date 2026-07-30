@@ -239,11 +239,10 @@ bool FUeremcpJobRegistry::CompleteJob(
 	const FUeremcpResponse& TerminalResponse,
 	FString& OutError)
 {
-	if (TerminalResponse.Status == TEXT("partially_completed"))
-	{
-		OutError = TEXT("terminal completion cannot use status partially_completed");
-		return false;
-	}
+	// partially_completed is allowed as a *terminal* retained status for plan
+	// subset completion (continue_independent). Distinguishing in-flight from
+	// terminal is job.state (running/queued vs completed), not status alone.
+	// Cancel already retains partially_completed the same way.
 	if (!FUeremcpEnvelope::ValidateResponse(TerminalResponse, OutError))
 	{
 		return false;

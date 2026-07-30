@@ -17,7 +17,9 @@ begin and before any mutation.
 
 The Templates delegate only routes one `action: execute_plan` envelope into
 `FUeremcpPlanExecutor::ExecuteRequest`. Domain actions inside the plan still
-require `RegisterAction` in the owning module.
+require `RegisterAction` in the owning module. The agent-facing string entry for
+Core's AICallable wrapper is `FUeremcpPlanActions::ExecutePlan` (same executor;
+adds idempotency and timeout envelope behaviour).
 
 ## Registration pattern (domain modules)
 

@@ -90,8 +90,9 @@ public:
 		FString& OutError);
 
 	/**
-	 * Store a terminal, verified response. The response must be envelope-valid and
-	 * cannot itself claim partially_completed.
+	 * Store a terminal, verified response. Envelope-valid statuses are accepted,
+	 * including plan-level partially_completed (continue_independent). In-flight
+	 * vs terminal is conveyed by job.state after this call (completed).
 	 */
 	bool CompleteJob(
 		const FString& JobId,

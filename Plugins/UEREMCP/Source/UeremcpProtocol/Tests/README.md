@@ -62,3 +62,8 @@ ADR-0006 idempotency tests live in
 `Private/Tests/UeremcpIdempotencyTests.cpp` with filter prefix
 `UEREMCP.Protocol.Idempotency`. They cover replay annotation, durable reload from
 `Saved/UEREMCP/idempotency/` (temp override), and the accepted durable root.
+
+Agent-facing `execute_plan` adapter tests live in
+`Private/Tests/UeremcpPlanActionsTests.cpp` (`UEREMCP.Protocol.PlanActions`).
+They use fake handlers; Core AICallable registration is a WS-03 integration step
+(`docs/proposals/ws-05-execute-plan-aicallable.md`).
