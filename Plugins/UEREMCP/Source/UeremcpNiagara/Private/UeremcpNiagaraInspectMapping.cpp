@@ -167,11 +167,23 @@ TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererExten
 		FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
 		RendererRef.RendererIndex = Renderer.RendererIndex;
 
+		const bool bMeshRendererClass = Renderer.RendererClass
+			&& Renderer.RendererClass->IsChildOf(UNiagaraMeshRendererProperties::StaticClass());
+
 		UNiagaraMeshRendererProperties* MeshProps =
 			UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
 				System,
 				EmitterName,
 				Renderer.RendererIndex);
+		if (!MeshProps && bMeshRendererClass)
+		{
+			MeshProps = Cast<UNiagaraMeshRendererProperties>(
+				UeremcpNiagaraRendererResolve::GetRendererAtIndex(
+					System,
+					EmitterName,
+					Renderer.RendererIndex));
+		}
+
 		if (MeshProps)
 		{
 			++InOutInternalOperations;
@@ -193,6 +205,15 @@ TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererExten
 					TEXT("material_path_fidelity"),
 					TEXT("extracted_from_mesh_renderer_fields_not_validated"));
 			}
+		}
+		else if (bMeshRendererClass)
+		{
+			// Never GetRendererData on mesh: GetAllObjectProperties(Renderer) evaluates
+			// FNiagaraMeshMaterialOverride::ExplicitMat edit conditions in struct scope.
+			// [VERIFIED: GetRendererDataInternal — NiagaraExternalSystemEditorUtilities.cpp:1881]
+			RendererObj->SetStringField(
+				TEXT("property_values_fidelity"),
+				TEXT("mesh_renderer_unresolved; GetRendererData skipped (OverrideMaterials EditCondition)"));
 		}
 		else
 		{

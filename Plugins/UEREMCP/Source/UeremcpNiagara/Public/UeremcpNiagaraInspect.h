@@ -53,6 +53,14 @@ public:
 	/** Wave 2 probe guard — only /Game/__UeremcpTests/ assets. */
 	static bool IsAllowedProbePath(const FString& AssetPath);
 
+	/**
+	 * Probe inspect must not call GetStackIssues: diagnostics VM builds renderer stack
+	 * items that evaluate FNiagaraMeshMaterialOverride::ExplicitMat edit conditions
+	 * (bOverrideMaterials on parent UNiagaraMeshRendererProperties) in struct scope.
+	 * [VERIFIED: GetStackIssues → GetDiagnosticsSystemViewModel — NiagaraExternalSystemEditorUtilities.cpp:3367]
+	 */
+	static bool ShouldSkipStackIssuesForProbe(const FString& AssetPath);
+
 	static bool Run(
 		const FUeremcpRequest& Request,
 		const FUeremcpNiagaraInspectSpec& Spec,

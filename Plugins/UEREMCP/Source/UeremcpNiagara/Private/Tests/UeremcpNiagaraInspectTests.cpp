@@ -69,6 +69,12 @@ bool FUeremcpNiagaraInspectPathGuardTest::RunTest(const FString& Parameters)
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/__UeremcpTests/NS_WS07_Probe")));
 	TestFalse(TEXT("game content rejected"),
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/VFX/NS_Fireball")));
+	TestTrue(
+		TEXT("probe inspect skips GetStackIssues"),
+		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/__UeremcpTests/NS_POCB_FireballProbe")));
+	TestFalse(
+		TEXT("non-probe inspect may collect stack issues"),
+		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/VFX/NS_Fireball")));
 	return true;
 }
 

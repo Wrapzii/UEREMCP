@@ -384,6 +384,11 @@ bool FUeremcpNiagaraInspect::IsAllowedProbePath(const FString& AssetPath)
 	return UeremcpNiagaraPaths::IsAllowedProbePath(AssetPath);
 }
 
+bool FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(const FString& AssetPath)
+{
+	return IsAllowedProbePath(AssetPath);
+}
+
 bool FUeremcpNiagaraInspect::Run(
 	const FUeremcpRequest& Request,
 	const FUeremcpNiagaraInspectSpec& Spec,
@@ -706,11 +711,20 @@ bool FUeremcpNiagaraInspect::Run(
 	bool bHasStackIssues = false;
 	if (Spec.bIncludeStackIssues)
 	{
-		UNiagaraExternalEditUtilities::GetStackIssues(System, StackIssues, Context);
-		++OutResult.InternalOperations;
-		OutResult.ChecksPerformed.Add(TEXT("niagara.stack_issues"));
-		bHasStackIssues = true;
-		SystemExt->SetNumberField(TEXT("stack_issue_count"), StackIssues.Issues.Num());
+		if (ShouldSkipStackIssuesForProbe(AssetPath))
+		{
+			OutResult.ChecksSkipped.Add(TEXT("niagara.stack_issues"));
+			OutResult.ChecksSkipped.Add(TEXT(
+				"niagara.stack_issues_skipped_probe: GetStackIssues diagnostics VM evaluates mesh OverrideMaterials edit conditions"));
+		}
+		else
+		{
+			UNiagaraExternalEditUtilities::GetStackIssues(System, StackIssues, Context);
+			++OutResult.InternalOperations;
+			OutResult.ChecksPerformed.Add(TEXT("niagara.stack_issues"));
+			bHasStackIssues = true;
+			SystemExt->SetNumberField(TEXT("stack_issue_count"), StackIssues.Issues.Num());
+		}
 	}
 	else
 	{
