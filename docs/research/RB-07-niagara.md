@@ -486,3 +486,25 @@ validator green, WS-11 harness can run one editor test.
 - `/Game/__UeremcpTests/NS_WS07_Probe` — created from MinimalLightweight, +ProbeBurst
   emitter, User.Color/Intensity/Scale, saved
   `[VERIFIED-RUNTIME]`
+
+## RE Inspect automation rebuild attempt (2026-07-30)
+
+- Orch contains `0754f7b` as patch-equivalent cherry-pick `e9bc110` (stable patch ID
+  `aa85927a769f69c9709073adb88a7dc6b4e592f9`). RE was repointed to the orch junction;
+  no Unreal Editor or Live Coding process was active.
+- The orch `REEditor Win64 Development -Module=UeremcpNiagara -WaitMutex
+  -NoHotReloadFromIDE` build stopped in rules evaluation because
+  `UeremcpMaterial.Build.cs` depends on a module named `Editor`
+  `[VERIFIED-RUNTIME: UBT 2026-07-30, "Could not find definition for module 'Editor'"]`.
+- A fallback build with RE junctioned to `ws-07-niagara` reached C++ compilation but
+  failed in the Inspect implementation: `FNiagaraExt_StackInputData_DataInterface`
+  has no `DataInterfaceClass` member
+  `[VERIFIED-RUNTIME: MSVC C2039 in UeremcpNiagaraInspect.cpp:82/84]`.
+  The UE 5.8 struct exposes `PropertyValues` only
+  `[VERIFIED: Engine/Plugins/FX/Niagara/Source/NiagaraEditor/Public/NiagaraExternalSystemEditorUtilities.h:574-581]`.
+  UHT also reported the pre-existing cross-workstream first-include error in
+  `UeremcpTemplatesModule.cpp`.
+- `UEREMCP.Niagara.Inspect.PathGuard` and
+  `UEREMCP.Niagara.Inspect.NS_WS07_Probe` were not run: no binary containing the
+  target Inspect implementation was produced. RE's plugin junction was restored to
+  `UEREMCP-ws01/Plugins/UEREMCP`.
