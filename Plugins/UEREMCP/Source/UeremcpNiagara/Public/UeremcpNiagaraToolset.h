@@ -24,7 +24,7 @@ class UEREMCPNIAGARA_API UUeremcpNiagaraToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.9.2-poc-b-gates-hash"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.9.3-poc-b-b7-inspect"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.

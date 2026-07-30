@@ -47,8 +47,8 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 		TEXT("B7 structural check performed"),
 		Gates.ChecksPerformed.Contains(TEXT("niagara.poc_b.B7_structural_match")));
 	TestTrue(
-		TEXT("renderers bound still skipped"),
-		Gates.ChecksSkipped.Contains(TEXT("niagara.poc_b.B7_renderers_bound")));
+		TEXT("renderers bound verified"),
+		Gates.bB7RenderersBoundEvaluated && Gates.bB7RenderersBound);
 	TestTrue(
 		TEXT("hash round trip still skipped"),
 		Gates.ChecksSkipped.Contains(TEXT("niagara.content_hash_round_trip_stability")));
@@ -71,11 +71,15 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 	const FUeremcpNiagaraPocBGateResult NoInspectGates =
 		FUeremcpNiagaraPocBGates::Evaluate(NoRoundTripCreate, nullptr);
 	TestFalse(TEXT("no inspect structural evaluated"), NoInspectGates.bB7StructuralMatchEvaluated);
+	TestFalse(TEXT("no inspect renderers present evaluated"), NoInspectGates.bB7RenderersPresentEvaluated);
+	TestFalse(TEXT("no inspect renderers bound evaluated"), NoInspectGates.bB7RenderersBoundEvaluated);
 
 	const TSharedPtr<FJsonObject> NoInspectDiagnostics =
 		FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(NoInspectGates);
 	const TSharedPtr<FJsonValue> B7Field = NoInspectDiagnostics->TryGetField(TEXT("B7_structural_match"));
 	TestTrue(TEXT("B7 null without inspect"), B7Field.IsValid() && B7Field->IsNull());
+	const TSharedPtr<FJsonValue> BoundField = NoInspectDiagnostics->TryGetField(TEXT("B7_renderers_bound"));
+	TestTrue(TEXT("renderers bound null without inspect"), BoundField.IsValid() && BoundField->IsNull());
 
 	return true;
 }

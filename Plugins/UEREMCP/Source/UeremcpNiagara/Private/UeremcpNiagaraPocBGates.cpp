@@ -41,14 +41,54 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 		{
 			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_structural_match"));
 		}
+
+		Out.InspectSignals = FUeremcpNiagaraPocBInspectFidelity::Evaluate(
+			CreateResult.EmittersAdded,
+			RoundTrip->InspectGraphs);
+
+		Out.bB7RenderersPresentEvaluated = true;
+		Out.bB7RenderersPresent = Out.InspectSignals.EmittersMissingRenderers.Num() == 0
+			&& Out.InspectSignals.TotalRendererRefs > 0
+			&& Out.InspectSignals.EmittersWithRendererRefs == Out.InspectSignals.ExpectedEmitterCount;
+		if (Out.bB7RenderersPresent)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B7_renderers_present"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_renderers_present"));
+		}
+
+		Out.bB7RenderersBoundEvaluated = true;
+		Out.bB7RenderersBound = CreateResult.MaterialBindings.bAllRequestedVerified;
+		if (Out.bB7RenderersBound)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B7_renderers_bound"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_renderers_bound"));
+		}
+
+		if (Out.InspectSignals.bDependenciesPresent)
+		{
+			Out.bB7DataInterfacesEvaluated = true;
+			Out.bB7DataInterfacesComplete = false;
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_data_interfaces_complete"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_data_interfaces_complete"));
+		}
 	}
 	else
 	{
 		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_structural_match"));
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_renderers_present"));
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_renderers_bound"));
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_data_interfaces_complete"));
 	}
 
-	Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_renderers_bound"));
-	Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B7_data_interfaces_complete"));
 	Out.ChecksSkipped.Add(TEXT("niagara.content_hash_round_trip_stability"));
 
 	return Out;
@@ -80,8 +120,73 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 		Gates->SetField(TEXT("B7_structural_match"), MakeShared<FJsonValueNull>());
 	}
 
-	Gates->SetField(TEXT("B7_renderers_bound"), MakeShared<FJsonValueNull>());
-	Gates->SetField(TEXT("B7_data_interfaces_complete"), MakeShared<FJsonValueNull>());
+	if (Result.bB7RenderersPresentEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B7_renderers_present"), Result.bB7RenderersPresent);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B7_renderers_present"), MakeShared<FJsonValueNull>());
+	}
+
+	if (Result.bB7RenderersBoundEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B7_renderers_bound"), Result.bB7RenderersBound);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B7_renderers_bound"), MakeShared<FJsonValueNull>());
+	}
+
+	if (Result.bB7DataInterfacesEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B7_data_interfaces_complete"), Result.bB7DataInterfacesComplete);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B7_data_interfaces_complete"), MakeShared<FJsonValueNull>());
+	}
+
+	if (Result.InspectSignals.bEvaluated)
+	{
+		TSharedPtr<FJsonObject> InspectFidelity = MakeShared<FJsonObject>();
+		InspectFidelity->SetNumberField(
+			TEXT("emitters_with_renderer_refs"),
+			Result.InspectSignals.EmittersWithRendererRefs);
+		InspectFidelity->SetNumberField(TEXT("total_renderer_refs"), Result.InspectSignals.TotalRendererRefs);
+		InspectFidelity->SetNumberField(
+			TEXT("renderers_with_extracted_material_path"),
+			Result.InspectSignals.RenderersWithExtractedMaterialPath);
+		if (Result.InspectSignals.bDependenciesPresent)
+		{
+			InspectFidelity->SetNumberField(
+				TEXT("used_data_interfaces"),
+				Result.InspectSignals.UsedDataInterfaces);
+		}
+		if (Result.InspectSignals.bCompileStatePresent)
+		{
+			InspectFidelity->SetBoolField(TEXT("compile_has_errors"), Result.InspectSignals.bCompileHasErrors);
+		}
+		if (Result.InspectSignals.EmittersMissingRenderers.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> Missing;
+			for (const FString& Emitter : Result.InspectSignals.EmittersMissingRenderers)
+			{
+				Missing.Add(MakeShared<FJsonValueString>(Emitter));
+			}
+			InspectFidelity->SetArrayField(TEXT("emitters_missing_renderers"), Missing);
+		}
+		if (Result.InspectSignals.FidelityNotes.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> Notes;
+			for (const FString& Note : Result.InspectSignals.FidelityNotes)
+			{
+				Notes.Add(MakeShared<FJsonValueString>(Note));
+			}
+			InspectFidelity->SetArrayField(TEXT("notes"), Notes);
+		}
+		Gates->SetObjectField(TEXT("inspect_fidelity"), InspectFidelity);
+	}
 
 	TArray<TSharedPtr<FJsonValue>> NeverClaims;
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("created_and_validated")));

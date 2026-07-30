@@ -101,8 +101,8 @@
     ],
     "poc_b_gates": {
       "round_trip_supported": false,
-      "B7_renderers_bound": null,
-      "B7_data_interfaces_complete": null
+      "B7_renderers_bound_null_without_inspect": true,
+      "B7_data_interfaces_complete_null_without_inspect": true
     }
   }
 }

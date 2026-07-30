@@ -1,0 +1,62 @@
+{
+  "$comment": "Offline fixture: POC B B7 inspect fidelity gate signals (WS-07).",
+  "expected_emitters": ["Sparks", "ImpactBurst"],
+  "inspect_graphs": [
+    {
+      "graph_type": "NiagaraSystemGraph",
+      "graph_name": "NS_POCB_GateProbe",
+      "extensions": {
+        "niagara": {
+          "dependencies": {
+            "used_data_interfaces": 2,
+            "used_renderers": 2
+          },
+          "compile": {
+            "bHasErrors": false,
+            "aggregate_status": "UpToDate"
+          }
+        }
+      }
+    },
+    {
+      "graph_type": "NiagaraEmitterGraph",
+      "graph_name": "Sparks",
+      "extensions": {
+        "niagara": {
+          "renderers": [
+            {
+              "renderer_index": 0,
+              "renderer_class": "/Script/Niagara.NiagaraSpriteRendererProperties",
+              "material_path": "/Game/__UeremcpTests/Materials/MI_Sparks.MI_Sparks",
+              "material_path_fidelity": "extracted_from_property_values_not_validated"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "graph_type": "NiagaraEmitterGraph",
+      "graph_name": "ImpactBurst",
+      "extensions": {
+        "niagara": {
+          "renderers": [
+            {
+              "renderer_index": 0,
+              "renderer_class": "/Script/Niagara.NiagaraSpriteRendererProperties"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "expectations": {
+    "emitters_with_renderer_refs": 2,
+    "total_renderer_refs": 2,
+    "renderers_with_extracted_material_path": 1,
+    "used_data_interfaces": 2,
+    "B7_renderers_present": true,
+    "B7_renderers_bound_requires_material_verify": true,
+    "B7_data_interfaces_complete": false,
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"]
+  }
+}

@@ -84,8 +84,10 @@ until WS-11 proves retrieve → replace → retrieve stability.
 | `B4_material_bindings_verified` | All requested material roles passed renderer re-read |
 | `B7_emitters_non_empty` | Create added at least one emitter |
 | `B7_structural_match` | Post-create inspect structural match (when `options.validate`) |
-| `B7_renderers_bound` | **null** — not implemented; never inferred |
-| `B7_data_interfaces_complete` | **null** — not implemented |
+| `B7_renderers_present` | Every created emitter has renderer refs on inspect (topology only) |
+| `B7_renderers_bound` | **false** until `material_bindings.bAllRequestedVerified`; inspect `material_path` does not count |
+| `B7_data_interfaces_complete` | **false** when dependencies observed; **null** without inspect dependencies — never inferred complete |
+| `inspect_fidelity` | Observational counts (`used_data_interfaces`, extracted material paths) |
 | `round_trip_supported` | always **false** until hash round-trip proven |
 
 Response status remains **`partially_completed`**; `never_claims` lists `*_validated` statuses.

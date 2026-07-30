@@ -35,7 +35,7 @@ namespace UeremcpNiagaraCapability
 			TEXT("create_niagara_effect is a POC B probe slice: duplicate template, add six emitter roles (core, flame_shell, sparks, smoke, ribbon_trail, impact_burst), optional User.* params, compile await, save."),
 			TEXT("material_bindings: assigns probe UMaterialInterface paths via GetRendererData/SetRendererData; inline create_spec delegates to UeremcpMaterialNiagaraExport (probe MI paths only)."),
 			TEXT("orphaned_inline_creates lists roles where inline MI creation succeeded but renderer bind/re-read failed — Create::Run continues as partially_completed; probe MIs are never deleted."),
-			TEXT("POC B emitters non-empty / renderer-bound checks surface via extra.poc_b_gates; B7_renderers_bound stays null until proven — status stays partially_completed, never *_validated."),
+			TEXT("POC B emitters non-empty / renderer-bound checks surface via extra.poc_b_gates; B7_renderers_bound true only after material bind re-read verify; extracted inspect material_path is never validated."),
 			TEXT("envelope mode 'replace' deletes and recreates probe assets under /Game/__UeremcpTests/ only; never deletes user content elsewhere."),
 			TEXT("options.validate=true runs post-create inspect (FUeremcpNiagaraRoundTrip): structural emitter/user-var match + content_hash manifest; not content_hash round-trip stability."),
 			TEXT("module_reorder_without_readd and event_handler_stacks fidelity gaps apply to created systems too."),

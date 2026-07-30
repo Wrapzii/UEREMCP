@@ -283,6 +283,31 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertIn("poc_b_gates", expectations)
         self.assertFalse(expectations["poc_b_gates"]["round_trip_supported"])
 
+    def test_poc_b_inspect_gate_signals_fixture(self) -> None:
+        fixture = load_fixture("poc_b_inspect_gate_signals.json")
+        expectations = fixture["expectations"]
+
+        expected_emitters = fixture["expected_emitters"]
+        graphs = fixture["inspect_graphs"]
+        self.assertEqual(len(expected_emitters), 2)
+
+        emitter_graphs = [g for g in graphs if g["graph_type"] == "NiagaraEmitterGraph"]
+        self.assertEqual(len(emitter_graphs), 2)
+        self.assertEqual(expectations["emitters_with_renderer_refs"], 2)
+        self.assertEqual(expectations["total_renderer_refs"], 2)
+        self.assertEqual(expectations["renderers_with_extracted_material_path"], 1)
+        self.assertEqual(
+            expectations["used_data_interfaces"],
+            graphs[0]["extensions"]["niagara"]["dependencies"]["used_data_interfaces"],
+        )
+        self.assertTrue(expectations["B7_renderers_present"])
+        self.assertFalse(expectations["B7_data_interfaces_complete"])
+        self.assertTrue(expectations["B7_renderers_bound_requires_material_verify"])
+        self.assertEqual(
+            set(expectations["validation_never_claims"]),
+            {"created_and_validated", "modified_and_validated"},
+        )
+
     def test_hash_round_trip_poc_b_scaffold_fixture(self) -> None:
         import sys
 
@@ -312,9 +337,9 @@ class NiagaraSpecificationTests(unittest.TestCase):
             self.assertIn("round_trip", check)
 
         self.assertFalse(gate_expectations["round_trip_supported"])
-        self.assertIsNone(gate_expectations["B7_renderers_bound"])
+        self.assertTrue(gate_expectations["B7_renderers_bound_null_without_inspect"])
         for check in gate_expectations["checks_skipped_always"]:
-            self.assertTrue(check.startswith("niagara.poc_b.") or check.startswith("niagara.content_hash_"))
+            self.assertIn("round_trip", check)
 
     def test_hash_round_trip_scaffold_fixture(self) -> None:
         import sys
