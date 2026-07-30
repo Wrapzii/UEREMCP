@@ -41,7 +41,7 @@ and one **closed**. Wave 2 implementation is authorized; first kick is WS-06 P0
 |---|---|---|
 | R-04 | **Closed** | MCP Ping/Echo on RE `[VERIFIED-RUNTIME: 127.0.0.1:8000, 2026-07-30]` |
 | R-03 | **Mitigated** | Shipping Validation Rollback Content/ full-Discard green on RE |
-| R-01 | **Mitigated** | RB-05: public-API reconstruction tractable (Epic DSL + primitives); scratch round-trip identical; bridge plan accepted. Residual: `graph.schema.json` envelope bridge = POC A (Wave 2) |
+| R-01 | **Mitigated** | RB-05: public-API reconstruction tractable (Epic DSL + primitives); scratch BP DSL round-trip `[VERIFIED-RUNTIME: RB-05 visualtest]`—**not** `graph.schema.json`/`content_hash`. Residual: envelope bridge = POC A (Wave 2) |
 | R-06 | **Mitigated** | Source audit complete; 73 `list_toolsets` + 12 priority `describe_toolset` dumps on RE; disposition matrix schema-complete for cited toolsets. Residual: ~61 non-priority dumps, REAgentTools 15 runtime schemas, payload calibration |
 
 **Why mitigated suffices for R-01:** Phase 1 was to answer whether the central thesis

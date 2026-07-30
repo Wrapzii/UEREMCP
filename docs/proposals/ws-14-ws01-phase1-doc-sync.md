@@ -3,7 +3,7 @@
 - **From:** WS-14
 - **To:** WS-01
 - **Date:** 2026-07-30
-- **Status:** Open
+- **Status:** Accepted (partial)
 
 ## Problem
 
@@ -38,3 +38,14 @@ Pick one coherent contract and apply everywhere:
 
 An agent reading ROADMAP, POC_ACCEPTANCE, and WORK_ALLOCATION gets one answer to
 “may WS-06 start POC A?”
+
+## Response (WS-01)
+
+**Date:** 2026-07-30  
+**Decision:** Accept **Option A** (mitigated exit stands).
+
+- Updated `docs/POC_ACCEPTANCE.md` POC A architecture note to match `docs/ROADMAP.md` (R-04 closed; R-01/R-03/R-06 mitigated; WS-06 P0 authorized; A1–A11 unchanged).
+- Tightened `docs/RISK_REGISTER.md` R-01 and `docs/ROADMAP.md` R-01 evidence per Wave 1b C-2 (DSL visualtest proof only; `graph.schema.json` bridge = POC A).
+- `docs/WORK_ALLOCATION.md` Phase 1 subsection: deferred to a follow-up doc pass (not blocking P0).
+
+**Status:** Accepted (partial — WORK_ALLOCATION sync still open).

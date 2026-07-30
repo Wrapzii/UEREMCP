@@ -36,3 +36,8 @@ Additional drift:
 
 MCP Echo path and `UEREMCP.Protocol.Golden.Envelope` share one implementation; no
 duplicate envelope parsers in shipping Core.
+
+## Response (WS-01)
+
+**Date:** 2026-07-30  
+**Decision:** Routed to **WS-03** (owner: `UeremcpCore` / ReferenceToolset). WS-01 will not rewire Core Echo in this integration; track under Wave 2 host hardening (M-1).

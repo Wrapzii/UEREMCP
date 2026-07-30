@@ -33,3 +33,8 @@ shows `Result={Success}` for Core tests.
 Critic can grep the committed log for
 `UEREMCP.Validation.Rollback.MultiAssetDiscard` and `Result={Success}` without
 re-running the editor.
+
+## Response (WS-01)
+
+**Date:** 2026-07-30  
+**Decision:** Routed to **WS-11** (owner: shipping Validation automation + `tests/integration/_logs/`). WS-01 will not invent validation logs; R-03 register text unchanged pending committed artifact (C-1).

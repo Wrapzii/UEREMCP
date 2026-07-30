@@ -39,7 +39,7 @@ need to know in week one, not week six.
 authoring. `content_hash` is over structured canonical JSON (`semantic_id`), not
 DSL text. Documented lossy: MultiGate decompile-on-exec, Timeline spawn syntax,
 bind elision. Patch mode is the A8 escape hatch (`ws-06-patch-mode-and-impl-plan.md`).
-Implementation waits on Phase 1 exit (especially R-04).
+Implementation is authorized after Phase 1 mitigated exit (2026-07-30 per `docs/ROADMAP.md`): R-04 closed; R-01, R-03, and R-06 mitigated. WS-06 P0 may proceed; criteria A1–A11 below remain the POC A proof bar (including the `graph.schema.json` envelope bridge).
 
 | # | Criterion |
 |---|---|
