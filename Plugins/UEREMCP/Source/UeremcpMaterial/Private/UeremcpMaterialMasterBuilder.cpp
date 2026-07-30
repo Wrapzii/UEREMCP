@@ -6,29 +6,31 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Factories/MaterialFactoryNew.h"
-#include "FileHelpers.h"
 #include "IAssetTools.h"
 #include "Materials/Material.h"
+#include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialFeatureGraph.h"
 #include "UeremcpMaterialPaths.h"
 
 namespace
 {
-	static UMaterial* LoadMaterialAtPath(const FString& PackagePath)
+	static UMaterial* LoadRegisteredMaterialAtPath(const FString& PackagePath)
 	{
-		return UeremcpMaterialAssetLoad::ResolveMaterial(PackagePath);
+		return UeremcpMaterialAssetLoad::TryLoadRegisteredMaterial(PackagePath);
 	}
 
-	static bool SaveLoadedMaterial(UMaterial* Material, int32& InOutOps)
+	static bool SaveMaterialAtPath(const FString& PackagePath, UMaterial* Material, int32& InOutOps)
 	{
-		if (!Material)
+		UEditorAssetSubsystem* AssetSubsystem =
+			GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
+		if (!AssetSubsystem || !Material || PackagePath.IsEmpty())
 		{
 			return false;
 		}
 
-		const TArray<UPackage*> PackagesToSave = { Material->GetPackage() };
-		const bool bSaved = UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
+		Material->MarkPackageDirty();
+		const bool bSaved = AssetSubsystem->SaveAsset(PackagePath, false);
 		if (bSaved)
 		{
 			++InOutOps;
@@ -73,7 +75,7 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 		return Result;
 	}
 
-	if (UMaterial* Existing = LoadMaterialAtPath(Request.MasterPackagePath))
+	if (UMaterial* Existing = LoadRegisteredMaterialAtPath(Request.MasterPackagePath))
 	{
 		Result.bSuccess = true;
 		Result.bCreated = false;
@@ -118,7 +120,7 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 		return Result;
 	}
 
-	if (!SaveLoadedMaterial(Material, Result.InternalOperations))
+	if (!SaveMaterialAtPath(Request.MasterPackagePath, Material, Result.InternalOperations))
 	{
 		Result.bSuccess = true;
 		Result.CapabilityNotes.Add(

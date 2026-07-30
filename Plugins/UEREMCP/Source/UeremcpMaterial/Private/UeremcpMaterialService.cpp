@@ -6,7 +6,6 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
-#include "FileHelpers.h"
 #include "IAssetTools.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
@@ -31,15 +30,88 @@ namespace
 		return GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
 	}
 
-	static bool SaveLoadedAssetPackage(UObject* Asset)
+	static bool SaveAssetAtPackagePath(const FString& PackagePath, UObject* Asset)
 	{
-		if (!Asset)
+		UEditorAssetSubsystem* AssetSubsystem = GetEditorAssetSubsystem();
+		if (!AssetSubsystem || !Asset || PackagePath.IsEmpty())
 		{
 			return false;
 		}
 
-		const TArray<UPackage*> PackagesToSave = { Asset->GetPackage() };
-		return UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
+		Asset->MarkPackageDirty();
+		if (UPackage* Package = Asset->GetPackage())
+		{
+			Package->MarkPackageDirty();
+		}
+		return AssetSubsystem->SaveAsset(PackagePath, false);
+	}
+
+	struct FVfxPersistTargets
+	{
+		const FUeremcpRequest* Request = nullptr;
+		UMaterialInstanceConstant* Instance = nullptr;
+		UMaterial* MasterMaterial = nullptr;
+		const FString* MasterPath = nullptr;
+		bool bMasterCreated = false;
+	};
+
+	static void TryPersistVfxAssets(const FVfxPersistTargets& Targets, FUeremcpMaterialCreateResult& Result)
+	{
+		if (!Targets.Request || !Targets.Request->bSave)
+		{
+			return;
+		}
+
+		if (Targets.Instance)
+		{
+			if (SaveAssetAtPackagePath(Targets.Request->TargetAssetPath, Targets.Instance))
+			{
+				++Result.InternalOperations;
+				Result.InterpretationNotes.Add(
+					FString::Printf(
+						TEXT("Saved in-process MI package '%s' to disk."),
+						*Targets.Request->TargetAssetPath));
+			}
+			else
+			{
+				Result.CapabilityNotes.Add(
+					FString::Printf(
+						TEXT("MI save unverified for '%s' — in-process object exists; disk persistence not proven."),
+						*Targets.Request->TargetAssetPath));
+			}
+		}
+
+		if (Targets.bMasterCreated && Targets.MasterMaterial && Targets.MasterPath && !Targets.MasterPath->IsEmpty())
+		{
+			const FString& SavedMasterPath = *Targets.MasterPath;
+			if (SaveAssetAtPackagePath(SavedMasterPath, Targets.MasterMaterial))
+			{
+				++Result.InternalOperations;
+				Result.InterpretationNotes.Add(
+					FString::Printf(TEXT("Saved freshly created master '%s' to disk."), *SavedMasterPath));
+			}
+			else
+			{
+				Result.CapabilityNotes.Add(
+					TEXT("master save unverified under automation — in-process graph exists; disk persistence not proven."));
+			}
+		}
+	}
+
+	static FVfxPersistTargets MakePersistTargets(
+		const FUeremcpRequest& Request,
+		UMaterialInstanceConstant* Instance,
+		UMaterial* MasterMaterial,
+		const FString& MasterPath,
+		bool bMasterCreated)
+	{
+		FVfxPersistTargets Targets;
+		Targets.Request = &Request;
+		Targets.Instance = Instance;
+		Targets.MasterMaterial = MasterMaterial;
+		Targets.MasterPath = &MasterPath;
+		Targets.bMasterCreated = bMasterCreated;
+		return Targets;
 	}
 
 	static bool ColorsApproximatelyEqual(const FLinearColor& A, const FLinearColor& B, float Tolerance = 0.02f)
@@ -623,6 +695,9 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	{
 		if (MasterResult.MasterMaterial)
 		{
+			TryPersistVfxAssets(
+				MakePersistTargets(Request, nullptr, MasterResult.MasterMaterial, MasterPath, MasterResult.bCreated),
+				Result);
 			CapPartialWhenProofUnavailable(
 				Result,
 				Request.TargetAssetPath,
@@ -663,6 +738,9 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	UMaterial* MasterMaterial = UeremcpMaterialAssetLoad::ResolveMaterial(MasterPath, MasterResult.MasterMaterial);
 	if (!MasterMaterial)
 	{
+		TryPersistVfxAssets(
+			MakePersistTargets(Request, nullptr, MasterResult.MasterMaterial, MasterPath, MasterResult.bCreated),
+			Result);
 		CapPartialWhenProofUnavailable(
 			Result,
 			Request.TargetAssetPath,
@@ -680,6 +758,9 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Instance = UeremcpMaterialAssetLoad::TryLoadMaterialInstance(Request.TargetAssetPath);
 		if (!Instance)
 		{
+			TryPersistVfxAssets(
+				MakePersistTargets(Request, nullptr, MasterMaterial, MasterPath, MasterResult.bCreated),
+				Result);
 			CapPartialWhenProofUnavailable(
 				Result,
 				Request.TargetAssetPath,
@@ -698,6 +779,9 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Instance = CreateMaterialInstance(MiFolder, MiName, MasterMaterial, CreateError, Result.InternalOperations);
 		if (!Instance)
 		{
+			TryPersistVfxAssets(
+				MakePersistTargets(Request, nullptr, MasterMaterial, MasterPath, MasterResult.bCreated),
+				Result);
 			CapPartialWhenProofUnavailable(
 				Result,
 				Request.TargetAssetPath,
@@ -713,6 +797,9 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	FString ParamError;
 	if (!ApplyParametersToInstance(Instance, Params, Result.InternalOperations))
 	{
+		TryPersistVfxAssets(
+			MakePersistTargets(Request, Instance, MasterMaterial, MasterPath, MasterResult.bCreated),
+			Result);
 		CapPartialWhenProofUnavailable(
 			Result,
 			Request.TargetAssetPath,
@@ -726,6 +813,9 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		FString TextureApplyError;
 		if (!ApplyTextureSlotsToInstance(Instance, TextureBindings, AssetSubsystem, Result.InternalOperations, TextureApplyError))
 		{
+			TryPersistVfxAssets(
+				MakePersistTargets(Request, Instance, MasterMaterial, MasterPath, MasterResult.bCreated),
+				Result);
 			CapPartialWhenProofUnavailable(
 				Result,
 				Request.TargetAssetPath,
@@ -742,7 +832,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	if (Request.bSave)
 	{
-		if (!SaveLoadedAssetPackage(Instance))
+		if (!SaveAssetAtPackagePath(Request.TargetAssetPath, Instance))
 		{
 			Result.Status = TEXT("partially_completed");
 			Result.Summary = FString::Printf(
@@ -757,7 +847,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 			FString::Printf(TEXT("Saved in-process MI package '%s' to disk before compile/validate gates."), *Request.TargetAssetPath));
 		if (MasterResult.bCreated)
 		{
-			if (SaveLoadedAssetPackage(MasterMaterial))
+			if (SaveAssetAtPackagePath(MasterPath, MasterMaterial))
 			{
 				++Result.InternalOperations;
 				Result.InterpretationNotes.Add(

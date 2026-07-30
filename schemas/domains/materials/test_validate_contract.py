@@ -82,11 +82,23 @@ class MaterialValidateContractTests(unittest.TestCase):
         )
 
     def test_create_vfx_material_saves_before_compile_gate(self) -> None:
-        save_idx = self.material_cpp.find("SaveLoadedAssetPackage(Instance)")
+        save_idx = self.material_cpp.find("SaveAssetAtPackagePath(Request.TargetAssetPath, Instance)")
         compile_idx = self.material_cpp.find("RecompileMaterial(MasterMaterial)")
         self.assertNotEqual(save_idx, -1)
         self.assertNotEqual(compile_idx, -1)
         self.assertLess(save_idx, compile_idx)
+
+    def test_master_builder_reuses_registry_not_stale_in_process(self) -> None:
+        master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
+        self.assertIn("TryLoadRegisteredMaterial", master_cpp)
+        self.assertNotIn("ResolveMaterial(PackagePath)", master_cpp)
+
+    def test_create_vfx_material_save_uses_editor_asset_subsystem(self) -> None:
+        self.assertIn("SaveAsset(PackagePath, false)", self.material_cpp)
+        master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
+        self.assertIn("SaveAsset(PackagePath, false)", master_cpp)
+        self.assertNotIn("SavePackages(PackagesToSave", self.material_cpp)
+        self.assertNotIn("SavePackages(PackagesToSave", master_cpp)
 
     def test_asset_load_gates_editor_subsystem_with_does_asset_exist(self) -> None:
         asset_load_cpp = MATERIAL_ASSET_LOAD.read_text(encoding="utf-8")
@@ -96,7 +108,7 @@ class MaterialValidateContractTests(unittest.TestCase):
             r"if\s*\(\s*!AssetSubsystem->DoesAssetExist\(PackagePath\)\s*\)\s*\{\s*return nullptr;\s*\}",
         )
         master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
-        self.assertIn("UeremcpMaterialAssetLoad::ResolveMaterial", master_cpp)
+        self.assertIn("TryLoadRegisteredMaterial", master_cpp)
         self.assertNotIn("LoadAsset(PackagePath)", master_cpp)
         self.assertNotIn("AssetSubsystem->LoadAsset", self.material_cpp)
         self.assertNotIn("AssetSubsystem->LoadAsset", self.procedural_cpp)

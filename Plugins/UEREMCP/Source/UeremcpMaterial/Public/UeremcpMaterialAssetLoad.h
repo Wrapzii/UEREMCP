@@ -19,6 +19,9 @@ namespace UeremcpMaterialAssetLoad
 	/** Load only when the asset registry reports the package exists (no LogError on miss). */
 	UEREMCPMATERIAL_API UObject* TryLoadRegisteredAsset(const FString& PackagePath);
 
+	/** Registry-only material load for idempotent reuse (ignores stale in-process objects after delete). */
+	UEREMCPMATERIAL_API UMaterial* TryLoadRegisteredMaterial(const FString& PackagePath);
+
 	UEREMCPMATERIAL_API UMaterial* ResolveMaterial(const FString& PackagePath, UMaterial* Preferred = nullptr);
 
 	UEREMCPMATERIAL_API UMaterialInstanceConstant* TryLoadMaterialInstance(const FString& PackagePath);

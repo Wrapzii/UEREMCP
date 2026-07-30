@@ -56,6 +56,11 @@ UObject* UeremcpMaterialAssetLoad::TryLoadRegisteredAsset(const FString& Package
 	return AssetSubsystem->LoadAsset(PackagePath);
 }
 
+UMaterial* UeremcpMaterialAssetLoad::TryLoadRegisteredMaterial(const FString& PackagePath)
+{
+	return Cast<UMaterial>(TryLoadRegisteredAsset(PackagePath));
+}
+
 UMaterial* UeremcpMaterialAssetLoad::ResolveMaterial(const FString& PackagePath, UMaterial* Preferred)
 {
 	if (Preferred)
