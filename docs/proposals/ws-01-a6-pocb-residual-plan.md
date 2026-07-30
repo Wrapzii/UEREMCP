@@ -1,6 +1,6 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `01b257e` (WS-11 B10 proof landed; residual commit follows)
+- **Orch tip at writing:** `41f4f82` (WS-11 reproducible metrics-gap handoff landed; residual commit follows)
 - **Date:** 2026-07-30
 - **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11. Post-UV editor fireball B2–B9 and B8 restart PASS. Post-`d07f8f1` MCP fireball proves **B1** and **B6**. WS-11 B10 proof `01b257e` landed, but Validation does not compile on UE 5.8 (`FLevelEditorViewportClient*` assigned to unrelated `FEditorViewportClient*`; `GetViewport` absent there) `[VERIFIED-RUNTIME: UeremcpValidation build on 2026-07-30]`, so no B10 runtime proof exists. Complete metrics/baseline also remain open. **No overall POC-B claim.**
 
@@ -254,8 +254,10 @@ Niagara DLL and ran the canonical fireball fixture:
 - **B6 PASS** — compile awaited true
 - Six material assets present
 - `status: partially_completed` — honest because B10 remains skipped
-- Metrics partial: `mcp_round_trips=1`, `internal_operations=46`; wall time,
-  tokens, and equivalent primitive-call baseline still outstanding
+- Metrics partial: `mcp_round_trips=1`, `internal_operations=46`; log timestamps
+  establish a reproducible **2.319s server-side lower bound**, explicitly not
+  client wall time. Client wall-clock, total tokens, and equivalent primitive-call
+  baseline remain outstanding.
 
 ### Overall POC B evaluation
 
@@ -265,7 +267,8 @@ Remaining blockers for an **overall** claim:
 1. **B10** — proof filter landed as `01b257e`, but Validation build fails before
    runtime; B10 remains unproven
 2. **Global POC metrics** — wall-clock, total tokens, and equivalent primitive-call
-   baseline not fully recorded (round trips and internal ops alone are insufficient)
+   baseline not fully recorded (round trips, internal ops, and the 2.319s
+   server-side lower bound are insufficient)
 
 No other B1–B9 gap is currently open. Do not claim overall POC B until both
 remainders pass.
@@ -294,7 +297,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | Fix B10 filter's UE 5.8 viewport-client compile errors; rebuild and run | WS-11 | Harness unit tests PASS 3/3; runtime filter unavailable until Validation compiles |
-| P0 | Complete POC-B metrics: wall time, tokens, equivalent primitive-call baseline | WS-11 / WS-14 | Round trips + internal ops recorded; remainder required by global POC rules |
+| P0 | Complete POC-B metrics: wall time, tokens, equivalent primitive-call baseline | WS-07 + WS-11 / WS-14 | `41f4f82` records 1 round trip, 46 ops, and a 2.319s server lower bound; fresh equivalent trials still required |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; POC-B entry still open |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
 

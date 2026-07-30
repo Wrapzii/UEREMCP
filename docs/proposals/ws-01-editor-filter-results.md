@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `01b257e` (B10 filter landed; Validation build blocked)
+- **Current orchestration tip:** `41f4f82` (metrics-gap handoff landed; B10 Validation build blocked)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -181,7 +181,7 @@ cleanly (DLL 07:19:11).
 |---|---|---|
 | Canonical one-request MCP fireball | **B1 PASS / B6 PASS** | `mcp_round_trips=1`; single-request pipeline true; compile awaited true; six materials present |
 | Status | `partially_completed` | Honest — B10 still skipped |
-| Metrics | **Partial** | Round trips=1, internal ops=46; wall time / tokens / primitive baseline outstanding |
+| Metrics | **Partial** | Round trips=1, internal ops=46; 2.319s server-side lower bound (not wall time); client wall / tokens / primitive baseline outstanding |
 
 B1–B9 are covered by editor + MCP + restart evidence. Remaining for overall
 POC B: **B10** and **complete metrics/baseline**. No overall POC-B claim.
@@ -194,8 +194,11 @@ POC B: **B10** and **complete metrics/baseline**. No overall POC-B claim.
 | `UeremcpValidation` rebuild | **FAIL** | `NiagaraPocBVisibleRender.spec.cpp:131-132`: viewport-client type mismatch and missing `GetViewport` member `[VERIFIED-RUNTIME: UeremcpValidation build on 2026-07-30]` |
 | B10 runtime filter | **NOT RUN** | New DLL was not produced; WS-11 fix/rebuild required |
 
-B10 remains unproven. Metrics remain partial: MCP round trips=1 and internal
-operations=46; wall time, tokens, and equivalent primitive-call baseline are open.
+B10 remains unproven; WS-11's fix/rebuild/run is in flight. Metrics handoff
+`41f4f82` records MCP round trips=1, internal operations=46, and a reproducible
+2.319s server-side lower bound that must **not** be reported as wall time. Client
+wall-clock, total tokens, and the measured equivalent primitive baseline remain
+open for the WS-07/WS-11/WS-14 rerun handoff.
 
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
