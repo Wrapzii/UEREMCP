@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/_shared/resolve_intent.schema.json",
+  "title": "resolve_intent specification",
+  "description": "Plain-text intent routing (WS-03/WS-05). Candidates come only from the live ToolsetRegistry / registry snapshot. Extends envelope.specification only (ADR-0003).",
+  "type": "object",
+  "required": ["intent"],
+  "additionalProperties": false,
+  "properties": {
+    "intent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Natural-language goal. One call should return ordered semantic steps with schemas and examples."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["recommend", "execute_if_complete"],
+      "default": "recommend",
+      "description": "recommend = plan only (no mutation). execute_if_complete is reserved; this build returns recommend-only and documents why if requested."
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional structured hints (asset paths, element, prior job_id, preferred domains)."
+    },
+    "expected_registry_hash": {
+      "type": "string",
+      "minLength": 16,
+      "description": "Optional SHA-256 of sorted qualified tool names. On mismatch the router abstains."
+    },
+    "max_steps": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 12,
+      "default": 6
+    }
+  },
+  "examples": [
+    {
+      "intent": "make a spell effect with a helix and show me what it looks like",
+      "mode": "recommend"
+    }
+  ]
+}

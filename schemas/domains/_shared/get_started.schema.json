@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/_shared/get_started.schema.json",
+  "title": "get_started specification",
+  "description": "Bootstrap briefing for fresh agents. Prefer calling ResolveIntent next. Extends envelope.specification only.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "detail": {
+      "type": "string",
+      "enum": ["summary", "complete"],
+      "default": "summary"
+    }
+  },
+  "examples": [
+    {}
+  ]
+}

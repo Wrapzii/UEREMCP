@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/_shared/describe_operation.schema.json",
+  "title": "describe_operation specification",
+  "description": "Return schema + worked example for one registry-verified tool. Extends envelope.specification only.",
+  "type": "object",
+  "required": ["tool"],
+  "additionalProperties": false,
+  "properties": {
+    "tool": {
+      "type": "string",
+      "minLength": 3,
+      "description": "Fully qualified Toolset.Tool name, or short Tool name if unique among UEREMCP tools."
+    }
+  },
+  "examples": [
+    {
+      "tool": "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect"
+    }
+  ]
+}
