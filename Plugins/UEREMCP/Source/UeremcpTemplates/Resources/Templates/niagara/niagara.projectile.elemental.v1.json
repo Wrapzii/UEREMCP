@@ -1,1 +1,207 @@
-{"template_id":"niagara.projectile.elemental.v1","domain":"niagara","category":"projectile","version":1,"description":"Parameterized elemental projectile Niagara system composed from six emitter archetypes.","purpose":"POC C seed: one template family for fire/water/wind/earth/ice via inputs.element and named modifiers.","authored_by":"human","engine_compatibility":{"min_version":"5.8.0","verified_on":["5.8.0"]},"composes":["niagara.emitter.core.v1","niagara.emitter.shell.v1","niagara.emitter.sparks.v1","niagara.emitter.smoke.v1","niagara.emitter.ribbon_trail.v1","niagara.emitter.impact_burst.v1"],"inputs":{"type":"object","properties":{"element":{"type":"string","enum":["fire","water","wind","earth","ice"]},"target_path":{"type":"string"},"source_system":{"type":"string","description":"Optional existing projectile system whose emitter structure is inherited by variation modifiers."},"scale":{"type":"number","minimum":0.1},"intensity":{"type":"number","minimum":0.1},"preset_material_parameters":{"type":"object"},"preset_niagara_parameters":{"type":"object"}},"required":["element","target_path"]},"outputs":{"primary_asset":{"type":"string","description":"Created Niagara system asset path."}},"supported_modifiers":["crystalline_fragments","reduce_trail_persistence","boost_impact","preserve_networking"],"modifier_definitions":{"crystalline_fragments":{"bucket":"add","merge_specifications":{"core_material":{"modifiers":["crystalline_fragments"]},"projectile_fx":{"base_system":{"asset_path":"{{inputs.source_system}}"},"components":[{"archetype":"niagara.emitter.sparks.v1","role":"crystalline"},{"archetype":"niagara.emitter.impact_burst.v1","role":"ice_impact"}]}}},"reduce_trail_persistence":{"bucket":"adjust","merge_specifications":{"trail_material":{"modifiers":["reduce_trail_persistence"]}}},"boost_impact":{"bucket":"adjust","merge_specifications":{"core_material":{"modifiers":["boost_impact"]}}},"preserve_networking":{"bucket":"preserve","merge_specifications":{"projectile_fx":{"base_system":{"asset_path":"{{inputs.source_system}}"},"emitters":[{"preservation_contract":"source_networking_and_damage_unchanged"}]}}}},"dependencies":{"materials":[{"role":"core_material","generate_if_missing":true},{"role":"trail_material","generate_if_missing":true,"optional":true}],"generate_if_missing":true},"construction_plan":[{"id":"core_material","action":"create_vfx_material","mode":"create_or_update","specification":{"purpose":"elemental_projectile_core","element":"{{inputs.element}}","features":["radial_falloff","animated_noise","fresnel","dynamic_color","dynamic_intensity"],"parameter_overrides":"{{inputs.preset_material_parameters}}"}},{"id":"trail_material","action":"create_vfx_material","optional":true,"mode":"create_or_update","specification":{"purpose":"elemental_projectile_trail","element":"{{inputs.element}}","features":["panning_textures","erosion","depth_fade","dynamic_color"],"parameter_overrides":"{{inputs.preset_material_parameters}}"}},{"id":"projectile_fx","action":"create_niagara_effect","depends_on":["core_material","trail_material"],"mode":"create_or_update","specification":{"name":"ElementalProjectile","effect_type":"projectile","element":"{{inputs.element}}","base_system":{"asset_path":"/Game/VFX/Spells/Firebolt/Systems/NS_FB_Projectile"},"parameters":"{{inputs.preset_niagara_parameters}}","components":[{"archetype":"niagara.emitter.core.v1","role":"REF"},{"archetype":"niagara.emitter.shell.v1","role":"Spiral1"},{"archetype":"niagara.emitter.sparks.v1","role":"Sparks1"},{"archetype":"niagara.emitter.smoke.v1","role":"Smoke"},{"archetype":"niagara.emitter.ribbon_trail.v1","role":"Trail"},{"archetype":"niagara.emitter.impact_burst.v1","role":"Flash"}],"materials":{"core":{"$ref":"core_material.result.primary_asset"},"ribbon_trail":{"$ref":"trail_material.result.primary_asset"}}}}],"validation_rules":[{"rule_id":"six_emitters","check":"emitter_count == 6","severity":"error","message":"Elemental projectile must compose all six archetype emitters."},{"rule_id":"element_user_params","check":"user_params_include(['Color', 'Scale', 'Intensity'])","severity":"error","message":"Elemental variation requires exposed user parameters."}],"typical_ranges":{"scale":{"min":0.5,"max":2.0,"typical":1.0},"intensity":{"min":2.0,"max":20.0,"typical":8.0}},"performance_profile":{"max_particles":12000,"gpu_simulation":true,"overdraw_risk":"medium","notes":"Six-emitter projectile patterned after NS_FB_Projectile prior art."},"search_terms":["projectile","fireball","elemental","fire","water","wind","earth","ice","niagara"]}
+{
+  "template_id": "niagara.projectile.elemental.v1",
+  "domain": "niagara",
+  "category": "projectile",
+  "version": 1,
+  "description": "Parameterized elemental projectile with an explicit RE gameplay source binding.",
+  "purpose": "POC C composite source-to-variation proof.",
+  "authored_by": "human",
+  "engine_compatibility": {
+    "min_version": "5.8.0",
+    "verified_on": ["5.8.0"]
+  },
+  "composes": [
+    "niagara.emitter.core.v1",
+    "niagara.emitter.shell.v1",
+    "niagara.emitter.sparks.v1",
+    "niagara.emitter.smoke.v1",
+    "niagara.emitter.ribbon_trail.v1",
+    "niagara.emitter.impact_burst.v1"
+  ],
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "element": {
+        "type": "string",
+        "enum": ["fire", "water", "wind", "earth", "ice"]
+      },
+      "target_path": { "type": "string" },
+      "source_system": { "type": "string" },
+      "ability_table": { "type": "string" },
+      "source_row": { "type": "string" },
+      "target_ability_table": { "type": "string" },
+      "target_row": { "type": "string" },
+      "vfx_phase": {
+        "type": "string",
+        "enum": ["projectile", "impact", "projectile_and_impact"]
+      },
+      "scale": { "type": "number", "minimum": 0.1 },
+      "intensity": { "type": "number", "minimum": 0.1 },
+      "preset_material_parameters": { "type": "object" },
+      "preset_niagara_parameters": { "type": "object" }
+    },
+    "required": [
+      "element",
+      "target_path",
+      "source_system",
+      "ability_table",
+      "source_row",
+      "target_ability_table",
+      "target_row",
+      "vfx_phase"
+    ]
+  },
+  "outputs": {
+    "primary_asset": {
+      "type": "string",
+      "description": "Scratch ability table containing the bound variation row."
+    }
+  },
+  "supported_modifiers": [
+    "crystalline_fragments",
+    "reduce_trail_persistence",
+    "boost_impact",
+    "preserve_networking"
+  ],
+  "modifier_definitions": {
+    "crystalline_fragments": {
+      "bucket": "add",
+      "merge_specifications": {
+        "core_material": {
+          "modifiers": ["crystalline_fragments"]
+        },
+        "projectile_fx": {
+          "base_system": {
+            "asset_path": "{{inputs.source_system}}"
+          },
+          "components": [
+            {
+              "archetype": "niagara.emitter.sparks.v1",
+              "role": "crystalline"
+            },
+            {
+              "archetype": "niagara.emitter.impact_burst.v1",
+              "role": "ice_impact"
+            }
+          ]
+        }
+      }
+    },
+    "reduce_trail_persistence": {
+      "bucket": "adjust",
+      "merge_specifications": {
+        "trail_material": {
+          "modifiers": ["reduce_trail_persistence"]
+        }
+      }
+    },
+    "boost_impact": {
+      "bucket": "adjust",
+      "merge_specifications": {
+        "core_material": {
+          "modifiers": ["boost_impact"]
+        }
+      }
+    },
+    "preserve_networking": {
+      "bucket": "preserve",
+      "merge_specifications": {
+        "gameplay_binding": {
+          "verification_mode": "protected_fields_equal"
+        }
+      }
+    }
+  },
+  "construction_plan": [
+    {
+      "id": "core_material",
+      "action": "create_vfx_material",
+      "mode": "create_or_update",
+      "specification": {
+        "purpose": "elemental_projectile_core",
+        "element": "{{inputs.element}}",
+        "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"],
+        "parameter_overrides": "{{inputs.preset_material_parameters}}"
+      }
+    },
+    {
+      "id": "trail_material",
+      "action": "create_vfx_material",
+      "optional": true,
+      "mode": "create_or_update",
+      "specification": {
+        "purpose": "elemental_projectile_trail",
+        "element": "{{inputs.element}}",
+        "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"],
+        "parameter_overrides": "{{inputs.preset_material_parameters}}"
+      }
+    },
+    {
+      "id": "projectile_fx",
+      "action": "create_niagara_effect",
+      "depends_on": ["core_material", "trail_material"],
+      "mode": "replace",
+      "target": {
+        "asset_path": "{{inputs.target_path}}"
+      },
+      "specification": {
+        "name": "ElementalProjectile",
+        "effect_type": "projectile",
+        "element": "{{inputs.element}}",
+        "base_system": {
+          "asset_path": "{{inputs.source_system}}"
+        },
+        "parameters": "{{inputs.preset_niagara_parameters}}",
+        "components": [
+          { "archetype": "niagara.emitter.core.v1", "role": "REF" },
+          { "archetype": "niagara.emitter.shell.v1", "role": "Spiral1" },
+          { "archetype": "niagara.emitter.sparks.v1", "role": "Sparks1" },
+          { "archetype": "niagara.emitter.smoke.v1", "role": "Smoke" },
+          { "archetype": "niagara.emitter.ribbon_trail.v1", "role": "Trail" },
+          { "archetype": "niagara.emitter.impact_burst.v1", "role": "Flash" }
+        ],
+        "materials": {
+          "core": { "$ref": "core_material.result.primary_asset" },
+          "ribbon_trail": { "$ref": "trail_material.result.primary_asset" }
+        }
+      }
+    },
+    {
+      "id": "gameplay_binding",
+      "action": "create_spell_variation",
+      "depends_on": ["projectile_fx"],
+      "mode": "create_or_update",
+      "target": {
+        "asset_path": "{{inputs.target_ability_table}}"
+      },
+      "specification": {
+        "source_binding": {
+          "ability_table": "{{inputs.ability_table}}",
+          "source_row": "{{inputs.source_row}}",
+          "vfx_phase": "{{inputs.vfx_phase}}"
+        },
+        "target_row": "{{inputs.target_row}}",
+        "presentation_asset": {
+          "$ref": "projectile_fx.result.primary_asset"
+        },
+        "verification_mode": "protected_fields_equal"
+      }
+    }
+  ],
+  "validation_rules": [
+    {
+      "rule_id": "networking_damage_preserved",
+      "check": "gameplay_binding.validation.protected_fields_equal == true",
+      "severity": "error",
+      "message": "Source and target protected FREAbilityDef fields must compare equal."
+    }
+  ],
+  "search_terms": [
+    "projectile",
+    "fireball",
+    "elemental",
+    "variation",
+    "networking",
+    "damage"
+  ]
+}

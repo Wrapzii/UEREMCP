@@ -450,6 +450,10 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 	{
 		const FString TargetFolder = FPaths::GetPath(EffectiveTargetPath);
 		const FString TargetName = FPaths::GetBaseFilename(EffectiveTargetPath);
+		if (!EffectiveInputs->HasField(TEXT("projectile_fx_path")))
+		{
+			EffectiveInputs->SetStringField(TEXT("projectile_fx_path"), EffectiveTargetPath);
+		}
 		if (!EffectiveInputs->HasField(TEXT("core_material_path")))
 		{
 			EffectiveInputs->SetStringField(
@@ -1059,7 +1063,7 @@ TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 	{
 		const TSharedPtr<FJsonObject> TerminalOperation =
 			Operations[ConstructionOperationCount - 1]->AsObject();
-		if (!TargetAssetPath.IsEmpty())
+		if (!TargetAssetPath.IsEmpty() && !TerminalOperation->HasField(TEXT("target")))
 		{
 			const TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
 			Target->SetStringField(TEXT("asset_path"), TargetAssetPath);

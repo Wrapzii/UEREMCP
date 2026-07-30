@@ -30,6 +30,26 @@
         "type": "string",
         "description": "Optional existing projectile system whose emitter structure is inherited by variation modifiers."
       },
+      "ability_table": {
+        "type": "string",
+        "description": "Read-only FREAbilityDef source table that owns gameplay behavior."
+      },
+      "source_row": {
+        "type": "string",
+        "description": "Source FREAbilityDef row copied without mutating the production row."
+      },
+      "target_ability_table": {
+        "type": "string",
+        "description": "Scratch DataTable receiving the cloned variation row."
+      },
+      "target_row": {
+        "type": "string",
+        "description": "Stable target variation row identity."
+      },
+      "vfx_phase": {
+        "type": "string",
+        "enum": ["projectile", "impact", "projectile_and_impact"]
+      },
       "scale": { "type": "number", "minimum": 0.1 },
       "intensity": { "type": "number", "minimum": 0.1 },
       "preset_material_parameters": { "type": "object" },
@@ -37,7 +57,13 @@
     },
     "required": [
       "element",
-      "target_path"
+      "target_path",
+      "source_system",
+      "ability_table",
+      "source_row",
+      "target_ability_table",
+      "target_row",
+      "vfx_phase"
     ]
   },
   "outputs": {
@@ -92,15 +118,8 @@
     "preserve_networking": {
       "bucket": "preserve",
       "merge_specifications": {
-        "projectile_fx": {
-          "base_system": {
-            "asset_path": "{{inputs.source_system}}"
-          },
-          "emitters": [
-            {
-              "preservation_contract": "source_networking_and_damage_unchanged"
-            }
-          ]
+        "gameplay_binding": {
+          "verification_mode": "protected_fields_equal"
         }
       }
     }
@@ -140,7 +159,10 @@
       "id": "projectile_fx",
       "action": "create_niagara_effect",
       "depends_on": ["core_material", "trail_material"],
-      "mode": "create_or_update",
+      "mode": "replace",
+      "target": {
+        "asset_path": "{{inputs.target_path}}"
+      },
       "specification": {
         "name": "ElementalProjectile",
         "effect_type": "projectile",
@@ -162,6 +184,27 @@
           "ribbon_trail": { "$ref": "trail_material.result.primary_asset" }
         }
       }
+    },
+    {
+      "id": "gameplay_binding",
+      "action": "create_spell_variation",
+      "depends_on": ["projectile_fx"],
+      "mode": "create_or_update",
+      "target": {
+        "asset_path": "{{inputs.target_ability_table}}"
+      },
+      "specification": {
+        "source_binding": {
+          "ability_table": "{{inputs.ability_table}}",
+          "source_row": "{{inputs.source_row}}",
+          "vfx_phase": "{{inputs.vfx_phase}}"
+        },
+        "target_row": "{{inputs.target_row}}",
+        "presentation_asset": {
+          "$ref": "projectile_fx.result.primary_asset"
+        },
+        "verification_mode": "protected_fields_equal"
+      }
     }
   ],
   "validation_rules": [
@@ -176,6 +219,12 @@
       "check": "user_params_include(['Color', 'Scale', 'Intensity'])",
       "severity": "error",
       "message": "Elemental variation requires exposed user parameters."
+    },
+    {
+      "rule_id": "networking_damage_preserved",
+      "check": "gameplay_binding.validation.protected_fields_equal == true",
+      "severity": "error",
+      "message": "Source and target protected FREAbilityDef fields must compare equal after re-read."
     }
   ],
   "typical_ranges": {

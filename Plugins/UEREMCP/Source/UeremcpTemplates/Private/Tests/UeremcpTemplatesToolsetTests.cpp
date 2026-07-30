@@ -195,6 +195,9 @@ bool FUeremcpTemplatesPocCThirdGenerationTest::RunTest(const FString& Parameters
 		FString Element;
 		FString SourcePath;
 		FString TargetPath;
+		FString AbilityTable;
+		FString SourceRow;
+		FString TargetRow;
 		FString ModifiersJson;
 	};
 	const TArray<FGeneration> Generations = {
@@ -203,6 +206,9 @@ bool FUeremcpTemplatesPocCThirdGenerationTest::RunTest(const FString& Parameters
 			TEXT("ice"),
 			TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball"),
 			TEXT("/Game/__UeremcpPoc/NS_POCC_IceVariation"),
+			TEXT("/Game/RE/Data/DT_Abilities"),
+			TEXT("fire_s"),
+			TEXT("poc_c_ice_fire_s"),
 			TEXT("\"adjust\":[\"reduce_trail_persistence\",\"boost_impact\"],\"add\":[\"crystalline_fragments\"],\"preserve\":[\"preserve_networking\"]")
 		},
 		{
@@ -210,6 +216,9 @@ bool FUeremcpTemplatesPocCThirdGenerationTest::RunTest(const FString& Parameters
 			TEXT("wind"),
 			TEXT("/Game/__UeremcpPoc/NS_POCC_IceVariation"),
 			TEXT("/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration"),
+			TEXT("/Game/__UeremcpPoc/Abilities/DT_POCC_Variations"),
+			TEXT("poc_c_ice_fire_s"),
+			TEXT("poc_c_wind_fire_s"),
 			TEXT("\"preserve\":[\"preserve_networking\"]")
 		},
 	};
@@ -218,15 +227,21 @@ bool FUeremcpTemplatesPocCThirdGenerationTest::RunTest(const FString& Parameters
 	{
 		const FString Request = FString::Printf(
 			TEXT("{\"protocol_version\":\"1.0\",\"request_id\":\"%s\",\"action\":\"instantiate_template\",")
-			TEXT("\"mode\":\"replace\",\"specification\":{\"template_id\":\"niagara.projectile.elemental.v1\",")
-			TEXT("\"inputs\":{\"element\":\"%s\",\"target_path\":\"%s\",\"source_system\":\"%s\",\"scale\":1.0,\"intensity\":6.0},")
-			TEXT("\"modifiers\":{%s},\"target\":{\"asset_path\":\"%s\"},\"mode\":\"replace\"},")
-			TEXT("\"options\":{\"dry_run\":false,\"allow_destructive\":true,\"atomic\":true,\"rollback_on_failure\":true,")
+			TEXT("\"mode\":\"create_or_update\",\"specification\":{\"template_id\":\"niagara.projectile.elemental.v1\",")
+			TEXT("\"inputs\":{\"element\":\"%s\",\"target_path\":\"%s\",\"source_system\":\"%s\",")
+			TEXT("\"ability_table\":\"%s\",\"source_row\":\"%s\",")
+			TEXT("\"target_ability_table\":\"/Game/__UeremcpPoc/Abilities/DT_POCC_Variations\",")
+			TEXT("\"target_row\":\"%s\",\"vfx_phase\":\"projectile_and_impact\",\"scale\":1.0,\"intensity\":6.0},")
+			TEXT("\"modifiers\":{%s},\"target\":{\"asset_path\":\"%s\"},\"mode\":\"create_or_update\"},")
+			TEXT("\"options\":{\"dry_run\":false,\"atomic\":true,\"rollback_on_failure\":true,")
 			TEXT("\"compile\":true,\"validate\":true,\"save\":true,\"response_detail\":\"complete\",\"timeout_ms\":0}}"),
 			*Generation.RequestId,
 			*Generation.Element,
 			*Generation.TargetPath,
 			*Generation.SourcePath,
+			*Generation.AbilityTable,
+			*Generation.SourceRow,
+			*Generation.TargetRow,
 			*Generation.ModifiersJson,
 			*Generation.TargetPath);
 
@@ -277,6 +292,25 @@ bool FUeremcpTemplatesPocCThirdGenerationTest::RunTest(const FString& Parameters
 		}
 		TestTrue(TEXT("response reports inherited pattern facts"), bInherited);
 		TestTrue(TEXT("response reports overridden variation facts"), bOverridden);
+		const TSharedPtr<FJsonObject>* Validation = nullptr;
+		bool bProtectedFieldsEqual = false;
+		TestTrue(
+			*FString::Printf(TEXT("%s C5 protected fields verified equal"), *Generation.Element),
+			Root->TryGetObjectField(TEXT("validation"), Validation)
+				&& Validation && Validation->IsValid()
+				&& (*Validation)->TryGetBoolField(
+					TEXT("protected_fields_equal"),
+					bProtectedFieldsEqual)
+				&& bProtectedFieldsEqual);
+		const TSharedPtr<FJsonObject>* GameplayBinding = nullptr;
+		TestTrue(
+			*FString::Printf(TEXT("%s composite gameplay binding returned"), *Generation.Element),
+			Root->TryGetObjectField(TEXT("gameplay_binding"), GameplayBinding)
+				&& GameplayBinding && GameplayBinding->IsValid()
+				&& (*GameplayBinding)->GetStringField(TEXT("source_row"))
+					== Generation.SourceRow
+				&& (*GameplayBinding)->GetStringField(TEXT("target_row"))
+					== Generation.TargetRow);
 		TestNotNull(
 			*FString::Printf(TEXT("%s generation asset exists"), *Generation.Element),
 			FSoftObjectPath(Generation.TargetPath).TryLoad());
