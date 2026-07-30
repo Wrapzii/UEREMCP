@@ -1,12 +1,19 @@
 // UEREMCP — reference toolset proving ADR-0002.
 //
+// START HERE for agents:
+//   GetStarted → ResolveIntent → domain semantic tools (prefer Ueremcp*).
+//
 // Agent-facing tools:
-//   Ping : no args — registration / reachability
-//   Echo : one FString request envelope — ADR-0003 shape + RB-03 q6 schema capture
-//   ExecutePlan : one complete plan request — ADR-0008 execution path
+//   GetStarted / ResolveIntent / DescribeOperation — intent router bootstrap
+//   Ping / Echo / ExecutePlan / GetJobResult / CancelJob — reference + jobs
 //
 // Reference pattern: UAgentSkillToolset
 // [VERIFIED: $TR/Source/ToolsetRegistry/Public/ToolsetRegistry/AgentSkill.h]
+//
+// Tool descriptions for describe_toolset come from these UFUNCTION doc comments
+// via UStructToJsonSchemaMetadata / GetToolTipText
+// [VERIFIED: Engine/.../JsonSchemaGeneratorEditor.h:66-75]
+// [VERIFIED: $TR/.../FunctionLibraryToolset.h:42-50].
 
 #pragma once
 
@@ -16,14 +23,17 @@
 #include "UeremcpReferenceToolset.generated.h"
 
 /**
- * Reference UEREMCP toolset (ADR-0002).
+ * START HERE — UEREMCP reference + intent router (ADR-0002).
  *
- * One UToolsetDefinition subclass hosting static AICallable UFUNCTIONs. Thin by
- * design — no domain work here. Registration is explicit via
- * UToolsetRegistry::RegisterToolsetClass
+ * Use when: first MCP call, discovering which semantic tool to invoke, or polling jobs.
+ * Prefer ResolveIntent over list_toolsets for goal routing. Prefer Ueremcp* domain tools
+ * over Epic primitives for create/modify/validate.
+ * Do not use for: domain asset authoring (use Niagara/Material/Blueprint/Templates toolsets).
+ *
+ * One UToolsetDefinition subclass hosting static AICallable UFUNCTIONs. Registration is
+ * explicit via UToolsetRegistry::RegisterToolsetClass
  * [VERIFIED: $TR/.../Public/ToolsetRegistry/UToolsetRegistry.h:28]
  * [VERIFIED: $TR/.../Private/ToolsetRegistry/ToolsetRegistrySubsystem.cpp:49]
- * (UAgentSkillToolset is registered the same way; subclasses do NOT self-register).
  */
 UCLASS(BlueprintType)
 class UEREMCPCORE_API UUeremcpReferenceToolset : public UToolsetDefinition
@@ -32,19 +42,76 @@ class UEREMCPCORE_API UUeremcpReferenceToolset : public UToolsetDefinition
 
 public:
 
-	// Called on the CDO [VERIFIED: ToolsetDefinition.h].
-	virtual FString GetToolsetVersion() const override { return TEXT("0.1.0"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.2.0-intent-router"); }
+
+	/**
+	 * START HERE — bootstrap briefing for fresh agents.
+	 *
+	 * Use when: first call, "what tools do I use?", getting oriented on UEREMCP.
+	 * Inputs: requestJson envelope with action=get_started (specification optional).
+	 * Outputs: prefer_toolsets, next_call=ResolveIntent, envelope reminder.
+	 * Do not use for: creating assets — call ResolveIntent then a domain tool.
+	 * Next tool: ResolveIntent with your plain-text goal.
+	 *
+	 * @param RequestJson Request envelope (schemas/domains/_shared/get_started.schema.json).
+	 * @return Response envelope; no editor mutation.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
+	static FString GetStarted(const FString& RequestJson);
+
+	/**
+	 * Resolve a plain-text intent into ordered UEREMCP semantic operations.
+	 *
+	 * Use when: you know the goal in English but not which tool/schema to call;
+	 * "make a spell effect with a helix and show me what it looks like".
+	 * Inputs: specification.intent (required), mode=recommend|execute_if_complete,
+	 * optional context hints and expected_registry_hash.
+	 * Outputs: confidence, ordered plan with fully-qualified live registry names,
+	 * request_json examples, input_schema, missing_fields, safety, recovery.
+	 * Do not use for: skipping verification — routing accuracy ≠ end-to-end success.
+	 * Next tool: call each plan step; on low confidence answer clarification_questions.
+	 *
+	 * Candidates come only from the live ToolsetRegistry
+	 * [VERIFIED: UToolsetRegistry::GetAllToolsetJsonSchemas].
+	 * Cannot emit a tool name absent from the live registry. Abstains on hash mismatch
+	 * or low confidence. Mode execute_if_complete is not auto-executed in this build.
+	 *
+	 * @param RequestJson Request envelope (schemas/domains/_shared/resolve_intent.schema.json).
+	 * @return Response envelope with result plan; status no_change_required or rejected.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
+	static FString ResolveIntent(const FString& RequestJson);
+
+	/**
+	 * Describe one registry-verified operation: schema, example, safety notes.
+	 *
+	 * Use when: you already know the tool name and need the envelope/example.
+	 * Inputs: specification.tool = fully qualified Toolset.Tool (or unique short name).
+	 * Outputs: description, input_schema, request_json example when catalogued.
+	 * Do not use for: choosing which tool — use ResolveIntent first.
+	 * Next tool: call_tool with the returned request_json.
+	 *
+	 * @param RequestJson Request envelope (schemas/domains/_shared/describe_operation.schema.json).
+	 * @return Response envelope; rejected if the name is not in the live registry.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
+	static FString DescribeOperation(const FString& RequestJson);
 
 	/**
 	 * Liveness probe. No parameters — isolates registration from schema questions.
+	 *
+	 * Use when: confirming UEREMCP MCP registration is alive before domain work.
+	 * Do not use for: domain operations.
 	 * @return Response envelope JSON (protocol_version, status, summary, metrics).
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
 	static FString Ping();
 
 	/**
-	 * Echoes a request envelope inside a response envelope. Exercises the single
-	 * FString parameter path that ADR-0003 depends on (RB-03 q6).
+	 * Echoes a request envelope inside a response envelope (ADR-0003 probe).
+	 *
+	 * Use when: validating envelope shape without touching assets.
+	 * Do not use for: production domain work.
 	 *
 	 * @param RequestJson Request envelope JSON string (schemas/envelope/request.schema.json).
 	 * @return Response envelope JSON. Malformed input yields status "rejected".
@@ -54,10 +121,12 @@ public:
 
 	/**
 	 * Execute a complete multi-operation plan (action=execute_plan).
-	 * Delegates to FUeremcpPlanActions — no additional parsing.
 	 *
-	 * @param RequestJson Request envelope JSON (schemas/batch/plan.schema.json
-	 *        as specification).
+	 * Use when: you already have an explicit multi-step plan JSON.
+	 * Do not use for: first-choice surface — prefer InstantiateTemplate or domain tools.
+	 * Next tool: GetJobResult if partially_completed.
+	 *
+	 * @param RequestJson Request envelope JSON (schemas/batch/plan.schema.json as specification).
 	 * @return Response envelope JSON with consolidated result + change manifest.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
@@ -65,7 +134,9 @@ public:
 
 	/**
 	 * Poll a long-running job by id (action=get_job_result).
-	 * Delegates to FUeremcpJobActions — no additional parsing.
+	 *
+	 * Use when: a prior call returned partially_completed with job.job_id.
+	 * Do not use for: starting new domain work.
 	 *
 	 * @param RequestJson Request envelope JSON with specification.job_id.
 	 * @return Response envelope JSON for the current job snapshot.
@@ -75,7 +146,9 @@ public:
 
 	/**
 	 * Cooperatively cancel a running job (action=cancel_job).
-	 * Delegates to FUeremcpJobActions — no additional parsing.
+	 *
+	 * Use when: stop a UEREMCP long job by job_id.
+	 * Do not use for: assuming MCP notifications/cancelled alone is enough.
 	 *
 	 * @param RequestJson Request envelope JSON with specification.job_id.
 	 * @return Response envelope JSON reflecting cancellation outcome.
