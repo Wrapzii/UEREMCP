@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball is PASS. MCP B1 and B8 restart survival remain open — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. MCP B1, required B10 visible rendering, and global POC-B metrics/baseline remain open — **no overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball PASS; one-request MCP B1 and fresh-process B8 Verify remain open. No overall POC-B claim.
+Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; one-request MCP B1, required B10 visible rendering, and global POC-B metrics/baseline remain open. No overall POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -84,7 +84,7 @@ WS-11 parsing fix is integrated as `674c439`. The ordered co-location stack is `
 |---|---|---|
 | Fireball inline materials | **PASS** | `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_055332.log`: all six B4 roles verified; `UEREMCP_POC_B_FIREBALL_OUTCOME=PASS proof=editor_single_create_inline_materials_b2_b4`; exit 0. |
 
-This proves the B2/B4 editor gate only **on that tip**. Later `70cc348` re-run (with `dbb3638`→`7a417bb`, before `ee905ed`) **FAILED** B1/B4 on `ribbon_trail` again — see below. Remaining overall POC-B criteria include B1, B4 freshness, and B8 Create→restart→Verify. B7 has separate scaffold proof; B10 is optional.
+This proves the B2/B4 editor gate only **on that tip**. Later `70cc348` re-run (with `dbb3638`→`7a417bb`, before `ee905ed`) **FAILED** B1/B4 on `ribbon_trail` again — see below. At that point, remaining overall POC-B criteria included B1, B4 freshness, and B8 Create→restart→Verify. B7 had separate scaffold proof; B10 remained required.
 
 ## Fireball / B8 / CRT on tip `70cc348` (WS-11; pre-`ee905ed`)
 
@@ -118,6 +118,22 @@ that one MCP transport request produced the effect. `B8_assets_saved` proves the
 save half only; POC_ACCEPTANCE B8 still requires WS-11
 Create→restart→Verify. **Overall POC B remains unclaimed.**
 
+## WS-11 freshness and restart proof on tip `8a8c75d`
+
+| Proof | Result | Evidence / residual |
+|---|---|---|
+| `FireballInlineMaterials` | **PASS** | `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_064554.log`: editor gates B1–B6/B9 green; all six B4 roles, including `ribbon_trail` |
+| B8 Restart Create | **PASS** | `editor_UEREMCP_Niagara_POCB_Restart_Create_20260730_064653.log` |
+| B8 Restart Verify | **PASS** | `editor_UEREMCP_Niagara_POCB_Restart_Verify_20260730_064733.log`: `restart_observed` and `reread_after_restart` for all ten checkpoint assets |
+
+Acceptance interpretation remains strict: the editor filter's B1 field proves one
+direct create pipeline, not POC_ACCEPTANCE B1's explicit one-MCP-request transport
+requirement. B10 is **required**, because it is a numbered criterion under the
+document's binary acceptance rules; “screenshot as supplementary evidence only”
+means a screenshot cannot itself be the validation, not that B10 is optional.
+Global POC-B metrics and the equivalent primitive-call baseline also remain
+unrecorded. **Overall POC B remains unclaimed.**
+
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
 | Proof | Result | Evidence |
@@ -133,9 +149,9 @@ Prior transport run on `600c383` / `70cc348`: **FAIL overall** (A5 blocked). Sup
 
 ## B8 restart current result
 
-**OPEN after post-UV editor fireball PASS:** `B8_assets_saved` is green, but
-restart survival has not run. WS-11 must execute Create→restart→Verify and prove
-fresh-process registry reload before B8 can pass. No overall POC-B claim.
+**PASS on `8a8c75d`:** WS-11 Create→restart→Verify observed a fresh editor
+process and re-read all ten checkpoint assets. This satisfies B8. It does not
+satisfy B1, B10, or the global POC-B metrics requirements.
 
 ## Templates editor result and handoff
 
@@ -346,7 +362,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Run one-request MCP fireball and B8 Create→restart→Verify. Keep overall POC-B unclaimed until both pass. |
+| WS-11 | Run one-request MCP fireball, B10 visible-render proof, and record complete POC-B metrics/baseline. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball PASS; MCP B1 and B8 restart survival remain open. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1, required B10, and global POC-B metrics/baseline remain open. No overall POC-B claim. No junction retarget.

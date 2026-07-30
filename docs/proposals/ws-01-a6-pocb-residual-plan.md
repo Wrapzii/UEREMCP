@@ -2,7 +2,7 @@
 
 - **Orch tip at writing:** `8a8c75d` (WS-08 trail UV + WS-07 proposal closed + POC-A residual)
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Trail UV fix landed as `cf7e6d3` (`2187d69`); proposal closed as `5ec7e02` (`ff648ab`). The post-UV editor fireball gate now passes, but MCP transport B1 and B8 restart survival remain unproven — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball B2–B6/B9 and B8 Create→restart→Verify now pass. Acceptance B1 still lacks a one-request MCP transport proof, B10 visible rendering is required and unproven, and global POC-B metrics/baseline are unrecorded — **no overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -124,8 +124,8 @@ Evidence: `tests/integration/_logs/poc_a_complete_round_trip_3756244.json`.
 | Aggregate CRT A1–A11 | WS-11 | **PASS** — overall POC A claimed |
 | Metrics file (`poc-metrics.md`) | WS-11 / WS-14 | Still open for POC **E7** only — not a POC A blocker |
 
-**WS-01 next step:** one-request MCP fireball B1 plus WS-11 B8
-Create→restart→Verify; keep overall POC-B unclaimed.
+**WS-01 next step:** one-request MCP fireball B1, required B10 visible-render
+proof, and complete POC-B metrics/baseline; keep overall POC-B unclaimed.
 
 ---
 
@@ -161,7 +161,7 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Expanded fireball B-gate assertions | `3b39dd3` (`0474e4e`) | Filter asserts B1/B3/B5/B6/B9 fields; runtime proof pending; ribbon_trail regression under diagnosis |
 | Stale ProjTrail master verify/rebuild | `7a417bb` (`dbb3638`) | Ribbon-trail regression fix landed; Material rebuilt; fireball runtime re-run required |
 | Stale ProjTrail pre-create cleanup | `886d09d` (`ee905ed`) | Clears stale masters when ribbon MI is absent; defense in depth with `7a417bb`; Niagara rebuilt |
-| Trail MainTexture UV + master package release | `cf7e6d3` (`2187d69`) | WS-08 UV pin fix; Material rebuilt; fireball/B8 still pending |
+| Trail MainTexture UV + master package release | `cf7e6d3` (`2187d69`) | WS-08 UV pin fix; Material rebuilt; post-UV fireball and B8 later passed |
 | Ribbon_trail proposal closed | `5ec7e02` (`ff648ab`) | Documents WS-08 `2187d69` as the durable trail fix; not a POC-B claim |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
@@ -189,20 +189,33 @@ current B2/B4 evidence. It does **not** prove acceptance B1's one-MCP-request
 transport requirement: the test directly executes one editor create pipeline.
 Its B8 field proves only package save; it does **not** prove restart survival.
 
+**WS-11 freshness on tip `8a8c75d`:** `FireballInlineMaterials` **PASS** for
+the six requested roles, including `ribbon_trail`, with editor gate fields
+B1–B6 and B9 green. Evidence:
+`editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_064554.log`.
+For acceptance, this is current B2–B6/B9 proof; its B1 field still describes
+the direct editor single-create pipeline, not one MCP transport request.
+
+**B8 restart proof on tip `8a8c75d`: PASS.** WS-11 ran separate Create and
+Verify editor processes. Verify reports `restart_observed` and
+`reread_after_restart` for all ten checkpoint assets. Evidence:
+`editor_UEREMCP_Niagara_POCB_Restart_Create_20260730_064653.log` and
+`editor_UEREMCP_Niagara_POCB_Restart_Verify_20260730_064733.log`.
+
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **OPEN** — editor single-create pipeline PASS after UV, but no MCP transport one-call proof | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS in post-UV editor fireball gate** — all six MI roles represented | WS-08 + WS-07 |
-| B3 | Niagara system exists with all six requested emitters | **PASS on `70cc348`** | WS-07 + WS-11 |
-| B4 | Renderers configured and bound to valid materials | **PASS in post-UV editor fireball gate** — all six, including `ribbon_trail` | WS-07 + WS-08 |
-| B5 | User params for colour, scale, intensity | **PASS on `70cc348`** | WS-07 + WS-11 |
-| B6 | System compiles; compile genuinely awaited | **PASS on `70cc348`** | WS-07 + WS-11 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS on `8a8c75d` editor fireball** — all six MI roles represented | WS-08 + WS-07 |
+| B3 | Niagara system exists with all six requested emitters | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
+| B4 | Renderers configured and bound to valid materials | **PASS on `8a8c75d` editor fireball** — all six, including `ribbon_trail` | WS-07 + WS-08 |
+| B5 | User params for colour, scale, intensity | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
+| B6 | System compiles; compile genuinely awaited | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
-| B8 | Assets saved and survive editor restart | **OPEN** — `B8_assets_saved` PASS proves save only; WS-11 Create→restart→Verify remains required | WS-11 |
-| B9 | One structured response with complete change manifest | **PASS on `70cc348`** | WS-07 + WS-11 |
-| B10 | Visibly renders as fireball when placed — screenshot supplementary only | **Not required as validation**; optional after B1–B9 | WS-07 / WS-11 |
+| B8 | Assets saved and survive editor restart | **PASS on `8a8c75d`** — Create→restart→Verify re-read all ten checkpoint assets | WS-11 |
+| B9 | One structured response with complete change manifest | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
+| B10 | Visibly renders as fireball when placed — screenshot supplementary only | **OPEN and required** — it is a numbered binary acceptance criterion; screenshot alone cannot satisfy it | WS-07 / WS-11 |
 
 Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc/`; metrics reported numerically; success with only `validate:false` does **not** count (`docs/POC_ACCEPTANCE.md`).
 
@@ -212,8 +225,9 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | B8 Create→restart→Verify after post-UV editor fireball PASS | WS-11 | Save gate is insufficient; refuse B8 until fresh-process Verify passes |
-| P0 | Full POC B fireball through one MCP request, covering B1–B9 | WS-07 (+ WS-08) + WS-11 | Editor single-create is not MCP transport proof; refuse overall POC-B |
+| P0 | Full POC B fireball through one MCP request | WS-07 (+ WS-08) + WS-11 | Editor single-create is not MCP transport proof; refuse B1 |
+| P0 | Place and visibly render the fireball with non-screenshot validation | WS-07 + WS-11 | B10 is required; screenshot may supplement but cannot be the validation |
+| P0 | Record POC-B MCP/internal-operation/token/wall metrics and equivalent primitive-call count | WS-11 / WS-14 | Required by global POC rules before overall claim |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after POC A + POC B |
 
