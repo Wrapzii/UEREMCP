@@ -140,8 +140,15 @@ namespace UeremcpMaterialTests
 			return FString();
 		}
 
+		TSharedPtr<FJsonObject> SearchRoot = Root;
+		const TSharedPtr<FJsonObject>* ResultObj = nullptr;
+		if (Root->TryGetObjectField(TEXT("result"), ResultObj) && ResultObj && ResultObj->IsValid())
+		{
+			SearchRoot = *ResultObj;
+		}
+
 		const TArray<TSharedPtr<FJsonValue>>* Deps = nullptr;
-		if (!Root->TryGetArrayField(TEXT("dependencies"), Deps) || !Deps)
+		if (!SearchRoot->TryGetArrayField(TEXT("dependencies"), Deps) || !Deps)
 		{
 			return FString();
 		}

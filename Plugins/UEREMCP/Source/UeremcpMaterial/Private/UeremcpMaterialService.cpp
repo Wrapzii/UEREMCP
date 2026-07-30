@@ -740,30 +740,6 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	Instance->MarkPackageDirty();
 	++Result.InternalOperations;
 
-	if (Request.bCompile)
-	{
-		const TArray<FString> CompileErrors = UMaterialEditingLibrary::RecompileMaterial(MasterMaterial);
-		++Result.InternalOperations;
-		if (CompileErrors.Num() > 0)
-		{
-			CapPartialWhenProofUnavailable(
-				Result,
-				Request.TargetAssetPath,
-				Instance,
-				FString::Printf(
-					TEXT("Parent material recompile reported errors under automation: %s"),
-					*FString::Join(CompileErrors, TEXT("; "))));
-			return Result;
-		}
-	}
-
-	FString VerifyError;
-	if (Request.bValidate && !VerifyInstanceParameters(Instance, Params, VerifyError))
-	{
-		CapPartialWhenProofUnavailable(Result, Request.TargetAssetPath, Instance, VerifyError);
-		return Result;
-	}
-
 	if (Request.bSave)
 	{
 		if (!SaveLoadedAssetPackage(Instance))
@@ -777,13 +753,51 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 			return Result;
 		}
 		++Result.InternalOperations;
+		Result.InterpretationNotes.Add(
+			FString::Printf(TEXT("Saved in-process MI package '%s' to disk before compile/validate gates."), *Request.TargetAssetPath));
 		if (MasterResult.bCreated)
 		{
 			if (SaveLoadedAssetPackage(MasterMaterial))
 			{
 				++Result.InternalOperations;
+				Result.InterpretationNotes.Add(
+					FString::Printf(TEXT("Saved freshly created master '%s' to disk."), *MasterPath));
+			}
+			else
+			{
+				Result.CapabilityNotes.Add(
+					TEXT("master save unverified under automation — in-process graph exists; disk persistence not proven."));
 			}
 		}
+	}
+
+	if (Request.bCompile)
+	{
+		const TArray<FString> CompileErrors = UMaterialEditingLibrary::RecompileMaterial(MasterMaterial);
+		++Result.InternalOperations;
+		if (CompileErrors.Num() > 0)
+		{
+			CapPartialWhenProofUnavailable(
+				Result,
+				Request.TargetAssetPath,
+				Instance,
+				FString::Printf(
+					TEXT("Parent material recompile reported errors under automation: %s"),
+					*FString::Join(CompileErrors, TEXT("; "))));
+			if (Request.bSave)
+			{
+				Result.InterpretationNotes.Add(
+					TEXT("MI package was saved before recompile; compile errors do not roll back disk persistence."));
+			}
+			return Result;
+		}
+	}
+
+	FString VerifyError;
+	if (Request.bValidate && !VerifyInstanceParameters(Instance, Params, VerifyError))
+	{
+		CapPartialWhenProofUnavailable(Result, Request.TargetAssetPath, Instance, VerifyError);
+		return Result;
 	}
 
 	Result.PrimaryAsset = Request.TargetAssetPath;

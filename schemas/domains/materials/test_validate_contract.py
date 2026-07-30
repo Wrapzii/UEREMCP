@@ -81,6 +81,13 @@ class MaterialValidateContractTests(unittest.TestCase):
             r"if\s*\(\s*!Request\.bValidate\s*\)[\s\S]*TEXT\(\"partially_completed\"\)",
         )
 
+    def test_create_vfx_material_saves_before_compile_gate(self) -> None:
+        save_idx = self.material_cpp.find("SaveLoadedAssetPackage(Instance)")
+        compile_idx = self.material_cpp.find("RecompileMaterial(MasterMaterial)")
+        self.assertNotEqual(save_idx, -1)
+        self.assertNotEqual(compile_idx, -1)
+        self.assertLess(save_idx, compile_idx)
+
     def test_asset_load_gates_editor_subsystem_with_does_asset_exist(self) -> None:
         asset_load_cpp = MATERIAL_ASSET_LOAD.read_text(encoding="utf-8")
         self.assertIn("DoesAssetExist", asset_load_cpp)
