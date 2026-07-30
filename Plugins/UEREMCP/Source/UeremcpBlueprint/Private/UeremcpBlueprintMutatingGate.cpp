@@ -1,15 +1,5 @@
 #include "UeremcpBlueprintMutatingGate.h"
 
-#if UEREMCP_BLUEPRINT_MUTATING_DISPATCH
-#include "UeremcpMutatingDispatch.h"
-
-class FUeremcpBlueprintMutatingGate::FDispatchHolder
-{
-public:
-	FUeremcpMutatingDispatch Instance;
-};
-#endif
-
 bool FUeremcpBlueprintMutatingGate::TryBeginRead(
 	const FString& RequestJson,
 	FString& OutBlockingResponseJson)
@@ -19,8 +9,8 @@ bool FUeremcpBlueprintMutatingGate::TryBeginRead(
 	bEffectiveDryRun = false;
 
 #if UEREMCP_BLUEPRINT_MUTATING_DISPATCH
-	Dispatch = MakeUnique<FDispatchHolder>();
-	bActive = Dispatch->Instance.TryBegin(
+	Dispatch.Emplace();
+	bActive = Dispatch->TryBegin(
 		RequestJson,
 		true,
 		0,
@@ -28,7 +18,7 @@ bool FUeremcpBlueprintMutatingGate::TryBeginRead(
 		OutBlockingResponseJson);
 	if (bActive)
 	{
-		bEffectiveDryRun = Dispatch->Instance.IsEffectiveDryRun();
+		bEffectiveDryRun = Dispatch->IsEffectiveDryRun();
 	}
 	return bActive;
 #else
@@ -47,8 +37,8 @@ bool FUeremcpBlueprintMutatingGate::TryBeginMutating(
 	bEffectiveDryRun = false;
 
 #if UEREMCP_BLUEPRINT_MUTATING_DISPATCH
-	Dispatch = MakeUnique<FDispatchHolder>();
-	bActive = Dispatch->Instance.TryBegin(
+	Dispatch.Emplace();
+	bActive = Dispatch->TryBegin(
 		RequestJson,
 		bTargetExists,
 		0,
@@ -56,7 +46,7 @@ bool FUeremcpBlueprintMutatingGate::TryBeginMutating(
 		OutBlockingResponseJson);
 	if (bActive)
 	{
-		bEffectiveDryRun = Dispatch->Instance.IsEffectiveDryRun();
+		bEffectiveDryRun = Dispatch->IsEffectiveDryRun();
 	}
 	return bActive;
 #else
@@ -69,9 +59,9 @@ bool FUeremcpBlueprintMutatingGate::TryBeginMutating(
 FString FUeremcpBlueprintMutatingGate::Complete(const FUeremcpResponse& Response)
 {
 #if UEREMCP_BLUEPRINT_MUTATING_DISPATCH
-	if (Dispatch.IsValid())
+	if (Dispatch.IsSet())
 	{
-		const FString Serialized = Dispatch->Instance.Complete(Response);
+		const FString Serialized = Dispatch->Complete(Response);
 		bActive = false;
 		Dispatch.Reset();
 		return Serialized;

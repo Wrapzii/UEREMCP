@@ -10,7 +10,7 @@
 
 namespace
 {
-	static FString EscapeJsonString(const FString& In)
+	static FString EscapeBlueprintBridgeJsonString(const FString& In)
 	{
 		FString Out;
 		Out.Reserve(In.Len() + 8);
@@ -118,7 +118,7 @@ bool FUeremcpBlueprintEpicBridge::WriteGraphDsl(UEdGraph* Graph, const FString& 
 	const FString Input = FString::Printf(
 		TEXT("{\"graph\":{\"refPath\":\"%s\"},\"code\":\"%s\"}"),
 		*Graph->GetPathName(),
-		*EscapeJsonString(DslCode));
+		*EscapeBlueprintBridgeJsonString(DslCode));
 
 	FString Result;
 	if (!ExecuteToolSync(TEXT("write_graph_dsl"), Input, Result, OutError))

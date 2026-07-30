@@ -39,10 +39,16 @@ class BlueprintMutatingGateContractTests(unittest.TestCase):
         self.assertIn("TryBeginMutating", body)
         self.assertIn("FinishSubmitResponse", body)
 
-    def test_cpp_guards_core_include(self) -> None:
+    def test_header_includes_core_dispatch_when_enabled(self) -> None:
+        header = GATE_HEADER.read_text(encoding="utf-8")
+        self.assertIn("#if UEREMCP_BLUEPRINT_MUTATING_DISPATCH", header)
+        self.assertIn("UeremcpMutatingDispatch.h", header)
+        self.assertIn("TOptional<FUeremcpMutatingDispatch>", header)
+
+    def test_cpp_uses_dispatch_guard(self) -> None:
         body = GATE_CPP.read_text(encoding="utf-8")
         self.assertIn("#if UEREMCP_BLUEPRINT_MUTATING_DISPATCH", body)
-        self.assertIn("UeremcpMutatingDispatch.h", body)
+        self.assertIn("Dispatch.Emplace()", body)
 
     def test_proposal_documents_orch_try_begin_api(self) -> None:
         proposal = PROPOSAL.read_text(encoding="utf-8")

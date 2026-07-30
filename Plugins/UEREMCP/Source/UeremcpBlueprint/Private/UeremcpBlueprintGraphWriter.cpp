@@ -207,7 +207,11 @@ namespace UeremcpBlueprintGraphWriter
 		if (Node->TryGetObjectField(TEXT("defaults"), Defaults) && Defaults && Defaults->IsValid())
 		{
 			TArray<FString> DefaultKeys;
-			(*Defaults)->Values.GetKeys(DefaultKeys);
+			DefaultKeys.Reserve((*Defaults)->Values.Num());
+			for (const auto& Pair : (*Defaults)->Values)
+			{
+				DefaultKeys.Add(FString(Pair.Key));
+			}
 			DefaultKeys.Sort();
 			for (const FString& Key : DefaultKeys)
 			{

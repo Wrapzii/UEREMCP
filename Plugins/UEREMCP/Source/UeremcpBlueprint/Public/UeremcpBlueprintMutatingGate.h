@@ -6,6 +6,10 @@
 #include "CoreMinimal.h"
 #include "UeremcpEnvelope.h"
 
+#if UEREMCP_BLUEPRINT_MUTATING_DISPATCH
+#include "UeremcpMutatingDispatch.h"
+#endif
+
 class UEREMCPBLUEPRINT_API FUeremcpBlueprintMutatingGate
 {
 public:
@@ -29,7 +33,6 @@ private:
 	bool bEffectiveDryRun = false;
 
 #if UEREMCP_BLUEPRINT_MUTATING_DISPATCH
-	class FDispatchHolder;
-	TUniquePtr<FDispatchHolder> Dispatch;
+	TOptional<FUeremcpMutatingDispatch> Dispatch;
 #endif
 };
