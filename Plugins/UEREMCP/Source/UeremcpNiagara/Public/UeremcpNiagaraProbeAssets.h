@@ -17,8 +17,8 @@ namespace UeremcpNiagaraProbeAssets
 	bool AssetExistsAtPath(const FString& AssetPath);
 
 	/**
-	 * Drop transient compile-time referencers (e.g. mesh renderer info DIs) before probe delete.
-	 * Safe to call while the system asset remains on disk.
+	 * Drop transient compile-time referencers before probe delete only.
+	 * Must not run at end of create — post-create inspect/round-trip still needs live DIs.
 	 */
 	void ReleaseExternalReferences(UNiagaraSystem* System);
 

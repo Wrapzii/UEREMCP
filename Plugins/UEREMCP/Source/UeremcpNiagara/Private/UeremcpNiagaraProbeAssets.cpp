@@ -61,7 +61,9 @@ namespace
 			{
 				// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraDataInterfaceMeshRendererInfo.h:38]
 				DI->OnMeshRendererChanged(nullptr);
-				DI->MarkAsGarbage();
+				// Delete-only: destroy transient DIs so probe packages can unload. Do not call
+				// during create — emitter scripts still reference these until inspect finishes.
+				DI->ConditionalBeginDestroy();
 			}
 		}
 #endif

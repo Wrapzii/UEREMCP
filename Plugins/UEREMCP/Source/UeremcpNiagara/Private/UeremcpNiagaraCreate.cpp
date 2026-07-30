@@ -680,7 +680,5 @@ bool FUeremcpNiagaraCreate::Run(
 			OrphanedRoles.Num());
 	}
 
-	UeremcpNiagaraProbeAssets::ReleaseExternalReferences(System);
-
 	return true;
 }
