@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current integration tip:** `268a102` (`[WS-08] Restore warm Niagara material output`)
+- **Current integration tip:** `e249841` (`[WS-14] Close POC-B metrics evidence honestly`)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `268a102` (fresh fireball create **PASS**; production B10 **PASS**, 30,454 warm / 41,231 changed / 412 live / 705 spawned)
@@ -10,7 +10,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. On `268a102`, stale production assets were freshly recreated with WS-08's Particle Color material path and the unchanged production B10 gate **PASSES** with 30,454 warm changed pixels, 41,231 total changed pixels, 412 live particles, and 705 spawned. The B10 visibility residual is closed. POC-B metrics and the complete current-lineage evidence bundle remain open. **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. Production B10 remains **PASS** with 30,454 warm changed pixels. POC-B metrics are recorded in [`docs/reviews/poc-metrics.md`](../reviews/poc-metrics.md) via `e249841`: `mcp_round_trips=1`, `internal_operations=46`, and editor-equivalent `wall_clock=31.370670s` after live MCP refused the connection. Tokens are unavailable from Cursor, and the primitive baseline is unavailable because the WS-07 sequence lacks executable inputs (planned known minimum 17 only). Overall POC-B still requires a complete current-lineage B1–B10 evidence bundle and an executable primitive baseline fixture. **No overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## WS-08 warm-material integration (`268a102`): production B10 PASS
@@ -46,8 +46,31 @@ PNG evidence:
 No canary rerun was needed; the production path itself passed with
 `warm_changed_pixels > 0`.
 
-This closes B10 only. POC-B metrics/baseline and the complete current-lineage
-evidence bundle remain open. **No overall POC-B claim.**
+This closes B10 only. POC-B metrics are now recorded, but the executable primitive
+baseline and complete current-lineage evidence bundle remain open.
+**No overall POC-B claim.**
+
+## POC-B metrics record (`e249841`)
+
+[`docs/reviews/poc-metrics.md`](../reviews/poc-metrics.md) now records:
+
+- `mcp_round_trips=1`
+- `internal_operations=46`
+- `wall_clock=31.370670s`, measured as the permitted editor single-call equivalent
+  because the live MCP endpoint refused the connection before dispatch
+- tokens unavailable because the Cursor MCP caller exposes no per-call agent usage
+- primitive baseline unavailable because the WS-07 sequence lacks the executable
+  emitter, variable, renderer, material, compile, and save inputs needed for an
+  equivalent run; its planned known minimum of 17 is not a measured baseline
+
+Raw metrics artifacts:
+
+- [`poc_b_editor_single_call_20260730_095849.json`](../reviews/metrics/artifacts/poc_b_editor_single_call_20260730_095849.json)
+- [`poc_b_primitive_baseline_attempt_20260730.json`](../reviews/metrics/artifacts/poc_b_primitive_baseline_attempt_20260730.json)
+- [`poc_b_ueremcp_prepared.json`](../reviews/metrics/artifacts/poc_b_ueremcp_prepared.json)
+
+Overall POC-B remains unclaimed pending a complete current-lineage B1–B10 evidence
+bundle and an executable primitive baseline fixture.
 
 ## WS-07 warm-color re-run (`a9977cf`)
 
