@@ -53,3 +53,16 @@ Until then, `plan.schema.json` stays provisional; WS-05 will not change its
 WS-02's audit of REAgentTools `execute_editor_batch` and Epic
 `execute_tool_script` remains the unblocker. Envelope / hash / topo-sort /
 provisional object-form resolver may ship as Wave 1 independent pieces.
+
+### Update 2026-07-29 (RB-02 landed)
+
+**q7 unblocked:** `ProgrammaticToolset.execute_tool_script` exists — compose
+`execute_plan` over it (`docs/audit/epic-toolsets.md`,
+`docs/audit/raw/q7-programmatic-execute-tool-script.json`). Disposition:
+`preserve`.
+
+**REAgentTools `$ref` still needed for grammar freeze:** WS-02 did not fill
+`reagenttools.md` / RB-15 this pass. Prior art (for WS-05 to read, not invent):
+`$RAT/.../batch_workflow_tools.py` — string refs prefixed with `$` resolve to a
+prior step's `label` or `path` via `_resolve_ref`; 8 allowlisted actions;
+`dry_run` / `stop_on_error`. Formal audit row still assigned to WS-02.

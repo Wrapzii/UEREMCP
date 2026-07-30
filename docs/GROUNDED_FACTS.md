@@ -335,6 +335,19 @@ first." It is:
 Every workstream must audit its Epic counterpart before proposing new primitives.
 `WS-02` owns the matrix; domain workstreams own their own rows.
 
+**Source inventory (RB-02, 2026-07-29):** 875 `AICallable` tools across 25 toolset
+plugins (599 Python `@tool_call`, 274 C++). Full matrix:
+`docs/audit/epic-toolsets.md` + `docs/audit/raw/`. Runtime registry dumps were
+**not** obtained (editor MCP offline) — do not invent JSON Schema shapes from memory.
+
+High-leverage preserve findings (do not rebuild):
+
+| Finding | Evidence |
+|---|---|
+| `ProgrammaticToolset.execute_tool_script` — Python `script` with `run()` → dict; in-script `execute_tool(...)`; transactional | `[VERIFIED: programmatic.py:887-953]` / `docs/audit/raw/q7-*.json` |
+| `BlueprintTools` (52) including `read_graph_dsl` / `write_graph_dsl` — **no** separate `BlueprintNodeTools` | `[VERIFIED: blueprint.py]` / `docs/audit/raw/q8-*.json` |
+| `AllToolsets` pulls Niagara/GAS/GameplayTags/PCG/etc. even when not listed individually in `RE.uproject` | `[VERIFIED: AllToolsets.uplugin]` |
+
 > `AllToolsets` is an aggregator. `MCPClientToolset` lets the editor act as an MCP
 > *client* — worth understanding, since it may let Unreal call out to Blender or
 > other MCP servers (master prompt §6). Assigned to `research/RB-11`.
@@ -477,10 +490,11 @@ from memory — they are assigned in `research/`.
    guard noted in §1.1a. Full bind/exposure check remains (`RB-13`).
 4. Whether `RunOnMainThread.h` and other `Private` ToolsetRegistry headers are
    usable from an out-of-tree plugin, or need a public equivalent. (`RB-03`)
-5. Exact tool inventory, schemas, and result shapes of each Epic toolset —
-   especially `NiagaraToolsets`, `GASToolsets`, `BlueprintTools`/`BlueprintNodeTools`,
-   `MaterialTools`. Directory names are confirmed; **tool names quoted from
-   REAgentTools docs are not**. (`RB-02`, and each domain brief)
+5. Exact **runtime** schemas/result shapes of each Epic toolset (live
+   `describe_toolset`). **Tool names/counts:** source-verified in
+   `docs/audit/epic-toolsets.md` (875 tools). Correction: there is no
+   `BlueprintNodeTools` — only `BlueprintTools`. JSON Schema dumps still pending
+   editor MCP. (`RB-02` residual)
 6. Whether Blueprint/Niagara/Material/AnimBP/ControlRig graphs can be fully
    serialized and rebuilt via public editor API, and where that breaks. This is
    the project's central technical risk. (`RB-05`, `RB-07`, `RB-08`, `RB-09`)
