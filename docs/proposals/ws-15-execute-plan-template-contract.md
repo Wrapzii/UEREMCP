@@ -2,7 +2,8 @@
 
 - **From:** WS-15 Templates
 - **To:** WS-05 Protocol and WS-01 schema owner
-- **Status:** executor and Templates binding landed; residual contracts proposed
+- **Status:** executor and Templates binding landed; WS-01 accepted residual schema shapes
+  (`docs/proposals/ws-01-template-validation-schema.md`)
 - **Blocks:** fully validated `instantiate_template`; executable named modifiers;
   `promote_to_template`
 
@@ -74,8 +75,10 @@ evidence, and fail-closed behavior: `ws-15-plan-handler-registration.md`.
 
 ### WS-01
 
-Decide the executable modifier and validation operation shapes proposed by WS-05
-`1ef125d`; then amend the frozen template schema if accepted. Names and descriptive
+**Accepted:** executable `modifier_definitions` and `validation_rules[].operation`
+shapes from WS-05 `1ef125d` are now in
+`schemas/template-library/template.schema.json`
+(`docs/proposals/ws-01-template-validation-schema.md`). Names and descriptive
 `check` strings alone remain non-executable.
 
 ## Required behavior after integration

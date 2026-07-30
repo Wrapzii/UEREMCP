@@ -58,7 +58,50 @@
     "supported_modifiers": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Named variations this pattern accepts, e.g. 'crystalline_fragments', 'reduce_trail_persistence'. Enables 'frost variant of the fireball' as ONE operation."
+      "description": "Search/display index of named variations. A name is executable only when an equal key exists in modifier_definitions; declaration-only names must fail closed."
+    },
+
+    "modifier_definitions": {
+      "type": "object",
+      "description": "Executable deltas for names accepted in instantiate_template.specification.modifiers. Accepted from WS-05 1ef125d / docs/proposals/ws-01-template-validation-schema.md. Application is deterministic; unknown names fail before mutation.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["bucket"],
+        "additionalProperties": false,
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "enum": ["replace", "adjust", "add", "preserve"],
+            "description": "Must match the request modifiers bucket that contains this name."
+          },
+          "replace_operations": {
+            "type": "object",
+            "additionalProperties": { "$ref": "../batch/plan.schema.json#/$defs/operation" },
+            "description": "Replace one complete operation; the object key must equal the replacement operation id."
+          },
+          "merge_specifications": {
+            "type": "object",
+            "additionalProperties": { "type": "object" },
+            "description": "RFC 7396 JSON Merge Patch applied only to the named operation's specification. Cannot alter id, action, dependencies, target, mode, or transaction policy."
+          },
+          "append_operations": {
+            "type": "array",
+            "items": { "$ref": "../batch/plan.schema.json#/$defs/operation" },
+            "description": "Append complete schema-valid operations. IDs must remain globally unique in the materialized plan."
+          },
+          "validation_operations": {
+            "type": "array",
+            "items": { "$ref": "../batch/plan.schema.json#/$defs/operation" },
+            "description": "Appended after construction effects from this modifier."
+          }
+        },
+        "anyOf": [
+          { "required": ["replace_operations"] },
+          { "required": ["merge_specifications"] },
+          { "required": ["append_operations"] },
+          { "required": ["validation_operations"] }
+        ]
+      }
     },
 
     "dependencies": {
@@ -87,17 +130,28 @@
 
     "validation_rules": {
       "type": "array",
-      "description": "Checks that must pass for an instance to be considered correct. Feed the response's validation.checks_performed.",
+      "description": "Checks that must pass for an instance to be considered correct. A rule is executable only when it carries a semantic operation; check-only rules are legacy descriptive metadata and force partially_completed.",
       "items": {
         "type": "object",
-        "required": ["rule_id", "check"],
+        "required": ["rule_id"],
         "additionalProperties": false,
         "properties": {
           "rule_id": { "type": "string" },
-          "check": { "type": "string" },
+          "check": {
+            "type": "string",
+            "description": "Optional descriptive legacy metadata. Not evaluated by the executor."
+          },
+          "operation": {
+            "$ref": "../batch/plan.schema.json#/$defs/operation",
+            "description": "Normal plan operation materialized after construction steps. Evidence ID template.<template_id>.<rule_id> must appear in validation.checks_performed for the rule to count as performed."
+          },
           "severity": { "$ref": "../common/defs.schema.json#/$defs/severity" },
           "message": { "type": "string" }
-        }
+        },
+        "anyOf": [
+          { "required": ["check"] },
+          { "required": ["operation"] }
+        ]
       }
     },
 

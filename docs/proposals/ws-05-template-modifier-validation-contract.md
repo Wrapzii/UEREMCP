@@ -2,7 +2,8 @@
 
 **From:** WS-05 Protocol  
 **To:** WS-01 schema owner, WS-15 Templates, domain workstreams  
-**Status:** proposed; no frozen schema or unowned implementation edited  
+**Status:** accepted by WS-01 into `schemas/template-library/template.schema.json`
+(see `docs/proposals/ws-01-template-validation-schema.md`)
 **Closes:** the two residual ADR-0008 contract gaps recorded in
 `ws-15-execute-plan-template-contract.md`
 
