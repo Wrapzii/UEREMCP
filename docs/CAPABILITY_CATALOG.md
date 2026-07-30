@@ -155,5 +155,8 @@ does, the architecture failed (`docs/ROADMAP.md`).
 
 | Action | Status | Notes |
 |---|---|---|
+| `get_started` | available | START HERE bootstrap; `UeremcpReferenceToolset.GetStarted` |
+| `resolve_intent` | available | Plain-text → ordered live-registry plan; cannot emit absent names; abstains on hash mismatch / weak signal. Routing ≠ E2E success. |
+| `describe_operation` | available | One registry-verified tool schema + example |
 | `ping` | available | `UeremcpReferenceToolset` + domain pings; ADR-0002 reachability |
 | `echo` | available | Envelope round-trip (ADR-0003); registered on Reference / domain toolsets |
