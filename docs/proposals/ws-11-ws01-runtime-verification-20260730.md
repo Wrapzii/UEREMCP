@@ -1,25 +1,43 @@
-﻿# WS-11 runtime verification handoff (WS-01 orch gate)
+# WS-11 runtime verification handoff (WS-01 orch gate)
 
 - **Date:** 2026-07-30
-- **Branch:** ws-01-orch @ 8359fdb (merge WS-11 c9b4797 = 8d30e5b)
+- **Branch:** ws-01-orch @ 35aba09 (no-ff merge WS-11 `0cdea82` post-Templates Validation log)
+- **Prior gate:** ws-01-orch @ 9eb7531 — WS-15 Templates compile fix integrated; Validation blocked on plugin load until rebuild
 - **RE junction:** RE\Plugins\UEREMCP -> UEREMCP-ws01\Plugins\UEREMCP [VERIFIED-RUNTIME: junction target query]
 
-## Build
+## Build (post WS-15 merge)
 
 | Step | Result | Notes |
 |------|--------|-------|
-| Build.bat REEditor Win64 Development (full) | FAIL (exit 6) | UeremcpTemplates compile errors; UnrealEditor-Cmd DLL locks |
-| Per-module REEditor -Module=Ueremcp* (excl. Templates) | Up-to-date (exit 0) | No UnrealEditor-UeremcpTemplates.dll; UnrealEditor.modules missing until local restore |
-| UeremcpTemplates | Not built | Blocks plugin load |
+| UeremcpTemplates / plugin load | PASS | After closing UnrealEditor / Live Coding; `UnrealEditor.modules` lists `UeremcpTemplates` |
+| Full REEditor gate (this session) | Not re-run | Prior blocker (Templates compile) resolved via WS-15 merge `9eb7531` |
 
-## Editor automation
+## Editor automation (post WS-15 merge)
 
-Command: pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter UEREMCP.Validation
-Exit: 1 — plugin load failed (UeremcpTemplates missing).
+Command: `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"` from `UEREMCP-ws11`
+Exit: **255** (one test failed)
 
-Redacted log: tests/integration/_logs/editor_UEREMCP_Validation_20260730_ws01orch.redacted.md
+Redacted log: `tests/integration/_logs/editor_UEREMCP_Validation_20260730_post_ws15_merge.redacted.md`
 
-## Per-test status
+## Per-test status (2026-07-30 post WS-15 merge)
+
+| Test | Status |
+|------|--------|
+| UEREMCP.Validation.Harness.Smoke | PASS |
+| UEREMCP.Validation.Rollback.MultiAssetDiscard | PASS |
+| UEREMCP.Validation.Rollback.DeletedAssetDiscard | PASS |
+| UEREMCP.Validation.Rollback.BlueprintCompileDiscard | PASS |
+| UEREMCP.Validation.Idempotency.RepeatedCreate | **FAIL** |
+| UEREMCP.Validation.Revision.StaleRejected | PASS |
+
+**Summary:** 5 PASS, 1 FAIL (`Idempotency.RepeatedCreate`). Repeat attempts 2–3: expected `no_change_required` or `replayed` and idempotency store replay; see `IdempotencyRepeatedCreate.spec.cpp` (~199, ~202).
+
+## Prior gate (pre Templates fix) — blocked
+
+Command: `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter UEREMCP.Validation` on orch before WS-15 integration.
+Exit: 1 — plugin load failed (`UeremcpTemplates` missing).
+
+Redacted log: `tests/integration/_logs/editor_UEREMCP_Validation_20260730_ws01orch.redacted.md`
 
 | Test | Status |
 |------|--------|
@@ -30,43 +48,8 @@ Redacted log: tests/integration/_logs/editor_UEREMCP_Validation_20260730_ws01orc
 | UEREMCP.Validation.Idempotency.RepeatedCreate | BLOCKED |
 | UEREMCP.Validation.Revision.StaleRejected | BLOCKED |
 
-ADR-0005 q4/q5: not closed on this gate. Unblock: WS-15 fixes Templates compile; full REEditor build; re-run Validation filter.
+ADR-0005 q4/q5: Rollback tests **ran and passed** on the post-merge gate; idempotency failure is separate from sandbox semantics.
 
----
+## Open blockers
 
-## Post WS-15 Templates compile fix (2026-07-30, second gate)
-
-- **Branch:** ws-01-orch @ 9eb7531 (merge `eea1622` WS-15 Templates JSON deps; no new merge this run — `eea1622` already ancestor)
-- **Merge hash:** `9eb7531` `[WS-01] Integrate WS-15 Templates UE 5.8 JSON compile fix`
-- **RE junction:** `RE\Plugins\UEREMCP` → `UEREMCP-ws01\Plugins\UEREMCP` [VERIFIED-RUNTIME: fsutil reparsepoint / Print Name]
-- **UeremcpTemplates working tree:** clean (no local restore needed)
-
-### Build
-
-| Step | Result | Notes |
-|------|--------|-------|
-| Build.bat REEditor Win64 Development `-NoHotReloadFromIDE` | PASS (exit 0) | Built `UnrealEditor-UeremcpTemplates.dll` (+ 6 compile/link actions) |
-
-### Editor automation
-
-Command: `pwsh $UEREMCP_ROOT-ws11\tests\run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"`
-
-| Run | Exit | Notes |
-|-----|------|-------|
-| 20260730_004950 | -1 | Editor log truncated during Zen startup (no tests executed); retried |
-| 20260730_005111 | 255 | All 6 tests discovered and executed; non-zero due to `Idempotency.RepeatedCreate` failure |
-
-Log: `UEREMCP-ws11/tests/integration/_logs/editor_UEREMCP_Validation_20260730_005111.log`
-
-### Per-test status (authoritative: 005111 run)
-
-| Test | Status |
-|------|--------|
-| UEREMCP.Validation.Harness.Smoke | PASS |
-| UEREMCP.Validation.Idempotency.RepeatedCreate | **FAIL** (repeat attempts 2–3: idempotency store / `no_change_required` expectations) |
-| UEREMCP.Validation.Revision.StaleRejected | PASS |
-| UEREMCP.Validation.Rollback.BlueprintCompileDiscard | PASS (ADR-0005 q4 exercised this run) |
-| UEREMCP.Validation.Rollback.DeletedAssetDiscard | PASS (ADR-0005 q5 exercised this run) |
-| UEREMCP.Validation.Rollback.MultiAssetDiscard | PASS (Q1/Q3 positive this run) |
-
-**Gate summary:** Templates compile blocker cleared; plugin loads; Validation suite **not** fully green — `Idempotency.RepeatedCreate` remains open.
+- **Idempotency.RepeatedCreate** — behavior mismatch (not a plugin-load/build gate).
