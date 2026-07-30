@@ -1,0 +1,48 @@
+{
+  "handoff_version": "ws04-wave1-1",
+  "source": "docs/research/RB-04-transport-and-jobs.md",
+  "recommended_job_model": "poll_after_timeout",
+  "capabilities": {
+    "http_transport_only": true,
+    "streamable_http_sse": true,
+    "stdio_transport": false,
+    "mcp_resources": true,
+    "mcp_progress_notifications": true,
+    "mcp_cancellation_notification": true,
+    "toolset_registry_cancel_wired": false,
+    "persistent_server_push": false,
+    "engine_job_ids": false,
+    "engine_auth": false,
+    "origin_localhost_guard": true
+  },
+  "job_defaults": {
+    "default_timeout_ms": 120000,
+    "min_timeout_ms": 1000,
+    "max_timeout_ms": 600000,
+    "poll_action": "get_job_result"
+  },
+  "engine_provides": [
+    "HTTP MCP server on configurable port/path (default 127.0.0.1:8000/mcp)",
+    "Per-client Mcp-Session-Id sessions",
+    "tools/call over SSE with JSON-RPC result",
+    "notifications/progress heartbeat when client supplies progressToken",
+    "notifications/cancelled for tools implementing CancelAsync",
+    "resources/list and resources/read via IModelContextProtocolResourceProvider",
+    "Origin-header DNS-rebinding guard for browser clients"
+  ],
+  "ueremcp_must_build": [
+    "In-process job registry with stable job_id (envelope job block)",
+    "get_job_result poll tool/action",
+    "Cooperative cancellation wired from MCP cancel to domain work",
+    "Semantic progress mapping (engine heartbeat is not percent-complete)",
+    "timeout_ms enforcement returning partially_completed + job handle",
+    "Crash recovery is out of scope for Wave 1 — jobs are in-memory only"
+  ],
+  "ws05_constraints": {
+    "dispatch_inline_when_timeout_ms_zero": true,
+    "dispatch_poll_when_timeout_ms_positive": true,
+    "never_hold_mcp_sse_open_past_client_timeout": true,
+    "job_id_scope": "per-editor-process",
+    "mcp_round_trips_metric_includes_polls": true
+  }
+}
