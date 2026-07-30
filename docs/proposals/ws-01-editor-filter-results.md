@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `5499f48` (WS-07 runtime emit landed as `20edf2f`; WS-14 metrics slice landed; B10 production warm signature still open pending post-emit rerun)
+- **Integration tip before this record:** `20edf2f` (`c4edd99` + cherry-picked WS-07 runtime-emission fix; B10 **FAILED** after fresh production recreation)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112` (runtime emit fix `20edf2f` / `8aae3b6` supersedes for particle spawn)
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. B10 harness canary PASS on `0049153`. WS-07 runtime emit proved (717 spawned / 423 live). POC-B metrics **partial** in `docs/reviews/poc-metrics.md` (`mcp_round_trips=1`, `internal_operations=46`, server lower bound 2.319s; wall-clock / tokens / primitive timing still open). **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. B10 harness canary PASS on `0049153`. WS-07 proved 717 spawned / 423 live after 3s on its source lineage, and that fix is landed as `20edf2f`; however, a fresh production recreate on the integrated lineage produced 0 particles in both the runtime probe and B10. B10 **FAILS** with 5,405 changed / 0 warm / 0 particles. POC-B metrics remain partial. **No overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -534,3 +534,48 @@ Canonical gap list: [`ws-01-acceptance-gap-audit-2026-07-30.md`](./ws-01-accepta
 | Tip lineage on `ws-11-poc-b10-render` | `5499f48` |
 
 No overall POC-B claim. Metrics are not complete.
+
+---
+
+## Integrated WS-07 runtime-emission rerun (`20edf2f`): B10 FAIL
+
+WS-07 commit `8aae3b6` was cherry-picked without conflicts onto orchestration tip
+`c4edd99`, producing `20edf2f`. This lineage contains both the B10 harness fix
+`0049153` and the runtime-emission source fix.
+
+The source-lineage WS-07 proof remains recorded as **717 total spawned / 423 live
+after 3 seconds simulated**, with
+`UEREMCP.Niagara.Create.PocBParticlesSpawn` PASS. That result did not reproduce
+after integration and fresh production-asset recreation:
+
+- `UeremcpNiagara` and `UeremcpValidation` rebuilt successfully.
+- `UEREMCP.Niagara.POCB.FireballInlineMaterials` deleted the stale production
+  system/materials, recreated `/Game/__UeremcpPoc/NS_POCB_Fireball` through the
+  goal-level generator, preserved the new assets, and PASSed. Log:
+  `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_083934.log`.
+- The immediate runtime probe then **FAILED** with
+  `live_particles=0`, `total_spawned_particles=0`, and
+  `component_complete=true`, despite six enabled emitters, five spawn modules,
+  six initialize modules, and persisted
+  `bAllowSystemStateFastPath=false`. Log:
+  `tests/integration/_logs/editor_UEREMCP_Niagara_Create_PocBParticlesSpawn_20260730_084009.log`.
+- Production B10 **FAILED**:
+
+```text
+UEREMCP_POC_B10_EVIDENCE={"status":"fail","screenshot":"C:\\Users\\$USER\\Documents\\GitHub\\UEREMCP-ws01\\tests\\integration\\_artifacts\\poc_b10_fireball.png","width":1530,"height":605,"changed_pixels":5405,"warm_changed_pixels":0,"particle_count":0,"warmup_frames":179,"warmup_seconds":1.505,"system":"/Game/__UeremcpPoc/NS_POCB_Fireball.NS_POCB_Fireball","dark_backdrop":true,"programmatic_pixel_validation":true}
+UEREMCP_POC_B10_OUTCOME=FAIL reason=system_emits_no_particles
+```
+
+Evidence: `tests/integration/_artifacts/poc_b10_fireball.png` (30,370 bytes,
+1530×605). The image shows only the dark backdrop and viewport axis gizmo.
+
+This rerun does **not** satisfy the conditional “particles > 0 but warm = 0”
+visibility handoff. The immediate integrated residual is earlier: freshly
+generated production assets complete with zero particles. WS-07 owns reconciling
+the source-lineage 717/423 proof with this integrated fresh-create regression;
+WS-08 material visibility is not yet the demonstrated blocker.
+
+Even after B10 passes, `docs/reviews/poc-metrics.md` remains incomplete
+(wall-clock, token accounting, and measured primitive timing), and a full
+current-lineage B1–B9+B8 evidence bundle remains open per
+`ws-01-acceptance-gap-audit-2026-07-30.md`. **No overall POC-B claim.**
