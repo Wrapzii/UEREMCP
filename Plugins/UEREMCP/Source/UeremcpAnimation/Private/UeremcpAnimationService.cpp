@@ -33,15 +33,29 @@ namespace
 		return Object ? Object->GetPathName() : FString();
 	}
 
-	FName NotifyTrackName(const UAnimMontage& Montage, const FAnimNotifyEvent& Event)
+	FString NotifyTrackName(const UAnimMontage& Montage, const FAnimNotifyEvent& Event)
 	{
 #if WITH_EDITORONLY_DATA
 		if (Montage.AnimNotifyTracks.IsValidIndex(Event.TrackIndex))
 		{
-			return Montage.AnimNotifyTracks[Event.TrackIndex].TrackName;
+			const FName TrackName = Montage.AnimNotifyTracks[Event.TrackIndex].TrackName;
+			return TrackName.IsNone() ? FString() : TrackName.ToString();
 		}
 #endif
-		return NAME_None;
+		return FString();
+	}
+
+	float MontageLength(const UAnimMontage& Montage)
+	{
+		float Length = 0.0f;
+		for (const FSlotAnimationTrack& Slot : Montage.SlotAnimTracks)
+		{
+			// Matches UAnimMontage::CalculateSequenceLength without consulting the
+			// animation data model, which may not exist for transient test assets.
+			// [VERIFIED: AnimMontage.cpp:1035-1047; AnimCompositeBase.cpp:315-330]
+			Length = FMath::Max(Length, Slot.AnimTrack.GetLength());
+		}
+		return Length;
 	}
 
 	FString ClassifyAnimBlueprintGraph(const UEdGraph* Graph)
@@ -277,7 +291,7 @@ bool FUeremcpAnimationService::InspectMontage(
 	TSharedPtr<FJsonObject> State = MakeShared<FJsonObject>();
 	State->SetStringField(TEXT("asset_path"), AssetPath);
 	State->SetStringField(TEXT("asset_class"), Montage->GetClass()->GetPathName());
-	State->SetNumberField(TEXT("length_seconds"), Montage->GetPlayLength());
+	State->SetNumberField(TEXT("length_seconds"), MontageLength(*Montage));
 	State->SetBoolField(TEXT("auto_blend_out"), Montage->bEnableAutoBlendOut);
 	State->SetStringField(TEXT("sync_group"), Montage->SyncGroup.ToString());
 
@@ -358,7 +372,7 @@ bool FUeremcpAnimationService::InspectMontage(
 		NotifyObject->SetStringField(TEXT("name"), Event.NotifyName.ToString());
 		NotifyObject->SetNumberField(TEXT("time"), Event.GetTriggerTime());
 		NotifyObject->SetNumberField(TEXT("duration"), Event.GetDuration());
-		NotifyObject->SetStringField(TEXT("track"), NotifyTrackName(*Montage, Event).ToString());
+		NotifyObject->SetStringField(TEXT("track"), NotifyTrackName(*Montage, Event));
 		NotifyObject->SetNumberField(TEXT("track_index"), Event.TrackIndex);
 		NotifyObject->SetNumberField(TEXT("trigger_chance"), Event.NotifyTriggerChance);
 		NotifyObject->SetBoolField(TEXT("trigger_on_dedicated_server"), Event.bTriggerOnDedicatedServer);

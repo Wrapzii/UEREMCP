@@ -144,7 +144,9 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 					static_cast<int32>(NotifyObject->GetNumberField(TEXT("track_index"))),
 					0);
 				TestTrue(TEXT("notify time"), FMath::IsNearlyEqual(NotifyObject->GetNumberField(TEXT("time")), 0.5));
-				TestTrue(TEXT("notify duration"), FMath::IsNearlyEqual(NotifyObject->GetNumberField(TEXT("duration")), 0.2));
+				TestTrue(
+					TEXT("instant notify duration is zero"),
+					FMath::IsNearlyZero(NotifyObject->GetNumberField(TEXT("duration"))));
 				TestTrue(TEXT("notify trigger chance"), FMath::IsNearlyEqual(NotifyObject->GetNumberField(TEXT("trigger_chance")), 0.75));
 				TestFalse(TEXT("notify dedicated-server policy"), NotifyObject->GetBoolField(TEXT("trigger_on_dedicated_server")));
 				TestFalse(TEXT("notify is not a state"), NotifyObject->GetBoolField(TEXT("is_state")));
@@ -155,6 +157,9 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 			if (StateObject.IsValid())
 			{
 				TestEqual(TEXT("state name"), StateObject->GetStringField(TEXT("name")), FString(TEXT("DisableRootMotion")));
+				TestTrue(
+					TEXT("notify state duration"),
+					FMath::IsNearlyEqual(StateObject->GetNumberField(TEXT("duration")), 0.3));
 				TestTrue(TEXT("state is marked as state"), StateObject->GetBoolField(TEXT("is_state")));
 				TestTrue(
 					TEXT("state concrete class"),
