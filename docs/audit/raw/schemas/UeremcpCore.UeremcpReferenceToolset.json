@@ -1,0 +1,54 @@
+{
+  "name": "UeremcpCore.UeremcpReferenceToolset",
+  "version": "0.1.0",
+  "description": "Reference UEREMCP toolset (ADR-0002).\n\nOne UToolsetDefinition subclass hosting static AICallable UFUNCTIONs. Thin by\ndesign — no domain work here. Registration is explicit via\nUToolsetRegistry::RegisterToolsetClass\n[VERIFIED: $TR/.../Public/ToolsetRegistry/UToolsetRegistry.h:28]\n[VERIFIED: $TR/.../Private/ToolsetRegistry/ToolsetRegistrySubsystem.cpp:49]\n(UAgentSkillToolset is registered the same way; subclasses do NOT self-register).",
+  "tools": [
+    {
+      "description": "Liveness probe. No parameters — isolates registration from schema questions.",
+      "name": "UeremcpCore.UeremcpReferenceToolset.Ping",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Response envelope JSON (protocol_version, status, summary, metrics)."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Echoes a request envelope inside a response envelope. Exercises the single\nFString parameter path that ADR-0003 depends on (RB-03 q6).",
+      "name": "UeremcpCore.UeremcpReferenceToolset.Echo",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "requestJson": {
+            "type": "string",
+            "description": "Request envelope JSON string (schemas/envelope/request.schema.json)."
+          }
+        },
+        "required": [
+          "requestJson"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "description": "Response envelope JSON. Malformed input yields status \"rejected\"."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

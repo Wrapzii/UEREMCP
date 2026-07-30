@@ -1,0 +1,36 @@
+{
+  "captured_at": "2026-07-30T04:24:12Z",
+  "endpoint": "http://127.0.0.1:8000/mcp",
+  "editor_state": "RE.uproject live; UEREMCP enabled; UeremcpValidationProbe disabled",
+  "r04_context": "Ping/Echo verified on ws-01-orch bc57039",
+  "priority_toolsets_requested": [
+    "editor_toolset.toolsets.blueprint.BlueprintTools",
+    "NiagaraToolsets.NiagaraToolset_System",
+    "NiagaraToolsets.NiagaraToolset_Assets",
+    "GASToolsets.GameplayCueToolset",
+    "GASToolsets.AttributeSetToolset",
+    "GASToolsets.AbilitySystemInspectorToolset",
+    "GameplayTagsToolset.GameplayTagsToolset",
+    "editor_toolset.toolsets.material.MaterialTools",
+    "editor_toolset.toolsets.material_instance.MaterialInstanceTools",
+    "animation_toolset.toolsets.controlrig.ControlRigTools",
+    "editor_toolset.toolsets.programmatic.ProgrammaticToolset",
+    "UeremcpCore.UeremcpReferenceToolset"
+  ],
+  "priority_schemas_dumped": [
+    "editor_toolset.toolsets.blueprint.BlueprintTools",
+    "NiagaraToolsets.NiagaraToolset_System",
+    "NiagaraToolsets.NiagaraToolset_Assets",
+    "GASToolsets.GameplayCueToolset",
+    "GASToolsets.AttributeSetToolset",
+    "GASToolsets.AbilitySystemInspectorToolset",
+    "GameplayTagsToolset.GameplayTagsToolset",
+    "editor_toolset.toolsets.material.MaterialTools",
+    "editor_toolset.toolsets.material_instance.MaterialInstanceTools",
+    "animation_toolset.toolsets.controlrig.ControlRigTools",
+    "editor_toolset.toolsets.programmatic.ProgrammaticToolset",
+    "UeremcpCore.UeremcpReferenceToolset"
+  ],
+  "list_toolsets_dump": "docs/audit/raw/runtime/list_toolsets.json",
+  "tag": "[VERIFIED-RUNTIME: user-unreal-mcp list_toolsets + describe_toolset 2026-07-30]"
+}

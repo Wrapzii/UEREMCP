@@ -1,0 +1,123 @@
+{
+  "name": "GASToolsets.AttributeSetToolset",
+  "version": "1.0",
+  "description": "Provides tools for discovering AttributeSet classes and their gameplay attributes.",
+  "tools": [
+    {
+      "description": "Returns the gameplay attributes defined on a specific AttributeSet class.",
+      "name": "GASToolsets.AttributeSetToolset.ListAttributes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "className": {
+            "type": "string",
+            "description": "The UClass name to look up, e.g. \"UMyHealthSet\". Raises a script error if the class is not found or is not an AttributeSet subclass."
+          }
+        },
+        "required": [
+          "className"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "GameplayAttributeInfo",
+              "type": "object",
+              "properties": {
+                "attributeName": {
+                  "type": "string",
+                  "description": "The short attribute name (e.g. \"Health\")."
+                },
+                "fullName": {
+                  "type": "string",
+                  "description": "The fully-qualified attribute name including the set class (e.g. \"UMyHealthSet.Health\")."
+                },
+                "setClassName": {
+                  "type": "string",
+                  "description": "The name of the AttributeSet class that owns this attribute (e.g. \"UMyHealthSet\")."
+                }
+              },
+              "required": [
+                "attributeName",
+                "fullName",
+                "setClassName"
+              ]
+            },
+            "description": "A list of attribute descriptors defined on the class."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns all AttributeSet subclasses found in the project, including their attributes.\nCovers both native C++ subclasses and Blueprint subclasses discovered via the asset registry.",
+      "name": "GASToolsets.AttributeSetToolset.FindAttributeSetClasses",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "AttributeSetClassInfo",
+              "type": "object",
+              "properties": {
+                "className": {
+                  "type": "string",
+                  "description": "The UClass name of the attribute set (e.g. \"UMyHealthSet\")."
+                },
+                "assetPath": {
+                  "type": "string",
+                  "description": "The object path to the Blueprint asset, or empty for native C++ classes."
+                },
+                "attributes": {
+                  "type": "array",
+                  "items": {
+                    "title": "GameplayAttributeInfo",
+                    "type": "object",
+                    "properties": {
+                      "attributeName": {
+                        "type": "string",
+                        "description": "The short attribute name (e.g. \"Health\")."
+                      },
+                      "fullName": {
+                        "type": "string",
+                        "description": "The fully-qualified attribute name including the set class (e.g. \"UMyHealthSet.Health\")."
+                      },
+                      "setClassName": {
+                        "type": "string",
+                        "description": "The name of the AttributeSet class that owns this attribute (e.g. \"UMyHealthSet\")."
+                      }
+                    },
+                    "required": [
+                      "attributeName",
+                      "fullName",
+                      "setClassName"
+                    ]
+                  },
+                  "description": "The gameplay attributes defined on this set."
+                }
+              },
+              "required": [
+                "className",
+                "assetPath",
+                "attributes"
+              ]
+            },
+            "description": "A list of attribute set descriptors sorted by class name."
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,3581 @@
+{
+  "name": "editor_toolset.toolsets.blueprint.BlueprintTools",
+  "version": "1.0",
+  "description": "Provides tools for working with Blueprints.",
+  "tools": [
+    {
+      "description": "Reads a Blueprint graph and returns a DSL script.\n\n        The returned code uses the same syntax that write_graph_dsl accepts and can\n        be edited and passed back to write_graph_dsl to modify the graph.\n        Call get_graph_dsl_docs() for the full syntax reference.\n\n        Args:\n            graph: The graph to read.\n\n        Returns:\n            An S-expression DSL script representing the graph's logic.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.read_graph_dsl",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Populates a Blueprint graph with nodes from a DSL script and compiles the Blueprint.\n\n        Call get_graph_dsl_docs() for the full syntax reference and examples.\n\n        Args:\n            graph: The graph to populate with nodes.\n            code: The S-expression DSL script to convert into Blueprint nodes.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.write_graph_dsl",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "graph",
+          "code"
+        ]
+      }
+    },
+    {
+      "description": "Returns the full syntax reference for write_graph_dsl.\n\n        Call this before using write_graph_dsl for the first time.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_graph_dsl_docs",
+      "inputSchema": {
+        "type": "object"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists all event dispatchers defined on a Blueprint.\n\n        Args:\n            blueprint: The Blueprint to list event dispatchers for.\n\n        Returns:\n            A list of event dispatcher graphs, one per dispatcher.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.list_event_dispatchers",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.EdGraph",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds an event dispatcher to a Blueprint.\n\n        Args:\n            blueprint: The Blueprint to add the dispatcher to.\n            name: The name of the new event dispatcher.\n\n        Returns:\n            The event dispatcher graph.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_event_dispatcher",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes a member or local variable from a Blueprint.\n\n        Args:\n            blueprint: The Blueprint to remove the variable from.\n            name: The name of the variable to remove.\n            graph: If provided, removes a local variable from this function graph instead of a\n                member variable.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.remove_variable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "graph": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint",
+          "name"
+        ]
+      }
+    },
+    {
+      "description": "Sets the user-defined category on a Blueprint member variable.\n\n        Categories group variables in the My Blueprint panel. Pass an empty string\n        to reset to the default (the Blueprint's name).\n\n        Args:\n            blueprint: The Blueprint containing the variable.\n            variable_name: The name of the member variable to modify.\n            category: The new category text.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.set_variable_category",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "variable_name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint",
+          "variable_name",
+          "category"
+        ]
+      }
+    },
+    {
+      "description": "Gets the user-defined category of a Blueprint member variable.\n\n        Categories group variables in the My Blueprint panel. Variables with no\n        explicit category default to the Blueprint's name in the UI.\n\n        Args:\n            blueprint: The Blueprint containing the variable.\n            variable_name: The name of the member variable to query.\n\n        Returns:\n            The category as a string. Empty string if the variable has no custom\n            category override.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_variable_category",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "variable_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint",
+          "variable_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Sets the replication mode on a Blueprint member variable.\n\n        RepNotify will automatically create an OnRep_ function on the Blueprint if one does not\n        already exist.\n\n        Args:\n            blueprint: The Blueprint containing the variable.\n            variable_name: The name of the member variable to modify.\n            replication: Replication mode (NONE, REPLICATED, or REP_NOTIFY).",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.set_variable_replication",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "variable_name": {
+            "type": "string"
+          },
+          "replication": {
+            "type": "string",
+            "title": "EBlueprintVariableReplication",
+            "enum": [
+              "None",
+              "Replicated",
+              "RepNotify"
+            ]
+          }
+        },
+        "required": [
+          "blueprint",
+          "variable_name",
+          "replication"
+        ]
+      }
+    },
+    {
+      "description": "Gets the replication mode of a Blueprint member variable.\n\n        Args:\n            blueprint: The Blueprint containing the variable.\n            variable_name: The name of the member variable to query.\n\n        Returns:\n            The replication mode (NONE, REPLICATED, or REP_NOTIFY).",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_variable_replication",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "variable_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint",
+          "variable_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string",
+            "title": "EBlueprintVariableReplication",
+            "enum": [
+              "None",
+              "Replicated",
+              "RepNotify"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Sets whether a member variable is editable per-instance on actors placed in the level.\n\n        Args:\n            blueprint: The Blueprint containing the variable.\n            variable_name: The name of the member variable to modify.\n            instance_editable: True to make the variable editable on instances, False to hide it.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.set_variable_instance_editable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "variable_name": {
+            "type": "string"
+          },
+          "instance_editable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "blueprint",
+          "variable_name",
+          "instance_editable"
+        ]
+      }
+    },
+    {
+      "description": "Lists member or local variables defined on a Blueprint.\n\n        Args:\n            blueprint: The Blueprint to list variables for.\n            graph: If provided, lists local variables in this function graph instead of\n                member variables.\n\n        Returns:\n            A list of variable names.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.list_variables",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a member or local variable that holds an object reference to a Blueprint.\n\n        Args:\n            blueprint: The Blueprint to add the variable to.\n            name: The variable name.\n            object_class: The class of object this variable will reference.\n            graph: If provided, adds a local variable to this function graph instead of a\n                member variable.\n            container_type: Container type for the variable. MAP uses string as the key type.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_object_variable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "object_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "container_type": {
+            "default": null,
+            "type": "string",
+            "title": "ContainerType",
+            "enum": [
+              "ARRAY",
+              "SET",
+              "MAP"
+            ]
+          }
+        },
+        "required": [
+          "blueprint",
+          "name",
+          "object_class"
+        ]
+      }
+    },
+    {
+      "description": "Adds a member or local variable of a struct type to a Blueprint.\n\n        Use this to add variables of any UStruct type, including custom structs and engine\n        structs not in the basic list supported by add_variable (e.g. HitResult, GameplayTag).\n\n        Args:\n            blueprint: The Blueprint to add the variable to.\n            name: The variable name.\n            struct_type: The struct type for this variable.\n            graph: If provided, adds a local variable to this function graph instead of a\n                member variable.\n            container_type: Container type for the variable. MAP uses string as the key type.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_struct_variable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "struct_type": {
+            "type": "object",
+            "title": "/Script/CoreUObject.ScriptStruct",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "container_type": {
+            "default": null,
+            "type": "string",
+            "title": "ContainerType",
+            "enum": [
+              "ARRAY",
+              "SET",
+              "MAP"
+            ]
+          }
+        },
+        "required": [
+          "blueprint",
+          "name",
+          "struct_type"
+        ]
+      }
+    },
+    {
+      "description": "Adds a member or local variable to a Blueprint.\n\n        Supported type names:\n          Primitives: 'bool', 'int', 'float', 'byte', 'string', 'name', 'text'\n          Structs:    'Vector', 'Rotator', 'Transform', 'Vector2D', 'LinearColor'\n\n        Args:\n            blueprint: The Blueprint to add the variable to.\n            name: The variable name.\n            type_name: The variable type as a string (see above).\n            graph: If provided, adds a local variable to this function graph instead of a\n                member variable.\n            container_type: Container type for the variable. MAP uses string as the key type.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_variable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "type_name": {
+            "type": "string"
+          },
+          "graph": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "container_type": {
+            "default": null,
+            "type": "string",
+            "title": "ContainerType",
+            "enum": [
+              "ARRAY",
+              "SET",
+              "MAP"
+            ]
+          }
+        },
+        "required": [
+          "blueprint",
+          "name",
+          "type_name"
+        ]
+      }
+    },
+    {
+      "description": "Reparents a Blueprint to a new parent class.\n\n        The Blueprint must be recompiled after reparenting.\n\n        Args:\n            blueprint: The Blueprint to reparent.\n            parent_class: The new parent class. Must be a UObject subclass.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.set_parent",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "parent_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint",
+          "parent_class"
+        ]
+      }
+    },
+    {
+      "description": "Returns the parent class of a Blueprint.\n\n        Args:\n            blueprint: The Blueprint whose parent class to retrieve.\n\n        Returns:\n            The parent class of the Blueprint's generated class.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_parent",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Gets the value of a Blueprint graph pin.\n\n        Args:\n            pin: The PinID of the pin to read. Must be an input pin that supports default values.\n\n        Returns:\n            The value of the pin as a string.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_pin_value",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pin": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "pin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Sets the value of a Blueprint graph pin.\n\n        Args:\n            pin: The PinID of the pin to modify. Must be an input pin that supports default values.\n            value: The value to assign as a string. Format depends on the pin's data type:\n                - Numeric pins (int/float): \"42\" or \"3.14\"\n                - Boolean pins: \"true\" or \"false\"\n                - String/Name/Text pins: \"Hello World\"\n                - Object reference pins: \"/Game/Path/To/Asset.Asset\"",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.set_pin_value",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pin": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pin",
+          "value"
+        ]
+      }
+    },
+    {
+      "description": "Breaks the connection between two pins.\n\n            Args:\n                output_pin: The PinID of the output pin to disconnect from.\n                input_pin: The PinID of the input pin to disconnect from.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.break_pins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "output_pin": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          },
+          "input_pin": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "output_pin",
+          "input_pin"
+        ]
+      }
+    },
+    {
+      "description": "Makes a connection between source (output) and dest (input) pins.\n\n            Args:\n                output_pin: The PinID of the output pin to connect from.\n                input_pin: The PinID of the input pin to connect to.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.connect_pins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "output_pin": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          },
+          "input_pin": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "output_pin",
+          "input_pin"
+        ]
+      }
+    },
+    {
+      "description": "Arranges a list of nodes in a readable left-to-right layout.\n\n        Organizes nodes into columns based on data/execution flow, with producer nodes to\n        the left of the nodes they feed into. Call this after building a graph\n        to avoid nodes overlapping. Connections to nodes outside the list are used as anchors\n        so the arranged nodes integrate cleanly with the rest of the graph.\n\n        Args:\n            nodes: The nodes to arrange.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.arrange_nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.EdGraphNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "nodes"
+        ]
+      }
+    },
+    {
+      "description": "Sets a new position for the node.\n\n        Args:\n            node: Node to be moved\n            pos: New x, y position of the node in the graph",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.set_node_position",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "pos": {
+            "title": "IntPoint",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer"
+              },
+              "y": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "required": [
+          "node",
+          "pos"
+        ]
+      }
+    },
+    {
+      "description": "Replaces a node's baked-in class reference from old_class to new_class in place.\n\n        If the node's current class reference matches old_class it is replaced with\n        new_class and the node is reconstructed so its pins reflect the new type.\n        If the node already references new_class the call is a no-op.\n\n        When a Blueprint is duplicated, nodes in the copied graph retain class references\n        pointing to the original Blueprint. Calling this on each node with the original\n        and duplicate classes retargets them without manual delete-recreate-rewire cycles.\n\n        Handles cast, function call, event, and multicast delegate nodes. The Blueprint\n        must be compiled after all retargeting is complete.\n\n        Args:\n            node: The node to retarget.\n            old_class: The class currently baked into the node.\n            new_class: The replacement class.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.retarget_node_class",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "old_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "new_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node",
+          "old_class",
+          "new_class"
+        ]
+      }
+    },
+    {
+      "description": "Removes a specific pin from a node that supports dynamic pin removal.\n\n        Works for Switch nodes (removes one case pin), Sequence nodes (removes one Then output),\n        commutative binary operators like Add/Multiply (removes one input), Make Array nodes, etc.\n\n        Args:\n            node: The node to remove a pin from. Must support dynamic pin removal.\n            pin: The PinID of the pin to remove.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.remove_node_pin",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "pin": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "node",
+          "pin"
+        ]
+      }
+    },
+    {
+      "description": "Adds a pin to a node that supports dynamic pin addition.\n\n        Works for Switch nodes (adds one case pin), Sequence nodes (adds one Then output),\n        commutative binary operators like Add/Multiply (adds one input), Make Array nodes, etc.\n\n        Args:\n            node: The node to add a pin to. Must support dynamic pin addition.\n\n        Returns:\n            The PinID of the newly added pin.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_node_pin",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Deletes the node from its graph.\n\n        Args:\n            node: The node to be deleted",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.delete_node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      }
+    },
+    {
+      "description": "Adds a new node to the graph.\n\n        Args:\n            graph: The graph to add a node to\n            type_id: The type of the node to add. Eg 'Development|PrintString',\n                'Utilities|Operators|Add', a macro like 'Utilities|FlowControl|ForLoop', a\n                dispatcher event handler like 'Default|EventDispatcherOnDamaged', an event\n                like 'AddEvent|EventBeginPlay', or a named custom event with\n                'AddEvent|Custom|MyEventName'.\n            pos: The x, y position of the created node\n            declaring_class: The class that should own the created node. Only set this when you need\n                to disambiguate nodes that share the same type_id to ensure the correct one is used.\n\n        Returns:\n            Returns the new node",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.create_node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "type_id": {
+            "type": "string"
+          },
+          "pos": {
+            "title": "IntPoint",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer"
+              },
+              "y": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          },
+          "declaring_class": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "graph",
+          "type_id",
+          "pos"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a component bound event node in the event graph.\n\n        Args:\n            component: The component to bind the event to. Must be a component on a Blueprint actor.\n            event_name: The name of the delegate event to bind, e.g. 'OnComponentBeginOverlap'.\n            graph: The event graph to add the node to.\n\n        Returns:\n            The created or pre-existing component bound event node.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_component_bound_event",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "type": "object",
+            "title": "/Script/Engine.ActorComponent",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "event_name": {
+            "type": "string"
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "component",
+          "event_name",
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists the bindable delegate events available on a component.\n\n        Args:\n            component: The component to query. Must be a component on a Blueprint actor.\n\n        Returns:\n            The names of all bindable events on the component, e.g. OnComponentBeginOverlap.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.list_component_events",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "component": {
+            "type": "object",
+            "title": "/Script/Engine.ActorComponent",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "component"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Retrieves a list of available node categories in a Blueprint graph, optionally filtered by compatible input and/or output pin types\n\n        Note: Categories are everything before the last | character in a node type id (eg 'Utilities|Operators' in the 'Utilities|Operators|Add' type id)\n\n        Args:\n            graph: the graph to make the search for\n            category_filter: Substring to match against the node categories (case-insensitive). Pass an empty string to return all categories.\n            context_pins: If set, only returns categories with nodes whose pin types match those specified in this list\n\n        Returns:\n            Returns node categories that match the input criteria",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.find_node_categories",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "category_filter": {
+            "type": "string"
+          },
+          "context_pins": {
+            "type": "array",
+            "items": {
+              "title": "PinID",
+              "type": "object",
+              "properties": {
+                "direction": {
+                  "type": "string",
+                  "title": "EEdGraphPinDirection",
+                  "enum": [
+                    "EGPD_Input",
+                    "EGPD_Output"
+                  ]
+                },
+                "index_id": {
+                  "type": "integer"
+                },
+                "node": {
+                  "type": "object",
+                  "title": "/Script/Engine.EdGraphNode",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "direction",
+                "index_id",
+                "node"
+              ]
+            }
+          }
+        },
+        "required": [
+          "graph",
+          "category_filter",
+          "context_pins"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the pin names and types for a node type.\n\n        Args:\n            graph: The graph context used to resolve the node type.\n            type_id: A node type_id as returned by find_node_types.\n\n        Returns:\n            NodeInfo with input_pins and output_pins listing each pin's name and type.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_node_type_pins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "type_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "graph",
+          "type_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "NodeInfo",
+            "type": "object",
+            "properties": {
+              "output_pins": {
+                "type": "array",
+                "items": {
+                  "title": "PinInfo",
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "connected_pins": {
+                      "type": "array",
+                      "items": {
+                        "title": "PinID",
+                        "type": "object",
+                        "properties": {
+                          "direction": {
+                            "type": "string",
+                            "title": "EEdGraphPinDirection",
+                            "enum": [
+                              "EGPD_Input",
+                              "EGPD_Output"
+                            ]
+                          },
+                          "index_id": {
+                            "type": "integer"
+                          },
+                          "node": {
+                            "type": "object",
+                            "title": "/Script/Engine.EdGraphNode",
+                            "description": "Represents a reference to a UObject or UClass.",
+                            "properties": {
+                              "refPath": {
+                                "type": "string",
+                                "description": "The reference stored as a soft path string."
+                              }
+                            },
+                            "required": [
+                              "refPath"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "direction",
+                          "index_id",
+                          "node"
+                        ]
+                      }
+                    },
+                    "pin_id": {
+                      "title": "PinID",
+                      "type": "object",
+                      "properties": {
+                        "direction": {
+                          "type": "string",
+                          "title": "EEdGraphPinDirection",
+                          "enum": [
+                            "EGPD_Input",
+                            "EGPD_Output"
+                          ]
+                        },
+                        "index_id": {
+                          "type": "integer"
+                        },
+                        "node": {
+                          "type": "object",
+                          "title": "/Script/Engine.EdGraphNode",
+                          "description": "Represents a reference to a UObject or UClass.",
+                          "properties": {
+                            "refPath": {
+                              "type": "string",
+                              "description": "The reference stored as a soft path string."
+                            }
+                          },
+                          "required": [
+                            "refPath"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "direction",
+                        "index_id",
+                        "node"
+                      ]
+                    },
+                    "type_id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "connected_pins",
+                    "pin_id",
+                    "type_id",
+                    "name"
+                  ]
+                }
+              },
+              "input_pins": {
+                "type": "array",
+                "items": {
+                  "title": "PinInfo",
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "string"
+                    },
+                    "connected_pins": {
+                      "type": "array",
+                      "items": {
+                        "title": "PinID",
+                        "type": "object",
+                        "properties": {
+                          "direction": {
+                            "type": "string",
+                            "title": "EEdGraphPinDirection",
+                            "enum": [
+                              "EGPD_Input",
+                              "EGPD_Output"
+                            ]
+                          },
+                          "index_id": {
+                            "type": "integer"
+                          },
+                          "node": {
+                            "type": "object",
+                            "title": "/Script/Engine.EdGraphNode",
+                            "description": "Represents a reference to a UObject or UClass.",
+                            "properties": {
+                              "refPath": {
+                                "type": "string",
+                                "description": "The reference stored as a soft path string."
+                              }
+                            },
+                            "required": [
+                              "refPath"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "direction",
+                          "index_id",
+                          "node"
+                        ]
+                      }
+                    },
+                    "pin_id": {
+                      "title": "PinID",
+                      "type": "object",
+                      "properties": {
+                        "direction": {
+                          "type": "string",
+                          "title": "EEdGraphPinDirection",
+                          "enum": [
+                            "EGPD_Input",
+                            "EGPD_Output"
+                          ]
+                        },
+                        "index_id": {
+                          "type": "integer"
+                        },
+                        "node": {
+                          "type": "object",
+                          "title": "/Script/Engine.EdGraphNode",
+                          "description": "Represents a reference to a UObject or UClass.",
+                          "properties": {
+                            "refPath": {
+                              "type": "string",
+                              "description": "The reference stored as a soft path string."
+                            }
+                          },
+                          "required": [
+                            "refPath"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "direction",
+                        "index_id",
+                        "node"
+                      ]
+                    },
+                    "type_id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "connected_pins",
+                    "pin_id",
+                    "type_id",
+                    "name"
+                  ]
+                }
+              },
+              "position": {
+                "title": "IntPoint",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "integer"
+                  },
+                  "y": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "type_id": {
+                "type": "string",
+                "description": "type_id is in the format Category|Title"
+              }
+            },
+            "required": [
+              "output_pins",
+              "input_pins",
+              "position",
+              "node",
+              "type_id"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Finds node types that can be created in a particular graph meeting the search criteria.\n\n        Note: there can be thousands of valid node types in a graph, so type_id_filter should be\n        reasonably specific even if that requires multiple searches.\n\n        To list all nodes within a category, use a trailing pipe: e.g. 'Utilities|FlowControl|'\n        returns every node under that category. Without the trailing pipe, 'Utilities|FlowControl'\n        also matches any node whose type_id contains that substring (such as a node with category\n        'Utilities' and title 'FlowControl').\n\n        Args:\n            graph: the graph to make the search for\n            type_id_filter: Substring to match against the node type_id (case-insensitive)\n            context_pins: If set, only returns nodes whose pin types match those specified in this list\n\n        Returns:\n            Returns nodes that match the input criteria",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.find_node_types",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "type_id_filter": {
+            "type": "string"
+          },
+          "context_pins": {
+            "type": "array",
+            "items": {
+              "title": "PinID",
+              "type": "object",
+              "properties": {
+                "direction": {
+                  "type": "string",
+                  "title": "EEdGraphPinDirection",
+                  "enum": [
+                    "EGPD_Input",
+                    "EGPD_Output"
+                  ]
+                },
+                "index_id": {
+                  "type": "integer"
+                },
+                "node": {
+                  "type": "object",
+                  "title": "/Script/Engine.EdGraphNode",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                }
+              },
+              "required": [
+                "direction",
+                "index_id",
+                "node"
+              ]
+            }
+          }
+        },
+        "required": [
+          "graph",
+          "type_id_filter",
+          "context_pins"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns detailed information for all nodes connected to the given node.\n\n        Use this alongside find_nodes to read a single event chain from a large graph\n        (like Event Graph) without reading the entire graph.\n\n        Args:\n            node: The starting node.\n\n        Returns:\n            Every node reachable from the given node via any connection, including\n            the starting node itself.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_connected_subgraph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "NodeInfo",
+              "type": "object",
+              "properties": {
+                "output_pins": {
+                  "type": "array",
+                  "items": {
+                    "title": "PinInfo",
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      },
+                      "connected_pins": {
+                        "type": "array",
+                        "items": {
+                          "title": "PinID",
+                          "type": "object",
+                          "properties": {
+                            "direction": {
+                              "type": "string",
+                              "title": "EEdGraphPinDirection",
+                              "enum": [
+                                "EGPD_Input",
+                                "EGPD_Output"
+                              ]
+                            },
+                            "index_id": {
+                              "type": "integer"
+                            },
+                            "node": {
+                              "type": "object",
+                              "title": "/Script/Engine.EdGraphNode",
+                              "description": "Represents a reference to a UObject or UClass.",
+                              "properties": {
+                                "refPath": {
+                                  "type": "string",
+                                  "description": "The reference stored as a soft path string."
+                                }
+                              },
+                              "required": [
+                                "refPath"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "direction",
+                            "index_id",
+                            "node"
+                          ]
+                        }
+                      },
+                      "pin_id": {
+                        "title": "PinID",
+                        "type": "object",
+                        "properties": {
+                          "direction": {
+                            "type": "string",
+                            "title": "EEdGraphPinDirection",
+                            "enum": [
+                              "EGPD_Input",
+                              "EGPD_Output"
+                            ]
+                          },
+                          "index_id": {
+                            "type": "integer"
+                          },
+                          "node": {
+                            "type": "object",
+                            "title": "/Script/Engine.EdGraphNode",
+                            "description": "Represents a reference to a UObject or UClass.",
+                            "properties": {
+                              "refPath": {
+                                "type": "string",
+                                "description": "The reference stored as a soft path string."
+                              }
+                            },
+                            "required": [
+                              "refPath"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "direction",
+                          "index_id",
+                          "node"
+                        ]
+                      },
+                      "type_id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "connected_pins",
+                      "pin_id",
+                      "type_id",
+                      "name"
+                    ]
+                  }
+                },
+                "input_pins": {
+                  "type": "array",
+                  "items": {
+                    "title": "PinInfo",
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      },
+                      "connected_pins": {
+                        "type": "array",
+                        "items": {
+                          "title": "PinID",
+                          "type": "object",
+                          "properties": {
+                            "direction": {
+                              "type": "string",
+                              "title": "EEdGraphPinDirection",
+                              "enum": [
+                                "EGPD_Input",
+                                "EGPD_Output"
+                              ]
+                            },
+                            "index_id": {
+                              "type": "integer"
+                            },
+                            "node": {
+                              "type": "object",
+                              "title": "/Script/Engine.EdGraphNode",
+                              "description": "Represents a reference to a UObject or UClass.",
+                              "properties": {
+                                "refPath": {
+                                  "type": "string",
+                                  "description": "The reference stored as a soft path string."
+                                }
+                              },
+                              "required": [
+                                "refPath"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "direction",
+                            "index_id",
+                            "node"
+                          ]
+                        }
+                      },
+                      "pin_id": {
+                        "title": "PinID",
+                        "type": "object",
+                        "properties": {
+                          "direction": {
+                            "type": "string",
+                            "title": "EEdGraphPinDirection",
+                            "enum": [
+                              "EGPD_Input",
+                              "EGPD_Output"
+                            ]
+                          },
+                          "index_id": {
+                            "type": "integer"
+                          },
+                          "node": {
+                            "type": "object",
+                            "title": "/Script/Engine.EdGraphNode",
+                            "description": "Represents a reference to a UObject or UClass.",
+                            "properties": {
+                              "refPath": {
+                                "type": "string",
+                                "description": "The reference stored as a soft path string."
+                              }
+                            },
+                            "required": [
+                              "refPath"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "direction",
+                          "index_id",
+                          "node"
+                        ]
+                      },
+                      "type_id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "connected_pins",
+                      "pin_id",
+                      "type_id",
+                      "name"
+                    ]
+                  }
+                },
+                "position": {
+                  "title": "IntPoint",
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "integer"
+                    },
+                    "y": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ]
+                },
+                "node": {
+                  "type": "object",
+                  "title": "/Script/Engine.EdGraphNode",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "type_id": {
+                  "type": "string",
+                  "description": "type_id is in the format Category|Title"
+                }
+              },
+              "required": [
+                "output_pins",
+                "input_pins",
+                "position",
+                "node",
+                "type_id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Finds nodes in a graph by title, class, and/or execution role.\n\n        All filters are optional and ANDed together. Useful for locating specific\n        event chains in large graphs like EventGraph before reading them with\n        get_connected_subgraph.\n\n        Args:\n            graph: The graph to search.\n            title: Case-insensitive substring to match against the node's displayed\n                title. Pass an empty string to match any title.\n            node_class: If provided, only returns nodes that are instances of this\n                class or its subclasses.\n            entry_points_only: If True, only returns entry point nodes - nodes with\n                an exec output but no exec input (event nodes, function entry nodes,\n                macro input tunnels, etc.). Nothing can drive these nodes; they\n                start execution themselves.\n\n        Returns:\n            All nodes in the graph matching the given filters.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.find_nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "node_class": {
+            "default": null,
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "entry_points_only": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "graph",
+          "title"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.EdGraphNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists functions that can be bound to a Create Event node.\n\n        Args:\n            node: The Create Event node.\n\n        Returns:\n            A list of function names valid for binding.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.list_compatible_event_functions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/BlueprintGraph.K2Node_CreateDelegate",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Binds a function to a Create Event node.\n\n        Use list_compatible_event_functions to find valid function names.\n\n        Args:\n            node: The Create Event node.\n            function_name: The name of the function to bind.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.set_create_event_function",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/BlueprintGraph.K2Node_CreateDelegate",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "function_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "node",
+          "function_name"
+        ]
+      }
+    },
+    {
+      "description": "Returns the function currently bound to a Create Event node.\n\n        Args:\n            node: The Create Event node.\n\n        Returns:\n            The bound function name, or empty string if none is set.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_create_event_function",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "node": {
+            "type": "object",
+            "title": "/Script/BlueprintGraph.K2Node_CreateDelegate",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Retrieves detailed information for a list of Blueprint graph nodes.\n\n        Args:\n            nodes: The graph nodes to retrieve information from.\n\n        Returns:\n            Information about each node, including type, pins, connections, and position.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_node_infos",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.EdGraphNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "nodes"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "NodeInfo",
+              "type": "object",
+              "properties": {
+                "output_pins": {
+                  "type": "array",
+                  "items": {
+                    "title": "PinInfo",
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      },
+                      "connected_pins": {
+                        "type": "array",
+                        "items": {
+                          "title": "PinID",
+                          "type": "object",
+                          "properties": {
+                            "direction": {
+                              "type": "string",
+                              "title": "EEdGraphPinDirection",
+                              "enum": [
+                                "EGPD_Input",
+                                "EGPD_Output"
+                              ]
+                            },
+                            "index_id": {
+                              "type": "integer"
+                            },
+                            "node": {
+                              "type": "object",
+                              "title": "/Script/Engine.EdGraphNode",
+                              "description": "Represents a reference to a UObject or UClass.",
+                              "properties": {
+                                "refPath": {
+                                  "type": "string",
+                                  "description": "The reference stored as a soft path string."
+                                }
+                              },
+                              "required": [
+                                "refPath"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "direction",
+                            "index_id",
+                            "node"
+                          ]
+                        }
+                      },
+                      "pin_id": {
+                        "title": "PinID",
+                        "type": "object",
+                        "properties": {
+                          "direction": {
+                            "type": "string",
+                            "title": "EEdGraphPinDirection",
+                            "enum": [
+                              "EGPD_Input",
+                              "EGPD_Output"
+                            ]
+                          },
+                          "index_id": {
+                            "type": "integer"
+                          },
+                          "node": {
+                            "type": "object",
+                            "title": "/Script/Engine.EdGraphNode",
+                            "description": "Represents a reference to a UObject or UClass.",
+                            "properties": {
+                              "refPath": {
+                                "type": "string",
+                                "description": "The reference stored as a soft path string."
+                              }
+                            },
+                            "required": [
+                              "refPath"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "direction",
+                          "index_id",
+                          "node"
+                        ]
+                      },
+                      "type_id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "connected_pins",
+                      "pin_id",
+                      "type_id",
+                      "name"
+                    ]
+                  }
+                },
+                "input_pins": {
+                  "type": "array",
+                  "items": {
+                    "title": "PinInfo",
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      },
+                      "connected_pins": {
+                        "type": "array",
+                        "items": {
+                          "title": "PinID",
+                          "type": "object",
+                          "properties": {
+                            "direction": {
+                              "type": "string",
+                              "title": "EEdGraphPinDirection",
+                              "enum": [
+                                "EGPD_Input",
+                                "EGPD_Output"
+                              ]
+                            },
+                            "index_id": {
+                              "type": "integer"
+                            },
+                            "node": {
+                              "type": "object",
+                              "title": "/Script/Engine.EdGraphNode",
+                              "description": "Represents a reference to a UObject or UClass.",
+                              "properties": {
+                                "refPath": {
+                                  "type": "string",
+                                  "description": "The reference stored as a soft path string."
+                                }
+                              },
+                              "required": [
+                                "refPath"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "direction",
+                            "index_id",
+                            "node"
+                          ]
+                        }
+                      },
+                      "pin_id": {
+                        "title": "PinID",
+                        "type": "object",
+                        "properties": {
+                          "direction": {
+                            "type": "string",
+                            "title": "EEdGraphPinDirection",
+                            "enum": [
+                              "EGPD_Input",
+                              "EGPD_Output"
+                            ]
+                          },
+                          "index_id": {
+                            "type": "integer"
+                          },
+                          "node": {
+                            "type": "object",
+                            "title": "/Script/Engine.EdGraphNode",
+                            "description": "Represents a reference to a UObject or UClass.",
+                            "properties": {
+                              "refPath": {
+                                "type": "string",
+                                "description": "The reference stored as a soft path string."
+                              }
+                            },
+                            "required": [
+                              "refPath"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "direction",
+                          "index_id",
+                          "node"
+                        ]
+                      },
+                      "type_id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "connected_pins",
+                      "pin_id",
+                      "type_id",
+                      "name"
+                    ]
+                  }
+                },
+                "position": {
+                  "title": "IntPoint",
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "integer"
+                    },
+                    "y": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ]
+                },
+                "node": {
+                  "type": "object",
+                  "title": "/Script/Engine.EdGraphNode",
+                  "description": "Represents a reference to a UObject or UClass.",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "type_id": {
+                  "type": "string",
+                  "description": "type_id is in the format Category|Title"
+                }
+              },
+              "required": [
+                "output_pins",
+                "input_pins",
+                "position",
+                "node",
+                "type_id"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds an object reference input or output to a function or event dispatcher.\n\n        Note: output params are not supported on event dispatchers.\n\n        Args:\n            graph: The function or event dispatcher graph to add the param to.\n            param_name: The name of the new param.\n            object_class: The class of object this param will reference.\n            input_param: True to add an input param, false to add an output.\n            container_type: Container type for the param. MAP uses string as the key type.\n        Returns:\n            The PinID of the newly created param.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_object_function_param",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "param_name": {
+            "type": "string"
+          },
+          "object_class": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "input_param": {
+            "type": "boolean"
+          },
+          "container_type": {
+            "default": null,
+            "type": "string",
+            "title": "ContainerType",
+            "enum": [
+              "ARRAY",
+              "SET",
+              "MAP"
+            ]
+          }
+        },
+        "required": [
+          "graph",
+          "param_name",
+          "object_class",
+          "input_param"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a struct input or output to a function or event dispatcher.\n\n        Note: output params are not supported on event dispatchers.\n\n        Use this to add parameters of any UStruct type, including custom structs and engine\n        structs not in the basic list supported by add_function_param (e.g. HitResult, GameplayTag).\n\n        Args:\n            graph: The function or event dispatcher graph to add the parameter to.\n            param_name: The name of the new parameter.\n            struct_type: The struct type for this parameter.\n            input_param: True to add an input param, false to add an output.\n            container_type: Container type for the parameter. MAP uses string as the key type.\n\n        Returns:\n            The PinID of the newly created parameter.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_struct_function_param",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "param_name": {
+            "type": "string"
+          },
+          "struct_type": {
+            "type": "object",
+            "title": "/Script/CoreUObject.ScriptStruct",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "input_param": {
+            "type": "boolean"
+          },
+          "container_type": {
+            "default": null,
+            "type": "string",
+            "title": "ContainerType",
+            "enum": [
+              "ARRAY",
+              "SET",
+              "MAP"
+            ]
+          }
+        },
+        "required": [
+          "graph",
+          "param_name",
+          "struct_type",
+          "input_param"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes an input or output from a function or event dispatcher.\n\n        Note: output params are not supported on event dispatchers.\n\n        Args:\n            graph: The function or event dispatcher graph to remove the param from.\n            param_name: The name of the param to remove.\n            input_param: True to remove an input param, False to remove an output.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.remove_function_param",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "param_name": {
+            "type": "string"
+          },
+          "input_param": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "graph",
+          "param_name",
+          "input_param"
+        ]
+      }
+    },
+    {
+      "description": "Adds an input or output to a function or event dispatcher\n\n        Note: output params are not supported on event dispatchers.\n\n        Supported parameter types:\n          Primitives: 'bool', 'int', 'float', 'byte', 'string', 'name', 'text'\n          Structs:    'Vector', 'Rotator', 'Transform', 'Vector2D', 'LinearColor'\n\n        Args:\n            graph: The function or event dispatcher graph to add the parameter to.\n            param_name: The name of the new parameter.\n            param_type: The parameter type as a string (see above).\n            input_param: True to add an input param, false to add an output.\n            container_type: Container type for the parameter. MAP uses string as the key type.\n\n        Returns:\n            The PinID of the newly created parameter.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_function_param",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "param_name": {
+            "type": "string"
+          },
+          "param_type": {
+            "type": "string"
+          },
+          "input_param": {
+            "type": "boolean"
+          },
+          "container_type": {
+            "default": null,
+            "type": "string",
+            "title": "ContainerType",
+            "enum": [
+              "ARRAY",
+              "SET",
+              "MAP"
+            ]
+          }
+        },
+        "required": [
+          "graph",
+          "param_name",
+          "param_type",
+          "input_param"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "PinID",
+            "type": "object",
+            "properties": {
+              "direction": {
+                "type": "string",
+                "title": "EEdGraphPinDirection",
+                "enum": [
+                  "EGPD_Input",
+                  "EGPD_Output"
+                ]
+              },
+              "index_id": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "object",
+                "title": "/Script/Engine.EdGraphNode",
+                "description": "Represents a reference to a UObject or UClass.",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              }
+            },
+            "required": [
+              "direction",
+              "index_id",
+              "node"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Removes a function graph or event dispatcher from the Blueprint.\n\n        Note: This will close the Blueprint editor window if it is currently open.\n\n        Args:\n            blueprint: The Blueprint asset to remove the function graph from.\n            graph_name: The name of the function or dispatcher to remove.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.remove_function_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint",
+          "graph_name"
+        ]
+      }
+    },
+    {
+      "description": "Adds an event node to the Blueprint's event graph.\n\n        If event_name matches an inherited overridable event, the new node is an\n        override of that event. Otherwise a new custom event with the given name is\n        created. Idempotent — if an event node with that name already exists,\n        that node is returned.\n\n        Args:\n            blueprint: The Blueprint asset to add the event to.\n            event_name: The name of an inherited event to override (e.g.\n                'ReceiveAnyDamage') or a name for a new custom event.\n            position: Position of the new node in the event graph.\n\n        Returns:\n            The event node.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_event",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "event_name": {
+            "type": "string"
+          },
+          "position": {
+            "title": "IntPoint",
+            "default": {
+              "x": 0,
+              "y": 0
+            },
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "integer"
+              },
+              "y": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "required": [
+          "blueprint",
+          "event_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraphNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Adds a function graph to the Blueprint.\n\n        If graph_name matches an inherited overridable function, the new graph is a\n        function-graph override of that function. Idempotent — if a graph with that\n        name already exists, that graph is returned.\n\n        Args:\n            blueprint: The Blueprint asset to add the function to.\n            graph_name: The name of the new function graph.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.add_function_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint",
+          "graph_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists all events visible on the Blueprint — locally defined custom events\n        plus inheritable events from the parent class chain and implemented interfaces.\n\n        Args:\n            blueprint: The Blueprint asset to query.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.list_events",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "BlueprintFunctionInfo",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The function or event's identifier — the name a caller would use to refer to it."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Short human-readable description, e.g. the tooltip shown in the editor. Empty if none."
+                },
+                "bIsImplemented": {
+                  "type": "boolean",
+                  "description": "True if this function/event already has a graph or node on the Blueprint; false if it is only available to implement or override."
+                }
+              },
+              "required": [
+                "name",
+                "description",
+                "bIsImplemented"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists all functions visible on the Blueprint — locally defined plus\n        inheritable ones from the parent class chain and implemented interfaces.\n\n        Args:\n            blueprint: The Blueprint asset to query.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.list_functions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "BlueprintFunctionInfo",
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "The function or event's identifier — the name a caller would use to refer to it."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Short human-readable description, e.g. the tooltip shown in the editor. Empty if none."
+                },
+                "bIsImplemented": {
+                  "type": "boolean",
+                  "description": "True if this function/event already has a graph or node on the Blueprint; false if it is only available to implement or override."
+                }
+              },
+              "required": [
+                "name",
+                "description",
+                "bIsImplemented"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Retrieves a specific graph from a Blueprint asset by name.\n\n        Args:\n            blueprint: The Blueprint asset to search within.\n            graph_name: The name of the graph to retrieve (e.g., \"EventGraph\", \"MyFunction\")\n\n        Returns:\n            The graph object matching the specified name.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "blueprint",
+          "graph_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.EdGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Lists all graphs in the Blueprint.\n\n        Args:\n            blueprint: The Blueprint asset with the graphs to list.\n\n        Returns:\n            list of graphs in the Blueprint.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.list_graphs",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/Engine.EdGraph",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Returns the Class Default Object (CDO) for a Blueprint's.\n\n        ObjectTools list/set/get property will get the CDO automatically, so this\n        should primarily be used before calling tools that want to operate on the\n        object inside the blueprint (like ActorTools).\n\n        Note: The Blueprint must be compiled for the CDO to reflect the latest state.\n\n        Args:\n            blueprint: The Blueprint whose CDO to retrieve.\n\n        Returns:\n            The Class Default Object for the Blueprint's generated class.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.get_default_object",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Object",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Compiles the given Blueprint.\n\n        Blueprints should be compiled after all graph modifications are complete.\n\n        Args:\n            blueprint: The Blueprint to compile.\n            warnings_as_errors: If True, raise on compile warnings as well as errors.\n                Defaults to False.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.compile_blueprint",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "blueprint": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "warnings_as_errors": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "blueprint"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new Blueprint asset in the project.\n\n        Args:\n            folder_path: The path to the folder that will contain the asset.\n            asset_name: The name of the asset in the folder.\n            asset_type: The specific kind of Blueprint to make.\n\n        Returns:\n            The Blueprint that was created.",
+      "name": "editor_toolset.toolsets.blueprint.BlueprintTools.create",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "folder_path": {
+            "type": "string"
+          },
+          "asset_name": {
+            "type": "string"
+          },
+          "asset_type": {
+            "type": "object",
+            "title": "/Script/CoreUObject.Class",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "folder_path",
+          "asset_name",
+          "asset_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/Engine.Blueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,4361 @@
+{
+  "name": "animation_toolset.toolsets.controlrig.ControlRigTools",
+  "version": "1.0",
+  "description": "Tools for creating and editing Control Rig assets, including hierarchy\n    management, graph operations, and node/pin manipulation.",
+  "tools": [
+    {
+      "description": "Remove a member variable from the Control Rig.\n\n        Args:\n            control_rig: The Control Rig to modify.\n            name: Variable name to remove.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.remove_variable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "name"
+        ]
+      }
+    },
+    {
+      "description": "Change the type of an existing variable.\n\n        Args:\n            control_rig: The Control Rig containing the variable.\n            name: Variable name.\n            new_type: New type path (e.g., \"double\", \"float\").",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.change_variable_type",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "new_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "name",
+          "new_type"
+        ]
+      }
+    },
+    {
+      "description": "Get a specific variable by name.\n\n        Args:\n            control_rig: The Control Rig to query.\n            name: Variable name.\n\n        Returns:\n            The variable description.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_variable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "RigVMGraphVariableDescription",
+            "type": "object",
+            "properties": {
+              "guid": {
+                "type": "string",
+                "description": "The guid of the variable",
+                "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+              },
+              "name": {
+                "type": "string",
+                "description": "The name of the variable"
+              },
+              "cPPType": {
+                "type": "string",
+                "description": "The C++ data type of the variable"
+              },
+              "cPPTypeObject": {
+                "type": "object",
+                "title": "/Script/CoreUObject.Object",
+                "description": "The Struct of the C++ data type of the variable (or nullptr)",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "cPPTypeObjectPath": {
+                "type": "string"
+              },
+              "defaultValue": {
+                "type": "string",
+                "description": "The default value of the variable"
+              },
+              "category": {
+                "type": "string",
+                "description": "The category of the variable"
+              },
+              "tooltip": {
+                "type": "string",
+                "description": "The tooltip of the variable"
+              },
+              "bExposedOnSpawn": {
+                "type": "boolean",
+                "description": "Should this variable be exposed on spawn"
+              },
+              "bExposeToCinematics": {
+                "type": "boolean",
+                "description": "Should this variable be exposed on spawn"
+              },
+              "bPublic": {
+                "type": "boolean",
+                "description": "Is this variable public"
+              },
+              "bPrivate": {
+                "type": "boolean",
+                "description": "This property should soon become deprecated, since it does not make sense for blueprint independent assets\nIs this variable private"
+              }
+            },
+            "required": [
+              "guid",
+              "name",
+              "cPPType",
+              "cPPTypeObject",
+              "cPPTypeObjectPath",
+              "defaultValue",
+              "category",
+              "tooltip",
+              "bExposedOnSpawn",
+              "bExposeToCinematics",
+              "bPublic",
+              "bPrivate"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "List all member variables in the Control Rig.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            List of variable descriptions.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.list_variables",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RigVMGraphVariableDescription",
+              "type": "object",
+              "properties": {
+                "guid": {
+                  "type": "string",
+                  "description": "The guid of the variable",
+                  "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the variable"
+                },
+                "cPPType": {
+                  "type": "string",
+                  "description": "The C++ data type of the variable"
+                },
+                "cPPTypeObject": {
+                  "type": "object",
+                  "title": "/Script/CoreUObject.Object",
+                  "description": "The Struct of the C++ data type of the variable (or nullptr)",
+                  "properties": {
+                    "refPath": {
+                      "type": "string",
+                      "description": "The reference stored as a soft path string."
+                    }
+                  },
+                  "required": [
+                    "refPath"
+                  ]
+                },
+                "cPPTypeObjectPath": {
+                  "type": "string"
+                },
+                "defaultValue": {
+                  "type": "string",
+                  "description": "The default value of the variable"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "The category of the variable"
+                },
+                "tooltip": {
+                  "type": "string",
+                  "description": "The tooltip of the variable"
+                },
+                "bExposedOnSpawn": {
+                  "type": "boolean",
+                  "description": "Should this variable be exposed on spawn"
+                },
+                "bExposeToCinematics": {
+                  "type": "boolean",
+                  "description": "Should this variable be exposed on spawn"
+                },
+                "bPublic": {
+                  "type": "boolean",
+                  "description": "Is this variable public"
+                },
+                "bPrivate": {
+                  "type": "boolean",
+                  "description": "This property should soon become deprecated, since it does not make sense for blueprint independent assets\nIs this variable private"
+                }
+              },
+              "required": [
+                "guid",
+                "name",
+                "cPPType",
+                "cPPTypeObject",
+                "cPPTypeObjectPath",
+                "defaultValue",
+                "category",
+                "tooltip",
+                "bExposedOnSpawn",
+                "bExposeToCinematics",
+                "bPublic",
+                "bPrivate"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a member variable to the Control Rig.\n\n        Args:\n            control_rig: The Control Rig to add the variable to.\n            name: Variable name.\n            type_path: UE type path (e.g., \"double\", \"float\",\n                      \"/Script/CoreUObject.Vector\").\n            is_public: Whether the variable is exposed publicly.\n            is_read_only: Whether the variable is read-only.\n            default_value: Default value as string.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_variable",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "type_path": {
+            "type": "string"
+          },
+          "is_public": {
+            "type": "boolean",
+            "default": true
+          },
+          "is_read_only": {
+            "type": "boolean",
+            "default": false
+          },
+          "default_value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "name",
+          "type_path",
+          "default_value"
+        ]
+      }
+    },
+    {
+      "description": "Get all pins connected to this pin.\n\n        Args:\n            control_rig: The Control Rig containing the pin.\n            pin: The pin to query.\n\n        Returns:\n            List of connected RigVMPin objects.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_connected_pins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "pin": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMPin",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "pin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/RigVMDeveloper.RigVMPin",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Disconnect two pins.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph containing the pins.\n            source_pin: The source (output) pin.\n            target_pin: The target (input) pin.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.disconnect_pins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "source_pin": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMPin",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "target_pin": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMPin",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "source_pin",
+          "target_pin"
+        ]
+      }
+    },
+    {
+      "description": "Connect two pins together.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph containing the pins.\n            source_pin: The source (output) pin.\n            target_pin: The target (input) pin.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.connect_pins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "source_pin": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMPin",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "target_pin": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMPin",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "source_pin",
+          "target_pin"
+        ]
+      }
+    },
+    {
+      "description": "Set the default value of a pin.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph containing the pin's node.\n            pin: The pin to modify.\n            value: The new value as a string. Format depends on pin type:\n                - float/double: \"1.0\"\n                - int: \"42\"\n                - bool: \"true\" or \"false\"\n                - Vector: \"(X=1.0,Y=2.0,Z=3.0)\"\n                - Rotator: \"(Pitch=0.0,Yaw=90.0,Roll=0.0)\"\n                - Transform: \"(Rotation=(X=0,Y=0,Z=0,W=1),Translation=(X=0,Y=0,Z=0),Scale3D=(X=1,Y=1,Z=1))\"\n                - Name/String: \"MyValue\"\n                - Enum: \"EnumValue\" (without type prefix)",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.set_pin_value",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "pin": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMPin",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "pin",
+          "value"
+        ]
+      }
+    },
+    {
+      "description": "Get the default value of a pin.\n\n        Args:\n            control_rig: The Control Rig containing the pin.\n            pin: The pin to query.\n\n        Returns:\n            The pin's default value as a string.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_pin_value",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "pin": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMPin",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "pin"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "List all pins on a node.\n\n        Args:\n            control_rig: The Control Rig containing the node.\n            node: The node to query.\n\n        Returns:\n            List of RigVMPin objects on the node.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.list_pins",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/RigVMDeveloper.RigVMPin",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create a variable getter or setter node.\n\n        The variable must already exist (created via add_variable first).\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph to add the node to.\n            variable_name: Name of the variable to reference.\n            is_getter: True for getter node, False for setter node.\n            position: Position in the graph. Uses (0, 0) if None.\n\n        Returns:\n            The created variable RigVMNode.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_variable_node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "variable_name": {
+            "type": "string"
+          },
+          "is_getter": {
+            "type": "boolean",
+            "default": true
+          },
+          "position": {
+            "default": null,
+            "title": "Vector2D",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "variable_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add an event node to the graph.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph to add the event to.\n            event_type: The type of event node.\n            position: Position in the graph. Uses (200, 200) if None.\n\n        Returns:\n            The created event RigVMNode.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_event_node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "event_type": {
+            "type": "string",
+            "title": "EventType",
+            "enum": [
+              "FORWARD_SOLVE",
+              "BACKWARD_SOLVE",
+              "INTERACTION"
+            ]
+          },
+          "position": {
+            "default": null,
+            "title": "Vector2D",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "event_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set the position of a node in the graph editor.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph containing the node.\n            node: The node to move.\n            position: The new position.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.set_node_position",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "position": {
+            "title": "Vector2D",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "node",
+          "position"
+        ]
+      }
+    },
+    {
+      "description": "Get the position of a node in the graph editor.\n\n        Args:\n            control_rig: The Control Rig containing the node.\n            node: The node to query.\n\n        Returns:\n            The node's position as Vector2D.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_node_position",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "node"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "Vector2D",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Delete a node from the graph.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph containing the node.\n            node: The node to delete.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.delete_node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "node"
+        ]
+      }
+    },
+    {
+      "description": "List all nodes in a graph.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph to query.\n\n        Returns:\n            List of RigVMNode objects in the graph.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.list_nodes",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/RigVMDeveloper.RigVMNode",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create a new RigUnit node in the graph.\n\n        Args:\n            control_rig: The Control Rig containing the graph.\n            graph: The graph to add the node to.\n            node_type: RigUnit struct name (e.g., \"RigUnit_MathFloatAdd\") or\n                      full path (e.g., \"/Script/ControlRig.RigUnit_MathFloatAdd\").\n            position: Position in the graph editor. Uses (0, 0) if None.\n            node_name: Optional custom name for the node.\n\n        Returns:\n            The created RigVMNode.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.create_node",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "node_type": {
+            "type": "string"
+          },
+          "position": {
+            "default": null,
+            "title": "Vector2D",
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ]
+          },
+          "node_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph",
+          "node_type",
+          "node_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMNode",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create an interaction graph with InteractionExecution event.\n\n        Args:\n            control_rig: The Control Rig to add the graph to.\n            name: Optional custom name (default: \"Interaction\").\n\n        Returns:\n            The newly created RigVMGraph with InteractionExecution event.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_interaction_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "default": null,
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create a backward solve graph with InverseExecution event.\n\n        Args:\n            control_rig: The Control Rig to add the graph to.\n            name: Optional custom name (default: \"Backward Solve\").\n\n        Returns:\n            The newly created RigVMGraph with InverseExecution event.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_backward_solve_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "default": null,
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create a new graph with the specified event type.\n\n        Args:\n            control_rig: The Control Rig to add the graph to.\n            event_type: The event type to add (BACKWARD_SOLVE or INTERACTION).\n            name: Optional custom name for the graph.\n\n        Returns:\n            The newly created RigVMGraph with the event node.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_event_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "event_type": {
+            "type": "string",
+            "title": "EventType",
+            "enum": [
+              "FORWARD_SOLVE",
+              "BACKWARD_SOLVE",
+              "INTERACTION"
+            ]
+          },
+          "name": {
+            "default": null,
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "event_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the interaction graph.\n\n        The interaction graph contains the InteractionExecution event and runs\n        during user interaction with controls.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            The interaction RigVMGraph.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_interaction_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the backward solve graph.\n\n        The backward solve graph contains the InverseExecution event and runs\n        during IK operations.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            The backward solve RigVMGraph.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_backward_solve_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get a graph containing the specified event type.\n\n        Args:\n            control_rig: The Control Rig to query.\n            event_type: The event type to search for.\n\n        Returns:\n            The RigVMGraph containing the specified event.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_event_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "event_type": {
+            "type": "string",
+            "title": "EventType",
+            "enum": [
+              "FORWARD_SOLVE",
+              "BACKWARD_SOLVE",
+              "INTERACTION"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "event_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the forward solve graph (main execution graph).\n\n        This graph contains the BeginExecution event and runs during normal\n        animation evaluation.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            The forward solve RigVMGraph.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_forward_solve_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Create a new empty graph in the Control Rig.\n\n        Args:\n            control_rig: The Control Rig to add the graph to.\n            name: Name for the new graph.\n\n        Returns:\n            The newly created RigVMGraph.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "List all graphs in the Control Rig.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            List of RigVMGraph objects (excludes function library).",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.list_graphs",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "title": "/Script/RigVMDeveloper.RigVMGraph",
+              "properties": {
+                "refPath": {
+                  "type": "string",
+                  "description": "The reference stored as a soft path string."
+                }
+              },
+              "required": [
+                "refPath"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get a specific graph from the Control Rig by name.\n\n        Args:\n            control_rig: The Control Rig to query.\n            graph_name: Name of the graph (e.g., \"RigVMModel\").\n\n        Returns:\n            The RigVMGraph object.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_graph",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "graph_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_rig",
+          "graph_name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/RigVMDeveloper.RigVMGraph",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get children of a hierarchy element.\n\n        Args:\n            control_rig: The Control Rig to query.\n            item: The element to get children of.\n            recursive: If True, returns all descendants recursively.\n\n        Returns:\n            List of child RigElementKeys.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_children",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "item": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "control_rig",
+          "item"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RigElementKey",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "title": "ERigElementType",
+                  "enum": [
+                    "None",
+                    "Bone",
+                    "Null",
+                    "Space",
+                    "Control",
+                    "Curve",
+                    "Physics",
+                    "Reference",
+                    "Connector",
+                    "Socket",
+                    "All",
+                    "First",
+                    "Last",
+                    "ToResetAfterConstructionEvent",
+                    "TransformTypes"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get the parent of a hierarchy element.\n\n        Args:\n            control_rig: The Control Rig to query.\n            item: The element to get the parent of.\n\n        Returns:\n            The parent's RigElementKey, or an invalid key if item is at root.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_parent",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "item": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "item"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set local transform of a hierarchy element.\n\n        Args:\n            control_rig: The Control Rig to modify.\n            item: The element to set the transform for.\n            transform: The new local transform.\n            initial: If True, sets the initial (setup) transform.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.set_local_transform",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "item": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "transform": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          },
+          "initial": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "control_rig",
+          "item",
+          "transform"
+        ]
+      }
+    },
+    {
+      "description": "Get local transform of a hierarchy element.\n\n        Args:\n            control_rig: The Control Rig to query.\n            item: The element to get the transform for.\n            initial: If True, returns the initial (setup) transform.\n\n        Returns:\n            The element's local transform relative to its parent,\n            with translation, rotation (euler), and scale.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_local_transform",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "item": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "initial": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "control_rig",
+          "item"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Set global transform of a hierarchy element.\n\n        Args:\n            control_rig: The Control Rig to modify.\n            item: The element to set the transform for.\n            transform: The new global transform.\n            initial: If True, sets the initial (setup) transform.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.set_global_transform",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "item": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "transform": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          },
+          "initial": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "control_rig",
+          "item",
+          "transform"
+        ]
+      }
+    },
+    {
+      "description": "Get global transform of a hierarchy element.\n\n        Args:\n            control_rig: The Control Rig to query.\n            item: The element to get the transform for.\n            initial: If True, returns the initial (setup) transform.\n\n        Returns:\n            The element's global transform with translation, rotation (euler), and scale.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_global_transform",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "item": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "initial": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "control_rig",
+          "item"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a control to the hierarchy.\n\n        Args:\n            control_rig: The Control Rig to add the control to.\n            name: Name for the new control.\n            parent: Parent element in the hierarchy. None creates at root level.\n            settings: Control settings (shape, color, limits). Uses defaults if None.\n\n        Returns:\n            The RigElementKey for the newly created control.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_control",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "default": null,
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "settings": {
+            "default": null,
+            "title": "RigControlSettings",
+            "type": "object",
+            "properties": {
+              "animationType": {
+                "type": "string",
+                "title": "ERigControlAnimationType",
+                "enum": [
+                  "AnimationControl",
+                  "AnimationChannel",
+                  "ProxyControl",
+                  "VisualCue"
+                ]
+              },
+              "controlType": {
+                "type": "string",
+                "title": "ERigControlType",
+                "enum": [
+                  "Bool",
+                  "Float",
+                  "Integer",
+                  "Vector2D",
+                  "Position",
+                  "Scale",
+                  "Rotator",
+                  "Transform",
+                  "TransformNoScale",
+                  "EulerTransform",
+                  "ScaleFloat"
+                ]
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "primaryAxis": {
+                "type": "string",
+                "title": "ERigControlAxis",
+                "enum": [
+                  "X",
+                  "Y",
+                  "Z"
+                ],
+                "description": "the primary axis to use for float controls"
+              },
+              "bIsCurve": {
+                "type": "boolean",
+                "description": "If Created from a Curve  Container"
+              },
+              "limitEnabled": {
+                "type": "array",
+                "items": {
+                  "title": "RigControlLimitEnabled",
+                  "type": "object",
+                  "properties": {
+                    "bMinimum": {
+                      "type": "boolean"
+                    },
+                    "bMaximum": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "bMinimum",
+                    "bMaximum"
+                  ]
+                },
+                "description": "True if the control has limits."
+              },
+              "bDrawLimits": {
+                "type": "boolean",
+                "description": "True if the limits should be drawn in debug.\nFor this to be enabled you need to have at least one min and max limit turned on."
+              },
+              "minimumValue": {
+                "title": "RigControlValue",
+                "description": "The minimum limit of the control's value",
+                "type": "object",
+                "properties": {
+                  "floatStorage": {
+                    "title": "RigControlValueStorage",
+                    "type": "object",
+                    "properties": {
+                      "float00": {
+                        "type": "number"
+                      },
+                      "float01": {
+                        "type": "number"
+                      },
+                      "float02": {
+                        "type": "number"
+                      },
+                      "float03": {
+                        "type": "number"
+                      },
+                      "float10": {
+                        "type": "number"
+                      },
+                      "float11": {
+                        "type": "number"
+                      },
+                      "float12": {
+                        "type": "number"
+                      },
+                      "float13": {
+                        "type": "number"
+                      },
+                      "float20": {
+                        "type": "number"
+                      },
+                      "float21": {
+                        "type": "number"
+                      },
+                      "float22": {
+                        "type": "number"
+                      },
+                      "float23": {
+                        "type": "number"
+                      },
+                      "float30": {
+                        "type": "number"
+                      },
+                      "float31": {
+                        "type": "number"
+                      },
+                      "float32": {
+                        "type": "number"
+                      },
+                      "float33": {
+                        "type": "number"
+                      },
+                      "float00_2": {
+                        "type": "number"
+                      },
+                      "float01_2": {
+                        "type": "number"
+                      },
+                      "float02_2": {
+                        "type": "number"
+                      },
+                      "float03_2": {
+                        "type": "number"
+                      },
+                      "float10_2": {
+                        "type": "number"
+                      },
+                      "float11_2": {
+                        "type": "number"
+                      },
+                      "float12_2": {
+                        "type": "number"
+                      },
+                      "float13_2": {
+                        "type": "number"
+                      },
+                      "float20_2": {
+                        "type": "number"
+                      },
+                      "float21_2": {
+                        "type": "number"
+                      },
+                      "float22_2": {
+                        "type": "number"
+                      },
+                      "float23_2": {
+                        "type": "number"
+                      },
+                      "float30_2": {
+                        "type": "number"
+                      },
+                      "float31_2": {
+                        "type": "number"
+                      },
+                      "float32_2": {
+                        "type": "number"
+                      },
+                      "float33_2": {
+                        "type": "number"
+                      },
+                      "bValid": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "float00",
+                      "float01",
+                      "float02",
+                      "float03",
+                      "float10",
+                      "float11",
+                      "float12",
+                      "float13",
+                      "float20",
+                      "float21",
+                      "float22",
+                      "float23",
+                      "float30",
+                      "float31",
+                      "float32",
+                      "float33",
+                      "float00_2",
+                      "float01_2",
+                      "float02_2",
+                      "float03_2",
+                      "float10_2",
+                      "float11_2",
+                      "float12_2",
+                      "float13_2",
+                      "float20_2",
+                      "float21_2",
+                      "float22_2",
+                      "float23_2",
+                      "float30_2",
+                      "float31_2",
+                      "float32_2",
+                      "float33_2",
+                      "bValid"
+                    ]
+                  }
+                },
+                "required": [
+                  "floatStorage"
+                ]
+              },
+              "maximumValue": {
+                "title": "RigControlValue",
+                "description": "The maximum limit of the control's value",
+                "type": "object",
+                "properties": {
+                  "floatStorage": {
+                    "title": "RigControlValueStorage",
+                    "type": "object",
+                    "properties": {
+                      "float00": {
+                        "type": "number"
+                      },
+                      "float01": {
+                        "type": "number"
+                      },
+                      "float02": {
+                        "type": "number"
+                      },
+                      "float03": {
+                        "type": "number"
+                      },
+                      "float10": {
+                        "type": "number"
+                      },
+                      "float11": {
+                        "type": "number"
+                      },
+                      "float12": {
+                        "type": "number"
+                      },
+                      "float13": {
+                        "type": "number"
+                      },
+                      "float20": {
+                        "type": "number"
+                      },
+                      "float21": {
+                        "type": "number"
+                      },
+                      "float22": {
+                        "type": "number"
+                      },
+                      "float23": {
+                        "type": "number"
+                      },
+                      "float30": {
+                        "type": "number"
+                      },
+                      "float31": {
+                        "type": "number"
+                      },
+                      "float32": {
+                        "type": "number"
+                      },
+                      "float33": {
+                        "type": "number"
+                      },
+                      "float00_2": {
+                        "type": "number"
+                      },
+                      "float01_2": {
+                        "type": "number"
+                      },
+                      "float02_2": {
+                        "type": "number"
+                      },
+                      "float03_2": {
+                        "type": "number"
+                      },
+                      "float10_2": {
+                        "type": "number"
+                      },
+                      "float11_2": {
+                        "type": "number"
+                      },
+                      "float12_2": {
+                        "type": "number"
+                      },
+                      "float13_2": {
+                        "type": "number"
+                      },
+                      "float20_2": {
+                        "type": "number"
+                      },
+                      "float21_2": {
+                        "type": "number"
+                      },
+                      "float22_2": {
+                        "type": "number"
+                      },
+                      "float23_2": {
+                        "type": "number"
+                      },
+                      "float30_2": {
+                        "type": "number"
+                      },
+                      "float31_2": {
+                        "type": "number"
+                      },
+                      "float32_2": {
+                        "type": "number"
+                      },
+                      "float33_2": {
+                        "type": "number"
+                      },
+                      "bValid": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "float00",
+                      "float01",
+                      "float02",
+                      "float03",
+                      "float10",
+                      "float11",
+                      "float12",
+                      "float13",
+                      "float20",
+                      "float21",
+                      "float22",
+                      "float23",
+                      "float30",
+                      "float31",
+                      "float32",
+                      "float33",
+                      "float00_2",
+                      "float01_2",
+                      "float02_2",
+                      "float03_2",
+                      "float10_2",
+                      "float11_2",
+                      "float12_2",
+                      "float13_2",
+                      "float20_2",
+                      "float21_2",
+                      "float22_2",
+                      "float23_2",
+                      "float30_2",
+                      "float31_2",
+                      "float32_2",
+                      "float33_2",
+                      "bValid"
+                    ]
+                  }
+                },
+                "required": [
+                  "floatStorage"
+                ]
+              },
+              "bShapeVisible": {
+                "type": "boolean",
+                "description": "Set to true if the shape is currently visible in 3d"
+              },
+              "shapeVisibility": {
+                "type": "string",
+                "title": "ERigControlVisibility",
+                "enum": [
+                  "UserDefined",
+                  "BasedOnSelection"
+                ],
+                "description": "Defines how the shape visibility should be changed"
+              },
+              "shapeName": {
+                "type": "string",
+                "description": "This is optional UI setting - this doesn't mean this is always used, but it is optional for manipulation layer to use this"
+              },
+              "shapeColor": {
+                "type": "object",
+                "title": "LinearColor",
+                "properties": {
+                  "r": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "g": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "b": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "a": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "r",
+                  "g",
+                  "b",
+                  "a"
+                ]
+              },
+              "bIsTransientControl": {
+                "type": "boolean",
+                "description": "If the control is transient and only visible in the control rig editor"
+              },
+              "controlEnum": {
+                "type": "object",
+                "title": "/Script/CoreUObject.Enum",
+                "description": "If the control is integer it can use this enum to choose values",
+                "properties": {
+                  "refPath": {
+                    "type": "string",
+                    "description": "The reference stored as a soft path string."
+                  }
+                },
+                "required": [
+                  "refPath"
+                ]
+              },
+              "customization": {
+                "title": "RigControlElementCustomization",
+                "description": "The User interface customization used for a control\nThis will be used as the default content for the space picker and other widgets",
+                "type": "object",
+                "properties": {
+                  "availableSpaces": {
+                    "type": "array",
+                    "items": {
+                      "title": "RigElementKeyWithLabel",
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "title": "RigElementKey",
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "title": "ERigElementType",
+                              "enum": [
+                                "None",
+                                "Bone",
+                                "Null",
+                                "Space",
+                                "Control",
+                                "Curve",
+                                "Physics",
+                                "Reference",
+                                "Connector",
+                                "Socket",
+                                "All",
+                                "First",
+                                "Last",
+                                "ToResetAfterConstructionEvent",
+                                "TransformTypes"
+                              ]
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "name"
+                          ]
+                        },
+                        "label": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "label"
+                      ]
+                    }
+                  },
+                  "removedSpaces": {
+                    "type": "array",
+                    "items": {
+                      "title": "RigElementKey",
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "title": "ERigElementType",
+                          "enum": [
+                            "None",
+                            "Bone",
+                            "Null",
+                            "Space",
+                            "Control",
+                            "Curve",
+                            "Physics",
+                            "Reference",
+                            "Connector",
+                            "Socket",
+                            "All",
+                            "First",
+                            "Last",
+                            "ToResetAfterConstructionEvent",
+                            "TransformTypes"
+                          ]
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "name"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "availableSpaces",
+                  "removedSpaces"
+                ]
+              },
+              "drivenControls": {
+                "type": "array",
+                "items": {
+                  "title": "RigElementKey",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "title": "ERigElementType",
+                      "enum": [
+                        "None",
+                        "Bone",
+                        "Null",
+                        "Space",
+                        "Control",
+                        "Curve",
+                        "Physics",
+                        "Reference",
+                        "Connector",
+                        "Socket",
+                        "All",
+                        "First",
+                        "Last",
+                        "ToResetAfterConstructionEvent",
+                        "TransformTypes"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "name"
+                  ]
+                },
+                "description": "The list of driven controls for this proxy control."
+              },
+              "bGroupWithParentControl": {
+                "type": "boolean",
+                "description": "If set to true the animation channel will be grouped with the parent control in sequencer"
+              },
+              "bRestrictSpaceSwitching": {
+                "type": "boolean",
+                "description": "Allow to space switch only to the available spaces"
+              },
+              "filteredChannels": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "title": "ERigControlTransformChannel",
+                  "enum": [
+                    "TranslationX",
+                    "TranslationY",
+                    "TranslationZ",
+                    "Pitch",
+                    "Yaw",
+                    "Roll",
+                    "ScaleX",
+                    "ScaleY",
+                    "ScaleZ"
+                  ]
+                },
+                "description": "Filtered Visible Transform channels. If this is empty everything is visible"
+              },
+              "preferredRotationOrder": {
+                "type": "string",
+                "title": "EEulerRotationOrder",
+                "enum": [
+                  "XYZ",
+                  "XZY",
+                  "YXZ",
+                  "YZX",
+                  "ZXY",
+                  "ZYX"
+                ],
+                "description": "The euler rotation order this control prefers for animation, if we aren't using default UE rotator"
+              },
+              "bUsePreferredRotationOrder": {
+                "type": "boolean",
+                "description": "Whether to use a specified rotation order or just use the default FRotator order and conversion functions"
+              },
+              "shapeTransform": {
+                "type": "object",
+                "title": "ToolsetTransform",
+                "description": "Transient storage for overrides when changing the shape transform",
+                "properties": {
+                  "location": {
+                    "description": "The world-space location.",
+                    "title": "Vector",
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
+                  },
+                  "rotation": {
+                    "description": "The world-space rotation.",
+                    "title": "Rotator",
+                    "type": "object",
+                    "properties": {
+                      "pitch": {
+                        "type": "number",
+                        "description": "Pitch (degrees) around Y axis"
+                      },
+                      "yaw": {
+                        "type": "number",
+                        "description": "Yaw (degrees) around Z axis"
+                      },
+                      "roll": {
+                        "type": "number",
+                        "description": "Roll (degrees) around X axis"
+                      }
+                    },
+                    "required": [
+                      "pitch",
+                      "yaw",
+                      "roll"
+                    ]
+                  },
+                  "scale": {
+                    "description": "The scale.",
+                    "title": "Vector",
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "z": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "z"
+                    ]
+                  }
+                }
+              }
+            },
+            "required": [
+              "animationType",
+              "controlType",
+              "displayName",
+              "primaryAxis",
+              "bIsCurve",
+              "limitEnabled",
+              "bDrawLimits",
+              "minimumValue",
+              "maximumValue",
+              "bShapeVisible",
+              "shapeVisibility",
+              "shapeName",
+              "shapeColor",
+              "bIsTransientControl",
+              "controlEnum",
+              "customization",
+              "drivenControls",
+              "bGroupWithParentControl",
+              "bRestrictSpaceSwitching",
+              "filteredChannels",
+              "preferredRotationOrder",
+              "bUsePreferredRotationOrder",
+              "shapeTransform"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a null (locator) to the Control Rig hierarchy.\n\n        Args:\n            control_rig: The Control Rig to add the null to.\n            name: Name for the new null.\n            parent: Parent element in the hierarchy. None creates at root level.\n            transform: Initial world transform. Uses identity if None.\n                Only specified fields are applied; unset fields use identity.\n\n        Returns:\n            The RigElementKey for the newly created null.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_null",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "default": null,
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "transform": {
+            "default": null,
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "control_rig",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a bone to the Control Rig hierarchy.\n\n        Args:\n            control_rig: The Control Rig to add the bone to.\n            name: Name for the new bone.\n            parent: Parent element in the hierarchy. None creates at root level.\n            transform: Initial world transform. Uses identity if None.\n                Only specified fields are applied; unset fields use identity.\n\n        Returns:\n            The RigElementKey for the newly created bone.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_bone",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "default": null,
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "transform": {
+            "default": null,
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "control_rig",
+          "name"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Add a bone or null element to the Control Rig hierarchy.\n\n        Args:\n            control_rig: The Control Rig to add the element to.\n            name: Name for the new element.\n            element_type: Type of element to create: \"bone\" or \"null\".\n            parent: Parent element in the hierarchy. None creates at root level.\n            transform: Initial world transform. Uses identity if None.\n                Only specified fields are applied; unset fields use identity.\n\n        Returns:\n            The RigElementKey for the newly created element.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.add_element",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "element_type": {
+            "type": "string"
+          },
+          "parent": {
+            "default": null,
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          },
+          "transform": {
+            "default": null,
+            "type": "object",
+            "title": "ToolsetTransform",
+            "description": "Represents a 3D transformation with optional location, rotation, and scale.\nUnset fields mean \"identity\" when creating objects and \"don't change\" when modifying existing ones.",
+            "properties": {
+              "location": {
+                "description": "The world-space location.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              },
+              "rotation": {
+                "description": "The world-space rotation.",
+                "title": "Rotator",
+                "type": "object",
+                "properties": {
+                  "pitch": {
+                    "type": "number",
+                    "description": "Pitch (degrees) around Y axis"
+                  },
+                  "yaw": {
+                    "type": "number",
+                    "description": "Yaw (degrees) around Z axis"
+                  },
+                  "roll": {
+                    "type": "number",
+                    "description": "Roll (degrees) around X axis"
+                  }
+                },
+                "required": [
+                  "pitch",
+                  "yaw",
+                  "roll"
+                ]
+              },
+              "scale": {
+                "description": "The scale.",
+                "title": "Vector",
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "z": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "control_rig",
+          "name",
+          "element_type"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "title": "RigElementKey",
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "title": "ERigElementType",
+                "enum": [
+                  "None",
+                  "Bone",
+                  "Null",
+                  "Space",
+                  "Control",
+                  "Curve",
+                  "Physics",
+                  "Reference",
+                  "Connector",
+                  "Socket",
+                  "All",
+                  "First",
+                  "Last",
+                  "ToResetAfterConstructionEvent",
+                  "TransformTypes"
+                ]
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "name"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all controls in the Control Rig hierarchy.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            List of RigElementKeys for all controls.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_all_controls",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RigElementKey",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "title": "ERigElementType",
+                  "enum": [
+                    "None",
+                    "Bone",
+                    "Null",
+                    "Space",
+                    "Control",
+                    "Curve",
+                    "Physics",
+                    "Reference",
+                    "Connector",
+                    "Socket",
+                    "All",
+                    "First",
+                    "Last",
+                    "ToResetAfterConstructionEvent",
+                    "TransformTypes"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all nulls (locators) in the Control Rig hierarchy.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            List of RigElementKeys for all nulls.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_all_nulls",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RigElementKey",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "title": "ERigElementType",
+                  "enum": [
+                    "None",
+                    "Bone",
+                    "Null",
+                    "Space",
+                    "Control",
+                    "Curve",
+                    "Physics",
+                    "Reference",
+                    "Connector",
+                    "Socket",
+                    "All",
+                    "First",
+                    "Last",
+                    "ToResetAfterConstructionEvent",
+                    "TransformTypes"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get all bones in the Control Rig hierarchy.\n\n        Args:\n            control_rig: The Control Rig to query.\n\n        Returns:\n            List of RigElementKeys for all bones.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_all_bones",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RigElementKey",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "title": "ERigElementType",
+                  "enum": [
+                    "None",
+                    "Bone",
+                    "Null",
+                    "Space",
+                    "Control",
+                    "Curve",
+                    "Physics",
+                    "Reference",
+                    "Connector",
+                    "Socket",
+                    "All",
+                    "First",
+                    "Last",
+                    "ToResetAfterConstructionEvent",
+                    "TransformTypes"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Get hierarchy elements of the specified type.\n\n        Args:\n            control_rig: The Control Rig to query.\n            element_type: Type of elements to return, or None for all elements.\n\n        Returns:\n            List of RigElementKeys matching the specified type.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.get_elements",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "element_type": {
+            "default": null,
+            "type": "string",
+            "title": "ERigElementType",
+            "enum": [
+              "None",
+              "Bone",
+              "Null",
+              "Space",
+              "Control",
+              "Curve",
+              "Physics",
+              "Reference",
+              "Connector",
+              "Socket",
+              "All",
+              "First",
+              "Last",
+              "ToResetAfterConstructionEvent",
+              "TransformTypes"
+            ]
+          }
+        },
+        "required": [
+          "control_rig"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RigElementKey",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "title": "ERigElementType",
+                  "enum": [
+                    "None",
+                    "Bone",
+                    "Null",
+                    "Space",
+                    "Control",
+                    "Curve",
+                    "Physics",
+                    "Reference",
+                    "Connector",
+                    "Socket",
+                    "All",
+                    "First",
+                    "Last",
+                    "ToResetAfterConstructionEvent",
+                    "TransformTypes"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Import bones from the given skeletal mesh to the Control Rig hierarchy.\n\n        Args:\n            control_rig: The Control Rig to import bones into.\n            skeletal_mesh: The skeletal mesh to import bones from.\n\n        Returns:\n            List of RigElementKeys for the imported bones.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.import_bones_from_asset",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "control_rig": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          },
+          "skeletal_mesh": {
+            "type": "object",
+            "title": "/Script/Engine.SkeletalMesh",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "control_rig",
+          "skeletal_mesh"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "array",
+            "items": {
+              "title": "RigElementKey",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "title": "ERigElementType",
+                  "enum": [
+                    "None",
+                    "Bone",
+                    "Null",
+                    "Space",
+                    "Control",
+                    "Curve",
+                    "Physics",
+                    "Reference",
+                    "Connector",
+                    "Socket",
+                    "All",
+                    "First",
+                    "Last",
+                    "ToResetAfterConstructionEvent",
+                    "TransformTypes"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    },
+    {
+      "description": "Creates a new Control Rig at the given location.\n\n        Args:\n            path: The content browser path for the new Control Rig.\n\n        Returns:\n            The newly created ControlRigBlueprint.",
+      "name": "animation_toolset.toolsets.controlrig.ControlRigTools.create",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "returnValue": {
+            "type": "object",
+            "title": "/Script/ControlRigDeveloper.ControlRigBlueprint",
+            "description": "Represents a reference to a UObject or UClass.",
+            "properties": {
+              "refPath": {
+                "type": "string",
+                "description": "The reference stored as a soft path string."
+              }
+            },
+            "required": [
+              "refPath"
+            ]
+          }
+        },
+        "required": [
+          "returnValue"
+        ]
+      }
+    }
+  ]
+}

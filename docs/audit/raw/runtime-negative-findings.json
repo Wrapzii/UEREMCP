@@ -1,49 +1,49 @@
 {
-  "audit_date": "2026-07-29",
-  "method_attempted": "MCP runtime enumeration via user-unreal-mcp (list_toolsets, describe_toolset)",
+  "audit_date": "2026-07-30",
+  "method": "MCP runtime enumeration via user-unreal-mcp (list_toolsets, describe_toolset)",
   "editor_mcp_endpoint": "http://127.0.0.1:8000/mcp",
   "proxy_endpoint": "http://127.0.0.1:8001/mcp",
   "findings": [
     {
       "call": "user-unreal-mcp.list_toolsets",
       "attempt_1": {
+        "date": "2026-07-29",
         "result": "error",
         "message": "MCP error -32000: Unreal tools/call queue busy (lock timeout: tools_call.lock)"
       },
       "attempt_2": {
+        "date": "2026-07-29",
         "result": "error",
         "message": "MCP error -32000: Unreal MCP transport error: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      "attempt_3": {
+        "date": "2026-07-29",
+        "result": "error",
+        "message": "MCP error -32000: Unreal MCP transport error: [WinError 10061]"
       },
       "tag": "[VERIFIED-RUNTIME: MCP client error payload 2026-07-29]"
     },
     {
       "call": "user-unreal-watch.check_unreal",
+      "date": "2026-07-29",
       "result": "error",
       "message": "Timed out waiting for connection to unreal-watch MCP scope",
       "tag": "[VERIFIED-RUNTIME: MCP client timeout 2026-07-29]"
     },
     {
       "call": "HTTP POST 127.0.0.1:8000/mcp tools/list",
+      "date": "2026-07-29",
       "result": "error",
       "message": "Unable to connect to the remote server (port 8000 closed)",
       "tag": "[VERIFIED-RUNTIME: Test-NetConnection + Invoke-RestMethod 2026-07-29]"
     },
     {
-      "call": "HTTP POST 127.0.0.1:8001/mcp tools/list",
-      "result": "error",
-      "message": "Proxy reachable but backend refused: WinError 10061 through proxy to editor MCP",
-      "tag": "[VERIFIED-RUNTIME: Test-NetConnection port 8001 open, 8000 closed; HTTP error 2026-07-29]"
+      "call": "user-unreal-mcp.list_toolsets + describe_toolset (priority matrix)",
+      "date": "2026-07-30",
+      "result": "success",
+      "message": "73 toolsets enumerated; 12 priority describe_toolset JSON dumps saved under docs/audit/raw/schemas/ and docs/audit/raw/runtime/",
+      "tag": "[VERIFIED-RUNTIME: user-unreal-mcp list_toolsets + describe_toolset 2026-07-30]"
     }
   ],
-    {
-      "call": "user-unreal-mcp.list_toolsets",
-      "attempt_3": {
-        "date": "2026-07-29 (follow-up)",
-        "result": "error",
-        "message": "MCP error -32000: Unreal MCP transport error: [WinError 10061] No connection could be made because the target machine actively refused it"
-      },
-      "tag": "[VERIFIED-RUNTIME: MCP client error payload 2026-07-29 follow-up]"
-    }
-  ],
-  "conclusion": "Runtime toolset enumeration and JSON Schema dumps were NOT obtained after three attempts. Inventory remains from static source scan. Re-run list_toolsets/describe_toolset when RE editor is up with ModelContextProtocol serving on :8000."
+  "conclusion": "Runtime enumeration succeeded 2026-07-30 after R-04 MCP window opened. Priority Epic + UEREMCP schema dumps captured; full 73-toolset matrix still lacks per-toolset describe_toolset for non-priority rows. Re-run when editor restarts if dumps drift."
 }

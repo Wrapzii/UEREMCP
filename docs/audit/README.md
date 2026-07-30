@@ -20,10 +20,10 @@ defect.
 
 | File | Contents | Brief | Status |
 |---|---|---|---|
-| `epic-toolsets.md` | Per-tool inventory of all loaded Epic toolsets | RB-02 | **source_complete — runtime checklist open** |
-| `reagenttools.md` | Per-toolset disposition for REAgentTools' 15 toolsets | RB-15 | **source_complete — cutover/coexistence open** |
+| `epic-toolsets.md` | Per-tool inventory of all loaded Epic toolsets | RB-02 | **runtime_partial — priority schemas captured** |
+| `reagenttools.md` | Per-toolset disposition for REAgentTools' 15 toolsets | RB-15 | **runtime_partial — registry confirmed, schemas open** |
 | `coverage-assertion.md` | Proof that UEREMCP covers everything marked `supersede` | — | not started |
-| `raw/` | Verbatim schema dumps so others can grep without repeating the work | RB-02 | — |
+| `raw/` | Verbatim schema dumps (`raw/schemas/`, `raw/runtime/`) | RB-02 | **priority matrix captured 2026-07-30** |
 
 Use `_TEMPLATE-capability-matrix.md` for both matrices.
 
