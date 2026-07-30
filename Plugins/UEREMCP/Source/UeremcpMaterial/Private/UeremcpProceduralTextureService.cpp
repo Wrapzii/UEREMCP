@@ -74,12 +74,13 @@ bool UeremcpProceduralTextureService::IsSupportedGenerateKind(const FString& Kin
 		Kind == TEXT("voronoi") ||
 		Kind == TEXT("ring_mask") ||
 		Kind == TEXT("flow_map") ||
-		Kind == TEXT("flipbook_atlas");
+		Kind == TEXT("flipbook_atlas") ||
+		Kind == TEXT("flipbook_import");
 }
 
 bool UeremcpProceduralTextureService::IsImplementedGenerateKind(const FString& Kind)
 {
-	return IsSupportedGenerateKind(Kind);
+	return IsSupportedGenerateKind(Kind) && Kind != TEXT("flipbook_import");
 }
 
 bool UeremcpProceduralTextureService::ParseGenerateSpec(
@@ -90,7 +91,8 @@ bool UeremcpProceduralTextureService::ParseGenerateSpec(
 	int32& OutSeed,
 	int32& OutFlipbookColumns,
 	int32& OutFlipbookRows,
-	int32& OutFlipbookFrameCount)
+	int32& OutFlipbookFrameCount,
+	FString& OutSourceFilePath)
 {
 	if (!GenerateObject.IsValid())
 	{
@@ -108,6 +110,7 @@ bool UeremcpProceduralTextureService::ParseGenerateSpec(
 	OutFlipbookColumns = 0;
 	OutFlipbookRows = 0;
 	OutFlipbookFrameCount = 0;
+	OutSourceFilePath.Reset();
 
 	const TArray<TSharedPtr<FJsonValue>>* Dimensions = nullptr;
 	if (GenerateObject->TryGetArrayField(TEXT("dimensions"), Dimensions) && Dimensions && Dimensions->Num() >= 2)
@@ -154,6 +157,51 @@ bool UeremcpProceduralTextureService::ParseGenerateSpec(
 		}
 	}
 
+	if (OutKind == TEXT("flipbook_import"))
+	{
+		const TSharedPtr<FJsonObject>* SourceObject = nullptr;
+		if (!GenerateObject->TryGetObjectField(TEXT("source"), SourceObject) || !SourceObject || !SourceObject->IsValid())
+		{
+			return false;
+		}
+		if (!(*SourceObject)->TryGetStringField(TEXT("file_path"), OutSourceFilePath) || OutSourceFilePath.IsEmpty())
+		{
+			return false;
+		}
+
+		const TSharedPtr<FJsonObject>* ImportFlipbookObject = nullptr;
+		if (!(*SourceObject)->TryGetObjectField(TEXT("flipbook"), ImportFlipbookObject) ||
+			!ImportFlipbookObject ||
+			!ImportFlipbookObject->IsValid())
+		{
+			return false;
+		}
+
+		double Columns = 0.0;
+		double Rows = 0.0;
+		if (!(*ImportFlipbookObject)->TryGetNumberField(TEXT("columns"), Columns) ||
+			!(*ImportFlipbookObject)->TryGetNumberField(TEXT("rows"), Rows))
+		{
+			return false;
+		}
+		OutFlipbookColumns = static_cast<int32>(Columns);
+		OutFlipbookRows = static_cast<int32>(Rows);
+		if (OutFlipbookColumns <= 0 || OutFlipbookRows <= 0)
+		{
+			return false;
+		}
+
+		double FrameCount = 0.0;
+		if ((*ImportFlipbookObject)->TryGetNumberField(TEXT("frame_count"), FrameCount))
+		{
+			OutFlipbookFrameCount = static_cast<int32>(FrameCount);
+		}
+		if (OutFlipbookFrameCount <= 0)
+		{
+			OutFlipbookFrameCount = OutFlipbookColumns * OutFlipbookRows;
+		}
+	}
+
 	return true;
 }
 
@@ -164,6 +212,7 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 	Result.CapabilityNotes = {
 		TEXT("procedural_texture_v1: CPU pixel fill via FImageUtils::CreateTexture2D — not Epic MaterialTools/RT draw."),
 		TEXT("flipbook_atlas: CPU grid assembly of procedural per-frame cells — not external sheet import."),
+		TEXT("flipbook_import: Phase A scaffold — FImageUtils::ImportBufferAsTexture2D not invoked [VERIFIED: ImageUtils.h:448-449]."),
 	};
 
 	if (!GEditor)
@@ -184,6 +233,22 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 	{
 		Result.Status = TEXT("rejected");
 		Result.Summary = FString::Printf(TEXT("Unsupported generate kind '%s'."), *Request.GenerateKind);
+		return Result;
+	}
+
+	if (!IsImplementedGenerateKind(Request.GenerateKind))
+	{
+		Result.Status = TEXT("partially_completed");
+		Result.Summary = FString::Printf(
+			TEXT("generate kind '%s' is recognized but not implemented (source '%s', grid %dx%d, %d frames)."),
+			*Request.GenerateKind,
+			*Request.SourceFilePath,
+			Request.FlipbookColumns,
+			Request.FlipbookRows,
+			Request.FlipbookFrameCount);
+		Result.InterpretationNotes.Add(TEXT(
+			"flipbook_import Phase A scaffold: specification parsed; "
+			"FImageUtils::ImportBufferAsTexture2D not invoked [VERIFIED: ImageUtils.h:448-449]."));
 		return Result;
 	}
 
@@ -399,7 +464,9 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::ExecuteFromEnve
 	int32 FlipbookColumns = 0;
 	int32 FlipbookRows = 0;
 	int32 FlipbookFrameCount = 0;
-	if (!ParseGenerateSpec(Request.Specification, Kind, Width, Height, Seed, FlipbookColumns, FlipbookRows, FlipbookFrameCount))
+	FString SourceFilePath;
+	if (!ParseGenerateSpec(
+		Request.Specification, Kind, Width, Height, Seed, FlipbookColumns, FlipbookRows, FlipbookFrameCount, SourceFilePath))
 	{
 		Result.Status = TEXT("rejected");
 		Result.Summary = TEXT("create_procedural_texture requires specification.generate.");
@@ -415,6 +482,7 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::ExecuteFromEnve
 	TextureRequest.FlipbookColumns = FlipbookColumns;
 	TextureRequest.FlipbookRows = FlipbookRows;
 	TextureRequest.FlipbookFrameCount = FlipbookFrameCount;
+	TextureRequest.SourceFilePath = SourceFilePath;
 	TextureRequest.bDryRun = Request.bDryRun;
 	TextureRequest.bSave = Request.bSave;
 	TextureRequest.bValidate = Request.bValidate;

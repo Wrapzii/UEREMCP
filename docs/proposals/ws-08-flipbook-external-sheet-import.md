@@ -2,7 +2,7 @@
 
 - **From:** WS-08
 - **Date:** 2026-07-30
-- **Status:** proposal — **not implemented** (`flipbook_atlas` CPU assembly only)
+- **Status:** proposal — **Phase A scaffold** landed (`flipbook_import` parses, returns `partially_completed`); runtime import **not implemented**
 
 ## Problem
 
@@ -74,4 +74,4 @@ Alternative: `source.base64` for agent-supplied buffers (size-gated; WS-12 audit
 ## Current WS-08 status
 
 - `flipbook_atlas`: CPU procedural grid assembly — **implemented**.
-- `flipbook_import`: external sheet — **not implemented**.
+- `flipbook_import`: external sheet — **Phase A scaffold** (parses `source.file_path`; `ImportBufferAsTexture2D` not invoked).

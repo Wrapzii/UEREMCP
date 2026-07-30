@@ -17,6 +17,7 @@ struct FUeremcpProceduralTextureRequest
 	int32 FlipbookColumns = 0;
 	int32 FlipbookRows = 0;
 	int32 FlipbookFrameCount = 0;
+	FString SourceFilePath;
 	bool bDryRun = false;
 	bool bSave = true;
 	bool bValidate = true;
@@ -42,7 +43,7 @@ namespace UeremcpProceduralTextureService
 {
 	bool IsSupportedGenerateKind(const FString& Kind);
 
-	/** False for scaffold kinds (e.g. flipbook_atlas) that parse but do not emit pixels yet. */
+	/** False for scaffold kinds (e.g. flipbook_import) that parse but do not import yet. */
 	bool IsImplementedGenerateKind(const FString& Kind);
 
 	/** Parse textures.generate object from create_vfx_material specification. */
@@ -54,7 +55,8 @@ namespace UeremcpProceduralTextureService
 		int32& OutSeed,
 		int32& OutFlipbookColumns,
 		int32& OutFlipbookRows,
-		int32& OutFlipbookFrameCount);
+		int32& OutFlipbookFrameCount,
+		FString& OutSourceFilePath);
 
 	FUeremcpProceduralTextureResult Execute(const FUeremcpProceduralTextureRequest& Request);
 

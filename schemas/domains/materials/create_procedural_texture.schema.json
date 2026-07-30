@@ -9,8 +9,8 @@
   "properties": {
     "generate": {
       "type": "string",
-      "enum": ["noise", "gradient", "voronoi", "ring_mask", "flow_map", "flipbook_atlas"],
-      "description": "Procedural generator kind. flow_map uses TC_VectorDisplacementmap; noise/voronoi use TC_Grayscale. flipbook_atlas packs procedural per-frame cells into a grid atlas (requires flipbook.columns/rows)."
+      "enum": ["noise", "gradient", "voronoi", "ring_mask", "flow_map", "flipbook_atlas", "flipbook_import"],
+      "description": "Procedural generator kind. flipbook_atlas packs procedural per-frame cells; flipbook_import is Phase A scaffold for external sheet import (returns partially_completed)."
     },
     "dimensions": {
       "type": "array",
@@ -34,6 +34,29 @@
         "frame_count": { "type": "integer", "minimum": 1, "description": "Active frames; defaults to columns * rows when omitted." }
       },
       "required": ["columns", "rows"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Required when generate is flipbook_import. External sheet path and grid metadata (import not implemented — Phase A scaffold).",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Absolute or project-relative path to PNG/TGA flipbook sheet."
+        },
+        "flipbook": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "columns": { "type": "integer", "minimum": 1, "maximum": 64 },
+            "rows": { "type": "integer", "minimum": 1, "maximum": 64 },
+            "frame_count": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["columns", "rows"]
+        }
+      },
+      "required": ["file_path", "flipbook"]
     }
   },
   "examples": [
@@ -54,6 +77,13 @@
       "generate": "flipbook_atlas",
       "dimensions": [512, 512],
       "flipbook": { "columns": 4, "rows": 4, "frame_count": 16 }
+    },
+    {
+      "generate": "flipbook_import",
+      "source": {
+        "file_path": "Content/__UeremcpTests/Textures/sheet_probe.png",
+        "flipbook": { "columns": 4, "rows": 4, "frame_count": 16 }
+      }
     }
   ]
 }

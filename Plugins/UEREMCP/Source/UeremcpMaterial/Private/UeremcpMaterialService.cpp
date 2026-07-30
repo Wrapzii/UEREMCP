@@ -192,8 +192,9 @@ namespace
 				int32 FlipbookColumns = 0;
 				int32 FlipbookRows = 0;
 				int32 FlipbookFrameCount = 0;
+				FString SourceFilePath;
 				if (!UeremcpProceduralTextureService::ParseGenerateSpec(
-					GenerateObject, Kind, Width, Height, Seed, FlipbookColumns, FlipbookRows, FlipbookFrameCount))
+					GenerateObject, Kind, Width, Height, Seed, FlipbookColumns, FlipbookRows, FlipbookFrameCount, SourceFilePath))
 				{
 					OutError = FString::Printf(
 						TEXT("Texture slot '%s' requires a valid generate spec."),
@@ -226,6 +227,7 @@ namespace
 					TextureRequest.FlipbookColumns = FlipbookColumns;
 					TextureRequest.FlipbookRows = FlipbookRows;
 					TextureRequest.FlipbookFrameCount = FlipbookFrameCount;
+					TextureRequest.SourceFilePath = SourceFilePath;
 					TextureRequest.bSave = bSave;
 					TextureRequest.bValidate = bValidate;
 

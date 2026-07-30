@@ -32,9 +32,10 @@ SUPPORTED_GENERATE_KINDS = frozenset({
     "ring_mask",
     "flow_map",
     "flipbook_atlas",
+    "flipbook_import",
 })
 
-IMPLEMENTED_GENERATE_KINDS = SUPPORTED_GENERATE_KINDS
+IMPLEMENTED_GENERATE_KINDS = SUPPORTED_GENERATE_KINDS - frozenset({"flipbook_import"})
 
 
 def load_registry() -> Registry:
@@ -79,7 +80,17 @@ class ProceduralTextureSchemaTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("IsImplementedGenerateKind", cpp)
         self.assertIn("GenerateFlipbookAtlasPixels", generator_cpp)
-        self.assertEqual(IMPLEMENTED_GENERATE_KINDS, SUPPORTED_GENERATE_KINDS)
+        self.assertEqual(IMPLEMENTED_GENERATE_KINDS, SUPPORTED_GENERATE_KINDS - {"flipbook_import"})
+
+    def test_flipbook_import_example_validates(self) -> None:
+        example = {
+            "generate": "flipbook_import",
+            "source": {
+                "file_path": "Content/__UeremcpTests/Textures/sheet_probe.png",
+                "flipbook": {"columns": 4, "rows": 4, "frame_count": 16},
+            },
+        }
+        self.validator.validate(example)
 
     def test_flipbook_atlas_example_validates(self) -> None:
         example = {
