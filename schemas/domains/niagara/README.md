@@ -111,6 +111,13 @@ Use envelope **`mode: "replace"`** (not a specification field) to delete and rec
 
 Example target: `/Game/__UeremcpTests/NS_WS07_RoundTripProbe`.
 
+### Content hash scaffolding (`FUeremcpNiagaraGraphHash` / `FUeremcpNiagaraHashRoundTrip`)
+
+Every inspect graph receives `content_hash` + `revision` via `FUeremcpContentHash`
+(ADR-0004 / WS-05). `fidelity.round_trip_supported` remains **false** until WS-11 proves
+retrieve → replace → retrieve hash stability on probe assets. Response
+`diagnostics.hash_scaffold` carries a graph_id → hash manifest only.
+
 ## Tests
 
 Runtime probes and created assets: **`/Game/__UeremcpTests/`** only (e.g. `NS_WS07_Probe`).

@@ -27,6 +27,7 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCHEMAS_DIR = REPO_ROOT / "schemas"
 NIAGARA_DIR = SCHEMAS_DIR / "domains" / "niagara"
+PROTOCOL_TESTS = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpProtocol/Tests/py"
 
 EXPECTED_LOSSY_AREAS = frozenset({
     "event_handler_stacks",
@@ -179,6 +180,28 @@ class NiagaraSpecificationTests(unittest.TestCase):
                 "fixture must document paths outside probe root as forbidden",
             )
         self.assertIn("niagara.replace_delete_probe_asset", expectations["checks_when_replacing"])
+
+    def test_hash_round_trip_scaffold_fixture(self) -> None:
+        import sys
+
+        sys.path.insert(0, str(PROTOCOL_TESTS))
+        from ueremcp_protocol.content_hash import content_hash
+
+        fixture = load_fixture("hash_round_trip_scaffold.json")
+        graph = fixture["module_stack_graph"]
+        expectations = fixture["hash_scaffold_expectations"]
+
+        self.assertFalse(expectations["round_trip_supported"])
+        self.assertFalse(graph["fidelity"]["round_trip_supported"])
+
+        digest = content_hash(graph)
+        self.assertTrue(digest.startswith(expectations["content_hash_prefix"]))
+
+        digest_again = content_hash(graph)
+        self.assertEqual(digest, digest_again, "retrieve→retrieve hash must be stable offline")
+
+        for check in expectations["checks_skipped"]:
+            self.assertIn("round_trip", check)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ namespace UeremcpNiagaraCapability
 			TEXT("event_handler_stacks: GetEmitterTopology omits ParticleEventScript stacks; extensions.niagara.event_handlers[] holds inferred placeholders from GetStackIssues / compile per_script only."),
 			TEXT("module_reorder_without_readd: no ReorderModule AICallable on NiagaraToolsets; reorder requires remove+re-add or internal MoveModule."),
 			TEXT("script_graph_internals: NiagaraScriptGraph (module/dynamic-input EdGraphs) is out of POC B/C scope."),
-			TEXT("fidelity.round_trip_supported remains false until retrieve -> replace -> retrieve hash stability is proven."),
+			TEXT("fidelity.round_trip_supported remains false until retrieve -> replace -> retrieve content_hash stability is proven (FUeremcpNiagaraHashRoundTrip scaffold only)."),
 			TEXT("No headless particle-count validation on current Epic toolset surface (RB-07 D.17)."),
 		};
 	}
@@ -36,7 +36,7 @@ namespace UeremcpNiagaraCapability
 			TEXT("material_bindings: WS-08 materials are not created or assigned; renderer materials may remain template defaults."),
 			TEXT("POC B emitters non-empty / renderer-bound checks are not yet implemented — status stays partially_completed, never *_validated."),
 			TEXT("envelope mode 'replace' deletes and recreates probe assets under /Game/__UeremcpTests/ only; never deletes user content elsewhere."),
-			TEXT("options.validate=true runs post-create inspect (FUeremcpNiagaraRoundTrip): structural emitter/user-var match only — not content_hash round-trip."),
+			TEXT("options.validate=true runs post-create inspect (FUeremcpNiagaraRoundTrip): structural emitter/user-var match + content_hash manifest; not content_hash round-trip stability."),
 			TEXT("module_reorder_without_readd and event_handler_stacks fidelity gaps apply to created systems too."),
 		};
 	}

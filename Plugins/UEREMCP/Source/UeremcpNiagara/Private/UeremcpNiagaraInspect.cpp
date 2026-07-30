@@ -3,6 +3,7 @@
 #include "UeremcpNiagaraInspect.h"
 
 #include "UeremcpNiagaraCapabilityNotes.h"
+#include "UeremcpNiagaraGraphHash.h"
 #include "UeremcpNiagaraInspectMapping.h"
 #include "UeremcpNiagaraPaths.h"
 
@@ -739,6 +740,11 @@ bool FUeremcpNiagaraInspect::Run(
 
 	OutResult.Graphs.Insert(MakeShared<FJsonValueObject>(SystemGraph), 0);
 
+	const int32 HashedGraphs = FUeremcpNiagaraGraphHash::ApplyContentHashesToGraphs(
+		OutResult.Graphs,
+		OutResult.ChecksPerformed,
+		OutResult.ChecksSkipped);
+
 	AddTrace(
 		OutResult.ExecutionTrace,
 		TEXT("map_topology"),
@@ -746,11 +752,12 @@ bool FUeremcpNiagaraInspect::Run(
 		FString::Printf(TEXT("%d emitters, %d module nodes"), OutResult.EmitterCount, OutResult.ModuleCount));
 
 	OutResult.Summary = FString::Printf(
-		TEXT("Inspected Niagara system '%s': %d emitter graph(s), %d module stack node(s), %d renderer ref(s) via UNiagaraExternalEditUtilities. Event handler stacks and renderer material bindings remain lossy. round_trip_supported=false."),
+		TEXT("Inspected Niagara system '%s': %d emitter graph(s), %d module stack node(s), %d renderer ref(s), %d content_hash(es) via UNiagaraExternalEditUtilities + FUeremcpContentHash. Event handler stacks and renderer material bindings remain lossy. round_trip_supported=false."),
 		*Summary.SystemName.ToString(),
 		OutResult.EmitterCount,
 		OutResult.ModuleCount,
-		OutResult.RendererCount);
+		OutResult.RendererCount,
+		HashedGraphs);
 
 	OutResult.bSuccess = true;
 	OutResult.ChecksPerformed.Add(TEXT("niagara.topology_read"));

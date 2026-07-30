@@ -1,0 +1,40 @@
+{
+  "$comment": "Offline fixture: content_hash round-trip scaffolding for WS-07 Niagara inspect graphs.",
+  "module_stack_graph": {
+    "asset_path": "/Game/__UeremcpTests/NS_WS07_Probe",
+    "graph_id": "/Game/__UeremcpTests/NS_WS07_Probe::ProbeBurst::ParticleUpdateScript",
+    "graph_name": "ParticleUpdateScript",
+    "graph_type": "NiagaraModuleStack",
+    "schema_version": "1.0",
+    "fidelity": {
+      "round_trip_supported": false,
+      "lossy_areas": [
+        "event_handler_stacks",
+        "module_reorder_without_readd",
+        "script_graph_internals"
+      ]
+    },
+    "nodes": [
+      {
+        "node_id": "ignored-for-hash",
+        "semantic_id": "ProbeBurst/ParticleUpdateScript/ParticleState",
+        "semantic_type": "niagara_module",
+        "node_class": "FNiagaraStackModuleItem"
+      }
+    ],
+    "extensions": {
+      "niagara": {
+        "emitter_name": "ProbeBurst",
+        "script_usage": "ParticleUpdateScript"
+      }
+    }
+  },
+  "hash_scaffold_expectations": {
+    "round_trip_supported": false,
+    "revision_equals_content_hash": true,
+    "content_hash_prefix": "sha256:",
+    "checks_performed": ["niagara.content_hash_compute"],
+    "checks_skipped": ["niagara.content_hash_round_trip_stability"],
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"]
+  }
+}

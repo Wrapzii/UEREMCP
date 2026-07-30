@@ -8,6 +8,7 @@
 #include "Dom/JsonObject.h"
 #include "UeremcpEnvelope.h"
 #include "UeremcpNiagaraCreate.h"
+#include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspect.h"
 
 /** Outcome of create → inspect structural comparison (not ADR-0004 hash round-trip). */
@@ -22,6 +23,8 @@ struct FUeremcpNiagaraRoundTripResult
 	TArray<TSharedPtr<FJsonValue>> InspectGraphs;
 	TArray<FString> ChecksPerformed;
 	TArray<FString> ChecksSkipped;
+
+	FUeremcpNiagaraHashRoundTripResult HashScaffold;
 
 	int32 InternalOperations = 0;
 };

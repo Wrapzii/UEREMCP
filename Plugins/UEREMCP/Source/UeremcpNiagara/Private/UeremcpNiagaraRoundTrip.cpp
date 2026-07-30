@@ -2,6 +2,8 @@
 
 #include "UeremcpNiagaraRoundTrip.h"
 
+#include "UeremcpNiagaraGraphHash.h"
+#include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspectMapping.h"
 #include "UeremcpNiagaraPaths.h"
 
@@ -128,6 +130,21 @@ bool FUeremcpNiagaraRoundTrip::ValidateCreateResult(
 		InspectResult.Graphs,
 		OutResult.Mismatches);
 
+	FUeremcpNiagaraHashRoundTripResult HashScaffold;
+	FUeremcpNiagaraHashRoundTrip::RecordPostInspectScaffold(InspectResult.Graphs, HashScaffold);
+	for (const FString& Check : HashScaffold.ChecksPerformed)
+	{
+		OutResult.ChecksPerformed.Add(Check);
+	}
+	for (const FString& Check : HashScaffold.ChecksSkipped)
+	{
+		if (!OutResult.ChecksSkipped.Contains(Check))
+		{
+			OutResult.ChecksSkipped.Add(Check);
+		}
+	}
+	OutResult.HashScaffold = HashScaffold;
+
 	if (OutResult.bStructuralMatch)
 	{
 		OutResult.ChecksPerformed.Add(TEXT("niagara.structural_match"));
@@ -146,8 +163,11 @@ bool FUeremcpNiagaraRoundTrip::ValidateCreateResult(
 			*FString::Join(OutResult.Mismatches, TEXT("; ")));
 	}
 
-	// Honest: content_hash round-trip and reread-after-write are not proven here.
-	OutResult.ChecksSkipped.Add(TEXT("niagara.content_hash_round_trip"));
+	// Honest: retrieve→replace→retrieve hash stability is not proven here.
+	if (!OutResult.ChecksSkipped.Contains(TEXT("niagara.content_hash_round_trip_stability")))
+	{
+		OutResult.ChecksSkipped.Add(TEXT("niagara.content_hash_round_trip_stability"));
+	}
 
 	return true;
 }

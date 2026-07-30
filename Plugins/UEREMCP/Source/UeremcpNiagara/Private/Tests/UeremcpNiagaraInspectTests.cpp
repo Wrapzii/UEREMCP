@@ -80,6 +80,16 @@ bool FUeremcpNiagaraInspectSystemRuntimeTest::RunTest(const FString& Parameters)
 		{
 			bFoundSystemGraph = true;
 
+			FString ContentHash;
+			TestTrue(TEXT("system graph has content_hash"), Graph->TryGetStringField(TEXT("content_hash"), ContentHash));
+			TestTrue(TEXT("content_hash sha256 prefix"), ContentHash.StartsWith(TEXT("sha256:")));
+
+			const TSharedPtr<FJsonObject>* FidelityObj = nullptr;
+			if (Graph->TryGetObjectField(TEXT("fidelity"), FidelityObj) && FidelityObj && FidelityObj->IsValid())
+			{
+				TestFalse(TEXT("round_trip_supported false"), (*FidelityObj)->GetBoolField(TEXT("round_trip_supported")));
+			}
+
 			const TSharedPtr<FJsonObject>* Extensions = nullptr;
 			if (Graph->TryGetObjectField(TEXT("extensions"), Extensions) && Extensions && Extensions->IsValid())
 			{

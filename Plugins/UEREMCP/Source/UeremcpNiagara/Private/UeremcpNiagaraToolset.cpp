@@ -5,6 +5,7 @@
 #include "UeremcpEnvelope.h"
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraCreate.h"
+#include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraRoundTrip.h"
 
@@ -134,6 +135,19 @@ FString UUeremcpNiagaraToolset::InspectSystem(const FString& RequestJson)
 	if (Diagnostics->Values.Num() > 0)
 	{
 		Extra->SetObjectField(TEXT("diagnostics"), Diagnostics);
+	}
+
+	FUeremcpNiagaraHashRoundTripResult HashScaffold;
+	FUeremcpNiagaraHashRoundTrip::RecordPostInspectScaffold(InspectResult.Graphs, HashScaffold);
+	if (HashScaffold.bHashesPresent)
+	{
+		TSharedPtr<FJsonObject> ExtraDiagnostics = Extra->HasField(TEXT("diagnostics"))
+			? Extra->GetObjectField(TEXT("diagnostics"))
+			: MakeShared<FJsonObject>();
+		ExtraDiagnostics->SetObjectField(
+			TEXT("hash_scaffold"),
+			FUeremcpNiagaraHashRoundTrip::BuildDiagnosticsObject(HashScaffold));
+		Extra->SetObjectField(TEXT("diagnostics"), ExtraDiagnostics);
 	}
 
 	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
@@ -344,6 +358,17 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 			Diagnostics->SetArrayField(TEXT("structural_mismatches"), MismatchValues);
 		}
 		Extra->SetObjectField(TEXT("diagnostics"), Diagnostics);
+	}
+
+	if (bRanRoundTrip && RoundTripResult.HashScaffold.bHashesPresent)
+	{
+		TSharedPtr<FJsonObject> ExtraDiagnostics = Extra->HasField(TEXT("diagnostics"))
+			? Extra->GetObjectField(TEXT("diagnostics"))
+			: MakeShared<FJsonObject>();
+		ExtraDiagnostics->SetObjectField(
+			TEXT("hash_scaffold"),
+			FUeremcpNiagaraHashRoundTrip::BuildDiagnosticsObject(RoundTripResult.HashScaffold));
+		Extra->SetObjectField(TEXT("diagnostics"), ExtraDiagnostics);
 	}
 
 	if (!Request.bDryRun && CreateResult.EmittersAdded.Num() > 0)
