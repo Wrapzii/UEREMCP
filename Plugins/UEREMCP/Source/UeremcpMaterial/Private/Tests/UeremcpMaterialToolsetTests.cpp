@@ -42,6 +42,8 @@ namespace UeremcpMaterialTests
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ProjectileTrail_Ice"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_NS_WS08_ExportProbe_core"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ValidateFalse_Core"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ReuseProbe_A"));
+		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ReuseProbe_B"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Distortion_Probe"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Materials/MI_WS08_Flipbook_Probe"));
 		DeleteIfExists(TEXT("/Game/__UeremcpTests/Textures/T_WS08_ValidateFalse_Noise"));
@@ -173,6 +175,61 @@ namespace UeremcpMaterialTests
 		}
 
 		return FString();
+	}
+
+	static bool ManifestContainsAsset(
+		const FString& Json,
+		const FString& FieldName,
+		const FString& AssetPath,
+		const FString& Role = FString())
+	{
+		TSharedPtr<FJsonObject> Root;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+		if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
+		{
+			return false;
+		}
+
+		TSharedPtr<FJsonObject> SearchRoot = Root;
+		const TSharedPtr<FJsonObject>* ResultObj = nullptr;
+		if (Root->TryGetObjectField(TEXT("result"), ResultObj) && ResultObj && ResultObj->IsValid())
+		{
+			SearchRoot = *ResultObj;
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* Entries = nullptr;
+		if (!SearchRoot->TryGetArrayField(FieldName, Entries) || !Entries)
+		{
+			return false;
+		}
+
+		for (const TSharedPtr<FJsonValue>& Value : *Entries)
+		{
+			const TSharedPtr<FJsonObject>* ObjPtr = nullptr;
+			if (!Value.IsValid() || !Value->TryGetObject(ObjPtr) || !ObjPtr || !ObjPtr->IsValid())
+			{
+				continue;
+			}
+
+			FString Path;
+			if (!(*ObjPtr)->TryGetStringField(TEXT("asset_path"), Path) || Path != AssetPath)
+			{
+				continue;
+			}
+
+			if (Role.IsEmpty())
+			{
+				return true;
+			}
+
+			FString EntryRole;
+			if ((*ObjPtr)->TryGetStringField(TEXT("role"), EntryRole) && EntryRole == Role)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	static bool VerifyMasterFeatureWired(
@@ -575,6 +632,75 @@ bool FUeremcpMaterialCreateVfxFlipbookSubuvTest::RunTest(const FString& Paramete
 	{
 		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Target, Status);
 	}
+
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCreateVfxMasterReuseManifestTest,
+	"UeremcpMaterial.Toolset.CreateVfxMaterial.MasterReuseManifest",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialCreateVfxMasterReuseManifestTest::RunTest(const FString& Parameters)
+{
+	UeremcpMaterialTests::CleanupWs08MaterialScratch();
+
+	const FString TargetA = TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ReuseProbe_A");
+	const FString TargetB = TEXT("/Game/__UeremcpTests/Materials/MI_WS08_ReuseProbe_B");
+	const FString SpecBody = TEXT(R"(
+			"purpose":"elemental_projectile_core",
+			"element":"fire",
+			"features":["radial_falloff","animated_noise","fresnel","dynamic_color","dynamic_intensity"]
+		)");
+
+	const FString RequestA = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-reuse-a",
+		"action":"create_vfx_material",
+		"target":{"asset_path":"%s"},
+		"specification":{%s},
+		"options":{"compile":true,"validate":false,"save":true}
+	})"), *TargetA, *SpecBody);
+
+	const FString JsonA = UUeremcpMaterialToolset::CreateVfxMaterial(RequestA);
+	FString StatusA;
+	TestTrue(TEXT("first response parseable"), UeremcpMaterialTests::ParseStatus(JsonA, StatusA));
+
+	const FString MasterPath =
+		UeremcpMaterialTests::FindDependencyPath(JsonA, TEXT("master_template"));
+	TestFalse(TEXT("first call reports master dependency"), MasterPath.IsEmpty());
+	TestTrue(
+		TEXT("first call creates master in created_assets"),
+		UeremcpMaterialTests::ManifestContainsAsset(JsonA, TEXT("created_assets"), MasterPath, TEXT("master_template")));
+	TestTrue(
+		TEXT("first call creates MI in created_assets"),
+		UeremcpMaterialTests::ManifestContainsAsset(JsonA, TEXT("created_assets"), TargetA, TEXT("elemental_projectile_core")));
+	TestFalse(
+		TEXT("first call does not list master in reused_assets"),
+		UeremcpMaterialTests::ManifestContainsAsset(JsonA, TEXT("reused_assets"), MasterPath, TEXT("master_template")));
+
+	const FString RequestB = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-reuse-b",
+		"action":"create_vfx_material",
+		"target":{"asset_path":"%s"},
+		"specification":{%s},
+		"options":{"compile":true,"validate":false,"save":true}
+	})"), *TargetB, *SpecBody);
+
+	const FString JsonB = UUeremcpMaterialToolset::CreateVfxMaterial(RequestB);
+	FString StatusB;
+	TestTrue(TEXT("second response parseable"), UeremcpMaterialTests::ParseStatus(JsonB, StatusB));
+	TestTrue(
+		TEXT("second call reports master in reused_assets"),
+		UeremcpMaterialTests::ManifestContainsAsset(JsonB, TEXT("reused_assets"), MasterPath, TEXT("master_template")));
+	TestFalse(
+		TEXT("second call does not recreate master in created_assets"),
+		UeremcpMaterialTests::ManifestContainsAsset(JsonB, TEXT("created_assets"), MasterPath, TEXT("master_template")));
+	TestTrue(
+		TEXT("second call creates new MI in created_assets"),
+		UeremcpMaterialTests::ManifestContainsAsset(JsonB, TEXT("created_assets"), TargetB, TEXT("elemental_projectile_core")));
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
 	return true;

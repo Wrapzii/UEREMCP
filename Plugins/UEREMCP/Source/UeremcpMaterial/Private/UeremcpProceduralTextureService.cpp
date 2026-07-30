@@ -300,6 +300,11 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 			Result.VerifiedWidth,
 			Result.VerifiedHeight);
 		Result.InterpretationNotes.Add(TEXT("Texture already existed; generation skipped (idempotent reuse)."));
+		FUeremcpAssetRef Reused;
+		Reused.AssetPath = Request.TargetAssetPath;
+		Reused.AssetClass = TEXT("Texture2D");
+		Reused.Role = Request.GenerateKind;
+		Result.ReusedAssets.Add(Reused);
 		return Result;
 	}
 

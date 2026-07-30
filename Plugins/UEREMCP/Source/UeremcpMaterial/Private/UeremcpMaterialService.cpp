@@ -324,6 +324,7 @@ namespace
 		bool bValidate,
 		TArray<FTextureSlotBinding>& OutBindings,
 		TArray<FUeremcpAssetRef>& OutCreatedAssets,
+		TArray<FUeremcpAssetRef>& OutReusedAssets,
 		TArray<FString>& OutInterpretationNotes,
 		TArray<FString>& OutCapabilityNotes,
 		int32& InOutOps,
@@ -367,6 +368,11 @@ namespace
 				}
 				OutInterpretationNotes.Add(
 					FString::Printf(TEXT("Texture slot '%s' bound to existing asset '%s'."), *SlotName, *ResolvedPath));
+				FUeremcpAssetRef ReusedTexture;
+				ReusedTexture.AssetPath = ResolvedPath;
+				ReusedTexture.AssetClass = TEXT("Texture2D");
+				ReusedTexture.Role = SlotName;
+				OutReusedAssets.Add(ReusedTexture);
 			}
 			else if (Value->Type == EJson::Object)
 			{
@@ -441,13 +447,29 @@ namespace
 								*SlotName));
 					}
 
-					OutCreatedAssets.Append(TextureResult.CreatedAssets);
-					OutInterpretationNotes.Add(
-						FString::Printf(
-							TEXT("Generated slot '%s' via create_procedural_texture (%s → '%s')."),
-							*SlotName,
-							*Kind,
-							*ResolvedPath));
+					if (TextureResult.bReused)
+					{
+						FUeremcpAssetRef ReusedTexture;
+						ReusedTexture.AssetPath = ResolvedPath;
+						ReusedTexture.AssetClass = TEXT("Texture2D");
+						ReusedTexture.Role = SlotName;
+						OutReusedAssets.Add(ReusedTexture);
+						OutInterpretationNotes.Add(
+							FString::Printf(
+								TEXT("Reused procedural texture slot '%s' at '%s' (idempotent)."),
+								*SlotName,
+								*ResolvedPath));
+					}
+					else
+					{
+						OutCreatedAssets.Append(TextureResult.CreatedAssets);
+						OutInterpretationNotes.Add(
+							FString::Printf(
+								TEXT("Generated slot '%s' via create_procedural_texture (%s → '%s')."),
+								*SlotName,
+								*Kind,
+								*ResolvedPath));
+					}
 				}
 			}
 			else
@@ -763,6 +785,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Request.bValidate,
 		TextureBindings,
 		Result.CreatedAssets,
+		Result.ReusedAssets,
 		Result.InterpretationNotes,
 		Result.CapabilityNotes,
 		Result.InternalOperations,
@@ -850,6 +873,18 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		CreatedMaster.Role = TEXT("master_template");
 		Result.CreatedAssets.Add(CreatedMaster);
 		Result.InterpretationNotes.Add(TEXT("Created feature-driven VFX master via MaterialEditingLibrary (MaterialTools-equivalent substrate)."));
+	}
+	else
+	{
+		FUeremcpAssetRef ReusedMaster;
+		ReusedMaster.AssetPath = MasterPath;
+		ReusedMaster.AssetClass = TEXT("Material");
+		ReusedMaster.Role = TEXT("master_template");
+		Result.ReusedAssets.Add(ReusedMaster);
+		Result.InterpretationNotes.Add(
+			FString::Printf(
+				TEXT("Reused existing master '%s' (idempotent ensure; graph rebuild skipped)."),
+				*MasterPath));
 	}
 
 	UEditorAssetSubsystem* AssetSubsystem = GetEditorAssetSubsystem();

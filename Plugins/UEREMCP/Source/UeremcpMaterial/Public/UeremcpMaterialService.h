@@ -13,6 +13,7 @@ struct UEREMCPMATERIAL_API FUeremcpMaterialCreateResult
 	FString PrimaryAsset;
 	TArray<FUeremcpAssetRef> CreatedAssets;
 	TArray<FUeremcpAssetRef> ModifiedAssets;
+	TArray<FUeremcpAssetRef> ReusedAssets;
 	TArray<FUeremcpAssetRef> Dependencies;
 	TArray<FString> InterpretationNotes;
 	TArray<FString> CapabilityNotes;

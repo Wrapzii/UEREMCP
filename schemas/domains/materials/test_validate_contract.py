@@ -82,7 +82,7 @@ class MaterialValidateContractTests(unittest.TestCase):
         )
 
     def test_create_vfx_material_saves_before_compile_gate(self) -> None:
-        save_idx = self.material_cpp.find("SaveAssetObject(Instance, Request.TargetAssetPath)")
+        save_idx = self.material_cpp.find("SaveAssetObject(Instance, Request.TargetAssetPath")
         compile_idx = self.material_cpp.find("RecompileMaterial(MasterMaterial)")
         self.assertNotEqual(save_idx, -1)
         self.assertNotEqual(compile_idx, -1)
@@ -91,8 +91,15 @@ class MaterialValidateContractTests(unittest.TestCase):
     def test_create_vfx_material_mi_uses_create_package_path(self) -> None:
         self.assertIn("CreateMaterialInstanceAtPath", self.material_cpp)
         self.assertIn("CreatePackage(*PackagePath)", self.material_cpp)
+        self.assertIn("NewObject<UMaterialInstanceConstant>", self.material_cpp)
+        self.assertIn("ReleaseInProcessPackageForCreate", self.material_cpp)
         self.assertIn("TryLoadRegisteredMaterialInstance", self.material_cpp)
         self.assertIn("!Request.bSave", self.material_cpp)
+
+    def test_create_vfx_material_reports_mi_save_failure(self) -> None:
+        self.assertIn("ReportMiSaveFailure", self.material_cpp)
+        self.assertIn("MI save failed for", self.material_cpp)
+        self.assertIn("UEditorLoadingAndSavingUtils::SavePackages", self.material_cpp)
 
     def test_master_builder_reuses_registry_not_stale_in_process(self) -> None:
         master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
@@ -102,9 +109,9 @@ class MaterialValidateContractTests(unittest.TestCase):
     def test_create_vfx_material_save_uses_editor_asset_subsystem(self) -> None:
         self.assertIn("SaveAsset(PreferredPackagePath, false)", self.material_cpp)
         self.assertIn("SaveAsset(ActualPackagePath, false)", self.material_cpp)
+        self.assertIn("UEditorLoadingAndSavingUtils::SavePackages", self.material_cpp)
         master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
         self.assertIn("SaveAsset(PackagePath, false)", master_cpp)
-        self.assertNotIn("SavePackages(PackagesToSave", self.material_cpp)
         self.assertNotIn("SavePackages(PackagesToSave", master_cpp)
 
     def test_asset_load_gates_editor_subsystem_with_does_asset_exist(self) -> None:
@@ -119,6 +126,35 @@ class MaterialValidateContractTests(unittest.TestCase):
         self.assertNotIn("LoadAsset(PackagePath)", master_cpp)
         self.assertNotIn("AssetSubsystem->LoadAsset", self.material_cpp)
         self.assertNotIn("AssetSubsystem->LoadAsset", self.procedural_cpp)
+
+    def test_animated_noise_wires_float3_position_with_fallback_pins(self) -> None:
+        feature_graph = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialFeatureGraph.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("MaterialExpressionAppendVector", feature_graph)
+        self.assertIn("ConnectToInputWithFallback", feature_graph)
+        self.assertIn("World Position", feature_graph)
+        self.assertIn("Failed to wire animated_noise.", feature_graph)
+
+    def test_create_vfx_material_reports_reused_assets_for_master_reuse(self) -> None:
+        self.assertIn("ReusedAssets", self.material_cpp)
+        self.assertIn("Result.ReusedAssets.Add(ReusedMaster)", self.material_cpp)
+        toolset_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialToolset.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Response.ReusedAssets = CreateResult.ReusedAssets", toolset_cpp)
+        tests_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/Tests/UeremcpMaterialToolsetTests.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("CreateVfxMaterial.MasterReuseManifest", tests_cpp)
+        self.assertIn("reused_assets", tests_cpp)
+
+    def test_procedural_texture_reports_reused_assets_on_idempotent_hit(self) -> None:
+        self.assertIn("Result.ReusedAssets.Add(Reused)", self.procedural_cpp)
+        toolset_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialToolset.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Response.ReusedAssets = CreateResult.ReusedAssets", toolset_cpp)
 
 
 if __name__ == "__main__":

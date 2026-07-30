@@ -32,6 +32,7 @@ struct FUeremcpProceduralTextureResult
 	FString Summary;
 	FString PrimaryAsset;
 	TArray<FUeremcpAssetRef> CreatedAssets;
+	TArray<FUeremcpAssetRef> ReusedAssets;
 	TArray<FString> CapabilityNotes;
 	TArray<FString> InterpretationNotes;
 	int32 InternalOperations = 0;

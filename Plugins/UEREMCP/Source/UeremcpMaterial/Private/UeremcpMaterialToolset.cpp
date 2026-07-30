@@ -91,6 +91,7 @@ FString UUeremcpMaterialToolset::CreateVfxMaterial(const FString& RequestJson)
 	Response.PrimaryAsset = CreateResult.PrimaryAsset;
 	Response.CreatedAssets = CreateResult.CreatedAssets;
 	Response.ModifiedAssets = CreateResult.ModifiedAssets;
+	Response.ReusedAssets = CreateResult.ReusedAssets;
 	Response.Dependencies = CreateResult.Dependencies;
 	Response.InterpretationNotes = CreateResult.InterpretationNotes;
 	Response.CapabilityNotes = CreateResult.CapabilityNotes;
@@ -151,6 +152,7 @@ FString UUeremcpMaterialToolset::CreateProceduralTexture(const FString& RequestJ
 	Response.UnderstoodTarget = Request.TargetAssetPath;
 	Response.PrimaryAsset = CreateResult.PrimaryAsset;
 	Response.CreatedAssets = CreateResult.CreatedAssets;
+	Response.ReusedAssets = CreateResult.ReusedAssets;
 	Response.CapabilityNotes = CreateResult.CapabilityNotes;
 	Response.InterpretationNotes = CreateResult.InterpretationNotes;
 	Response.Metrics.McpRoundTrips = 1;
