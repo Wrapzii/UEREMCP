@@ -3,7 +3,7 @@
 - **From:** WS-11
 - **To:** WS-03 (owns `Plugins/UEREMCP/UEREMCP.uplugin`)
 - **Date:** 2026-07-29
-- **Status:** **Resolved for C-3** — uplugin + all four DLLs load in RE; shipping Validation gate green 2026-07-30 (see `tests/integration/_logs/editor_UEREMCP_Validation_20260729_234458.log`).
+- **Status:** **Resolved for C-3** ï¿½ uplugin + all four DLLs load in RE; shipping Validation gate green 2026-07-30 (see `tests/integration/_logs/editor_UEREMCP_Validation_shipping.redacted.md`).
 
 ## Ask (original)
 

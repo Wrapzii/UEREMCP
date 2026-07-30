@@ -16,7 +16,7 @@ N× Content/`UCurveFloat` creates → Discard+Leave (interim probe; UEREMCP disa
 Per WS-14 **C-3** (accepted by WS-01), that proves FileSandbox **engine** semantics
 only — **not** the shipping UEREMCP plugin gate.
 
-Shipping Validation gate is green `[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260729_234458.log]`. WS-01 may still keep `rollback.available: false` until BP compile / deletion / non-mount paths are gated. Supplement hazards below; do not claim BP compile / deletion /
+Shipping Validation gate is green `[VERIFIED-RUNTIME: tests/integration/_logs/editor_UEREMCP_Validation_shipping.redacted.md]`. WS-01 may still keep `rollback.available: false` until BP compile / deletion / non-mount paths are gated. Supplement hazards below; do not claim BP compile / deletion /
 `Saved|Config` coverage yet.
 
 Full evidence in `docs/research/RB-06-sandbox-and-rollback.md`.
