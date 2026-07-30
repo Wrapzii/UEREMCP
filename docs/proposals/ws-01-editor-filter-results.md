@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `fcff5cc` (WS-11 fireball material proof scaffold; editor proof SKIP)
+- **Current orchestration tip:** `c7b33cc` (A6 code + `__UeremcpPoc` allowlists; runtime proofs pending)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: optional live VisualTest MCP T1a freshness is **PASS**. B2/B4 wiring ready after `51583af`/`150f61a`. WS-11 fireball inline-material filter scaffold landed (`fcff5cc` / `11efc23`) but editor proof was **SKIP** — Niagara rejects `/Game/__UeremcpPoc/`; Material paths remain under test roots (`docs/proposals/ws-11-pocb-poc-root-blocker.md`). **Do not claim B1/B2/B4.** Allowlist owners: WS-07 + WS-08. **A6 and overall POC-B remain unclaimed** — `docs/proposals/ws-01-a6-pocb-residual-plan.md`.
+Residuals: A6 **code** landed (`13bf529` / `2a0b2cd`) — **runtime-unproven**; no A6/POC-A claim. Fireball harness on tip (`fcff5cc`); prior SKIP path rejection addressed by WS-07 `76a5f5a` + WS-08 `c7b33cc` `__UeremcpPoc` allowlists — **fireball re-run still required**; no B1/B2/B4 / overall POC-B claim. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`.
 
 ## Templates editor result and handoff
 
@@ -242,10 +242,11 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | POC A / A6: deliver programmatic modify→re-read proof; Wave 2 Blueprint 4/4 is not A6. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`. |
-| WS-07 | B7 scaffold PASS. B2/B4 wiring on `2814283`. **Own POC-root allowlist** so fireball filter can leave SKIP (`ws-11-pocb-poc-root-blocker.md`). B1/B8 still open. |
-| WS-08 | Material reuse slice on `b1f9479`. **Own Material path allowlist** for `/Game/__UeremcpPoc/` acceptance assets (same blocker). |
+| WS-06 | A6 reread-after-write **code** on `13bf529` — awaiting WS-11 editor proof; no A6 claim. |
+| WS-07 | `__UeremcpPoc` Niagara allowlist on `76a5f5a`. Fireball still needs WS-11 re-run. |
+| WS-08 | `__UeremcpPoc` Material allowlist on `c7b33cc`. Fireball still needs WS-11 re-run. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Fireball filter scaffold on `fcff5cc` — proof **SKIP**, not B1/B2/B4. Re-run after WS-07/WS-08 allowlist. |
+| WS-11 | Re-run A6 Blueprint proof + fireball filter after allowlists; keep A6/POC-A/POC-B unclaimed until PASS. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Wave 2 listed editor filters are green on recorded tips. B2/B4 wiring is ready; fireball editor proof is **SKIP** pending WS-07/WS-08 `/Game/__UeremcpPoc/` allowlist. Remaining acceptance gates: A6 and overall POC-B — see `docs/proposals/ws-01-a6-pocb-residual-plan.md`. No junction retarget.
+Wave 2 listed editor filters are green on recorded tips. A6 code and `__UeremcpPoc` allowlists are on orch; **runtime A6 and fireball proofs remain open**. No A6 / POC-A / overall POC-B claims. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`. No junction retarget.

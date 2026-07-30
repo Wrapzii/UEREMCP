@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `fcff5cc` (WS-11 fireball inline-material proof scaffold `11efc23`)
+- **Orch tip at writing:** `c7b33cc` (WS-06 A6 code + WS-07/WS-08 `__UeremcpPoc` allowlists)
 - **Date:** 2026-07-30
-- **Status:** Wave 2 listed editor filters are green; live VisualTest MCP T1a freshness is PASS. B2/B4 **wiring** remains ready. WS-11 added one-call fireball inline-material editor filter/runner/unit tests (`fcff5cc` / `11efc23`); **editor proof was SKIP** — Niagara rejects `/Game/__UeremcpPoc/` targets while Material paths are still pinned under test roots. **B1/B2/B4 not claimed.** **A6 is not met. Overall POC-B is not met.** No junction retarget.
+- **Status:** Wave 2 listed editor filters are green; live VisualTest MCP T1a freshness is PASS. **A6 implementation landed** on orch (`13bf529` / `2a0b2cd`) but remains **runtime-unproven** until WS-11 editor filter run — **A6 / overall POC A not claimed**. WS-11 fireball harness already on tip (`fcff5cc`); prior SKIP was path rejection. **WS-07 `76a5f5a` + WS-08 `c7b33cc` allow `__UeremcpPoc`** — fireball re-proof still required; **B1/B2/B4 / overall POC-B not claimed**. No junction retarget.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -46,13 +46,13 @@ Filter-results already declines an A6 claim. That remains correct.
 
 | Gap | Owner | Evidence needed |
 |---|---|---|
-| End-to-end POC A scenario covering A1–A11 (or documented A8 escape via patch + A10) | WS-06 + WS-11 | Single editor/MCP run with programmatic asserts; metrics (`mcp_round_trips`, `internal_operations`, wall-clock, tokens); scratch under `/Game/__UeremcpPoc/` |
-| Explicit A6 assert: after replace, re-read contains expected nodes + expected connections | WS-06 | Automation or MCP script that fails if nodes/links missing — not visual inspection |
-| A7 fields on the success path | WS-06 | Response shows `modified_and_validated` and `validation.reread_after_write == true` |
-| A8 / A11 identity and no-op | WS-06 | Identical `content_hash` on unchanged replace; second replace `no_change_required` without recompile |
+| **A6 code on orch** | WS-06 | Landed `13bf529` (`2a0b2cd`): programmatic reread-after-write validation + harness handoff `docs/proposals/ws-06-a6-ws11-harness.md`. **Not an A6 claim.** |
+| Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | Run Blueprint Toolset / A6 scenario on tip containing `13bf529`; assert expected nodes/links after replace |
+| End-to-end POC A (A1–A11) or A8 patch escape + A10 | WS-06 + WS-11 | Full scenario metrics under `/Game/__UeremcpPoc/` |
+| A7 / A8 / A11 fields on success path | WS-06 | Proven only after editor run |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** none that can close A6 without editing WS-06 paths. Keep criteria frozen; refuse false claims; track evidence here / in filter-results.
+**WS-01 next step:** track editor A6 re-proof; refuse A6/POC-A claims until WS-11 records PASS.
 
 ---
 
@@ -71,27 +71,26 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Fireball material sub-manifest merge, `reuse_if_present`, six-role defaults, B2 gate scaffolding | `2814283` (`51583af`) | **B2/B4 wiring ready** — not live fireball proof |
 | Material `reused_assets` B2 slice + WS-08 handoff; claimed Material filter 12/12 on WS-08 branch | `b1f9479` (`150f61a`) | Material-side B2 slice; **not** overall POC-B / B2 fireball proof |
 | Strict POC evidence harness (`run_poc_acceptance.ps1`, `poc_evidence.py`) | `761e7fa` (`d0913f8`) | Evidence tooling only — does not itself satisfy A6/POC-B |
-| Fireball inline-material editor filter + runner + unit harness | `fcff5cc` (`11efc23`) | Scaffold only; **proof SKIP** — see `docs/proposals/ws-11-pocb-poc-root-blocker.md` |
-| `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty; orch filter tip may lag WS-08 12/12 claim until WS-11 re-runs |
+| Fireball inline-material editor filter + runner + unit harness | `fcff5cc` (`11efc23`) | Scaffold landed; **prior proof SKIP** on path rejection |
+| Niagara `__UeremcpPoc` path allowlist | `76a5f5a` (`004264f`) | Unblocks Niagara create/inspect under POC root — **not** fireball PASS |
+| Material `__UeremcpPoc` path allowlist | `c7b33cc` (`a26090f`) | Unblocks material writes under POC root — **not** fireball PASS |
+| Blueprint A6 reread-after-write implementation | `13bf529` (`2a0b2cd`) | **Code landed; runtime-unproven** |
+| `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
-### POC-root allowlist blocker (blocks fireball editor proof)
+### POC-root allowlist status
 
-WS-11 filter targets `/Game/__UeremcpPoc/` per `POC_ACCEPTANCE.md`, but:
+Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Material rejected `/Game/__UeremcpPoc/`.
 
-1. **WS-07** — `CreateNiagaraEffect` rejects targets outside `/Game/__UeremcpTests/` (`UeremcpNiagaraToolset.cpp`).
-2. **WS-08** — material path constants force MIs/masters/textures under `/Game/__UeremcpTests/` (`UeremcpMaterialPaths.h`).
-3. **WS-07** — inline material resolver rejects paths outside probe roots (`UeremcpNiagaraMaterialBinding.cpp`).
-
-**Owners for allowlist / acceptance-root route:** WS-07 + WS-08. Until fixed, fireball filter reports **SKIP**; do not claim B1/B2/B4.
+**Now on orch:** WS-07 `76a5f5a` + WS-08 `c7b33cc` allow `__UeremcpPoc` scratch paths. Fireball editor filter must be **re-run** by WS-11 before any B1/B2/B4 claim. Until that PASS is recorded, treat B2/B4 as wiring+allowlist only.
 
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **Still open** — filter is one direct editor tool call, not MCP; live fireball MCP missing | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | **Wiring ready**; **not proven** — fireball filter SKIP on POC-root rejection | WS-08 + WS-07 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | **Wiring + POC-root allowlist landed**; **not proven** — awaiting fireball re-run | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **Partial scaffolding** — needs fireball acceptance run | WS-07 |
-| B4 | Renderers configured and bound to valid materials | **Wiring ready**; **not proven** — same SKIP | WS-07 + WS-08 |
+| B4 | Renderers configured and bound to valid materials | **Wiring + POC-root allowlist landed**; **not proven** — awaiting fireball re-run | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B6 | System compiles; compile genuinely awaited | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -108,8 +107,9 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | POC A scenario including explicit A6 programmatic re-read | WS-06 | Track; do not claim until WS-11 editor/MCP evidence lands |
-| P0 | Allow `/Game/__UeremcpPoc/` (or equivalent acceptance root) for fireball Niagara+Material create without weakening normal guards | WS-07 + WS-08 | Track `docs/proposals/ws-11-pocb-poc-root-blocker.md`; refuse B1/B2/B4 until path works |
-| P0 | Full POC B fireball run covering B1–B9 after allowlist (wiring ready; editor proof currently SKIP) | WS-07 (+ WS-08) + WS-11 harness | Track; refuse “POC B complete” / “B2 proven” without live evidence |
+| P0 | Editor A6 runtime proof on tip containing `13bf529` | WS-11 (+ WS-06) | Track; refuse A6/POC-A until PASS recorded |
+| P0 | Re-run fireball inline-material filter after `__UeremcpPoc` allowlists (`76a5f5a`/`c7b33cc`) | WS-11 | Track; refuse B1/B2/B4 until PASS |
+| P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
 | P2 | POC C / D / E remainder | WS-07+15 / WS-09 / WS-11 | Out of this residual’s critical path after A6 + POC B |
