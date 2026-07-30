@@ -61,12 +61,15 @@ class MaterialFunctionCompositionTests(unittest.TestCase):
         self.assertIn("material_function_internals", self.capability_h)
         self.assertIn("MaterialFunction", self.capability_h)
 
-    def test_flipbook_atlas_schema_and_scaffold_cpp(self) -> None:
+    def test_flipbook_atlas_generator_wired_in_service(self) -> None:
         enum_values = set(self.procedural_schema["properties"]["generate"]["enum"])
         self.assertIn("flipbook_atlas", enum_values)
-        self.assertIn("IsImplementedGenerateKind", self.procedural_cpp)
-        self.assertIn("flipbook_atlas", self.procedural_cpp)
-        self.assertIn('TEXT("partially_completed")', self.procedural_cpp)
+        self.assertIn("GenerateFlipbookAtlasPixels", self.procedural_cpp)
+        generator_cpp = (
+            REPO_ROOT
+            / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpProceduralTextureGenerator.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("divide evenly by columns and rows", generator_cpp)
         self.assertIn("FlipbookColumns", self.procedural_cpp)
 
 

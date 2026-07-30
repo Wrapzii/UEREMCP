@@ -68,7 +68,7 @@ Purpose defaults live in `element_presets.v1.json` → `purpose_default_features
 
 Not yet wired: engine MaterialFunctions (see `docs/proposals/ws-08-material-function-composition.md`).
 
-`textures.generate` slots (`noise`, `gradient`, `voronoi`, `ring_mask`, `flow_map`) execute via `create_procedural_texture` and bind to MI texture parameters (`MainTexture`, `NoiseTexture`, `FlowMap`, `MaskTexture`). `flipbook_atlas` is a **scaffold** — parses grid spec, returns `partially_completed` (no pixel assembly yet).
+`textures.generate` slots (`noise`, `gradient`, `voronoi`, `ring_mask`, `flow_map`, `flipbook_atlas`) execute via `create_procedural_texture` and bind to MI texture parameters (`MainTexture`, `NoiseTexture`, `FlowMap`, `MaskTexture`). `flipbook_atlas` packs procedural per-frame noise cells into a grid; atlas dimensions must divide evenly by `flipbook.columns` × `flipbook.rows`.
 
 ## Epic tool composition (implementation note)
 

@@ -45,6 +45,13 @@ namespace
 			OutParams.CompressionSettings = TC_Grayscale;
 			return;
 		}
+		if (Kind == TEXT("flipbook_atlas"))
+		{
+			OutParams.bSRGB = true;
+			OutParams.bUseAlpha = false;
+			OutParams.CompressionSettings = TC_Default;
+			return;
+		}
 		OutParams.bSRGB = true;
 		OutParams.bUseAlpha = false;
 		OutParams.CompressionSettings = TC_Default;
@@ -72,7 +79,7 @@ bool UeremcpProceduralTextureService::IsSupportedGenerateKind(const FString& Kin
 
 bool UeremcpProceduralTextureService::IsImplementedGenerateKind(const FString& Kind)
 {
-	return Kind != TEXT("flipbook_atlas");
+	return IsSupportedGenerateKind(Kind);
 }
 
 bool UeremcpProceduralTextureService::ParseGenerateSpec(
@@ -156,7 +163,7 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 	FUeremcpProceduralTextureResult Result;
 	Result.CapabilityNotes = {
 		TEXT("procedural_texture_v1: CPU pixel fill via FImageUtils::CreateTexture2D — not Epic MaterialTools/RT draw."),
-		TEXT("flipbook_atlas: scaffold only — grid slice assembly into Texture2D is not implemented."),
+		TEXT("flipbook_atlas: CPU grid assembly of procedural per-frame cells — not external sheet import."),
 	};
 
 	if (!GEditor)
@@ -177,22 +184,6 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 	{
 		Result.Status = TEXT("rejected");
 		Result.Summary = FString::Printf(TEXT("Unsupported generate kind '%s'."), *Request.GenerateKind);
-		return Result;
-	}
-
-	if (!IsImplementedGenerateKind(Request.GenerateKind))
-	{
-		Result.Status = TEXT("partially_completed");
-		Result.Summary = FString::Printf(
-			TEXT("generate kind '%s' is recognized but not implemented (grid %dx%d, %d frames, atlas %dx%d)."),
-			*Request.GenerateKind,
-			Request.FlipbookColumns,
-			Request.FlipbookRows,
-			Request.FlipbookFrameCount,
-			Request.Width,
-			Request.Height);
-		Result.InterpretationNotes.Add(
-			TEXT("flipbook_atlas scaffold: specification parsed; CPU grid slice fill not implemented."));
 		return Result;
 	}
 
@@ -241,8 +232,25 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 	TArray<FColor> Pixels;
 	FString PixelError;
 	const int32 Seed = DefaultSeedForPath(Request.TargetAssetPath, Request.Seed);
-	if (!UeremcpProceduralTextureGenerator::GeneratePixels(
-		Request.GenerateKind, Request.Width, Request.Height, Seed, Pixels, PixelError))
+	const bool bPixelsOk =
+		Request.GenerateKind == TEXT("flipbook_atlas")
+			? UeremcpProceduralTextureGenerator::GenerateFlipbookAtlasPixels(
+				Request.Width,
+				Request.Height,
+				Request.FlipbookColumns,
+				Request.FlipbookRows,
+				Request.FlipbookFrameCount,
+				Seed,
+				Pixels,
+				PixelError)
+			: UeremcpProceduralTextureGenerator::GeneratePixels(
+				Request.GenerateKind,
+				Request.Width,
+				Request.Height,
+				Seed,
+				Pixels,
+				PixelError);
+	if (!bPixelsOk)
 	{
 		Result.Status = TEXT("failed_validation");
 		Result.Summary = PixelError;

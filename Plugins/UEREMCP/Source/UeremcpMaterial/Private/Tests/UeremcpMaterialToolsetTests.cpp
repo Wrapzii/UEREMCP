@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
+#include "Engine/Texture2D.h"
 #include "Misc/AutomationTest.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -286,6 +287,50 @@ bool FUeremcpMaterialCreateProceduralTextureTest::RunTest(const FString& Paramet
 	if (Subsystem)
 	{
 		TestTrue(TEXT("texture asset exists"), Subsystem->DoesAssetExist(Target));
+	}
+
+	UeremcpMaterialTests::DeleteIfExists(Target);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCreateProceduralTextureFlipbookAtlasTest,
+	"UeremcpMaterial.Toolset.CreateProceduralTexture.FlipbookAtlas",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialCreateProceduralTextureFlipbookAtlasTest::RunTest(const FString& Parameters)
+{
+	const FString Target = TEXT("/Game/__UeremcpTests/Textures/T_WS08_FlipbookAtlas_Probe");
+	UeremcpMaterialTests::DeleteIfExists(Target);
+
+	const FString Request = FString::Printf(TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"mat-tex-flipbook",
+		"action":"create_procedural_texture",
+		"target":{"asset_path":"%s"},
+		"specification":{
+			"generate":"flipbook_atlas",
+			"dimensions":[256,256],
+			"flipbook":{"columns":4,"rows":4,"frame_count":16},
+			"seed":11
+		},
+		"options":{"save":true,"validate":true}
+	})"), *Target);
+
+	const FString Json = UUeremcpMaterialToolset::CreateProceduralTexture(Request);
+	FString Status;
+	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
+	TestEqual(TEXT("created_and_validated"), Status, FString(TEXT("created_and_validated")));
+
+	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
+	if (Subsystem)
+	{
+		TestTrue(TEXT("flipbook atlas texture exists"), Subsystem->DoesAssetExist(Target));
+		if (UTexture2D* Texture = Cast<UTexture2D>(Subsystem->LoadAsset(Target)))
+		{
+			TestEqual(TEXT("atlas width"), Texture->GetSizeX(), 256);
+			TestEqual(TEXT("atlas height"), Texture->GetSizeY(), 256);
+		}
 	}
 
 	UeremcpMaterialTests::DeleteIfExists(Target);

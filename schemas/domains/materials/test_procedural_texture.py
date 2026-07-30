@@ -34,13 +34,7 @@ SUPPORTED_GENERATE_KINDS = frozenset({
     "flipbook_atlas",
 })
 
-IMPLEMENTED_GENERATE_KINDS = frozenset({
-    "noise",
-    "gradient",
-    "voronoi",
-    "ring_mask",
-    "flow_map",
-})
+IMPLEMENTED_GENERATE_KINDS = SUPPORTED_GENERATE_KINDS
 
 
 def load_registry() -> Registry:
@@ -79,10 +73,13 @@ class ProceduralTextureSchemaTests(unittest.TestCase):
             REPO_ROOT
             / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpProceduralTextureService.cpp"
         ).read_text(encoding="utf-8")
+        generator_cpp = (
+            REPO_ROOT
+            / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpProceduralTextureGenerator.cpp"
+        ).read_text(encoding="utf-8")
         self.assertIn("IsImplementedGenerateKind", cpp)
-        self.assertIn("flipbook_atlas", cpp)
-        self.assertTrue(IMPLEMENTED_GENERATE_KINDS <= SUPPORTED_GENERATE_KINDS)
-        self.assertNotIn("flipbook_atlas", IMPLEMENTED_GENERATE_KINDS)
+        self.assertIn("GenerateFlipbookAtlasPixels", generator_cpp)
+        self.assertEqual(IMPLEMENTED_GENERATE_KINDS, SUPPORTED_GENERATE_KINDS)
 
     def test_flipbook_atlas_example_validates(self) -> None:
         example = {

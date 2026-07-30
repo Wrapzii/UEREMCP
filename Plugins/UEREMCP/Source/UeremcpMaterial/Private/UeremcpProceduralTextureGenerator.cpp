@@ -136,3 +136,64 @@ bool UeremcpProceduralTextureGenerator::GeneratePixels(
 	OutError = FString::Printf(TEXT("Unsupported generate kind '%s'."), *Kind);
 	return false;
 }
+
+bool UeremcpProceduralTextureGenerator::GenerateFlipbookAtlasPixels(
+	int32 AtlasWidth,
+	int32 AtlasHeight,
+	int32 Columns,
+	int32 Rows,
+	int32 FrameCount,
+	int32 Seed,
+	TArray<FColor>& OutPixels,
+	FString& OutError)
+{
+	if (AtlasWidth < 1 || AtlasHeight < 1 || AtlasWidth > 4096 || AtlasHeight > 4096)
+	{
+		OutError = TEXT("flipbook_atlas dimensions must be between 1 and 4096.");
+		return false;
+	}
+	if (Columns < 1 || Rows < 1 || Columns > 64 || Rows > 64)
+	{
+		OutError = TEXT("flipbook columns and rows must be between 1 and 64.");
+		return false;
+	}
+	if (FrameCount < 1 || FrameCount > Columns * Rows)
+	{
+		OutError = TEXT("flipbook.frame_count must be between 1 and columns * rows.");
+		return false;
+	}
+	if (AtlasWidth % Columns != 0 || AtlasHeight % Rows != 0)
+	{
+		OutError = TEXT("flipbook_atlas atlas dimensions must divide evenly by columns and rows.");
+		return false;
+	}
+
+	const int32 CellWidth = AtlasWidth / Columns;
+	const int32 CellHeight = AtlasHeight / Rows;
+	OutPixels.SetNum(AtlasWidth * AtlasHeight);
+
+	for (int32 FrameIndex = 0; FrameIndex < FrameCount; ++FrameIndex)
+	{
+		TArray<FColor> FramePixels;
+		const int32 FrameSeed = Seed + FrameIndex * 7919;
+		if (!GeneratePixels(TEXT("noise"), CellWidth, CellHeight, FrameSeed, FramePixels, OutError))
+		{
+			return false;
+		}
+
+		const int32 Col = FrameIndex % Columns;
+		const int32 Row = FrameIndex / Columns;
+		const int32 OffsetX = Col * CellWidth;
+		const int32 OffsetY = Row * CellHeight;
+
+		for (int32 Y = 0; Y < CellHeight; ++Y)
+		{
+			for (int32 X = 0; X < CellWidth; ++X)
+			{
+				OutPixels[(OffsetY + Y) * AtlasWidth + (OffsetX + X)] = FramePixels[Y * CellWidth + X];
+			}
+		}
+	}
+
+	return true;
+}
