@@ -87,6 +87,12 @@ TArray<FString> FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCre
 	return Orphans;
 }
 
+bool FUeremcpNiagaraMaterialBindingDiagnostics::ShouldContinueAfterBindingFailure(
+	const FUeremcpNiagaraMaterialBindingResult& Result)
+{
+	return FindOrphanedInlineCreates(Result).Num() > 0;
+}
+
 TSharedPtr<FJsonObject> FUeremcpNiagaraMaterialBindingDiagnostics::BuildMaterialBindingsObject(
 	const FUeremcpNiagaraMaterialBindingResult& Result)
 {

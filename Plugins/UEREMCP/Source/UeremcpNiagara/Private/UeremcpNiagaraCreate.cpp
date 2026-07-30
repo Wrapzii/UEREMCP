@@ -4,6 +4,7 @@
 
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraMaterialBinding.h"
+#include "UeremcpNiagaraMaterialBindingDiagnostics.h"
 #include "UeremcpNiagaraPaths.h"
 #include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraRoleNames.h"
@@ -497,20 +498,31 @@ bool FUeremcpNiagaraCreate::Run(
 
 	if (ResolvedMaterialPaths.Num() > 0)
 	{
-		if (!FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
+		const bool bBindingOk = FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			System,
 			OutResult.EmittersAdded,
 			ResolvedMaterialPaths,
 			Spec.MaterialRequests,
 			Context,
 			OutResult.MaterialBindings,
-			OutResult.InternalOperations))
-		{
-			OutResult.Error = TEXT("Renderer material binding failed re-read verification.");
-			return false;
-		}
+			OutResult.InternalOperations);
 
-		if (OutResult.MaterialBindings.bAllRequestedVerified)
+		if (!bBindingOk)
+		{
+			if (FUeremcpNiagaraMaterialBindingDiagnostics::ShouldContinueAfterBindingFailure(
+				OutResult.MaterialBindings))
+			{
+				OutResult.bMaterialBindingPartialFailure = true;
+				OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings"));
+				OutResult.ChecksSkipped.Add(TEXT("niagara.material_bindings_orphaned_inline_creates"));
+			}
+			else
+			{
+				OutResult.Error = TEXT("Renderer material binding failed re-read verification.");
+				return false;
+			}
+		}
+		else if (OutResult.MaterialBindings.bAllRequestedVerified)
 		{
 			OutResult.ChecksPerformed.Add(TEXT("niagara.material_bindings"));
 		}
@@ -612,6 +624,15 @@ bool FUeremcpNiagaraCreate::Run(
 				TEXT(" %d inline create_spec material(s) failed or unverified."),
 				FailedInline);
 		}
+	}
+
+	if (OutResult.bMaterialBindingPartialFailure)
+	{
+		const TArray<FString> OrphanedRoles =
+			FUeremcpNiagaraMaterialBindingDiagnostics::FindOrphanedInlineCreates(OutResult.MaterialBindings);
+		OutResult.Summary += FString::Printf(
+			TEXT(" %d orphaned inline material(s) saved under probe root but renderer bind unverified."),
+			OrphanedRoles.Num());
 	}
 
 	return true;

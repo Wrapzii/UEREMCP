@@ -16,9 +16,13 @@ public:
 		const FUeremcpNiagaraMaterialBindingResult& Result);
 
 	/**
-	 * Roles where inline create_spec succeeded (PrimaryAsset saved) but renderer binding
-	 * remains unresolved — honest partial-failure signal without claiming *_validated.
+	 * Roles where inline create_spec succeeded but renderer binding remains unresolved.
+	 * When non-empty after ApplyRoleMaterialBindings, Create::Run continues as partially_completed.
 	 */
 	static TArray<FString> FindOrphanedInlineCreates(
+		const FUeremcpNiagaraMaterialBindingResult& Result);
+
+	/** True when bind failed but probe inline MIs were saved — continuable partial failure. */
+	static bool ShouldContinueAfterBindingFailure(
 		const FUeremcpNiagaraMaterialBindingResult& Result);
 };

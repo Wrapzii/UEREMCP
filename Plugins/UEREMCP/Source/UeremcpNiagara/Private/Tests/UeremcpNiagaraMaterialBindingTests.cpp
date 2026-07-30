@@ -245,6 +245,19 @@ bool FUeremcpNiagaraMaterialBindingDiagnosticsOfflineTest::RunTest(const FString
 		TEXT("empty result yields null diagnostics"),
 		FUeremcpNiagaraMaterialBindingDiagnostics::BuildMaterialBindingsObject(EmptyResult).Get());
 
+	FUeremcpNiagaraMaterialBindingResult DirectBindFailure;
+	DirectBindFailure.ResolvedMaterialPaths.Add(
+		TEXT("sparks"),
+		TEXT("/Game/__UeremcpTests/Materials/MI_Sparks.MI_Sparks"));
+	DirectBindFailure.UnresolvedMaterialBindings.Add(
+		TEXT("sparks: renderer 0 re-read material path mismatch"));
+	TestFalse(
+		TEXT("direct bind failure not continuable"),
+		FUeremcpNiagaraMaterialBindingDiagnostics::ShouldContinueAfterBindingFailure(DirectBindFailure));
+	TestTrue(
+		TEXT("orphan bind failure continuable"),
+		FUeremcpNiagaraMaterialBindingDiagnostics::ShouldContinueAfterBindingFailure(Result));
+
 	return true;
 }
 

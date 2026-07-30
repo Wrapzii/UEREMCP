@@ -253,6 +253,11 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	Response.UnderstoodTarget = Request.TargetAssetPath;
 	Response.PrimaryAsset = CreateResult.CreatedAssetPath;
 	Response.CapabilityNotes = UeremcpNiagaraCapability::DefaultCreateCapabilityNotes();
+	if (CreateResult.bMaterialBindingPartialFailure)
+	{
+		Response.CapabilityNotes.Add(TEXT(
+			"Inline probe MIs were saved but renderer bind/re-read failed; orphaned_inline_creates lists roles left on disk under /Game/__UeremcpTests/Materials/. Status stays partially_completed."));
+	}
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = CreateResult.InternalOperations;
 	if (bRanRoundTrip)
@@ -352,6 +357,15 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	else
 	{
 		Validation->SetField(TEXT("material_bindings_verified"), MakeShared<FJsonValueNull>());
+	}
+
+	if (CreateResult.bMaterialBindingPartialFailure)
+	{
+		Validation->SetBoolField(TEXT("material_bindings_orphaned_inline_creates"), true);
+	}
+	else
+	{
+		Validation->SetField(TEXT("material_bindings_orphaned_inline_creates"), MakeShared<FJsonValueNull>());
 	}
 
 	Extra->SetObjectField(TEXT("validation"), Validation);

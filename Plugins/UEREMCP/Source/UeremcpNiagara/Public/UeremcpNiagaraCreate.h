@@ -45,6 +45,7 @@ struct FUeremcpNiagaraCreateResult
 	TArray<FString> ChecksSkipped;
 
 	bool bReplacedExisting = false;
+	bool bMaterialBindingPartialFailure = false;
 
 	FUeremcpNiagaraMaterialBindingResult MaterialBindings;
 

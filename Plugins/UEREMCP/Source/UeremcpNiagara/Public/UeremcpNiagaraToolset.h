@@ -24,7 +24,7 @@ class UEREMCPNIAGARA_API UUeremcpNiagaraToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.9.0-inline-materials"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.9.1-orphan-partial-failure"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.

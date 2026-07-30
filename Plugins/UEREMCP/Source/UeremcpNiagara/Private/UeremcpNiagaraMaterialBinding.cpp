@@ -510,7 +510,12 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 	FUeremcpNiagaraMaterialBindingResult& OutResult,
 	int32& InOutInternalOperations)
 {
+	const TArray<FUeremcpNiagaraInlineMaterialCreate> PreservedInlineCreates = OutResult.InlineMaterialCreates;
+	const TArray<FString> PreservedPreBindUnresolved = OutResult.UnresolvedMaterialBindings;
+
 	OutResult = FUeremcpNiagaraMaterialBindingResult();
+	OutResult.InlineMaterialCreates = PreservedInlineCreates;
+	OutResult.UnresolvedMaterialBindings = PreservedPreBindUnresolved;
 	OutResult.ResolvedMaterialPaths = RoleToCanonicalMaterialPath;
 	OutResult.bAttempted = RoleToCanonicalMaterialPath.Num() > 0;
 
