@@ -5,7 +5,7 @@
 - **Integration worktree:** `$UEREMCP_ROOT-integration`
 - **Branch:** `ws-01-poc-cde-integration`
 - **Base tip:** `ws-07-niagara-status-honesty` @ `b84397fa6ccbe92fe45fd2cdf7b9efd2b6f8aac7`
-- **Final tip:** see commit created with this record (parent `b84397f` + this consolidation)
+- **Final tip:** `ab711c2aa045cb582a53b700b6953705cf0059dc` (parent `b84397f`)
 
 ## What “merge everything” meant here
 
@@ -152,7 +152,7 @@ base**:
 ```text
 worktree: $UEREMCP_ROOT-integration
 branch:   ws-01-poc-cde-integration
-base SHA: <final tip after this commit>
+base SHA: b711c2aa045cb582a53b700b6953705cf0059dc (or later ws-01-poc-cde-integration HEAD)
 ```
 
 Recommended launch (phase 2 — **not done here**):
