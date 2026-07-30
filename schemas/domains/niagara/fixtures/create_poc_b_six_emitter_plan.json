@@ -1,0 +1,103 @@
+{
+  "$comment": "POC B six-emitter elemental projectile plan (WS-07 offline fixture). Aligns with docs/POC_ACCEPTANCE.md POC B and create_niagara_effect.schema.json Fireball example.",
+  "request": {
+    "action": "create_niagara_effect",
+    "mode": "replace",
+    "target": {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe"
+    },
+    "specification": {
+      "name": "NS_POCB_FireballProbe",
+      "effect_type": "projectile",
+      "element": "fire",
+      "components": [
+        "core",
+        "flame_shell",
+        "sparks",
+        "smoke",
+        "ribbon_trail",
+        "impact_burst"
+      ],
+      "parameters": {
+        "primary_color": [1.0, 0.12, 0.01, 1.0],
+        "secondary_color": [1.0, 0.75, 0.05, 1.0],
+        "scale": 1.0,
+        "intensity": 8.0
+      },
+      "template_system": {
+        "asset_path": "/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight"
+      }
+    },
+    "options": {
+      "dry_run": true,
+      "compile": true,
+      "validate": true,
+      "save": true
+    }
+  },
+  "poc_b_emitter_plan": {
+    "default_system_template": "/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight",
+    "roles": [
+      {
+        "role": "core",
+        "emitter_name": "Core",
+        "emitter_template": "/Niagara/DefaultAssets/Templates/Emitters/Minimal"
+      },
+      {
+        "role": "flame_shell",
+        "emitter_name": "FlameShell",
+        "emitter_template": "/Niagara/DefaultAssets/Templates/Emitters/UpwardMeshBurst"
+      },
+      {
+        "role": "sparks",
+        "emitter_name": "Sparks",
+        "emitter_template": "/Niagara/DefaultAssets/Templates/Emitters/SimpleSpriteBurst"
+      },
+      {
+        "role": "smoke",
+        "emitter_name": "Smoke",
+        "emitter_template": "/Niagara/DefaultAssets/Templates/Emitters/Fountain"
+      },
+      {
+        "role": "ribbon_trail",
+        "emitter_name": "RibbonTrail",
+        "emitter_template": "/Niagara/DefaultAssets/Templates/Emitters/LocationBasedRibbon"
+      },
+      {
+        "role": "impact_burst",
+        "emitter_name": "ImpactBurst",
+        "emitter_template": "/Niagara/DefaultAssets/Templates/Emitters/OmnidirectionalBurst"
+      }
+    ]
+  },
+  "expectations": {
+    "allowed_probe_root": "/Game/__UeremcpTests/",
+    "emitter_count": 6,
+    "dry_run_status": "no_change_required",
+    "response_status": "partially_completed",
+    "validation_never_claims": [
+      "created_and_validated",
+      "modified_and_validated"
+    ],
+    "poc_b_criteria_status": {
+      "B1_one_request": "planned",
+      "B3_six_emitters": "implemented_probe",
+      "B4_renderer_materials": "partial_material_bindings",
+      "B5_user_parameters": "implemented_probe",
+      "B6_compile_await": "implemented_probe",
+      "B7_structural_validation": "partial_round_trip",
+      "B8_save_restart": "implemented_probe_unverified_restart",
+      "B10_visible_render": "not_implemented"
+    },
+    "checks_performed_when_successful": [
+      "niagara.create_system_from_template",
+      "niagara.add_emitters_from_roles",
+      "niagara.compile_await",
+      "niagara.save_package"
+    ],
+    "checks_skipped_honest_gaps": [
+      "niagara.structural_re_read",
+      "niagara.runtime_smoke_test"
+    ]
+  }
+}

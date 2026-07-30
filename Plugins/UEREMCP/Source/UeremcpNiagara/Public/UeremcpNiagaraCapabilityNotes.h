@@ -32,7 +32,7 @@ namespace UeremcpNiagaraCapability
 	inline TArray<FString> DefaultCreateCapabilityNotes()
 	{
 		return {
-			TEXT("create_niagara_effect is a POC B probe slice: duplicate template, add role emitters, optional User.* params, compile await, save."),
+			TEXT("create_niagara_effect is a POC B probe slice: duplicate template, add six emitter roles (core, flame_shell, sparks, smoke, ribbon_trail, impact_burst), optional User.* params, compile await, save."),
 			TEXT("material_bindings: assigns probe UMaterialInterface paths via GetRendererData/SetRendererData; inline create_spec delegates to UeremcpMaterialNiagaraExport (probe MI paths only)."),
 			TEXT("orphaned_inline_creates lists roles where inline MI creation succeeded but renderer bind/re-read failed — Create::Run continues as partially_completed; probe MIs are never deleted."),
 			TEXT("POC B emitters non-empty / renderer-bound checks are not yet implemented — status stays partially_completed, never *_validated."),

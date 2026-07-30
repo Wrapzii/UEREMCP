@@ -111,13 +111,38 @@ Use envelope **`mode: "replace"`** (not a specification field) to delete and rec
 
 Example target: `/Game/__UeremcpTests/NS_WS07_RoundTripProbe`.
 
+### POC B six-emitter plan (`create_poc_b_six_emitter_plan.json`)
+
+Elemental projectile acceptance target from `docs/POC_ACCEPTANCE.md` POC B — six component
+roles composed from Epic default emitter templates:
+
+| Role | Emitter name | Template |
+|---|---|---|
+| `core` | Core | `/Niagara/DefaultAssets/Templates/Emitters/Minimal` |
+| `flame_shell` | FlameShell | `…/UpwardMeshBurst` |
+| `sparks` | Sparks | `…/SimpleSpriteBurst` |
+| `smoke` | Smoke | `…/Fountain` |
+| `ribbon_trail` | RibbonTrail | `…/LocationBasedRibbon` |
+| `impact_burst` | ImpactBurst | `…/OmnidirectionalBurst` |
+
+System template default: `/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight`.
+
+Implementation mapping lives in `UeremcpNiagaraRoles::DefaultPocBComponentRoles()` and
+`ResolveEmitterTemplatePath()`. Offline fixture validates the request shape and documents
+honest criterion status — response stays **`partially_completed`**, never `*_validated`,
+until B4/B7/B10 gates pass in editor (WS-11).
+
+Probe target for live runs: `/Game/__UeremcpTests/NS_POCB_FireballProbe`.
+
 ### Material bindings (`specification.materials`)
 
 Direct probe material paths under `/Game/__UeremcpTests/Materials/` are assigned via
 `GetRendererData` / `SetRendererData` on matching emitter renderers, with re-read
-verification. Inline `{create_spec}` entries remain blocked until WS-08 exports
-`UeremcpMaterialService` with `UEREMCPMATERIAL_API`. Status stays **`partially_completed`**
-unless every requested role re-reads equal — never `*_validated` without full POC B gate.
+verification. Inline `{create_spec}` entries delegate to `UeremcpMaterialNiagaraExport`
+(probe MI paths only; requires orch merge of WS-08 `UeremcpMaterial`). Orphan inline MIs
+after bind failure surface as `orphaned_inline_creates`. Status stays
+**`partially_completed`** unless every requested role re-reads equal — never
+`*_validated` without full POC B gate.
 
 ### Content hash scaffolding (`FUeremcpNiagaraGraphHash` / `FUeremcpNiagaraHashRoundTrip`)
 

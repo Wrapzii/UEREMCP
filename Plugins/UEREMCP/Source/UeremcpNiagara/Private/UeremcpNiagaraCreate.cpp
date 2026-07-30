@@ -30,20 +30,7 @@ namespace
 
 	FString ResolveEmitterTemplatePath(const FString& Role)
 	{
-		const FString Key = Role.ToLower();
-		static const TMap<FString, FString> RoleTemplates = {
-			{ TEXT("core"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/Minimal") },
-			{ TEXT("flame_shell"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/UpwardMeshBurst") },
-			{ TEXT("sparks"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/SimpleSpriteBurst") },
-			{ TEXT("smoke"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/Fountain") },
-			{ TEXT("ribbon_trail"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/LocationBasedRibbon") },
-			{ TEXT("impact_burst"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/OmnidirectionalBurst") },
-		};
-		if (const FString* Found = RoleTemplates.Find(Key))
-		{
-			return *Found;
-		}
-		return RoleTemplates.FindRef(TEXT("sparks"));
+		return UeremcpNiagaraRoles::ResolveEmitterTemplatePath(Role);
 	}
 
 	UObject* LoadSoftPath(const FString& SoftPath)

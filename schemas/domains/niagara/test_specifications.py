@@ -40,6 +40,7 @@ EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
     "partially_completed",
     "orphaned_inline_creates",
     "POC B",
+    "six emitter",
     "post-create inspect",
     "mode 'replace'",
 )
@@ -241,6 +242,44 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertTrue(any(entry.startswith("ribbon_trail:") for entry in unresolved))
         self.assertIn("sparks/renderer_0", diagnostics["renderer_bindings_verified"])
         self.assertNotIn("ribbon_trail/renderer_0", diagnostics["renderer_bindings_verified"])
+
+    def test_create_poc_b_six_emitter_plan_fixture(self) -> None:
+        fixture = load_fixture("create_poc_b_six_emitter_plan.json")
+        spec = fixture["request"]["specification"]
+        expectations = fixture["expectations"]
+        plan = fixture["poc_b_emitter_plan"]
+
+        validator = Draft202012Validator(
+            load_schema("create_niagara_effect.schema.json"),
+            registry=self.registry,
+        )
+        validator.validate(spec)
+
+        self.assertEqual(len(spec["components"]), expectations["emitter_count"])
+        self.assertEqual(len(plan["roles"]), expectations["emitter_count"])
+        self.assertTrue(
+            fixture["request"]["target"]["asset_path"].startswith(
+                expectations["allowed_probe_root"]
+            )
+        )
+        self.assertEqual(expectations["response_status"], "partially_completed")
+        self.assertEqual(
+            set(expectations["validation_never_claims"]),
+            {"created_and_validated", "modified_and_validated"},
+        )
+
+        plan_roles = {entry["role"]: entry for entry in plan["roles"]}
+        for role in spec["components"]:
+            self.assertIn(role, plan_roles)
+            entry = plan_roles[role]
+            self.assertEqual(entry["emitter_name"], "".join(part.capitalize() for part in role.split("_")))
+
+        self.assertIn("B3_six_emitters", expectations["poc_b_criteria_status"])
+        self.assertEqual(
+            expectations["poc_b_criteria_status"]["B3_six_emitters"],
+            "implemented_probe",
+        )
+        self.assertIn("niagara.runtime_smoke_test", expectations["checks_skipped_honest_gaps"])
 
     def test_hash_round_trip_scaffold_fixture(self) -> None:
         import sys
