@@ -34,5 +34,8 @@ public class UeremcpBlueprint : ModuleRules
 			// [VERIFIED: $TR/ToolsetRegistry.uplugin — Editor module]
 			"ToolsetRegistry",
 		});
+
+		// Post-orch-merge: set to 1 and add UeremcpCore + UeremcpSecurity (see ws-06-mutating-dispatch-adoption.md).
+		PublicDefinitions.Add("UEREMCP_BLUEPRINT_MUTATING_DISPATCH=0");
 	}
 }

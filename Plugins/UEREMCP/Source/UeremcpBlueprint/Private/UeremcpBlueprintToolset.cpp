@@ -2,6 +2,7 @@
 
 #include "UeremcpBlueprintGraphReader.h"
 #include "UeremcpBlueprintGraphWriter.h"
+#include "UeremcpBlueprintMutatingGate.h"
 #include "UeremcpEnvelope.h"
 
 #include "Engine/Blueprint.h"
@@ -200,6 +201,13 @@ FString UUeremcpBlueprintToolset::ReadGraph(const FString& RequestJson)
 		return FUeremcpEnvelope::MakeRejection(Request.RequestId, Error);
 	}
 
+	FUeremcpBlueprintMutatingGate ReadGate;
+	FString BlockingResponse;
+	if (!ReadGate.TryBeginRead(RequestJson, BlockingResponse))
+	{
+		return BlockingResponse;
+	}
+
 	FString LoadError;
 	UBlueprint* Blueprint = LoadBlueprintAsset(Request.TargetAssetPath, LoadError);
 	if (!Blueprint)
@@ -277,7 +285,7 @@ FString UUeremcpBlueprintToolset::ReadGraph(const FString& RequestJson)
 	Validation->SetArrayField(TEXT("checks_skipped"), Skipped);
 	Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
 
-	return FUeremcpEnvelope::SerializeResponse(Response);
+	return ReadGate.Complete(Response);
 }
 
 FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
@@ -477,6 +485,26 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 	WriteOptions.bValidate = Request.bValidate;
 	WriteOptions.bSave = Request.bSave;
 
+	TOptional<FUeremcpBlueprintMutatingGate> MutatingGate;
+	if (!Request.bDryRun)
+	{
+		MutatingGate.Emplace();
+		FString DispatchBlockingResponse;
+		if (!MutatingGate->TryBeginMutating(RequestJson, true, DispatchBlockingResponse))
+		{
+			return DispatchBlockingResponse;
+		}
+	}
+
+	auto FinishSubmitResponse = [&MutatingGate](const FUeremcpResponse& Resp) -> FString
+	{
+		if (MutatingGate.IsSet() && MutatingGate->IsActive())
+		{
+			return MutatingGate->Complete(Resp);
+		}
+		return FUeremcpEnvelope::SerializeResponse(Resp);
+	};
+
 	FUeremcpBlueprintReplaceGraphResult WriteResult;
 	if (!FUeremcpBlueprintGraphWriter::ReplaceGraph(
 			Blueprint,
@@ -496,7 +524,7 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 			false,
 			{TEXT("blueprint.current_graph_read"), TEXT("blueprint.submitted_graph_hash_compare")},
 			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
-		return FUeremcpEnvelope::SerializeResponse(Response);
+		return FinishSubmitResponse(Response);
 	}
 
 	Response.Metrics.InternalOperations += WriteResult.InternalOperations;
@@ -587,6 +615,13 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 		SkippedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
 	}
 
+	if (MutatingGate.IsSet() && MutatingGate->IsActive())
+	{
+		PerformedChecks.Add(TEXT("core_mutating_dispatch_admitted"));
+		Response.CapabilityNotes.Add(
+			TEXT("FUeremcpMutatingDispatch owns permission, path, queue, audit, and release when enabled."));
+	}
+
 	AttachSubmitValidation(Response, WriteResult.bSuccess, PerformedChecks, SkippedChecks);
-	return FUeremcpEnvelope::SerializeResponse(Response);
+	return FinishSubmitResponse(Response);
 }

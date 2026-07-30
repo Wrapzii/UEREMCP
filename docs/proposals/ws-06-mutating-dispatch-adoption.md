@@ -1,63 +1,60 @@
-# WS-06: Mutating main-thread dispatch adoption (proposal)
+# WS-06: MutatingDispatch adoption (orch API)
 
 - **From:** WS-06
-- **Date:** 2026-07-30
-- **Status:** Proposal only — **UeremcpCore wiring not owned by WS-06**
+- **Date:** 2026-07-30 (updated post-orch review)
+- **Status:** **Prepared** — gate wired; Core dispatch **disabled** until orch merge
 
-## Problem
+## Orch API (not RunOnGameThread)
 
-`UUeremcpBlueprintToolset::ReadGraph` / `SubmitGraph` execute synchronously on
-whatever thread invokes the MCP tool. Epic `ToolsetRegistry::ExecuteTool` and
-Blueprint graph mutation require the **game/editor main thread**. Today the
-toolset calls Epic bridge + `WriteGraphDsl` inline; this is fragile if transport
-ever invokes tools off-thread (WS-04) or during async job polling (ADR-0009).
+`ws-01-orch` ships `FUeremcpMutatingDispatch` in **UeremcpCore** (owner WS-03):
 
-There is **no** `MutatingDispatch` helper on branch `ws-06-blueprint` yet (searched
-`Plugins/UEREMCP/Source/**`, 2026-07-30). **`ws-01-orch` carries
-`FUeremcpMutatingDispatch::RunOnGameThread`** (`UeremcpMutatingDispatch.h`); WS-06
-adoption waits for orch merge into this worktree (separate lane).
-
-## Ask (WS-03 / UeremcpCore)
-
-Introduce a shared helper (name illustrative):
-
-```cpp
-// UeremcpMutatingDispatch.h — owner: WS-03
-template<typename TResult>
-TResult RunOnGameThread(TFunction<TResult()> MutatingWork);
-```
-
-Requirements:
-
-1. **Block caller** until main-thread work completes (matches current sync tool shape).
-2. **Propagate errors** as `TResult` or `TOptional` + `FString Error` — do not swallow.
-3. **Metrics hook** — increment `InternalOperations` once per dispatched mutation batch.
-4. **Reentrant-safe** — if already on game thread, run inline (no deadlock).
-
-## WS-06 adoption plan (after WS-03 lands)
-
-| Call site | Wrap |
+| Method | Role |
 |---|---|
-| `FUeremcpBlueprintEpicBridge::ExecuteToolSync` | Entire poll loop |
-| `FUeremcpBlueprintGraphWriter::ReplaceGraph` | `WriteGraphDsl` + save + re-read |
-| `FUeremcpBlueprintGraphReader::ReadGraph` | Graph walk (if ever off-thread) |
+| `TryBegin(RequestJson, bTargetExists, PredictedDeletedAssetCount, bReadOnlyOperation, OutBlockingJson)` | Permission + path + mutator queue; returns false with blocking JSON |
+| `Complete(Response)` | Audit append + mutator release + serialize |
+| `IsEffectiveDryRun()` | Post-gate dry_run after ADR-0010 destructive override |
 
-Blueprint toolset surface stays JSON-in/JSON-out; dispatch is internal.
+Reference adoption: `UeremcpGameplayToolset::CreateSpell` on `ws-01-orch`.
+
+**Not** a game-thread hop — main-thread assumption remains in Epic bridge polling.
+
+## WS-06 landing (this branch)
+
+| File | Role |
+|---|---|
+| `FUeremcpBlueprintMutatingGate` | Domain adapter; `#if UEREMCP_BLUEPRINT_MUTATING_DISPATCH` |
+| `UeremcpBlueprintToolset::ReadGraph` | `TryBeginRead` → work → `Complete` |
+| `UeremcpBlueprintToolset::SubmitGraph` | `TryBeginMutating` before live `ReplaceGraph`; `Complete` on live paths |
+| `UeremcpBlueprint.Build.cs` | `UEREMCP_BLUEPRINT_MUTATING_DISPATCH=0` (default) |
+
+### Enable after orch merge
+
+1. Merge `ws-01-orch` (or equivalent) into this worktree.
+2. In `UeremcpBlueprint.Build.cs`:
+   - Set `UEREMCP_BLUEPRINT_MUTATING_DISPATCH=1`
+   - Add `UeremcpCore`, `UeremcpSecurity` to `PrivateDependencyModuleNames`
+3. Rebuild plugin; WS-11 adds editor regression for queue + permission blocks.
+
+### Call-site parameters
+
+| Tool | TryBegin | Notes |
+|---|---|---|
+| `read_graph` | `bTargetExists=true`, `PredictedDeleted=0`, `bReadOnly=true` | Read tier; no mutator slot |
+| `submit_graph` (live) | `bTargetExists=true`, `PredictedDeleted=0`, `bReadOnly=false` | Skipped when `options.dry_run` |
+| `submit_graph` (dry_run) | *(skipped)* | Matches Gameplay pattern |
+
+Live success adds check `core_mutating_dispatch_admitted`.
 
 ## Non-goals
 
-- WS-06 does **not** edit `UeremcpCore/**` (WS-03 owned)
-- No claim that editor tests are green (A6) after dispatch — verification remains WS-11
-- No async fire-and-forget; ADR-0009 jobs still poll `get_job_result`
+- WS-06 does **not** edit `UeremcpCore/**` or `UeremcpSecurity/**`
+- No A6 editor-green claim until WS-11 verifies post-merge
+- No RE junction retarget
 
-## Handoff
+## Blockers
 
-| Owner | Action |
+| Blocker | Owner |
 |---|---|
-| **WS-03** | Implement `RunOnGameThread` (or Epic-equivalent) in `UeremcpCore` |
-| **WS-06** | Replace inline Epic calls with dispatch wrapper in one follow-up commit |
-| **WS-11** | Add regression test: invoke tool from non-game thread stub → no ensure |
-
-## POC impact
-
-None until wired. Offline tests and scratch-path policy remain valid without dispatch.
+| Orch merge into `ws-06-blueprint` | WS-01 orchestration |
+| Flip `UEREMCP_BLUEPRINT_MUTATING_DISPATCH=1` | WS-06 after merge |
+| Editor queue/permission regression | WS-11 |
