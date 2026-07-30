@@ -50,9 +50,17 @@
   },
   "expected_response_honesty": {
     "status": "partially_completed",
-    "never_claims": ["created_and_validated", "modified_and_validated"],
+    "never_claims": [
+      "created_and_validated",
+      "modified_and_validated",
+      "mcp_transport_one_call",
+      "editor_restart_survival"
+    ],
     "extra_poc_b_gates": {
       "round_trip_supported": false,
+      "B1_single_request_complete": "true_when_full_fireball_pipeline_in_one_create",
+      "B8_assets_saved": "true_when_save_package_succeeds",
+      "B8_restart_survival": "null_until_ws11_restart_harness",
       "B7_emitters_non_empty": true,
       "B7_structural_match": "boolean_or_null_when_inspect_fails",
       "B7_renderers_present": "boolean_when_inspect_succeeded",

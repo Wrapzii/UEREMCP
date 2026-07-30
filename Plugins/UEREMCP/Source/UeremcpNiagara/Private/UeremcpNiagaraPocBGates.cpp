@@ -25,6 +25,60 @@ namespace
 			&& UserVariablesAdded.Contains(TEXT("User.Intensity"))
 			&& UserVariablesAdded.Contains(TEXT("User.Color"));
 	}
+
+	bool ManifestHasPrimarySystemChange(
+		const FUeremcpNiagaraChangeManifestResult& Manifest,
+		const FString& SystemPath)
+	{
+		if (SystemPath.IsEmpty())
+		{
+			return false;
+		}
+
+		for (const FUeremcpAssetRef& Ref : Manifest.CreatedAssets)
+		{
+			if (Ref.AssetPath == SystemPath)
+			{
+				return true;
+			}
+		}
+		for (const FUeremcpAssetRef& Ref : Manifest.ModifiedAssets)
+		{
+			if (Ref.AssetPath == SystemPath)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool ManifestReportsMaterialAssets(const FUeremcpNiagaraChangeManifestResult& Manifest)
+	{
+		for (const FUeremcpAssetRef& Ref : Manifest.CreatedAssets)
+		{
+			if (Ref.AssetClass.Contains(TEXT("Material")))
+			{
+				return true;
+			}
+		}
+		for (const FUeremcpAssetRef& Ref : Manifest.ReusedAssets)
+		{
+			if (Ref.AssetClass.Contains(TEXT("Material")))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool CreatePipelineCompletedInOnePass(const FUeremcpNiagaraCreateResult& CreateResult)
+	{
+		return CreateResult.bSuccess
+			&& !CreateResult.CreatedAssetPath.IsEmpty()
+			&& CreateResult.ChecksPerformed.Contains(TEXT("niagara.create_system_from_template"))
+			&& CreateResult.ChecksPerformed.Contains(TEXT("niagara.add_emitters_from_roles"))
+			&& CreateResult.ChecksPerformed.Contains(TEXT("niagara.save_package"));
+	}
 }
 
 FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
@@ -33,6 +87,59 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 	const FUeremcpNiagaraChangeManifestResult* Manifest)
 {
 	FUeremcpNiagaraPocBGateResult Out;
+
+	const bool bMaterialsRequested = CreateResult.MaterialBindings.bAttempted
+		|| CreateResult.MaterialBindings.InlineMaterialCreates.Num() > 0
+		|| CreateResult.MaterialBindings.ResolvedMaterialPaths.Num() > 0;
+
+	if (CreateResult.bSuccess && !CreateResult.CreatedAssetPath.IsEmpty())
+	{
+		Out.bB1SingleRequestEvaluated = true;
+		const bool bMaterialsComplete = !bMaterialsRequested
+			|| CreateResult.MaterialBindings.bAllRequestedVerified;
+		const bool bEmittersComplete = CreateResult.EmittersAdded.Num() == 0
+			|| HasAllPocBEmitterRoles(CreateResult.EmittersAdded);
+		const bool bUserParamsComplete = CreateResult.UserVariablesAdded.Num() == 0
+			|| HasPocBUserParameters(CreateResult.UserVariablesAdded);
+		const bool bCompileComplete = !CreateResult.bCompiled.IsSet() || CreateResult.bCompiled.GetValue();
+		Out.bB1SingleRequestComplete = CreatePipelineCompletedInOnePass(CreateResult)
+			&& bEmittersComplete
+			&& bUserParamsComplete
+			&& bMaterialsComplete
+			&& bCompileComplete;
+		if (Out.bB1SingleRequestComplete)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B1_single_request"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B1_single_request"));
+		}
+	}
+	else
+	{
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B1_single_request"));
+	}
+
+	if (CreateResult.bSaved.IsSet())
+	{
+		Out.bB8AssetsSavedEvaluated = true;
+		Out.bB8AssetsSaved = CreateResult.bSaved.GetValue()
+			&& CreateResult.ChecksPerformed.Contains(TEXT("niagara.save_package"));
+		if (Out.bB8AssetsSaved)
+		{
+			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B8_assets_saved"));
+		}
+		else
+		{
+			Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B8_assets_saved"));
+		}
+	}
+	else
+	{
+		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B8_assets_saved"));
+	}
+	Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B8_restart_survival"));
 
 	if (CreateResult.EmittersAdded.Num() > 0)
 	{
@@ -63,9 +170,6 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 		Out.ChecksSkipped.Add(TEXT("niagara.poc_b.B4_material_bindings"));
 	}
 
-	const bool bMaterialsRequested = CreateResult.MaterialBindings.bAttempted
-		|| CreateResult.MaterialBindings.InlineMaterialCreates.Num() > 0
-		|| CreateResult.MaterialBindings.ResolvedMaterialPaths.Num() > 0;
 	if (Manifest && bMaterialsRequested)
 	{
 		Out.bB2MaterialsManifestEvaluated = true;
@@ -140,7 +244,15 @@ FUeremcpNiagaraPocBGateResult FUeremcpNiagaraPocBGates::Evaluate(
 	{
 		Out.bB9ChangeManifestEvaluated = true;
 		Out.bB9ChangeManifestPresent = Manifest->bPopulated && Manifest->Changes.Num() > 0;
-		if (Out.bB9ChangeManifestPresent)
+		const bool bHasSystemChange = ManifestHasPrimarySystemChange(*Manifest, CreateResult.CreatedAssetPath);
+		const bool bHasMaterialManifest = !bMaterialsRequested || ManifestReportsMaterialAssets(*Manifest);
+		const bool bHasEmitterChanges = CreateResult.EmittersAdded.Num() == 0
+			|| Manifest->Changes.Num() >= static_cast<int32>(CreateResult.EmittersAdded.Num());
+		Out.bB9ChangeManifestComplete = Out.bB9ChangeManifestPresent
+			&& bHasSystemChange
+			&& bHasMaterialManifest
+			&& bHasEmitterChanges;
+		if (Out.bB9ChangeManifestComplete)
 		{
 			Out.ChecksPerformed.Add(TEXT("niagara.poc_b.B9_change_manifest"));
 		}
@@ -235,6 +347,15 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	TSharedPtr<FJsonObject> Gates = MakeShared<FJsonObject>();
 	Gates->SetBoolField(TEXT("round_trip_supported"), false);
 
+	if (Result.bB1SingleRequestEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B1_single_request_complete"), Result.bB1SingleRequestComplete);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B1_single_request_complete"), MakeShared<FJsonValueNull>());
+	}
+
 	if (Result.bB3SixEmittersEvaluated)
 	{
 		Gates->SetBoolField(TEXT("B3_six_emitters_present"), Result.bB3SixEmittersPresent);
@@ -285,11 +406,23 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	if (Result.bB9ChangeManifestEvaluated)
 	{
 		Gates->SetBoolField(TEXT("B9_change_manifest_present"), Result.bB9ChangeManifestPresent);
+		Gates->SetBoolField(TEXT("B9_change_manifest_complete"), Result.bB9ChangeManifestComplete);
 	}
 	else
 	{
 		Gates->SetField(TEXT("B9_change_manifest_present"), MakeShared<FJsonValueNull>());
+		Gates->SetField(TEXT("B9_change_manifest_complete"), MakeShared<FJsonValueNull>());
 	}
+
+	if (Result.bB8AssetsSavedEvaluated)
+	{
+		Gates->SetBoolField(TEXT("B8_assets_saved"), Result.bB8AssetsSaved);
+	}
+	else
+	{
+		Gates->SetField(TEXT("B8_assets_saved"), MakeShared<FJsonValueNull>());
+	}
+	Gates->SetField(TEXT("B8_restart_survival"), MakeShared<FJsonValueNull>());
 
 	Gates->SetBoolField(TEXT("B7_emitters_non_empty"), Result.bB7EmittersNonEmpty);
 
@@ -373,6 +506,8 @@ TSharedPtr<FJsonObject> FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(
 	TArray<TSharedPtr<FJsonValue>> NeverClaims;
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("created_and_validated")));
 	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("modified_and_validated")));
+	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("mcp_transport_one_call")));
+	NeverClaims.Add(MakeShared<FJsonValueString>(TEXT("editor_restart_survival")));
 	Gates->SetArrayField(TEXT("never_claims"), NeverClaims);
 
 	return Gates;

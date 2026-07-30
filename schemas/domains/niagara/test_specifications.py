@@ -292,7 +292,7 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertIn("B3_six_emitters", expectations["poc_b_criteria_status"])
         self.assertEqual(
             expectations["poc_b_criteria_status"]["B3_six_emitters"],
-            "implemented_probe",
+            "implemented_gate",
         )
         self.assertIn("niagara.runtime_smoke_test", expectations["checks_skipped_honest_gaps"])
         self.assertIn("poc_b_gates", expectations)
@@ -304,7 +304,15 @@ class NiagaraSpecificationTests(unittest.TestCase):
         )
         self.assertEqual(
             expectations["poc_b_criteria_status"]["B7_renderers_bound"],
-            "false_until_material_re_read",
+            "editor_pass_when_b4_true",
+        )
+        self.assertEqual(
+            expectations["poc_b_criteria_status"]["B1_one_request"],
+            "implemented_pipeline_not_mcp",
+        )
+        self.assertEqual(
+            expectations["poc_b_criteria_status"]["B9_change_manifest"],
+            "implemented_complete_gate",
         )
 
     def test_poc_b_inspect_gate_signals_fixture(self) -> None:
@@ -371,7 +379,10 @@ class NiagaraSpecificationTests(unittest.TestCase):
         )
         self.assertEqual(honesty["status"], "partially_completed")
         self.assertIn("B7_renderers_bound", honesty["extra_poc_b_gates"])
+        self.assertIn("B1_single_request_complete", honesty["extra_poc_b_gates"])
+        self.assertIn("B8_restart_survival", honesty["extra_poc_b_gates"])
         self.assertIn("inspect_fidelity", honesty["extra_poc_b_gates"])
+        self.assertEqual(len(honesty["never_claims"]), 4)
         self.assertGreaterEqual(len(fixture["ws11_verification_steps"]), 5)
         self.assertIn("WS-08 create_vfx_material", fixture["blockers_before_pass"][0])
 

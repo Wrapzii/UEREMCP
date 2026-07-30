@@ -59,7 +59,7 @@ bool FUeremcpNiagaraChangeManifestOfflineTest::RunTest(const FString& Parameters
 	TestTrue(TEXT("manifest populated"), Manifest.bPopulated);
 	TestEqual(TEXT("created system + MI + master"), Manifest.CreatedAssets.Num(), 3);
 	TestEqual(TEXT("one short-circuit reused MI"), Manifest.ReusedAssets.Num(), 2);
-	TestTrue(TEXT("changes non-empty"), Manifest.Changes.Num() >= 4);
+	TestTrue(TEXT("changes include emitters"), Manifest.Changes.Num() >= 4);
 	TestEqual(TEXT("assets affected"), Manifest.AssetsAffected, 1);
 
 	const FUeremcpNiagaraChangeManifestResult DryRun =

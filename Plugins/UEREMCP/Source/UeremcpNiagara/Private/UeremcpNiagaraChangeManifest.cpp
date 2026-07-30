@@ -176,6 +176,15 @@ FUeremcpNiagaraChangeManifestResult FUeremcpNiagaraChangeManifest::BuildFromCrea
 		MergeInlineMaterialSubManifest(Inline, Out);
 	}
 
+	for (const FString& EmitterName : CreateResult.EmittersAdded)
+	{
+		Out.Changes.Add(MakeShared<FJsonValueObject>(MakeChangeEntry(
+			TEXT("emitter_added"),
+			CreateResult.CreatedAssetPath,
+			SystemClass,
+			FString::Printf(TEXT("emitter %s"), *EmitterName))));
+	}
+
 	TSet<FString> MaterialManifestPaths;
 	for (const FUeremcpAssetRef& Ref : Out.CreatedAssets)
 	{

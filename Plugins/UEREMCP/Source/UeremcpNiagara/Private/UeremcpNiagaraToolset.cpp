@@ -413,6 +413,17 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 			TEXT("poc_b_gates"),
 			FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(PocBGates));
 
+		if (PocBGates.bB1SingleRequestEvaluated)
+		{
+			Validation->SetBoolField(
+				TEXT("single_request_pipeline"),
+				PocBGates.bB1SingleRequestComplete);
+		}
+		else
+		{
+			Validation->SetField(TEXT("single_request_pipeline"), MakeShared<FJsonValueNull>());
+		}
+
 		for (const FString& Check : PocBGates.ChecksPerformed)
 		{
 			ChecksPerformed.Add(MakeShared<FJsonValueString>(Check));

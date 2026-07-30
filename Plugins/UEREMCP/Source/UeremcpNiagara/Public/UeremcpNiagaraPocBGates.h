@@ -14,6 +14,9 @@
 /** Honest POC B gate evaluation for create_niagara_effect responses. */
 struct FUeremcpNiagaraPocBGateResult
 {
+	bool bB1SingleRequestComplete = false;
+	bool bB1SingleRequestEvaluated = false;
+
 	bool bB3SixEmittersPresent = false;
 	bool bB3SixEmittersEvaluated = false;
 
@@ -31,7 +34,11 @@ struct FUeremcpNiagaraPocBGateResult
 	bool bB6CompileAwaitedEvaluated = false;
 
 	bool bB9ChangeManifestPresent = false;
+	bool bB9ChangeManifestComplete = false;
 	bool bB9ChangeManifestEvaluated = false;
+
+	bool bB8AssetsSaved = false;
+	bool bB8AssetsSavedEvaluated = false;
 
 	bool bB7EmittersNonEmpty = false;
 	bool bB7StructuralMatch = false;

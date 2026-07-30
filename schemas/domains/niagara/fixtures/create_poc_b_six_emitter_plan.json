@@ -80,16 +80,17 @@
       "modified_and_validated"
     ],
     "poc_b_criteria_status": {
-      "B1_one_request": "planned",
-      "B3_six_emitters": "implemented_probe",
-      "B4_renderer_materials": "partial_material_bindings",
-      "B5_user_parameters": "implemented_probe",
-      "B6_compile_await": "implemented_probe",
-      "B7_structural_validation": "partial_round_trip",
+      "B1_one_request": "implemented_pipeline_not_mcp",
+      "B3_six_emitters": "implemented_gate",
+      "B4_renderer_materials": "editor_pass_fireball_a6ca454",
+      "B5_user_parameters": "implemented_gate",
+      "B6_compile_await": "implemented_gate",
+      "B7_structural_validation": "pass_scaffold_825e4f4",
       "B7_renderers_present": "offline_inspect_topology",
-      "B7_renderers_bound": "false_until_material_re_read",
+      "B7_renderers_bound": "editor_pass_when_b4_true",
       "B7_data_interfaces_complete": "false_when_evaluated",
-      "B8_save_restart": "implemented_probe_unverified_restart",
+      "B8_save_restart": "save_gate_only_restart_ws11",
+      "B9_change_manifest": "implemented_complete_gate",
       "B10_visible_render": "not_implemented"
     },
     "checks_performed_when_successful": [
