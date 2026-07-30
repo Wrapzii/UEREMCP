@@ -422,33 +422,6 @@ orchestration: `FUeremcpMutatorQueue::IsImplemented()` returns false
 `[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp:3-18]`.
 Implementing an unsandboxed montage write would contradict ADR-0005 and ADR-0010.
 
-## Orch compile and runtime verification (2026-07-30)
-
-The RE plugin junction resolved to
-`$UEREMCP_ROOT-ws01\Plugins\UEREMCP` on
-`ws-01-orch` before verification
-`[VERIFIED-RUNTIME: PowerShell Get-Item -Force reported LinkType=Junction and the
-UEREMCP-ws01 target]`.
-
-The first isolated `UeremcpAnimation` build exposed an incomplete-type conversion
-for `UAnimNotifyState`. Adding its defining public header is grounded by the engine
-declaration `[VERIFIED: Engine/Source/Runtime/Engine/Classes/Animation/AnimNotifies/AnimNotifyState.h:34]`.
-The subsequent `REEditor Win64 Development -Module=UeremcpAnimation
--NoHotReloadFromIDE -WaitMutex` build compiled and linked
-`UnrealEditor-UeremcpAnimation.dll` with `Result: Succeeded`
-`[VERIFIED-RUNTIME: UnrealBuildTool module build on 2026-07-30 at orch tip 912a89d]`.
-
-`UEREMCP.Animation` automation was then attempted through `UnrealEditor-Cmd`.
-Startup stopped before `UeremcpAnimation` loaded because the integrated plugin's
-`UeremcpMaterial` binary was missing; no Animation test executed, so there is no
-runtime validation claim
-`[VERIFIED-RUNTIME: RE/Saved/Logs/RE.log reported "module 'UeremcpMaterial' could
-not be found" before the Animation module load/test filter]`. Material/Niagara and
-full-RE build/editor owners subsequently occupied the exclusive lane, so the smoke
-status is `partially_completed`, not validated. Re-run
-`Automation RunTests UEREMCP.Animation` when the integrated plugin binary set is
-complete and the lane is free.
-
 ## Deliverables checklist
 
 - [x] Capability ceiling table
