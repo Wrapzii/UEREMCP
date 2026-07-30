@@ -20,6 +20,7 @@ public class UeremcpTransport : ModuleRules
 			"Engine",
 			"Json",
 			"JsonUtilities",
+			"Projects",
 
 			// Public Epic MCP surface only — introspection, not reimplementation.
 			"ModelContextProtocol",
