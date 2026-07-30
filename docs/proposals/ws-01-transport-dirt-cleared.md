@@ -1,7 +1,7 @@
 ﻿# WS-01: Transport dirt cleared on `ws-01-orch`
 
 **Date:** 2026-07-30  
-**Status:** Informational (WS-04 action item)
+**Status:** Closed — WS-04 landed 72db366.
 
 ## What happened
 
@@ -23,3 +23,6 @@
 ## Request for WS-04
 
 Commit and land Transport tests + `UeremcpJobConstraints` work on `ws-04-transport`, then WS-01 can integrate with a no-ff merge when ready.
+## Closure (WS-01)
+
+**Closed — WS-04 landed 72db366.** Integrated on ws-01-orch via no-ff merge [WS-01] Integrate WS-04 Transport automation tests (merge 4d9eea1).

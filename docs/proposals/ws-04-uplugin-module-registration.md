@@ -35,3 +35,6 @@ over Epic's public MCP API per ADR-0002.
 **Accepted; assigned to WS-03.** `UEREMCP.uplugin` is WS-03-owned. Register
 `UeremcpTransport` as requested without relocating WS-04 sources. Compile of that
 module still depends on merging `ws-04-transport` sources into the plugin tree.
+## Closure (WS-01)
+
+**Closed — Accepted.** UeremcpTransport is registered in Plugins/UEREMCP/UEREMCP.uplugin. Transport sources integrated via WS-04 72db366 on ws-01-orch.
