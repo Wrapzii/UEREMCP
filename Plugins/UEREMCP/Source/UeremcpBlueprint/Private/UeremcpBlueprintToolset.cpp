@@ -86,6 +86,54 @@ namespace UeremcpBlueprintToolset
 		}
 		return bDefault;
 	}
+
+	static void AttachGraphDiagnostics(
+		FUeremcpResponse& Response,
+		const TSharedPtr<FJsonObject>& Graph)
+	{
+		if (!Graph.IsValid())
+		{
+			return;
+		}
+		if (!Response.ExtraFields.IsValid())
+		{
+			Response.ExtraFields = MakeShared<FJsonObject>();
+		}
+		TArray<TSharedPtr<FJsonValue>> Graphs;
+		Graphs.Add(MakeShared<FJsonValueObject>(Graph));
+		TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
+		Diagnostics->SetArrayField(TEXT("graphs"), Graphs);
+		Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
+	}
+
+	static void AttachSubmitValidation(
+		FUeremcpResponse& Response,
+		bool bStructurallyValid,
+		const TArray<FString>& Performed,
+		const TArray<FString>& Skipped)
+	{
+		if (!Response.ExtraFields.IsValid())
+		{
+			Response.ExtraFields = MakeShared<FJsonObject>();
+		}
+		TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+		Validation->SetBoolField(TEXT("structurally_valid"), bStructurallyValid);
+
+		TArray<TSharedPtr<FJsonValue>> Checks;
+		for (const FString& Check : Performed)
+		{
+			Checks.Add(MakeShared<FJsonValueString>(Check));
+		}
+		Validation->SetArrayField(TEXT("checks_performed"), Checks);
+
+		TArray<TSharedPtr<FJsonValue>> SkippedChecks;
+		for (const FString& Check : Skipped)
+		{
+			SkippedChecks.Add(MakeShared<FJsonValueString>(Check));
+		}
+		Validation->SetArrayField(TEXT("checks_skipped"), SkippedChecks);
+		Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
+	}
 }
 
 using namespace UeremcpBlueprintToolset;
@@ -242,17 +290,141 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
-	Response.Status = TEXT("partially_completed");
-	Response.Summary = TEXT(
-		"submit_graph is not implemented (P2). Use read_graph for inspection; replace/patch write path pending.");
 	Response.UnderstoodAction = Request.Action;
 	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = Request.TargetAssetPath;
+	Response.Metrics.McpRoundTrips = 1;
+
+	if (!Request.Mode.Equals(TEXT("replace"), ESearchCase::CaseSensitive))
+	{
+		Response.Status = TEXT("rejected");
+		Response.Summary = FString::Printf(
+			TEXT("submit_graph mode '%s' is not implemented; the current P2 slice accepts unchanged replace submissions only."),
+			*Request.Mode);
+		Response.CapabilityNotes = {
+			TEXT("submit_graph.changed_replace_not_implemented"),
+			TEXT("submit_graph.patch_not_implemented"),
+		};
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	const TSharedPtr<FJsonObject>* SubmittedGraphPtr = nullptr;
+	if (!Request.Specification.IsValid()
+		|| !Request.Specification->TryGetObjectField(TEXT("graph"), SubmittedGraphPtr)
+		|| !SubmittedGraphPtr
+		|| !SubmittedGraphPtr->IsValid())
+	{
+		Response.Status = TEXT("rejected");
+		Response.Summary = TEXT("specification.graph is required for mode=replace.");
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+	const TSharedPtr<FJsonObject> SubmittedGraph = *SubmittedGraphPtr;
+
+	FString LoadError;
+	UBlueprint* Blueprint = LoadBlueprintAsset(Request.TargetAssetPath, LoadError);
+	if (!Blueprint)
+	{
+		return FUeremcpEnvelope::MakeRejection(Request.RequestId, LoadError);
+	}
+
+	FString SubmittedGraphId;
+	SubmittedGraph->TryGetStringField(TEXT("graph_id"), SubmittedGraphId);
+	FUeremcpBlueprintReadGraphOptions ReadOptions;
+	ReadOptions.GraphId = !Request.TargetGraphId.IsEmpty()
+		? Request.TargetGraphId
+		: (!SubmittedGraphId.IsEmpty()
+			? SubmittedGraphId
+			: ReadGraphSpecificationString(Request, TEXT("graph_id")));
+	ReadOptions.ResponseDetail = TEXT("complete");
+
+	FUeremcpBlueprintReadGraphResult Current;
+	if (!FUeremcpBlueprintGraphReader::ReadGraph(
+			Blueprint,
+			Request.TargetAssetPath,
+			ReadOptions,
+			Current))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			Current.Error.IsEmpty() ? TEXT("failed to read current graph") : Current.Error);
+	}
+	Response.Revision = Current.ContentHash;
+	Response.Metrics.InternalOperations = Current.InternalOperations;
+
+	const bool bBypassConflict =
+		Request.OnRevisionConflict.Equals(TEXT("replace"), ESearchCase::CaseSensitive)
+		|| Request.OnRevisionConflict.Equals(TEXT("force"), ESearchCase::CaseSensitive);
+	if (Request.bHasExpectedRevision
+		&& !Request.ExpectedRevision.Equals(Current.ContentHash, ESearchCase::CaseSensitive)
+		&& !bBypassConflict)
+	{
+		Response.Status = TEXT("rejected");
+		Response.Summary = FString::Printf(
+			TEXT("expected_revision '%s' does not match current revision '%s'; no mutation was performed."),
+			*Request.ExpectedRevision,
+			*Current.ContentHash);
+		Response.CapabilityNotes.Add(TEXT("revision_conflict.no_mutation"));
+		if (Request.OnRevisionConflict.Equals(TEXT("return_conflict"), ESearchCase::CaseSensitive))
+		{
+			AttachGraphDiagnostics(Response, Current.Graph);
+		}
+		AttachSubmitValidation(
+			Response,
+			true,
+			{TEXT("blueprint.current_graph_read"), TEXT("blueprint.expected_revision_compare")},
+			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	FString SubmittedHashError;
+	const FString SubmittedHash =
+		FUeremcpBlueprintGraphReader::ComputeContentHash(SubmittedGraph, &SubmittedHashError);
+	if (SubmittedHash.IsEmpty())
+	{
+		Response.Status = TEXT("failed_validation");
+		Response.Summary = FString::Printf(
+			TEXT("Submitted graph could not be hashed: %s"),
+			*SubmittedHashError);
+		AttachSubmitValidation(
+			Response,
+			false,
+			{TEXT("blueprint.current_graph_read")},
+			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	if (SubmittedHash.Equals(Current.ContentHash, ESearchCase::CaseSensitive))
+	{
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = FString::Printf(
+			TEXT("Submitted Blueprint graph already matches '%s' at revision %s; no mutation or compile was needed."),
+			*Request.TargetAssetPath,
+			*Current.ContentHash);
+		Response.CapabilityNotes = FUeremcpBlueprintGraphReader::DefaultLossyAreas();
+		AttachSubmitValidation(
+			Response,
+			true,
+			{
+				TEXT("blueprint.current_graph_read"),
+				TEXT("blueprint.expected_revision_compare"),
+				TEXT("blueprint.submitted_graph_hash_compare"),
+			},
+			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	Response.Status = TEXT("rejected");
+	Response.Summary = TEXT(
+		"Changed graph replacement is not implemented in this P2 slice; no mutation was performed.");
 	Response.CapabilityNotes = {
-		TEXT("submit_graph.replace_not_implemented"),
+		TEXT("submit_graph.unchanged_replace_supported"),
+		TEXT("submit_graph.changed_replace_not_implemented"),
 		TEXT("submit_graph.patch_not_implemented"),
 	};
-	Response.Metrics.McpRoundTrips = 1;
-	Response.Metrics.InternalOperations = 0;
-
+	AttachSubmitValidation(
+		Response,
+		true,
+		{TEXT("blueprint.current_graph_read"), TEXT("blueprint.submitted_graph_hash_compare")},
+		{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }

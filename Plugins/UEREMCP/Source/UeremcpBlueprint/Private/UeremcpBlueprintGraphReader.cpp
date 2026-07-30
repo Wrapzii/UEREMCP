@@ -226,6 +226,7 @@ namespace UeremcpBlueprintGraphReader
 		{
 			return;
 		}
+		Visited.Add(Node);
 
 		for (const UEdGraphPin* Pin : Node->Pins)
 		{
@@ -246,11 +247,7 @@ namespace UeremcpBlueprintGraphReader
 			}
 		}
 
-		if (!Visited.Contains(Node))
-		{
-			Visited.Add(Node);
-			OutOrdered.Add(Node);
-		}
+		OutOrdered.Add(Node);
 	}
 
 	struct FEntryContext
@@ -315,6 +312,10 @@ namespace UeremcpBlueprintGraphReader
 		int32& InOutTopo)
 	{
 		if (!Node)
+		{
+			return;
+		}
+		if (OutSemanticIds.Contains(Node))
 		{
 			return;
 		}
@@ -681,6 +682,36 @@ namespace UeremcpBlueprintGraphReader
 
 		return Vars;
 	}
+
+	static FString FormatEngineVersionString()
+	{
+		const FEngineVersion Ver = FEngineVersion::Current();
+		return FString::Printf(TEXT("%u.%u.%u"), Ver.GetMajor(), Ver.GetMinor(), Ver.GetPatch());
+	}
+
+	static TSharedPtr<FJsonObject> MakeSemanticHashProjection(const TSharedPtr<FJsonObject>& Graph)
+	{
+		TSharedPtr<FJsonObject> Projection = MakeShared<FJsonObject>();
+		for (const TCHAR* Field : {
+				TEXT("schema_version"),
+				TEXT("graph_type"),
+				TEXT("graph_name"),
+				TEXT("nodes"),
+				TEXT("links"),
+				TEXT("variables"),
+				TEXT("functions"),
+				TEXT("macros"),
+				TEXT("events"),
+				TEXT("subgraphs"),
+				TEXT("comments")})
+		{
+			if (Graph->HasField(Field))
+			{
+				Projection->SetField(Field, Graph->TryGetField(Field));
+			}
+		}
+		return Projection;
+	}
 }
 
 using namespace UeremcpBlueprintGraphReader;
@@ -698,6 +729,21 @@ TArray<FString> FUeremcpBlueprintGraphReader::DefaultLossyAreas()
 		TEXT("collapsed_composite_subgraphs_unproven"),
 		TEXT("project_custom_k2_nodes_unknown"),
 	};
+}
+
+FString FUeremcpBlueprintGraphReader::ComputeContentHash(
+	const TSharedPtr<FJsonObject>& Graph,
+	FString* OutError)
+{
+	if (!Graph.IsValid())
+	{
+		if (OutError)
+		{
+			*OutError = TEXT("graph is null");
+		}
+		return FString();
+	}
+	return FUeremcpContentHash::HashJsonObject(MakeSemanticHashProjection(Graph), OutError);
 }
 
 bool FUeremcpBlueprintGraphReader::ReadGraph(
@@ -902,6 +948,7 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 		if (!Node->ErrorMsg.IsEmpty())
 		{
 			TSharedPtr<FJsonObject> Diag = MakeShared<FJsonObject>();
+			Diag->SetStringField(TEXT("severity"), TEXT("error"));
 			Diag->SetStringField(TEXT("code"), TEXT("blueprint.node_error"));
 			Diag->SetStringField(TEXT("message"), Node->ErrorMsg);
 			if (const FString* Id = NodeIds.Find(Node))
@@ -949,7 +996,7 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	GraphObj->SetStringField(TEXT("graph_name"), GraphName);
 	GraphObj->SetStringField(TEXT("graph_type"), ResolveGraphType(Blueprint, Graph));
 	GraphObj->SetStringField(TEXT("schema_version"), TEXT("1.0"));
-	GraphObj->SetStringField(TEXT("engine_version"), FEngineVersion::Current().ToString());
+	GraphObj->SetStringField(TEXT("engine_version"), FormatEngineVersionString());
 	GraphObj->SetStringField(TEXT("retrieved_at"), FDateTime::UtcNow().ToIso8601());
 
 	TSharedPtr<FJsonObject> Fidelity = MakeShared<FJsonObject>();
@@ -1029,7 +1076,7 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	}
 
 	FString HashError;
-	const FString ContentHash = FUeremcpContentHash::HashJsonObject(GraphObj, &HashError);
+	const FString ContentHash = ComputeContentHash(GraphObj, &HashError);
 	if (ContentHash.IsEmpty())
 	{
 		OutResult.Error = FString::Printf(TEXT("content_hash failed: %s"), *HashError);

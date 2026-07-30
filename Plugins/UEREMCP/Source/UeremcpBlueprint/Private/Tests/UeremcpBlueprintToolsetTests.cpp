@@ -200,6 +200,41 @@ namespace UeremcpBlueprintReadGraphTest
 		Test.TestTrue(TEXT("response JSON parseable"), bOk);
 		return bOk;
 	}
+
+	static FString SerializeObject(const TSharedPtr<FJsonObject>& Object)
+	{
+		FString Json;
+		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Json);
+		FJsonSerializer::Serialize(Object.ToSharedRef(), Writer);
+		return Json;
+	}
+
+	static FString MakeSubmitReplaceRequest(
+		const FString& RequestId,
+		const FString& AssetPath,
+		const TSharedPtr<FJsonObject>& Graph,
+		const FString& ExpectedRevision)
+	{
+		TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>();
+		Request->SetStringField(TEXT("protocol_version"), TEXT("1.0"));
+		Request->SetStringField(TEXT("request_id"), RequestId);
+		Request->SetStringField(TEXT("action"), TEXT("submit_graph"));
+		Request->SetStringField(TEXT("mode"), TEXT("replace"));
+		if (!ExpectedRevision.IsEmpty())
+		{
+			Request->SetStringField(TEXT("expected_revision"), ExpectedRevision);
+		}
+
+		TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
+		Target->SetStringField(TEXT("asset_path"), AssetPath);
+		Target->SetStringField(TEXT("graph_id"), TEXT("EventGraph"));
+		Request->SetObjectField(TEXT("target"), Target);
+
+		TSharedPtr<FJsonObject> Specification = MakeShared<FJsonObject>();
+		Specification->SetObjectField(TEXT("graph"), Graph);
+		Request->SetObjectField(TEXT("specification"), Specification);
+		return SerializeObject(Request);
+	}
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -283,31 +318,92 @@ bool FUeremcpBlueprintReadGraphRoundTripTest::RunTest(const FString& Parameters)
 	(*Fidelity)->TryGetBoolField(TEXT("round_trip_supported"), bRoundTrip);
 	TestFalse(TEXT("round_trip_supported honest"), bRoundTrip);
 
+	const FString SummaryRequest = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"bp-read-summary","action":"read_graph","target":{"asset_path":"%s","graph_id":"EventGraph"},"options":{"response_detail":"summary"}})"),
+		*AssetPath);
+	TSharedPtr<FJsonObject> SummaryRoot;
+	if (ParseResponse(UUeremcpBlueprintToolset::ReadGraph(SummaryRequest), SummaryRoot, *this))
+	{
+		FString SummaryRevision;
+		TestTrue(TEXT("summary revision present"),
+			SummaryRoot->TryGetStringField(TEXT("revision"), SummaryRevision));
+		TestEqual(TEXT("summary and complete revisions match"), SummaryRevision, Revision);
+	}
+
 	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FUeremcpBlueprintSubmitGraphStubTest,
-	"UeremcpBlueprint.Toolset.SubmitGraphStub",
+	FUeremcpBlueprintSubmitGraphValidationTest,
+	"UeremcpBlueprint.Toolset.SubmitGraphValidation",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FUeremcpBlueprintSubmitGraphStubTest::RunTest(const FString& Parameters)
+bool FUeremcpBlueprintSubmitGraphValidationTest::RunTest(const FString& Parameters)
 {
-	const FString Request = TEXT(
-		R"({"protocol_version":"1.0","request_id":"bp-submit-1","action":"submit_graph","target":{"asset_path":"/Game/__UeremcpTests/None"},"mode":"replace"})");
-	const FString ResponseJson = UUeremcpBlueprintToolset::SubmitGraph(Request);
+	using namespace UeremcpBlueprintReadGraphTest;
+
+	FScratchGuard Guard;
+	static const FString AssetName = TEXT("BP_SubmitGraph_Scratch");
+	UBlueprint* Blueprint = CreateScratchBlueprint(AssetName, *this);
+	if (!Blueprint)
+	{
+		return false;
+	}
+	const FString AssetPath = MakePackagePath(AssetName) + TEXT(".") + AssetName;
+	const FString ReadRequest = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"bp-submit-read","action":"read_graph","target":{"asset_path":"%s","graph_id":"EventGraph"},"options":{"response_detail":"complete"}})"),
+		*AssetPath);
 
 	TSharedPtr<FJsonObject> Root;
-	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
-	TestTrue(TEXT("parseable"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
-	if (!Root.IsValid())
+	if (!ParseResponse(UUeremcpBlueprintToolset::ReadGraph(ReadRequest), Root, *this))
 	{
 		return false;
 	}
 
+	FString Revision;
+	TestTrue(TEXT("read revision"), Root->TryGetStringField(TEXT("revision"), Revision));
+	const TSharedPtr<FJsonObject>* Diagnostics = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* Graphs = nullptr;
+	if (!TestTrue(TEXT("read graph available"),
+			Root->TryGetObjectField(TEXT("diagnostics"), Diagnostics)
+			&& Diagnostics
+			&& (*Diagnostics)->TryGetArrayField(TEXT("graphs"), Graphs)
+			&& Graphs
+			&& Graphs->Num() == 1))
+	{
+		return false;
+	}
+	const TSharedPtr<FJsonObject> Graph = (*Graphs)[0]->AsObject();
+
+	TSharedPtr<FJsonObject> NoOpRoot;
+	const FString NoOpRequest =
+		MakeSubmitReplaceRequest(TEXT("bp-submit-noop"), AssetPath, Graph, Revision);
+	if (!ParseResponse(UUeremcpBlueprintToolset::SubmitGraph(NoOpRequest), NoOpRoot, *this))
+	{
+		return false;
+	}
 	FString Status;
-	Root->TryGetStringField(TEXT("status"), Status);
-	TestEqual(TEXT("submit_graph stub status"), Status, FString(TEXT("partially_completed")));
+	NoOpRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("unchanged replace is no-op"), Status, FString(TEXT("no_change_required")));
+	FString NoOpRevision;
+	NoOpRoot->TryGetStringField(TEXT("revision"), NoOpRevision);
+	TestEqual(TEXT("no-op revision unchanged"), NoOpRevision, Revision);
+
+	TSharedPtr<FJsonObject> StaleRoot;
+	const FString StaleRequest = MakeSubmitReplaceRequest(
+		TEXT("bp-submit-stale"),
+		AssetPath,
+		Graph,
+		TEXT("sha256:0000000000000000000000000000000000000000000000000000000000000000"));
+	if (!ParseResponse(UUeremcpBlueprintToolset::SubmitGraph(StaleRequest), StaleRoot, *this))
+	{
+		return false;
+	}
+	StaleRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("stale replace rejected"), Status, FString(TEXT("rejected")));
+	FString CurrentRevision;
+	StaleRoot->TryGetStringField(TEXT("revision"), CurrentRevision);
+	TestEqual(TEXT("conflict returns current revision"), CurrentRevision, Revision);
 	return true;
 }
 

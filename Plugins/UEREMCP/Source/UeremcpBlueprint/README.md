@@ -1,6 +1,6 @@
 # UeremcpBlueprint
 
-**Owner:** WS-06 (Blueprint Specialist). **Status:** P1 `read_graph` implemented; P2 `submit_graph` stubbed.
+**Owner:** WS-06 (Blueprint Specialist). **Status:** P1 `read_graph` implemented; P2 unchanged-replace validation implemented.
 
 ## Purpose
 
@@ -36,22 +36,28 @@ implements graph read/submit.
 | Tool / action | Purpose |
 |---|---|
 | `ReadGraph` / `read_graph` | One call → `graph.schema.json` + diagnostics + `content_hash` |
-| `SubmitGraph` / `submit_graph` | P2 stub (`partially_completed`) |
+| `SubmitGraph` / `submit_graph` | Validates unchanged `replace` submissions and rejects stale revisions without mutation |
 
 ## Planned (P2+)
 
 | Action | Schema | Notes |
 |---|---|---|
-| `submit_graph` | `schemas/domains/blueprints/submit_graph.schema.json` | `replace` / `patch` / create modes (P2) |
+| `submit_graph` | `schemas/domains/blueprints/submit_graph.schema.json` | Changed `replace`, `patch`, and create modes |
 
 ## Tests
 
-Automation tests under `Private/Tests/`:
+Offline (no editor):
+
+```bash
+python Plugins/UEREMCP/Source/UeremcpBlueprint/Tests/py/run_tests.py
+```
+
+Automation tests under `Private/Tests/` (editor; run via orch junction after merge):
 
 - `UeremcpBlueprint.Toolset.Ping`
 - `UeremcpBlueprint.Toolset.Register`
 - `UeremcpBlueprint.Toolset.ReadGraphRoundTrip`
-- `UeremcpBlueprint.Toolset.SubmitGraphStub`
+- `UeremcpBlueprint.Toolset.SubmitGraphValidation`
 
 Run via editor automation or `tests/run_editor_tests.ps1` once the module is registered
 in `UEREMCP.uplugin` (see `docs/proposals/ws-06-register-blueprint-module.md`).

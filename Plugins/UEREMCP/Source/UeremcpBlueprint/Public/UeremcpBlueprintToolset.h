@@ -53,7 +53,9 @@ public:
 	static FString ReadGraph(const FString& RequestJson);
 
 	/**
-	 * action=submit_graph — P2 stub; rejects replace/patch until write path lands.
+	 * action=submit_graph — validates unchanged replace submissions and revision conflicts.
+	 * Changed replace and patch submissions are rejected without mutation until the
+	 * compile + re-read write backend is runtime-verified.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
 	static FString SubmitGraph(const FString& RequestJson);

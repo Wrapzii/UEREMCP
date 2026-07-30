@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/blueprints/submit_graph.schema.json",
   "title": "submit_graph specification",
-  "description": "specification payload for action=submit_graph (Blueprint domain, WS-06). P0 stub — full graph/patch shapes land in P1/P2.",
+  "description": "specification payload for action=submit_graph (Blueprint domain, WS-06 P2). Unchanged mode=replace submissions and revision conflicts are validated; changed replace and patch writes remain unsupported.",
   "type": "object",
   "additionalProperties": false,
   "properties": {

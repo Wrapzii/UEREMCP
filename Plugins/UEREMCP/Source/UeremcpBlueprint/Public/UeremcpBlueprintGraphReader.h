@@ -44,5 +44,10 @@ public:
 		const FUeremcpBlueprintReadGraphOptions& Options,
 		FUeremcpBlueprintReadGraphResult& OutResult);
 
+	/** Hashes only semantic Blueprint graph fields using the shared protocol hasher. */
+	static FString ComputeContentHash(
+		const TSharedPtr<FJsonObject>& Graph,
+		FString* OutError = nullptr);
+
 	static TArray<FString> DefaultLossyAreas();
 };

@@ -1,0 +1,219 @@
+{
+  "$comment": "Representative blueprints.read_graph payload (WS-06 P1). Validates against schemas/graph/graph.schema.json offline.",
+  "asset_path": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch.BP_ReadGraph_Scratch",
+  "graph_id": "EventGraph",
+  "graph_name": "EventGraph",
+  "graph_type": "BlueprintEventGraph",
+  "schema_version": "1.0",
+  "engine_version": "5.8.0",
+  "content_hash": "sha256:61b087c3d5d2a8f1e4b0c9d7a6e5f4d3c2b1a0987654321fedcba0987654321",
+  "revision": "sha256:61b087c3d5d2a8f1e4b0c9d7a6e5f4d3c2b1a0987654321fedcba0987654321",
+  "retrieved_at": "2026-07-30T05:00:00Z",
+  "fidelity": {
+    "round_trip_supported": false,
+    "lossy_areas": [
+      "multigate_no_dsl_roundtrip",
+      "timeline_special_spawn",
+      "math_expression_unproven",
+      "dsl_bind_elision",
+      "reroute_knots_elided",
+      "node_guid_not_preserved",
+      "positions_not_semantic",
+      "collapsed_composite_subgraphs_unproven",
+      "project_custom_k2_nodes_unknown"
+    ]
+  },
+  "semantic_summary": {
+    "purpose": "Blueprint graph 'EventGraph'",
+    "node_count": 5
+  },
+  "entry_points": [
+    "n11111111111111111111111111111111",
+    "n22222222222222222222222222222222"
+  ],
+  "nodes": [
+    {
+      "node_id": "n11111111111111111111111111111111",
+      "semantic_id": "EventGraph/event:EventBeginPlay/n001:Event|ReceiveBeginPlay",
+      "node_class": "K2Node_Event",
+      "semantic_type": "event:EventBeginPlay",
+      "title": "Event BeginPlay",
+      "position": [0, 0],
+      "properties": {
+        "type_id": "Event|ReceiveBeginPlay"
+      },
+      "input_pins": [],
+      "output_pins": [
+        {
+          "pin_id": "p11111111111111111111111111111111",
+          "name": "then",
+          "direction": "output",
+          "pin_type": {
+            "category": "exec",
+            "container": "none"
+          },
+          "links": [
+            {
+              "node_id": "n33333333333333333333333333333333",
+              "pin_id": "p33333333333333333333333333333333"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node_id": "n33333333333333333333333333333333",
+      "semantic_id": "EventGraph/event:EventBeginPlay/n002:Development|PrintString#PrintString",
+      "node_class": "K2Node_CallFunction",
+      "semantic_type": "call_function",
+      "title": "Print String",
+      "position": [300, 0],
+      "properties": {
+        "type_id": "Development|PrintString",
+        "function": "/Script/Engine.KismetSystemLibrary:PrintString"
+      },
+      "defaults": {
+        "InString": "hello"
+      },
+      "input_pins": [
+        {
+          "pin_id": "p33333333333333333333333333333333",
+          "name": "execute",
+          "direction": "input",
+          "pin_type": {
+            "category": "exec",
+            "container": "none"
+          },
+          "links": [
+            {
+              "node_id": "n11111111111111111111111111111111",
+              "pin_id": "p11111111111111111111111111111111"
+            }
+          ]
+        },
+        {
+          "pin_id": "p33333333333333333333333333333334",
+          "name": "InString",
+          "direction": "input",
+          "pin_type": {
+            "category": "string",
+            "container": "none"
+          },
+          "links": []
+        }
+      ],
+      "output_pins": []
+    },
+    {
+      "node_id": "n44444444444444444444444444444444",
+      "semantic_id": "EventGraph/orphan/n001:Development|PrintString",
+      "node_class": "K2Node_CallFunction",
+      "semantic_type": "call_function",
+      "title": "Print String",
+      "position": [300, 200],
+      "properties": {
+        "type_id": "Development|PrintString"
+      },
+      "input_pins": [
+        {
+          "pin_id": "p44444444444444444444444444444444",
+          "name": "execute",
+          "direction": "input",
+          "pin_type": {
+            "category": "exec",
+            "container": "none"
+          },
+          "links": []
+        }
+      ],
+      "output_pins": []
+    },
+    {
+      "node_id": "n22222222222222222222222222222222",
+      "semantic_id": "EventGraph/event:UeremcpOrphanEvent/n001:AddEvent|Custom|UeremcpOrphanEvent",
+      "node_class": "K2Node_CustomEvent",
+      "semantic_type": "custom_event:UeremcpOrphanEvent",
+      "title": "UeremcpOrphanEvent",
+      "position": [0, 400],
+      "properties": {
+        "type_id": "AddEvent|Custom|UeremcpOrphanEvent"
+      },
+      "input_pins": [],
+      "output_pins": [
+        {
+          "pin_id": "p22222222222222222222222222222222",
+          "name": "then",
+          "direction": "output",
+          "pin_type": {
+            "category": "exec",
+            "container": "none"
+          },
+          "links": [
+            {
+              "node_id": "n55555555555555555555555555555555",
+              "pin_id": "p55555555555555555555555555555555"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node_id": "n55555555555555555555555555555555",
+      "semantic_id": "EventGraph/event:UeremcpOrphanEvent/n002:Development|PrintString#PrintString",
+      "node_class": "K2Node_CallFunction",
+      "semantic_type": "call_function",
+      "title": "Print String",
+      "position": [300, 400],
+      "properties": {
+        "type_id": "Development|PrintString"
+      },
+      "input_pins": [
+        {
+          "pin_id": "p55555555555555555555555555555555",
+          "name": "execute",
+          "direction": "input",
+          "pin_type": {
+            "category": "exec",
+            "container": "none"
+          },
+          "links": [
+            {
+              "node_id": "n22222222222222222222222222222222",
+              "pin_id": "p22222222222222222222222222222222"
+            }
+          ]
+        }
+      ],
+      "output_pins": []
+    }
+  ],
+  "links": [
+    {
+      "from_node": "n11111111111111111111111111111111",
+      "from_pin": "then",
+      "to_node": "n33333333333333333333333333333333",
+      "to_pin": "execute",
+      "kind": "exec",
+      "valid": true
+    },
+    {
+      "from_node": "n22222222222222222222222222222222",
+      "from_pin": "then",
+      "to_node": "n55555555555555555555555555555555",
+      "to_pin": "execute",
+      "kind": "exec",
+      "valid": true
+    }
+  ],
+  "diagnostics": {
+    "dead_nodes": [
+      "n44444444444444444444444444444444"
+    ],
+    "disconnected_subgraphs": [
+      [
+        "n22222222222222222222222222222222",
+        "n55555555555555555555555555555555"
+      ]
+    ]
+  }
+}
