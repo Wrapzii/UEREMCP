@@ -86,6 +86,9 @@
       "B5_user_parameters": "implemented_probe",
       "B6_compile_await": "implemented_probe",
       "B7_structural_validation": "partial_round_trip",
+      "B7_renderers_present": "offline_inspect_topology",
+      "B7_renderers_bound": "false_until_material_re_read",
+      "B7_data_interfaces_complete": "false_when_evaluated",
       "B8_save_restart": "implemented_probe_unverified_restart",
       "B10_visible_render": "not_implemented"
     },
@@ -101,8 +104,10 @@
     ],
     "poc_b_gates": {
       "round_trip_supported": false,
+      "B7_renderers_present_null_without_inspect": true,
       "B7_renderers_bound_null_without_inspect": true,
-      "B7_data_interfaces_complete_null_without_inspect": true
+      "B7_data_interfaces_complete_null_without_inspect": true,
+      "editor_scaffold_fixture": "poc_b_editor_gate_scaffold.json"
     }
   }
 }

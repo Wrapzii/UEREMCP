@@ -160,6 +160,22 @@ until B4/B7/B10 gates pass in editor (WS-11).
 
 Probe target for live runs: `/Game/__UeremcpTests/NS_POCB_FireballProbe`.
 
+### B7 editor gate scaffold (WS-11 handoff)
+
+Offline implementation maps inspect graphs to `extra.poc_b_gates` on mutating create
+when `options.validate=true`. Editor proof is **not** done — WS-11 owns runtime
+verification using `fixtures/poc_b_editor_gate_scaffold.json`.
+
+| Check | Offline today | Editor proof |
+|---|---|---|
+| Emitters non-empty | `B7_emitters_non_empty` from create result | Re-read emitter count |
+| Renderers present | `B7_renderers_present` from inspect topology | Inspect all six roles |
+| Renderers bound | `B7_renderers_bound` false unless material re-read verified | B4 full bind proof |
+| Data interfaces | `B7_data_interfaces_complete` always false when evaluated | Dependency audit only |
+| Structural match | `B7_structural_match` when round-trip inspect ran | WS-11 structural spec |
+
+Handoff detail: `docs/proposals/ws-07-b7-editor-gate-handoff.md`.
+
 ### Material bindings (`specification.materials`)
 
 Direct probe material paths under `/Game/__UeremcpTests/Materials/` are assigned via

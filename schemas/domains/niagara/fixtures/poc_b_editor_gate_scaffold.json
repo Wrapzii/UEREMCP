@@ -1,0 +1,90 @@
+{
+  "$comment": "WS-11 editor integration scaffold for POC B B7 inspect-fidelity gates (WS-07). Offline contract only — not a runtime proof.",
+  "owner": "WS-11",
+  "probe_paths": {
+    "system": "/Game/__UeremcpTests/NS_POCB_FireballProbe",
+    "materials_root": "/Game/__UeremcpTests/Materials/"
+  },
+  "editor_test_suggestions": {
+    "filter_prefix": "UEREMCP.Niagara.Create.",
+    "proposed_spec": "UEREMCP.Niagara.POCB.SixEmitterGateScaffold",
+    "requires_editor_context": true,
+    "requires_niagara_toolsets_plugin": true
+  },
+  "create_request": {
+    "protocol_version": "1.0",
+    "request_id": "ws11-poc-b-gate-scaffold",
+    "action": "create_niagara_effect",
+    "mode": "replace",
+    "target": {
+      "asset_path": "/Game/__UeremcpTests/NS_POCB_FireballProbe"
+    },
+    "specification": {
+      "name": "NS_POCB_FireballProbe",
+      "effect_type": "projectile",
+      "element": "fire",
+      "components": [
+        "core",
+        "flame_shell",
+        "sparks",
+        "smoke",
+        "ribbon_trail",
+        "impact_burst"
+      ],
+      "parameters": {
+        "primary_color": [1.0, 0.12, 0.01, 1.0],
+        "secondary_color": [1.0, 0.75, 0.05, 1.0],
+        "scale": 1.0,
+        "intensity": 8.0
+      },
+      "template_system": {
+        "asset_path": "/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight"
+      }
+    },
+    "options": {
+      "dry_run": false,
+      "compile": true,
+      "validate": true,
+      "save": true,
+      "include_dependencies": true
+    }
+  },
+  "expected_response_honesty": {
+    "status": "partially_completed",
+    "never_claims": ["created_and_validated", "modified_and_validated"],
+    "extra_poc_b_gates": {
+      "round_trip_supported": false,
+      "B7_emitters_non_empty": true,
+      "B7_structural_match": "boolean_or_null_when_inspect_fails",
+      "B7_renderers_present": "boolean_when_inspect_succeeded",
+      "B7_renderers_bound": "false_until_material_bindings_bAllRequestedVerified",
+      "B7_data_interfaces_complete": "false_when_dependencies_observed_never_true_by_default",
+      "inspect_fidelity": {
+        "required_when_inspect_succeeded": true,
+        "material_path_is_observational_only": true,
+        "notes_must_not_imply_validated_binding": true
+      }
+    }
+  },
+  "b7_sub_gate_mapping": {
+    "emitters_non_empty": "extra.poc_b_gates.B7_emitters_non_empty",
+    "renderers_bound": "extra.poc_b_gates.B7_renderers_bound (material re-read only)",
+    "data_interfaces_complete": "extra.poc_b_gates.B7_data_interfaces_complete (always false when evaluated today)",
+    "structural_match": "extra.poc_b_gates.B7_structural_match (round-trip structural compare)"
+  },
+  "ws11_verification_steps": [
+    "Run create_request against probe path with replace mode.",
+    "Assert response.status is partially_completed until full B4/B7/B10 proof exists.",
+    "Assert extra.poc_b_gates.never_claims excludes *_validated statuses.",
+    "When options.validate=true and inspect succeeds, assert inspect_fidelity object present.",
+    "Assert B7_renderers_bound stays false unless material_bindings diagnostics report full re-read verify.",
+    "Do not treat inspect_fidelity.renderers_with_extracted_material_path as binding proof.",
+    "Record checks_performed / checks_skipped in extra.validation for manifest honesty."
+  ],
+  "blockers_before_pass": [
+    "WS-08 create_vfx_material execute_plan handler for elemental template chain",
+    "WS-03 atomic transaction callbacks registered at runtime (orch)",
+    "Full material bind re-read for all six emitter roles (B4)",
+    "B10 visible render proof (supplementary screenshot only)"
+  ]
+}

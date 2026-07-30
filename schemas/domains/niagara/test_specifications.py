@@ -283,6 +283,15 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertIn("niagara.runtime_smoke_test", expectations["checks_skipped_honest_gaps"])
         self.assertIn("poc_b_gates", expectations)
         self.assertFalse(expectations["poc_b_gates"]["round_trip_supported"])
+        self.assertTrue(expectations["poc_b_gates"]["B7_renderers_present_null_without_inspect"])
+        self.assertEqual(
+            expectations["poc_b_gates"]["editor_scaffold_fixture"],
+            "poc_b_editor_gate_scaffold.json",
+        )
+        self.assertEqual(
+            expectations["poc_b_criteria_status"]["B7_renderers_bound"],
+            "false_until_material_re_read",
+        )
 
     def test_poc_b_inspect_gate_signals_fixture(self) -> None:
         fixture = load_fixture("poc_b_inspect_gate_signals.json")
@@ -330,6 +339,22 @@ class NiagaraSpecificationTests(unittest.TestCase):
             set(expectations["validation_never_claims"]),
             {"created_and_validated", "modified_and_validated"},
         )
+
+    def test_poc_b_editor_gate_scaffold_fixture(self) -> None:
+        fixture = load_fixture("poc_b_editor_gate_scaffold.json")
+        honesty = fixture["expected_response_honesty"]
+        create = fixture["create_request"]
+
+        self.assertEqual(fixture["owner"], "WS-11")
+        self.assertEqual(create["action"], "create_niagara_effect")
+        self.assertTrue(create["target"]["asset_path"].startswith("/Game/__UeremcpTests/"))
+        self.assertTrue(create["options"]["validate"])
+        self.assertFalse(create["options"]["dry_run"])
+        self.assertEqual(honesty["status"], "partially_completed")
+        self.assertIn("B7_renderers_bound", honesty["extra_poc_b_gates"])
+        self.assertIn("inspect_fidelity", honesty["extra_poc_b_gates"])
+        self.assertGreaterEqual(len(fixture["ws11_verification_steps"]), 5)
+        self.assertIn("WS-08 create_vfx_material", fixture["blockers_before_pass"][0])
 
     def test_hash_round_trip_poc_b_scaffold_fixture(self) -> None:
         import sys
