@@ -1,9 +1,10 @@
 # RB-14: Testing and automation infrastructure
 
 - **Owner:** WS-11
-- **Status:** not_started
+- **Status:** Wave 1 harness green (unit + editor Smoke + Rollback gate)
 - **Blocks:** every verification claim in the project
 - **Priority:** high
+- **Updated:** 2026-07-29 (editor Cmd green)
 
 ## Framing
 
@@ -13,55 +14,67 @@ credibility of every other workstream**, so it runs in Wave 1.
 
 `AutomationTestToolset` is enabled in RE `[VERIFIED: RE.uproject]` — start there.
 
+## Current harness (what landed)
+
+| Path | Purpose | Status |
+|---|---|---|
+| `python tests/run_unit_tests.py` | Fast out-of-editor unittest discovery under `tests/unit/` | **Green** (9 tests) |
+| `pwsh tests/run_editor_tests.ps1 -Filter ...` | UnrealEditor-Cmd + Automation RunTests + Quit | **Green** (~26s cycle for Validation filter) |
+| `Plugins/UEREMCP/Source/UeremcpValidation/**` | Editor module: scratch helpers + automation tests | Scaffold; needs WS-03 uplugin registration |
+| `tests/integration/editor_plugin/UeremcpValidationProbe/` | Standalone interim plugin (junction into `$PROJ/Plugins/`) | **Built + green** via Cmd |
+| Scratch root `/Game/__UeremcpTests/` + `FUeremcpScratchGuard` | Guaranteed cleanup | Documented + unit-tested + runtime-proven |
+
+### Scratch-path conventions (publish to all workstreams)
+
+1. All test assets under **`/Game/__UeremcpTests/<Suite>/`** only.
+2. Never write to `/Game/__UeremcpPoc/` unless the test **is** a POC gate.
+3. Use `FUeremcpScratchGuard` (or equivalent) so cleanup runs on failure.
+4. Cleanup helpers refuse paths outside the tests root.
+5. Never touch real project content.
+
+Helpers: `Plugins/.../UeremcpValidation/Public/UeremcpScratchPaths.h` (and probe copy).
+
+### Editor Cmd blocker
+
+Observed 2026-07-29: Cmd exits during plugin load with  
+`Plugin 'UEREMCP' failed to load because module 'UeremcpCore' could not be found`  
+before any automation queue runs. `tests/run_editor_tests.ps1` now defaults to
+`-DisablePlugins=UEREMCP` and `-EnablePlugins=UeremcpValidationProbe` so WS-11 can
+proceed without editing `RE.uproject` or waiting on WS-03's module binaries.
+Registration proposal remains: `docs/proposals/ws-11-register-validation-module.md`.
+
 ## Questions
 
-1. What automation test frameworks are available for an editor plugin —
-   `IMPLEMENT_SIMPLE_AUTOMATION_TEST`, `FAutomationTestBase`, functional tests, Gauntlet?
-   Which suit asset-manipulation tests?
-2. How are tests run — editor UI, commandlet, `UnrealEditor-Cmd.exe` with
-   `-ExecCmds="Automation RunTests ..."`? **Can they run without a human present?** If
-   not, the swarm cannot self-verify and that changes how work is accepted.
-3. How long does a minimal editor-integration test cycle take end to end? If it is 10
-   minutes, agents will skip it; design around that reality rather than mandating
-   something nobody runs.
-4. Can tests create, mutate, and clean up assets safely in a scratch content path
-   (`/Game/__UeremcpTests/`)? How do we guarantee cleanup even on failure — and never
-   touch real project content?
-5. Can Blueprint compilation, Niagara compilation, and material/shader compilation be
-   awaited deterministically in a test? Async compilation is the most likely source of
-   flaky tests here.
-6. Can PIE be driven from a test for runtime smoke tests — spawn an actor, activate an
-   ability, confirm a Niagara system actually emitted particles? What does it cost, and
-   is it stable enough to gate on?
-7. Does `AutomationTestToolset` let an **agent** run tests through MCP? If so, an agent
-   can verify its own work in the same session — a significant capability, and it should
-   be wired into the response `validation` block rather than left as a separate manual
-   step.
-8. How do we test the **rollback** path, given ADR-0005 gates every rollback claim on
-   `Rollback.MultiAssetDiscard`? Coordinate with RB-06; this test is jointly owned.
-9. How do we test **idempotency** (`Idempotency.RepeatedCreate`) and **revision
-   conflict** (`Revision.StaleRejected`) from ADR-0006?
-10. Can unit tests for pure logic — schema validation, graph serialisation, patch
-    application, `$ref` resolution, hashing — run **outside** the editor for fast
-    iteration? Strongly preferred; it is the only way tests get run often.
-11. What does the benchmark harness need to measure the metrics in ADR-0003 —
-    `mcp_round_trips`, `internal_operations`, tokens, and **completion rate**? Extend
-    REAgentTools' existing A/B harness (`$RAT/Docs/BENCHMARK_REPORT.md`,
-    `benchmark_ab_live.json`) so numbers stay comparable to the ~5:1 baseline
-    (`docs/WHY.md`). Do not start a fresh benchmark that cannot be compared.
-12. Can the editor be launched and torn down repeatedly in an automated loop, and how
-    reliably? This determines whether "survives editor restart" (POC E) is testable.
+1. What automation test frameworks are available — `IMPLEMENT_SIMPLE_AUTOMATION_TEST`,
+   `FAutomationTestBase`, functional tests, Gauntlet? Which suit asset-manipulation
+   tests? **Answer (partial):** WS-11 uses `IMPLEMENT_SIMPLE_AUTOMATION_TEST` with
+   `EditorContext | ProductFilter` for asset/sandbox tests. Epic ToolsetRegistry uses
+   DEFINE_SPEC under `AI.ToolsetRegistry.Sandbox.Library`  
+   `[VERIFIED: $TR/.../Private/Tests/SandboxLibraryTest.cpp]`. Gauntlet not evaluated.
+2. How are tests run — **Yes, unattended:** `UnrealEditor-Cmd.exe` with
+   `-ExecCmds="Automation RunTests <filter>; Quit"` via `tests/run_editor_tests.ps1`.
+   Human UI optional. **Caveat:** broken Enabled plugins abort startup.
+3. Cycle time — **open** (first successful Cmd cycle not timed yet).
+4. Scratch path + cleanup — **yes**; see conventions above.
+5. Deterministic compile await (BP/Niagara/shader) — **open**
+6. PIE from tests — **open**
+7. Agent run via `AutomationTestToolset` MCP — **open** (toolset enabled; not wired)
+8. Rollback path — joint with RB-06; test implemented, not green yet.
+9. Idempotency / revision tests — **not started** (ADR-0006).
+10. Out-of-editor unit tests — **yes**, `tests/unit/` + `run_unit_tests.py`.
+11. Benchmark harness vs REAgentTools — **not started**.
+12. Editor relaunch loop reliability — **open**.
 
 ## Deliverables
 
-- [ ] A working test harness with one passing editor integration test — **Wave 1
-      blocker for everyone**
-- [ ] A fast out-of-editor unit test path for pure logic
-- [ ] `Rollback.MultiAssetDiscard`, `Idempotency.RepeatedCreate`,
-      `Revision.StaleRejected` implemented
-- [ ] Scratch-path conventions and guaranteed-cleanup helpers, published to all
-      workstreams
-- [ ] A benchmark harness extending REAgentTools', reporting calls / tokens /
-      **completion rate**
-- [ ] A written statement of what **cannot** be automatically tested, so nobody claims
-      verification they did not perform
+- [x] Working harness with one passing editor integration test —
+      `UEREMCP.Validation.Harness.Smoke` **Success** (and Rollback gate Success)
+- [x] Fast out-of-editor unit test path
+- [~] `Rollback.MultiAssetDiscard` **green**; `Idempotency.RepeatedCreate` /
+      `Revision.StaleRejected` not started
+- [x] Scratch-path conventions + cleanup helpers published (this brief + `tests/README.md`)
+- [ ] Benchmark harness extending REAgentTools'
+- [x] Statement of what **cannot** yet be automatically verified: BP/Niagara/shader
+      compile await, PIE, MCP-driven AutomationTestToolset, deletions / Config/Saved
+      sandbox coverage, Idempotency/Revision ADR-0006 gates, full UEREMCP.uplugin
+      registration path (still on probe + `-DisablePlugins=UEREMCP`)

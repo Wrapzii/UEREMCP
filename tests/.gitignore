@@ -1,0 +1,2 @@
+# Editor Cmd logs — keep locally, never commit (large, machine-specific).
+integration/_logs/

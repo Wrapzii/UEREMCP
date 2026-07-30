@@ -6,6 +6,25 @@
 verification. **Neither is possible until this harness exists**, which is why RB-14 is a
 Wave 1 blocker for every other workstream.
 
+## How to run (WS-11 harness)
+
+```bash
+# Fast, no editor — run this always
+python tests/run_unit_tests.py
+
+# Editor automation (UnrealEditor-Cmd). Defaults disable broken UEREMCP and enable
+# the interim UeremcpValidationProbe plugin. Filter examples:
+pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Harness.Smoke"
+pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Rollback.MultiAssetDiscard"
+pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library"
+```
+
+Logs land in `tests/integration/_logs/` (gitignored). Scratch assets only under
+`/Game/__UeremcpTests/` with `FUeremcpScratchGuard` cleanup — see RB-14.
+
+Until `Rollback.MultiAssetDiscard` is observed green, **`rollback.available` stays
+`false`** (ADR-0005). Do not claim atomic multi-asset rollback from source reading alone.
+
 ## Layout
 
 ```
