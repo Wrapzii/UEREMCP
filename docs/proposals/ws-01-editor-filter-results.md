@@ -702,10 +702,10 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Overall POC A claimed via Python-free CRT on `3756244`; support only if regressions appear. |
-| WS-07 | Remove the live create response's `partially_completed` ceiling when structural, compile, material, and visible gates pass; see `ws-01-niagara-created-and-validated-handoff.md`. |
+| WS-07 | Status ceiling closed: live MCP replace returned `modified_and_validated` on tip `e32d866` / record `d3e0f95`. Support only if regressions appear. |
 | WS-08 | Production B10 is PASS on the material lineage `268a102`; no remaining B10 material blocker in this claim. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Refresh the current-lineage bundle claim flag when convenient while preserving the honest `partially_completed`, token-unavailable, and quarantine caveats. |
+| WS-11 | Bundle claim flag refreshed at `0038016` (`overall_poc_b_claimed=true` in `poc_b_current_lineage_2aab525.json`). |
 | WS-14 | Successful primitive metrics archived at `2aab525`: 63 operations in each of 3/3 usable trials. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
