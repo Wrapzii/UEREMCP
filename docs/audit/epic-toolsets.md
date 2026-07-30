@@ -9,7 +9,7 @@
 
 | Layer | Result | Tag |
 |---|---|---|
-| Runtime `list_toolsets` / `describe_toolset` | **Failed** — editor MCP on `127.0.0.1:8000` not reachable; proxy on `:8001` returns transport WinError 10061 | [VERIFIED-RUNTIME: `docs/audit/raw/runtime-negative-findings.json`] |
+| Runtime `list_toolsets` / `describe_toolset` | **Partial** — full schema dump still blocked (editor MCP on `127.0.0.1:8000` not reachable; proxy on `:8001` returns transport WinError 10061). WS-09 confirmed `GASToolsets` + `GameplayTagsToolset` in `list_toolsets` when MCP is up | [VERIFIED-RUNTIME: `docs/audit/raw/runtime-negative-findings.json`; WS-09 `list_toolsets` 2026-07-29] |
 | Static source scan | **875 AICallable tools** across 25 toolset plugins (599 Python `@tool_call`, 274 C++ `UFUNCTION(meta=(AICallable))`) | [VERIFIED: `docs/audit/raw/source-scan-summary.json`] |
 | Per-plugin dumps | `docs/audit/raw/plugins/<PluginName>.json` | [VERIFIED: generated from scan 2026-07-29] |
 
@@ -33,7 +33,7 @@
 | No AICallable tools found | `MCPClientToolset` — editor MCP *client* subsystem/settings only `[VERIFIED: MCPClientToolset headers — no AICallable UFUNCTION]` |
 | ToolsetRegistry reference | `UAgentSkillToolset` — ListSkills, GetSkills, CreateSkill, UpdateSkill `[VERIFIED: AgentSkill.h:69-103]` |
 
-**Runtime confirmation pending:** actual registry contents when the editor is up.
+**Runtime confirmation pending** for full registry + schemas. **Partial (WS-09):** `GASToolsets` and `GameplayTagsToolset` are not named in `RE.uproject` but load via `AllToolsets` and were visible in live `list_toolsets` `[VERIFIED: RE.uproject]` `[VERIFIED: AllToolsets.uplugin:50-56]` `[VERIFIED-RUNTIME: unreal-mcp list_toolsets 2026-07-29]`.
 
 ---
 
@@ -82,17 +82,18 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 
 | Plugin | Toolset class(es) | Tools | Altitude mix | Disposition | Superseded by (UEREMCP) | Limitations | Tag |
 |---|---|---|---|---|---|---|---|
-| EditorToolset | `BlueprintTools` | 52 | primitive + DSL composite | preserve / supersede surface | `blueprints.submit_graph`, `blueprints.read_graph` (planned) | UObject pin refs; no envelope; DSL not JSON graph schema | [VERIFIED: source scan] |
+| EditorToolset | `BlueprintTools` | 52 | primitive + DSL composite | preserve / supersede surface | `blueprints.submit_graph`, `blueprints.read_graph` (planned) | UObject pin refs; no envelope; DSL not JSON graph schema | [VERIFIED: source scan; WS-06 proposal] — detail: Blueprint WS-06 disposition |
 | EditorToolset | `ProgrammaticToolset` | 2 | composite (batch) | preserve | compose in `execute_plan` | Async only; script sandbox; no arbitrary imports | [VERIFIED: programmatic.py] |
 | EditorToolset | `MaterialTools` | 22 | primitive | internalise | compose in `create_vfx_material`, `retrieve/replace_material_graph` (WS-08) | Per-expression ops; UObject refs; no ADR-0004 graph JSON | [VERIFIED: material.py, source scan] |
 | EditorToolset | `MaterialInstanceTools` | 13 | primitive | preserve / improve via envelope | `create_vfx_material` batches MI params (WS-08) | Scalar/vector/texture/switch overrides; static switch recompile cost | [VERIFIED: material_instance.py, source scan] |
 | EditorToolset | `ActorTools`, `SceneTools`, `AssetTools`, `ObjectTools`, … | 174 | primitive–composite | internalise | goal-level domain tools | Many round-trips for workflows | [VERIFIED: source scan] |
 | EditorToolset | `UEditorAppToolset`, `ULogsToolset` (C++) | 25 | primitive | preserve | — | Editor/PIE/log plumbing | [VERIFIED: EditorAppToolset.h, LogsToolset.h] |
 | NiagaraToolsets | C++ Niagara BP API | 56 | primitive–composite | preserve / internalise | `niagara.submit_graph` (planned) | Stack/module topology ops; batched via execute_tool_script in REAgentTools | [VERIFIED: source scan] |
-| GASToolsets | C++ GAS inspection | 14 | composite | preserve | `gameplay.*` (planned) | Cue/tag inspection; not ability graph authoring | [VERIFIED: source scan] |
-| GameplayTagsToolset | C++ tag CRUD | 6 | primitive | preserve | — | Tag dictionary ops only | [VERIFIED: source scan] |
+| GASToolsets | `GameplayCueToolset`, `AttributeSetToolset`, `AbilitySystemInspectorToolset` | 14 | primitive–composite | preserve / improve (cue create) | WS-09 `create_spell`, `upsert_ability_row` | No `UGameplayAbility` / `UGameplayEffect` authoring; RE has no ASC on characters | [VERIFIED: source scan; WS-09 proposal] |
+| GameplayTagsToolset | C++ tag CRUD | 6 | primitive | preserve with policy | — | INI mutation; concurrency hazard on rename | [VERIFIED: source scan; GameplayTagsToolset.cpp:93-147] |
+| EditorToolset | `DataTableTools` | 7+ | mid | preserve | WS-09 `upsert_ability_row` (idempotency wrapper) | Whole-table JSON rewrite on `set_rows`; no revision API | [VERIFIED: data_table.py:59-241] |
 | PCGToolset | C++ graph + instance | 31 | primitive–composite | preserve | defer | PCG graph authoring exists | [VERIFIED: source scan] |
-| AnimationAssistantToolset | ControlRig, Sequencer*, etc. | 300+ | primitive–composite | preserve / defer | WS-10 | Broad sequencer/control-rig surface | [VERIFIED: source scan] |
+| AnimationAssistantToolset | `ControlRigTools` (44), Sequencer* (276) | 320 | primitive–composite | preserve / compose | `animation.*` / `control_rig.*` (Wave 3) | RigVM primitives; no AnimBP/montage/notify goal ops | [VERIFIED: controlrig.py + audit JSON; WS-10 proposal] |
 | UMGToolSet | C++ widget BP | 23 | primitive–composite | defer | — | Widget tree authoring | [VERIFIED: source scan] |
 | StateTreeToolset | `StateTreeTools` | 9 | composite | defer | — | Read-heavy state inspection | [VERIFIED: source scan] |
 | SemanticSearchToolset | C++ | 2 | composite | preserve | template search (WS-15) | `Search`, `FindSimilar` only | [VERIFIED: source scan] |
@@ -105,6 +106,40 @@ One row per **toolset class** (875 tools total). Full tool name lists: `docs/aud
 | AllToolsets | — | 0 | — | preserve (infra) | — | Dependency aggregator | [VERIFIED: AllToolsets.uplugin] |
 | ToolsetRegistry | `UAgentSkillToolset` | 4 | goal (skills) | preserve | WS-15 templates | Skill assets, not domain graphs | [VERIFIED: AgentSkill.h] |
 | Remaining plugins | see raw/ | see raw | — | defer | — | ChaosCloth, Config, Conversation, DataRegistry, GameFeatures, LiveCoding, MetaHuman, SequencerAnimMixer, WorldConditions, AIModule | [VERIFIED: source scan] |
+
+---
+
+## Blueprint — WS-06 disposition
+
+Accepted from `docs/proposals/ws-06-audit-blueprint-rows.md` (WS-06 → WS-02, 2026-07-29).
+Evidence: [RB-05](../research/RB-05-blueprint-graph-ceiling.md); runtime probes noted in RB-05.
+Cross-checked against `docs/audit/raw/plugins/EditorToolset.json` and q8 dump
+`[VERIFIED: blueprint.py, helpers.py, source scan 2026-07-29]`. Per-tool MCP schemas
+still need runtime `describe_toolset` — dispositions are source + RB-05 only.
+
+**Correction (propagate):** REAgentTools and older docs sometimes name `BlueprintNodeTools`.
+That class **does not exist** in UE 5.8 EditorToolset — only `BlueprintTools`
+`[VERIFIED: docs/audit/raw/q8-blueprint-graph-tools.json; EditorToolset __init__.py]`.
+
+**WS-06 commitment:** WS-06 will not reimplement create/connect/compile pin primitives.
+New work is envelope mapping, hashing, diagnostics, and verification only.
+
+### Epic `BlueprintTools` (52 tools)
+
+| Toolset / tools | Altitude | Disposition | Superseded by (UEREMCP) | Limitations | Tag |
+|---|---|---|---|---|---|
+| `BlueprintTools` (52) | primitive + DSL composite | **preserve** primitives; **supersede** agent surface | `blueprints.read_graph`, `blueprints.submit_graph` | UObject pin refs; DSL ≠ `graph.schema.json`; no envelope/hash/revision | `[VERIFIED: blueprint.py]` + RB-05 |
+| `read_graph_dsl` / `write_graph_dsl` | composite | **preserve** as *internal* backend | composed under submit/read | MultiGate decompile fail; bind elision; no semantic_id | `[VERIFIED: blueprint.py:1454-1502]` `[VERIFIED-RUNTIME: RB-05]` |
+| `get_node_infos` / `find_nodes` / `get_connected_subgraph` | composite inspect | **preserve** / internalise | feed structured read | `PinInfo.type_id` is display string, not `FEdGraphPinType` | `[VERIFIED: blueprint.py:609-748]` |
+| `compile_blueprint` | primitive | **preserve** | validation pipeline | Sync; errors via `ErrorMsg` / `list_nodes_with_errors` | `[VERIFIED: helpers.py:30-44]` |
+| `ProgrammaticToolset.execute_tool_script` | batch | **preserve** | compose under `execute_plan` | Required for multi-tool Blueprint jobs without MCP thrash | WS-02 q7; `[VERIFIED: programmatic.py:906]` |
+
+### UEREMCP blueprint actions (not duplicates — envelope layer)
+
+| Planned action | Why not duplicate Epic/RE | Owner |
+|---|---|---|
+| `blueprints.read_graph` | ADR-0004 JSON + stable IDs/revision/hash; Epic DSL is text + UObject refs | WS-06 |
+| `blueprints.submit_graph` | Same + verified status taxonomy after compile/save | WS-06 |
 
 ---
 
@@ -170,6 +205,83 @@ Coordinate elemental Niagara+material templates with WS-07 and WS-15 per accepte
 
 ---
 
+## Gameplay / GAS — WS-09 disposition
+
+Accepted from `docs/proposals/ws-09-audit-gas-toolsets.md` (WS-09, 2026-07-29). Tool names
+cross-checked against `docs/audit/raw/plugins/GASToolsets.json`, `GameplayTagsToolset.json`,
+and `EditorToolset.json` `[VERIFIED: headers + source scan 2026-07-29]`. Brief:
+[RB-12](../research/RB-12-gas-and-gameplay.md). Per-tool schemas still need runtime
+`describe_toolset` — dispositions are source + accepted architecture only.
+
+### `GASToolsets.GameplayCueToolset`
+
+| Tool(s) | Purpose | Altitude | Disposition | Superseded by / notes | Tag |
+|---|---|---|---|---|---|
+| `ListCues`, `GetCueInfo`, `FindCueNotifyAssets`, `FindCueTagsWithoutNotifies` | Inspect cue tags and notify assets | primitive | **preserve** | — | [VERIFIED: GameplayCueToolset.h:67-145] |
+| `ExecuteCueOnSelectedActor` | Non-replicated cue preview on selection | primitive | **preserve** | Needs selection; not net validation | [VERIFIED: GameplayCueToolset.h:91-92] |
+| `CreateCueNotifyAsset` | Create empty Static/Actor notify BP; set tag on CDO | primitive | **improve** (compose into goal-level with VFX) | No Niagara/audio bind; tag must pre-exist | WS-09 `create_spell` presentation + WS-07 | [VERIFIED: GameplayCueToolset.cpp:218-286] |
+| `AddCueTag`, `RemoveCueTag` | Mutate `GameplayCue.*` tags in INI | primitive | **preserve** with policy | Concurrent-agent INI race; destructive | ADR-0006 tag policy | [VERIFIED: GameplayCueToolset.cpp:289-338] |
+
+### `GASToolsets.AttributeSetToolset`
+
+| Tool(s) | Purpose | Altitude | Disposition | Notes | Tag |
+|---|---|---|---|---|---|
+| `FindAttributeSetClasses`, `ListAttributes` | Discover AttributeSet types and fields | primitive | **preserve** | No create/edit; RE project has no GAS attribute sets in use | [VERIFIED: AttributeSetToolset.h:54-70] |
+
+### `GASToolsets.AbilitySystemInspectorToolset`
+
+| Tool(s) | Purpose | Altitude | Disposition | Notes | Tag |
+|---|---|---|---|---|---|
+| `GetAttributeValues`, `GetActiveEffects`, `GetGrantedAbilities`, `GetActiveTags` | Runtime ASC inspection | primitive | **preserve** | Requires ASC; RE magecraft characters have none today | [VERIFIED: AbilitySystemInspectorToolset.h:101-131] |
+
+### `GameplayTagsToolset`
+
+| Tool(s) | Purpose | Altitude | Disposition | Notes | Tag |
+|---|---|---|---|---|---|
+| `ListTags`, `GetTagInfo`, `FindReferencersByTag` | Tag discovery | primitive | **preserve** | — | [VERIFIED: GameplayTagsToolset.h:44-89] |
+| `AddTag`, `RemoveTag`, `RenameTag` | INI tag mutation | primitive | **preserve** with policy | Concurrency hazard; rename rewrites referencers | ADR-0006 | [VERIFIED: GameplayTagsToolset.cpp:93-147] |
+
+### Epic `DataTableTools` — substrate for RE abilities (not GAS)
+
+| Tool(s) | Purpose | Altitude | Disposition | Notes | Tag |
+|---|---|---|---|---|---|
+| `create`, `add_rows`, `set_rows`, `get_rows`, `list_rows`, … | DataTable CRUD | mid | **preserve** | Whole-table JSON rewrite on `set_rows`; no revision API | WS-09 `upsert_ability_row` wraps with idempotency | [VERIFIED: data_table.py:59-241] |
+
+### UEREMCP gameplay actions (not duplicates — real gaps)
+
+| Planned action | Why not duplicate Epic/RE | Owner |
+|---|---|---|
+| `create_spell` | Batches DataTable row + VFX/cue presentation + validation; not a rename of GASToolsets | WS-09 |
+| `upsert_ability_row` | Idempotent `FREAbilityDef` / `CastAbility` row semantics on top of `DataTableTools` | WS-09 |
+
+Goal-level `create_spell` must wrap DataTable + VFX domains and validate against RE runtime —
+Epic GAS toolsets do not understand `FREAbilityDef` or `CastAbility`.
+
+---
+
+## Animation and Control Rig — WS-10 disposition
+
+Accepted from `docs/proposals/ws-10-animation-audit-rows.md` (WS-10 → WS-02, 2026-07-29).
+Evidence: [RB-09](../research/RB-09-animation-controlrig.md); tool counts from AnimationAssistant audit JSON + source.
+
+| Plugin / surface | Tools | Disposition | Superseded by (UEREMCP) | Limitations | Tag |
+|---|---|---|---|---|---|
+| AnimationAssistant `ControlRigTools` | 44 | **preserve / compose** | `animation.*` / `control_rig.*` goal ops (Wave 3) | RigVM primitives; not envelope | [VERIFIED: controlrig.py] + runtime create |
+| AnimationAssistant Sequencer* | 276 | **preserve / internalise** | bake path only | No AnimBP/montage/notify | [VERIFIED: audit JSON 320 total] |
+| EditorToolset `SkeletalMeshTools` sockets/bones | ~15 anim-relevant | **preserve** | `animation.ensure_socket`, skeleton inspect | — | [VERIFIED-RUNTIME] |
+| `UAnimationBlueprintLibrary` | n/a (not a toolset) | **internalise** | montage/notify/marker ops | Editor module | [VERIFIED: AnimationBlueprintLibrary.h] |
+| AnimBP state machine authoring | **none in Epic toolsets** | **gap** | read-only inspect until proven | Schema spawners only | negative finding |
+
+### UEREMCP animation gaps (confirmed)
+
+| Gap | Why Epic is insufficient | Owner |
+|---|---|---|
+| Goal-level montage + **real** AnimNotify authoring | `UAnimationBlueprintLibrary` exists; no Epic toolset exposes notify authoring | WS-10 |
+| AnimBP / state-machine structured inspect as ADR-0004 JSON | `list_graphs` works; DSL empty for state machines | WS-10 |
+| AnimBP state-machine **authoring** | Documented non-goal for Phase 4 | — |
+
+---
+
 ## Do-not-rebuild list
 
 Tools already at composite/goal altitude or that would duplicate working Epic surface:
@@ -184,7 +296,13 @@ Tools already at composite/goal altitude or that would duplicate working Epic su
 8. **`ULogsToolset.GetLogEntries`** and editor/PIE helpers on `UEditorAppToolset` `[VERIFIED: LogsToolset.h, EditorAppToolset.h]`
 9. **`SlateInspectorToolset`** — UI dialog automation `[VERIFIED: source scan]`
 10. **`UAgentSkillToolset`** — skill template CRUD `[VERIFIED: AgentSkill.h]`
-11. **REAgentTools `execute_editor_batch`** — prior-art batch with `$ref` chaining; audit disposition in RB-15 / `reagenttools.md` (not Epic, but do not rebuild batch grammar without reading it)
+11. **`GASToolsets.*` cue/tag/ASC inspection** — 14 C++ tools; improve only via goal-level compose (WS-09) `[VERIFIED: GASToolsets.json, WS-09 proposal]`
+12. **`GameplayTagsToolset.*`** — tag dictionary CRUD with INI policy `[VERIFIED: GameplayTagsToolset, WS-09 proposal]`
+13. **`DataTableTools.*`** — table CRUD substrate for ability rows; wrap, do not reimplement `[VERIFIED: data_table.py:59-241]`
+14. **Entire AnimationAssistant ~320-tool surface** — compose via goal ops; do not re-expose RigVM/Sequencer primitives `[VERIFIED: WS-10 proposal]`
+15. **`SkeletalMeshTools` socket/bone primitives** — preserve; wrap in `animation.ensure_socket` `[VERIFIED: WS-10 proposal]`
+16. **Sequencer Control Rig keying** — compose via REAnimWorkflow bake pattern, do not rebuild `[VERIFIED: WS-10 proposal]`
+17. **REAgentTools `execute_editor_batch`** — prior-art batch with `$ref` chaining; audit disposition in RB-15 / `reagenttools.md` (not Epic, but do not rebuild batch grammar without reading it)
 
 ---
 
@@ -199,8 +317,12 @@ Capabilities where Epic + REAgentTools still leave holes — justified new UEREM
 | Verified status taxonomy | Epic returns tool errors/values; no `created_and_validated` pipeline | WS-11 |
 | Idempotent goal-level domain actions | Stable paths + expected_revision not on Epic surface | WS-05, domain WS |
 | Multi-asset rollback semantics | `execute_tool_script` undoes single transactional script, not FileSandbox batch | WS-11, WS-12 |
-| GAS **ability graph** authoring | GASToolsets inspect cues/tags/effects; no ability graph construction | WS-09 |
+| GAS **ability graph** authoring | GASToolsets inspect cues/tags/effects; no `UGameplayAbility` / `UGameplayEffect` creation | WS-09 |
+| RE `FREAbilityDef` / `CastAbility` row authoring | No Epic tool understands RE ability table schema or cast pipeline | WS-09 |
+| Goal-level spell creation | Not a rename of GASToolsets — must compose DataTable + VFX + validation | WS-09 |
 | Semantic VFX **material templates** | MaterialTools are per-expression; REAgentTools MI-only — need `create_vfx_material`, graph JSON, procedural texture, element instantiation | WS-08 |
+| Goal-level montage + **real** AnimNotify authoring | Library API exists; no Epic toolset; REAnim notify plan is metadata-only | WS-10 |
+| AnimBP state-machine structured inspect (ADR-0004 JSON) | Epic `list_graphs` only; DSL empty for state machines | WS-10 |
 | Project-specific RE workflows | dress/character/lighting REAgentTools toolsets | defer / project layer |
 
 ---
@@ -230,7 +352,8 @@ marked runtime-verified:
 
 - [ ] `list_toolsets` — dump to `docs/audit/raw/runtime-list_toolsets.json`
 - [ ] `describe_toolset` for each loaded class — schemas to `docs/audit/raw/schemas/`
-- [ ] Confirm load set matches `AllToolsets` inference (Niagara, GAS, GameplayTags, etc.)
+- [x] Confirm `GASToolsets` + `GameplayTagsToolset` in `list_toolsets` when MCP up (WS-09, 2026-07-29)
+- [ ] Confirm full load set matches `AllToolsets` inference (remaining toolsets)
 - [ ] Verify dotted toolset names match source scan (Python module paths vs MCP names)
 - [ ] Classify async tools (confirm `execute_tool_script` async; sample others)
 - [ ] Sample result payload sizes for composite tools (token budget calibration)
