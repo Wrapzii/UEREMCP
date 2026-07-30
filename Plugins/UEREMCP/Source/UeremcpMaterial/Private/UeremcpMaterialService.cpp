@@ -2,11 +2,9 @@
 
 #include "UeremcpMaterialService.h"
 
-#include "AssetToolsModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
-#include "IAssetTools.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
@@ -20,6 +18,7 @@
 #include "UeremcpMaterialMasterBuilder.h"
 #include "UeremcpMaterialNiagaraExport.h"
 #include "UeremcpMaterialPaths.h"
+#include "UObject/Package.h"
 #include "Engine/Texture.h"
 #include "UeremcpProceduralTextureService.h"
 
@@ -30,10 +29,10 @@ namespace
 		return GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
 	}
 
-	static bool SaveAssetAtPackagePath(const FString& PackagePath, UObject* Asset)
+	static bool SaveAssetObject(UObject* Asset, const FString& PreferredPackagePath)
 	{
 		UEditorAssetSubsystem* AssetSubsystem = GetEditorAssetSubsystem();
-		if (!AssetSubsystem || !Asset || PackagePath.IsEmpty())
+		if (!AssetSubsystem || !Asset || PreferredPackagePath.IsEmpty())
 		{
 			return false;
 		}
@@ -43,7 +42,19 @@ namespace
 		{
 			Package->MarkPackageDirty();
 		}
-		return AssetSubsystem->SaveAsset(PackagePath, false);
+
+		if (AssetSubsystem->SaveAsset(PreferredPackagePath, false))
+		{
+			return true;
+		}
+
+		const FString ActualPackagePath = Asset->GetOutermost()->GetName();
+		if (!ActualPackagePath.Equals(PreferredPackagePath, ESearchCase::CaseSensitive))
+		{
+			return AssetSubsystem->SaveAsset(ActualPackagePath, false);
+		}
+
+		return false;
 	}
 
 	struct FVfxPersistTargets
@@ -64,7 +75,7 @@ namespace
 
 		if (Targets.Instance)
 		{
-			if (SaveAssetAtPackagePath(Targets.Request->TargetAssetPath, Targets.Instance))
+			if (SaveAssetObject(Targets.Instance, Targets.Request->TargetAssetPath))
 			{
 				++Result.InternalOperations;
 				Result.InterpretationNotes.Add(
@@ -84,7 +95,7 @@ namespace
 		if (Targets.bMasterCreated && Targets.MasterMaterial && Targets.MasterPath && !Targets.MasterPath->IsEmpty())
 		{
 			const FString& SavedMasterPath = *Targets.MasterPath;
-			if (SaveAssetAtPackagePath(SavedMasterPath, Targets.MasterMaterial))
+			if (SaveAssetObject(Targets.MasterMaterial, SavedMasterPath))
 			{
 				++Result.InternalOperations;
 				Result.InterpretationNotes.Add(
@@ -421,29 +432,44 @@ namespace
 		return true;
 	}
 
-	static UMaterialInstanceConstant* CreateMaterialInstance(
-		const FString& FolderPath,
-		const FString& AssetName,
+	static UMaterialInstanceConstant* CreateMaterialInstanceAtPath(
+		const FString& PackagePath,
 		UMaterialInterface* Parent,
 		FString& OutError,
 		int32& InOutOps)
 	{
-		FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+		FString FolderPath;
+		FString AssetName;
+		if (!UeremcpMaterialPaths::SplitPackagePath(PackagePath, FolderPath, AssetName))
+		{
+			OutError = FString::Printf(TEXT("Invalid MI package path '%s'."), *PackagePath);
+			return nullptr;
+		}
+
+		UPackage* Package = CreatePackage(*PackagePath);
+		if (!Package)
+		{
+			OutError = TEXT("CreatePackage failed for MaterialInstanceConstant.");
+			return nullptr;
+		}
+
 		UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
 		Factory->InitialParent = Parent;
 
-		UObject* NewAsset = AssetToolsModule.Get().CreateAsset(
-			AssetName,
-			FolderPath,
+		UObject* NewAsset = Factory->FactoryCreateNew(
 			UMaterialInstanceConstant::StaticClass(),
-			Factory);
-
+			Package,
+			FName(*AssetName),
+			RF_Public | RF_Standalone,
+			nullptr,
+			GWarn);
 		UMaterialInstanceConstant* Instance = Cast<UMaterialInstanceConstant>(NewAsset);
 		if (!Instance)
 		{
-			OutError = TEXT("AssetTools.CreateAsset did not return UMaterialInstanceConstant.");
+			OutError = TEXT("MaterialInstanceConstantFactoryNew did not return UMaterialInstanceConstant.");
 			return nullptr;
 		}
+
 		FAssetRegistryModule::AssetCreated(Instance);
 		++InOutOps;
 		return Instance;
@@ -665,7 +691,9 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
-	FScopedTransaction Transaction(NSLOCTEXT("UeremcpMaterial", "CreateVfxMaterial", "UEREMCP create_vfx_material"));
+	FScopedTransaction Transaction(
+		NSLOCTEXT("UeremcpMaterial", "CreateVfxMaterial", "UEREMCP create_vfx_material"),
+		!Request.bSave);
 
 	FUeremcpMaterialMasterBuildRequest MasterRequest;
 	MasterRequest.MasterPackagePath = MasterPath;
@@ -749,34 +777,28 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
-	const bool bExisted = AssetSubsystem->DoesAssetExist(Request.TargetAssetPath);
-	UMaterialInstanceConstant* Instance = nullptr;
+	UMaterialInstanceConstant* Instance =
+		UeremcpMaterialAssetLoad::TryLoadRegisteredMaterialInstance(Request.TargetAssetPath);
 	bool bCreatedInstance = false;
 
-	if (bExisted)
+	if (Instance)
 	{
-		Instance = UeremcpMaterialAssetLoad::TryLoadMaterialInstance(Request.TargetAssetPath);
-		if (!Instance)
-		{
-			TryPersistVfxAssets(
-				MakePersistTargets(Request, nullptr, MasterMaterial, MasterPath, MasterResult.bCreated),
-				Result);
-			CapPartialWhenProofUnavailable(
-				Result,
-				Request.TargetAssetPath,
-				nullptr,
-				FString::Printf(
-					TEXT("Target '%s' exists but is not a MaterialInstanceConstant."),
-					*Request.TargetAssetPath));
-			return Result;
-		}
 		UMaterialEditingLibrary::SetMaterialInstanceParent(Instance, MasterMaterial);
 		++Result.InternalOperations;
 	}
 	else
 	{
+		if (AssetSubsystem->DoesAssetExist(Request.TargetAssetPath))
+		{
+			AssetSubsystem->DeleteAsset(Request.TargetAssetPath);
+		}
+
 		FString CreateError;
-		Instance = CreateMaterialInstance(MiFolder, MiName, MasterMaterial, CreateError, Result.InternalOperations);
+		Instance = CreateMaterialInstanceAtPath(
+			Request.TargetAssetPath,
+			MasterMaterial,
+			CreateError,
+			Result.InternalOperations);
 		if (!Instance)
 		{
 			TryPersistVfxAssets(
@@ -832,7 +854,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	if (Request.bSave)
 	{
-		if (!SaveAssetAtPackagePath(Request.TargetAssetPath, Instance))
+		if (!SaveAssetObject(Instance, Request.TargetAssetPath))
 		{
 			Result.Status = TEXT("partially_completed");
 			Result.Summary = FString::Printf(
@@ -847,7 +869,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 			FString::Printf(TEXT("Saved in-process MI package '%s' to disk before compile/validate gates."), *Request.TargetAssetPath));
 		if (MasterResult.bCreated)
 		{
-			if (SaveAssetAtPackagePath(MasterPath, MasterMaterial))
+			if (SaveAssetObject(MasterMaterial, MasterPath))
 			{
 				++Result.InternalOperations;
 				Result.InterpretationNotes.Add(

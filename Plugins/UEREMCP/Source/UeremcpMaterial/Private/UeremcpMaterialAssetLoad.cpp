@@ -76,6 +76,11 @@ UMaterial* UeremcpMaterialAssetLoad::ResolveMaterial(const FString& PackagePath,
 	return FindInProcessObject<UMaterial>(PackagePath);
 }
 
+UMaterialInstanceConstant* UeremcpMaterialAssetLoad::TryLoadRegisteredMaterialInstance(const FString& PackagePath)
+{
+	return Cast<UMaterialInstanceConstant>(TryLoadRegisteredAsset(PackagePath));
+}
+
 UMaterialInstanceConstant* UeremcpMaterialAssetLoad::TryLoadMaterialInstance(const FString& PackagePath)
 {
 	if (UMaterialInstanceConstant* Registered = Cast<UMaterialInstanceConstant>(TryLoadRegisteredAsset(PackagePath)))

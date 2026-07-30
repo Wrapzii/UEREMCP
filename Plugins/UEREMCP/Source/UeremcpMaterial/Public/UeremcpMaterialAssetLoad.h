@@ -24,7 +24,10 @@ namespace UeremcpMaterialAssetLoad
 
 	UEREMCPMATERIAL_API UMaterial* ResolveMaterial(const FString& PackagePath, UMaterial* Preferred = nullptr);
 
-	UEREMCPMATERIAL_API UMaterialInstanceConstant* TryLoadMaterialInstance(const FString& PackagePath);
+	UEREMCPMATERIAL_API 	UMaterialInstanceConstant* TryLoadMaterialInstance(const FString& PackagePath);
+
+	/** Registry-only MI load for idempotent reuse (ignores stale in-process objects after delete). */
+	UEREMCPMATERIAL_API UMaterialInstanceConstant* TryLoadRegisteredMaterialInstance(const FString& PackagePath);
 
 	UEREMCPMATERIAL_API UTexture2D* TryLoadTexture(const FString& PackagePath);
 }
