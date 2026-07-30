@@ -133,6 +133,11 @@ public:
 		UNiagaraMeshRendererProperties* MeshProps,
 		const FString& ExpectedCanonicalPath);
 
+	/** Compare material object paths with FSoftObjectPath equivalence. */
+	static bool MaterialObjectPathsMatch(
+		const FString& ActualPath,
+		const FString& ExpectedPath);
+
 	static bool MaterialMatchesExpectedAfterReread(
 		const FString& PropertyValuesJson,
 		EUeremcpNiagaraRendererMaterialKind Kind,

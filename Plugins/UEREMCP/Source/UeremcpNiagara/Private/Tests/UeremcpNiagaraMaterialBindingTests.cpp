@@ -75,6 +75,19 @@ bool FUeremcpNiagaraInlineMaterialPathCoLocationTest::RunTest(const FString& Par
 		TEXT("user content MI path rejected"),
 		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/VFX/Materials/MI_Fireball_core")));
 
+	TestTrue(
+		TEXT("object path soft equivalence"),
+		FUeremcpNiagaraMaterialBinding::MaterialObjectPathsMatch(
+			TEXT("/Game/__UeremcpPoc/Materials/MI_Foo.MI_Foo"),
+			TEXT("/Game/__UeremcpPoc/Materials/MI_Foo")));
+
+	TestTrue(
+		TEXT("json reread accepts package path when expected is object path"),
+		FUeremcpNiagaraMaterialBinding::MaterialMatchesExpectedAfterReread(
+			TEXT("{\"Material\":{\"refPath\":\"/Game/__UeremcpPoc/Materials/MI_Core\"}}"),
+			EUeremcpNiagaraRendererMaterialKind::Sprite,
+			TEXT("/Game/__UeremcpPoc/Materials/MI_Core.MI_Core")));
+
 	return true;
 }
 

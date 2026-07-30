@@ -10,6 +10,8 @@
 
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraMeshRendererProperties.h"
+#include "NiagaraRibbonRendererProperties.h"
+#include "NiagaraSpriteRendererProperties.h"
 #include "NiagaraSystem.h"
 
 #include "Materials/MaterialInterface.h"
@@ -178,6 +180,96 @@ namespace
 		return true;
 	}
 
+	bool TrySetSpriteOrRibbonMaterialDirect(
+		UNiagaraRendererProperties* RendererProps,
+		EUeremcpNiagaraRendererMaterialKind Kind,
+		UMaterialInterface* Material,
+		FString& OutConflict)
+	{
+		OutConflict.Reset();
+		if (!RendererProps || !Material)
+		{
+			OutConflict = TEXT("missing renderer or material");
+			return false;
+		}
+
+		if (Kind == EUeremcpNiagaraRendererMaterialKind::Sprite)
+		{
+			UNiagaraSpriteRendererProperties* SpriteProps =
+				Cast<UNiagaraSpriteRendererProperties>(RendererProps);
+			if (!SpriteProps)
+			{
+				OutConflict = TEXT("renderer is not a sprite renderer");
+				return false;
+			}
+
+			if (HasValidUserMaterialBindingCpp(SpriteProps->MaterialUserParamBinding))
+			{
+				OutConflict = TEXT("MaterialUserParamBinding wins over direct Material assignment");
+				return false;
+			}
+
+			SpriteProps->Modify();
+			SpriteProps->Material = Material;
+			return true;
+		}
+
+		if (Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
+		{
+			UNiagaraRibbonRendererProperties* RibbonProps =
+				Cast<UNiagaraRibbonRendererProperties>(RendererProps);
+			if (!RibbonProps)
+			{
+				OutConflict = TEXT("renderer is not a ribbon renderer");
+				return false;
+			}
+
+			if (HasValidUserMaterialBindingCpp(RibbonProps->MaterialUserParamBinding))
+			{
+				OutConflict = TEXT("MaterialUserParamBinding wins over direct Material assignment");
+				return false;
+			}
+
+			RibbonProps->Modify();
+			RibbonProps->Material = Material;
+			return true;
+		}
+
+		OutConflict = TEXT("unsupported renderer kind for direct Material assignment");
+		return false;
+	}
+
+	UMaterialInterface* GetSpriteOrRibbonMaterialDirect(
+		UNiagaraRendererProperties* RendererProps,
+		EUeremcpNiagaraRendererMaterialKind Kind)
+	{
+		if (!RendererProps)
+		{
+			return nullptr;
+		}
+
+		if (Kind == EUeremcpNiagaraRendererMaterialKind::Sprite)
+		{
+			if (UNiagaraSpriteRendererProperties* SpriteProps =
+				Cast<UNiagaraSpriteRendererProperties>(RendererProps))
+			{
+				return SpriteProps->Material;
+			}
+			return nullptr;
+		}
+
+		if (Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
+		{
+			if (UNiagaraRibbonRendererProperties* RibbonProps =
+				Cast<UNiagaraRibbonRendererProperties>(RendererProps))
+			{
+				return RibbonProps->Material;
+			}
+		}
+
+		return nullptr;
+	}
+
 	TSharedPtr<FJsonObject> MergeDefaultPurposeIntoCreateSpec(
 		const FString& Role,
 		const TSharedPtr<FJsonObject>& CreateSpec)
@@ -210,6 +302,20 @@ namespace
 		InlineRecord.ModifiedAssets = MatResult.ModifiedAssets;
 		InlineRecord.ReusedAssets = MatResult.ReusedAssets;
 	}
+}
+
+bool FUeremcpNiagaraMaterialBinding::MaterialObjectPathsMatch(
+	const FString& ActualPath,
+	const FString& ExpectedPath)
+{
+	if (ActualPath == ExpectedPath)
+	{
+		return true;
+	}
+
+	const FSoftObjectPath ActualSoft(ActualPath);
+	const FSoftObjectPath ExpectedSoft(ExpectedPath);
+	return ActualSoft.IsValid() && ExpectedSoft.IsValid() && ActualSoft == ExpectedSoft;
 }
 
 bool FUeremcpNiagaraMaterialBinding::ParseMaterialRequests(
@@ -647,7 +753,9 @@ bool FUeremcpNiagaraMaterialBinding::MaterialMatchesExpectedAfterReread(
 	if (Kind == EUeremcpNiagaraRendererMaterialKind::Sprite
 		|| Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
 	{
-		return ReadRefPathField(Root, TEXT("Material")) == ExpectedCanonicalPath;
+		return MaterialObjectPathsMatch(
+			ReadRefPathField(Root, TEXT("Material")),
+			ExpectedCanonicalPath);
 	}
 
 	if (Kind == EUeremcpNiagaraRendererMaterialKind::Mesh)
@@ -665,7 +773,9 @@ bool FUeremcpNiagaraMaterialBinding::MaterialMatchesExpectedAfterReread(
 			{
 				continue;
 			}
-			if (ReadRefPathField(Slot, TEXT("ExplicitMat")) == ExpectedCanonicalPath)
+			if (MaterialObjectPathsMatch(
+				ReadRefPathField(Slot, TEXT("ExplicitMat")),
+				ExpectedCanonicalPath))
 			{
 				return true;
 			}
@@ -748,41 +858,52 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 				continue;
 			}
 
-			FNiagaraExt_StackItemReference RendererRef(System, FName(*EmitterName));
-			RendererRef.RendererIndex = Renderer.RendererIndex;
+			UNiagaraRendererProperties* RendererProps =
+				UeremcpNiagaraRendererResolve::GetRendererAtIndex(
+					System,
+					FName(*EmitterName),
+					Renderer.RendererIndex);
+			if (!RendererProps)
+			{
+				OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
+					TEXT("%s: could not resolve renderer %d on emitter '%s'"),
+					*Role,
+					Renderer.RendererIndex,
+					*EmitterName));
+				continue;
+			}
 
 			FString Conflict;
 			bool bPatched = false;
-			TSharedPtr<FJsonObject> SpriteRibbonPropertyValues;
 			if (Kind == EUeremcpNiagaraRendererMaterialKind::Sprite
 				|| Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
 			{
-				FNiagaraExt_RendererData RendererData;
-				UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
-				++InOutInternalOperations;
-
-				SpriteRibbonPropertyValues = ParsePropertyValuesJson(RendererData.PropertyValues);
-				if (!SpriteRibbonPropertyValues.IsValid())
+				UMaterialInterface* Material = Cast<UMaterialInterface>(
+					FSoftObjectPath(CanonicalMaterialPath).TryLoad());
+				if (!Material)
 				{
 					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
-						TEXT("%s: renderer %d PropertyValues JSON unreadable"),
+						TEXT("%s: could not load material '%s' for renderer %d"),
 						*Role,
+						*CanonicalMaterialPath,
 						Renderer.RendererIndex));
 					continue;
 				}
 
-				bPatched = PatchSpriteOrRibbonMaterial(
-					SpriteRibbonPropertyValues,
-					CanonicalMaterialPath,
+				bPatched = TrySetSpriteOrRibbonMaterialDirect(
+					RendererProps,
+					Kind,
+					Material,
 					Conflict);
+				if (bPatched)
+				{
+					++InOutInternalOperations;
+				}
 			}
 			else
 			{
 				UNiagaraMeshRendererProperties* MeshProps =
-					UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
-						System,
-						FName(*EmitterName),
-						Renderer.RendererIndex);
+					Cast<UNiagaraMeshRendererProperties>(RendererProps);
 				if (!MeshProps)
 				{
 					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
@@ -827,25 +948,6 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 				continue;
 			}
 
-			if (Kind == EUeremcpNiagaraRendererMaterialKind::Sprite
-				|| Kind == EUeremcpNiagaraRendererMaterialKind::Ribbon)
-			{
-				FNiagaraExt_RendererData PatchedData;
-				PatchedData.PropertyValues = SerializePropertyValuesJson(SpriteRibbonPropertyValues);
-				UNiagaraExternalEditUtilities::SetRendererData(RendererRef, PatchedData, Context);
-				++InOutInternalOperations;
-
-				if (Context.HasErrors())
-				{
-					OutResult.bAnyBindingFailedReread = true;
-					OutResult.UnresolvedMaterialBindings.Add(FString::Printf(
-						TEXT("%s: SetRendererData failed for renderer %d"),
-						*Role,
-						Renderer.RendererIndex));
-					continue;
-				}
-			}
-
 			const FString BindingKey = FString::Printf(
 				TEXT("%s/renderer_%d"),
 				*Role,
@@ -855,21 +957,15 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 			bool bVerified = false;
 			if (Kind == EUeremcpNiagaraRendererMaterialKind::Mesh)
 			{
-				UNiagaraMeshRendererProperties* MeshProps =
-					UeremcpNiagaraRendererResolve::GetMeshRendererAtIndex(
-						System,
-						FName(*EmitterName),
-						Renderer.RendererIndex);
-				bVerified = MeshRendererMaterialMatchesExpected(MeshProps, CanonicalMaterialPath);
+				bVerified = MeshRendererMaterialMatchesExpected(
+					Cast<UNiagaraMeshRendererProperties>(RendererProps),
+					CanonicalMaterialPath);
 			}
-			else
+			else if (UMaterialInterface* BoundMaterial =
+				GetSpriteOrRibbonMaterialDirect(RendererProps, Kind))
 			{
-				FNiagaraExt_RendererData RereadData;
-				UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RereadData, Context);
-				++InOutInternalOperations;
-				bVerified = MaterialMatchesExpectedAfterReread(
-					RereadData.PropertyValues,
-					Kind,
+				bVerified = MaterialObjectPathsMatch(
+					BoundMaterial->GetPathName(),
 					CanonicalMaterialPath);
 			}
 
@@ -1031,7 +1127,8 @@ bool FUeremcpNiagaraMaterialBinding::MeshRendererMaterialMatchesExpected(
 
 	for (const FNiagaraMeshMaterialOverride& Override : MeshProps->OverrideMaterials)
 	{
-		if (Override.ExplicitMat && Override.ExplicitMat->GetPathName() == ExpectedCanonicalPath)
+		if (Override.ExplicitMat
+			&& MaterialObjectPathsMatch(Override.ExplicitMat->GetPathName(), ExpectedCanonicalPath))
 		{
 			return true;
 		}
