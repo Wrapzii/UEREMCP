@@ -56,6 +56,5 @@ remains on the source branch closeouts (WS-04/WS-05/WS-11).
 
 ## Local main
 
-Final tip: `33aff30` (WS-01 wording) atop merges of `ded9fc4` / `9cc5381` /
-`deacfa6`. Fast-forward `main` to that tip. Verify with `git rev-parse main`.
-Do not push.
+Fast-forwarded local `main` to this consolidation tip (ancestor-safe from
+`227cb99`). Verify with `git rev-parse main`. Do not push.
