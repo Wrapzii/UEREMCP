@@ -28,5 +28,12 @@ public:
 		const class UUeremcpSecuritySettings* Settings = nullptr);
 
 	static EUeremcpPermissionTier TierForMode(const FString& Mode, bool bTargetExists);
+
+	/**
+	 * True for console/OS escape hatches (ADR-0010 §2). Requests cannot self-elevate;
+	 * only UUeremcpSecuritySettings::bAllowUnsafe can admit these actions.
+	 */
+	static bool IsUnsafeAction(const FString& Action);
+
 	static bool IsDestructiveContext(const FString& Mode, bool bTargetExists, int32 PredictedDeletedAssetCount);
 };

@@ -50,6 +50,14 @@ EUeremcpPermissionTier FUeremcpPermissionPolicy::TierForMode(const FString& Mode
 	return EUeremcpPermissionTier::Write;
 }
 
+bool FUeremcpPermissionPolicy::IsUnsafeAction(const FString& Action)
+{
+	const FString Normalised = Action.ToLower();
+	return Normalised == TEXT("execute_tool_script")
+		|| Normalised == TEXT("run_console_command")
+		|| Normalised == TEXT("execute_python");
+}
+
 FUeremcpPermissionVerdict FUeremcpPermissionPolicy::Evaluate(
 	const FString& Action,
 	const FString& Mode,
@@ -57,11 +65,17 @@ FUeremcpPermissionVerdict FUeremcpPermissionPolicy::Evaluate(
 	bool bTargetExists,
 	const UUeremcpSecuritySettings* Settings)
 {
-	(void)Action;
-
 	FUeremcpPermissionVerdict Verdict;
-	Verdict.RequiredTier = TierForMode(Mode, bTargetExists);
+	Verdict.RequiredTier = IsUnsafeAction(Action)
+		? EUeremcpPermissionTier::Unsafe
+		: TierForMode(Mode, bTargetExists);
 	Verdict.bEffectiveDryRun = Options.bDryRun;
+
+	if (Options.PredictedDeletedAssetCount > 0
+		&& static_cast<uint8>(Verdict.RequiredTier) < static_cast<uint8>(EUeremcpPermissionTier::Destructive))
+	{
+		Verdict.RequiredTier = EUeremcpPermissionTier::Destructive;
+	}
 
 	const UUeremcpSecuritySettings* EffectiveSettings = Settings ? Settings : UUeremcpSecuritySettings::Get();
 	const EUeremcpPermissionTier MaxTier = EffectiveSettings
@@ -76,19 +90,17 @@ FUeremcpPermissionVerdict FUeremcpPermissionPolicy::Evaluate(
 		return Verdict;
 	}
 
-	if (Verdict.RequiredTier == EUeremcpPermissionTier::Destructive
+	// Predicted deletes outside delete/replace/rebuild require explicit allow_destructive
+	// (ADR-0010 §2). Mode-native destructive ops do not need the flag.
+	if (Options.PredictedDeletedAssetCount > 0
 		&& !Options.bAllowDestructive
 		&& !ModeEquals(Mode, TEXT("delete"))
 		&& !ModeEquals(Mode, TEXT("replace"))
 		&& !ModeEquals(Mode, TEXT("rebuild_from_specification")))
 	{
-		// Predicted deletes without explicit destructive opt-in.
-		if (Options.PredictedDeletedAssetCount > 0)
-		{
-			Verdict.bAllowed = false;
-			Verdict.DenialReason = TEXT("operation predicts deletions but allow_destructive is false");
-			return Verdict;
-		}
+		Verdict.bAllowed = false;
+		Verdict.DenialReason = TEXT("operation predicts deletions but allow_destructive is false");
+		return Verdict;
 	}
 
 	if (static_cast<uint8>(Verdict.RequiredTier) > static_cast<uint8>(MaxTier)

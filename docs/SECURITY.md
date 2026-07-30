@@ -61,6 +61,8 @@ and game-thread freezes that in-editor MCP cannot self-heal.
 
 Requests **cannot** elevate to `unsafe`. Only `UUeremcpSecuritySettings::bAllowUnsafe`
 can enable it. UEREMCP v1 does **not** wrap `execute_tool_script` as a normal tool.
+`FUeremcpPermissionPolicy::IsUnsafeAction` rejects those action names unless settings
+allow `[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpPermissionPolicy.cpp]`.
 
 ### Destructive `dry_run`
 
@@ -72,6 +74,9 @@ sets `dry_run: false` when:
 - `mode` is `replace` and the target exists, or
 - `mode` is `rebuild_from_specification` and the target exists, or
 - predicted `deleted_assets` is non-empty.
+
+Predicted deletes outside native `delete`/`replace`/`rebuild_from_specification` modes
+also require `options.allow_destructive: true` or the request is **rejected**.
 
 Plan destructive work with a dry run first; opt out only deliberately.
 
@@ -94,14 +99,70 @@ Plan destructive work with a dry run first; opt out only deliberately.
 mutator per normalized project key. `read` bypasses the queue. A waiter receives a
 stable job id and claims the slot by retrying after the prior owner releases it
 `[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp]`.
-Core/Transport still must map that id into ADR-0009 polling; see
-`docs/proposals/ws-12-core-security-dispatcher-gate.md`.
+Core maps that id into ADR-0009 `partially_completed` via `FUeremcpMutatingDispatch`.
 
 ### Forbidden patterns
 
 - Agent-facing `UndoTransaction` — use sandbox `Discard()` (ADR-0005).
 - Wrapping Epic `execute_tool_script` without `unsafe` tier + name filters.
 - Per-domain path allowlists looser than `FUeremcpPathPolicy`.
+- Calling Security primitives piecemeal from domains when `FUeremcpMutatingDispatch`
+  already composes them (fork risk).
+
+## Preferred domain gate: `FUeremcpMutatingDispatch`
+
+**Owner:** WS-03 (`UeremcpCore`). **Policy substrate:** WS-12 (`UeremcpSecurity`).
+
+Domains must **not** reimplement permission / path / queue / audit. Call the Core RAII
+gate:
+
+```cpp
+#include "UeremcpMutatingDispatch.h"  // also add UeremcpSecurity to PrivateDependencyModuleNames
+
+FUeremcpMutatingDispatch Gate;
+FString Blocking;
+if (!Gate.TryBegin(
+	RequestJson,
+	bTargetExists,
+	PredictedDeletedAssetCount,  // use FUeremcpSecurityDomainAdoption::PredictedDeletedForDestructiveReplace
+	bReadOnlyOperation,
+	Blocking))
+{
+	return Blocking;  // rejected or partially_completed (queued)
+}
+
+// ... mutate, save, re-read verify ...
+return Gate.Complete(Response);  // audit append + mutator release + serialize
+```
+
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpCore/Public/UeremcpMutatingDispatch.h;
+Plugins/UEREMCP/Source/UeremcpCore/Private/UeremcpMutatingDispatch.cpp]`
+
+| Parameter | Typical create | Inspect / read | Replace existing |
+|---|---|---|---|
+| `bTargetExists` | asset already on disk | true | true |
+| `PredictedDeletedAssetCount` | 0 | 0 | 1 (or helper) |
+| `bReadOnlyOperation` | false | **true** | false |
+
+Live mutators that skip `TryBegin` when `options.dry_run` is true (Gameplay /
+Blueprint pattern) are acceptable **only** when dry-run paths never acquire the
+queue and never write. Prefer always calling `TryBegin` with the effective dry-run
+verdict when in doubt.
+
+Helpers for PredictedDeleted / soft-path preflight without forking policy:
+`FUeremcpSecurityDomainAdoption` in `UeremcpSecurityDomainAdoption.h`
+(umbrella: `UeremcpSecurity.h`).
+
+### Domain adoption status (2026-07-30)
+
+| Domain | Mutating entry | Gate wired? | Notes |
+|---|---|---|---|
+| Gameplay (WS-09) | `CreateSpell` | **yes** | `FUeremcpMutatingDispatch` around live DataTable write |
+| Blueprint (WS-06) | `SubmitGraph` / `ReadGraph` | **yes** | `FUeremcpBlueprintMutatingGate` adapter |
+| Niagara (WS-07) | `CreateNiagaraEffect` | **no** | handoff: `docs/proposals/ws-12-niagara-mutating-dispatch-handoff.md` |
+| Material (WS-08) | `CreateVfxMaterial`, `CreateProceduralTexture` | **no** | handoff: `docs/proposals/ws-12-material-mutating-dispatch-handoff.md` |
+
+**R-07 stays open** until Niagara and Material call the dispatch on live mutate paths.
 
 ## Audit
 
@@ -124,53 +185,35 @@ FFileHelper.h:196; FileManager.h:20,122]`.
 |---|---|
 | `UUeremcpSecuritySettings` | Project tiers, `bAllowUnsafe`, audit retention |
 | `FUeremcpPathPolicy` | Soft + filesystem roots |
-| `FUeremcpPermissionPolicy` | Tier + destructive dry_run gate |
+| `FUeremcpPermissionPolicy` | Tier + destructive dry_run + unsafe action gate |
 | `FUeremcpMutatorQueue` | Per-project FIFO single active mutator |
 | `FUeremcpAuditLog` | Append-only daily JSONL writer + retention prune |
+| `FUeremcpSecurityDomainAdoption` | Domain helpers (PredictedDeleted, soft-path wrap) |
+| `FUeremcpMutatingDispatch` | **Core** RAII composition of the above (WS-03) |
 
-Registration in `UEREMCP.uplugin` landed in WS-03 merge `9148d52`
+### Not a toolset
+
+`UeremcpSecurity` registers **no** `AICallable` tools and does **not** call
+`UToolsetRegistry::RegisterToolsetClass`. It is a policy library loaded as a plugin
+module; domains and Core consume it
+`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpSecurityModule.cpp]`.
+Registration of the module in `UEREMCP.uplugin` landed in WS-03 merge `9148d52`
 `[VERIFIED: docs/proposals/ws-12-register-security-module.md:60-63]`.
-Core dispatcher integration remains open:
-`docs/proposals/ws-12-core-security-dispatcher-gate.md`.
 
-## WS-09 Gameplay integration surface
+Core dispatcher (`FUeremcpMutatingDispatch`) landed per
+`docs/proposals/ws-12-core-security-dispatcher-gate.md` — residual work is **domain
+adoption**, not Core wiring.
 
-Gameplay DataTable mutators should add `UeremcpSecurity` as a private module
-dependency, then use this sequence around the complete write/verify/audit operation:
+## Legacy primitive sequence (Core/tests only)
+
+Prefer `FUeremcpMutatingDispatch`. If composing primitives (Core or automation only):
 
 ```cpp
-const FString ProjectKey = Request.ProjectPath;
-const FString RequestId = Request.RequestId;
-const auto Acquire = FUeremcpMutatorQueue::TryAcquire(
-	ProjectKey, RequestId, EUeremcpPermissionTier::Write);
-if (!Acquire.bAcquired)
-{
-	// With ADR-0009 job wiring: return partially_completed using Acquire.JobId.
-	// Without job wiring: CancelQueued(ProjectKey, RequestId) and reject as busy.
-}
-
-// Hold ownership through DataTable write, save, re-read verification, and audit.
-// Use scope-exit so every terminal path calls:
-FUeremcpMutatorQueue::Release(ProjectKey, RequestId);
+// 1) FUeremcpPermissionPolicy::Evaluate(...)
+// 2) FUeremcpPathPolicy::ValidateSoftPath / ValidateProjectPathMatch
+// 3) FUeremcpMutatorQueue::TryAcquire → Release / CancelQueued
+// 4) FUeremcpAuditLog::Append on every terminal path
 ```
-
-Before acquisition, call `FUeremcpPermissionPolicy::Evaluate` and
-`FUeremcpPathPolicy::ValidateSoftPath`; use the verdict's required tier rather than
-hard-coding `Write` if a future Gameplay mode can delete or replace existing content
-`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpPermissionPolicy.h;
-Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpPathPolicy.h]`.
-
-After verification, populate `FUeremcpAuditRecord` with the terminal status and
-created/modified/deleted asset lists, then call
-`FUeremcpAuditLog::Append(Record, FUeremcpPathPolicy::RootsFromProject(), Error)`.
-Append failure must be surfaced; it must not be reported as an audited success
-`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Public/UeremcpAuditLog.h]`.
-
-Queued requests are FIFO and retain the same job id across retries. If WS-09 cannot
-yet register the waiter with the ADR-0009 job registry, it must call `CancelQueued`
-before returning a terminal busy rejection so an abandoned waiter cannot block later
-writes
-`[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp]`.
 
 ## Tests
 
@@ -178,6 +221,11 @@ writes
 # Header/docs contract (no Unreal):
 python Plugins/UEREMCP/Source/UeremcpSecurity/scripts/test_security_contract.py
 
-# Editor automation (plugin built):
+# Editor automation (plugin built; does not require Niagara rebuild):
 pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Security"
 ```
+
+Coverage includes: `/Engine/` write rejection, destructive dry-run force
+(including `rebuild_from_specification`), predicted-delete `allow_destructive`
+rejection, unsafe action denial, mutator FIFO serialization, audit JSONL append,
+and `FUeremcpSecurityDomainAdoption` helpers.

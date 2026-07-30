@@ -1,4 +1,6 @@
 // UEREMCP — security module. Registers no AICallable tools; hosts policy helpers.
+// Intentionally not a UToolsetDefinition — domains adopt ADR-0010 via Core's
+// FUeremcpMutatingDispatch rather than Security exposing tools.
 
 #include "Modules/ModuleManager.h"
 #include "Modules/ModuleInterface.h"

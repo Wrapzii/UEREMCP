@@ -8,6 +8,7 @@
 #include "UeremcpMutatorQueue.h"
 #include "UeremcpPathPolicy.h"
 #include "UeremcpPermissionPolicy.h"
+#include "UeremcpSecurityDomainAdoption.h"
 #include "UeremcpSecuritySettings.h"
 
 #include "Async/ParallelFor.h"
@@ -133,10 +134,121 @@ bool FUeremcpSecurityPermissionPolicyDryRunTest::RunTest(const FString& Paramete
 	const auto PredictedDeletes = FUeremcpPermissionPolicy::Evaluate(
 		TEXT("patch_graph"), TEXT("patch"), Options, false);
 	TestTrue(TEXT("predicted deletes force dry_run"), PredictedDeletes.bDryRunForced);
+	TestFalse(TEXT("predicted deletes without allow_destructive denied"), PredictedDeletes.bAllowed);
+
+	Options.bAllowDestructive = true;
+	const auto PredictedDeletesAllowed = FUeremcpPermissionPolicy::Evaluate(
+		TEXT("patch_graph"), TEXT("patch"), Options, false);
+	TestTrue(TEXT("predicted deletes with allow_destructive admitted"), PredictedDeletesAllowed.bAllowed);
+	TestTrue(TEXT("predicted deletes still force dry_run"), PredictedDeletesAllowed.bDryRunForced);
+
+	Options = FUeremcpPermissionOptions();
+	const auto RebuildExists = FUeremcpPermissionPolicy::Evaluate(
+		TEXT("rebuild_graph"), TEXT("rebuild_from_specification"), Options, true);
+	TestTrue(TEXT("rebuild_from_specification on existing forces dry_run"), RebuildExists.bDryRunForced);
+	TestEqual(
+		TEXT("rebuild_from_specification is destructive tier"),
+		static_cast<uint8>(RebuildExists.RequiredTier),
+		static_cast<uint8>(EUeremcpPermissionTier::Destructive));
 
 	const auto Create = FUeremcpPermissionPolicy::Evaluate(
 		TEXT("create_graph"), TEXT("create_or_update"), FUeremcpPermissionOptions(), false);
 	TestFalse(TEXT("create does not force dry_run"), Create.bDryRunForced);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpSecurityPermissionPolicyUnsafeAndTierTest,
+	"UEREMCP.Security.PermissionPolicy.UnsafeAndMaxTier",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpSecurityPermissionPolicyUnsafeAndTierTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+
+	TestTrue(
+		TEXT("execute_tool_script is unsafe"),
+		FUeremcpPermissionPolicy::IsUnsafeAction(TEXT("execute_tool_script")));
+	TestFalse(
+		TEXT("create_niagara_effect is not unsafe"),
+		FUeremcpPermissionPolicy::IsUnsafeAction(TEXT("create_niagara_effect")));
+
+	UUeremcpSecuritySettings* Settings = NewObject<UUeremcpSecuritySettings>();
+	Settings->bAllowUnsafe = false;
+	Settings->MaxProjectTier = EUeremcpPermissionTier::Write;
+
+	const auto UnsafeDenied = FUeremcpPermissionPolicy::Evaluate(
+		TEXT("execute_tool_script"),
+		TEXT("create"),
+		FUeremcpPermissionOptions(),
+		false,
+		Settings);
+	TestFalse(TEXT("unsafe denied when bAllowUnsafe false"), UnsafeDenied.bAllowed);
+	TestEqual(
+		TEXT("unsafe required tier"),
+		static_cast<uint8>(UnsafeDenied.RequiredTier),
+		static_cast<uint8>(EUeremcpPermissionTier::Unsafe));
+
+	Settings->bAllowUnsafe = true;
+	const auto UnsafeAllowed = FUeremcpPermissionPolicy::Evaluate(
+		TEXT("execute_tool_script"),
+		TEXT("create"),
+		FUeremcpPermissionOptions(),
+		false,
+		Settings);
+	TestTrue(TEXT("unsafe admitted when bAllowUnsafe true"), UnsafeAllowed.bAllowed);
+
+	Settings->bAllowUnsafe = false;
+	Settings->MaxProjectTier = EUeremcpPermissionTier::Read;
+	const auto WriteDenied = FUeremcpPermissionPolicy::Evaluate(
+		TEXT("create_vfx_material"),
+		TEXT("create"),
+		FUeremcpPermissionOptions(),
+		false,
+		Settings);
+	TestFalse(TEXT("write denied when MaxProjectTier is read"), WriteDenied.bAllowed);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpSecurityDomainAdoptionHelpersTest,
+	"UEREMCP.Security.DomainAdoption.Helpers",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpSecurityDomainAdoptionHelpersTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+
+	TestEqual(
+		TEXT("preferred gate header"),
+		FString(FUeremcpSecurityDomainAdoption::PreferredGateHeader()),
+		FString(TEXT("UeremcpMutatingDispatch.h")));
+
+	TestEqual(
+		TEXT("replace existing predicts one delete"),
+		FUeremcpSecurityDomainAdoption::PredictedDeletedForDestructiveReplace(true, true),
+		1);
+	TestEqual(
+		TEXT("replace missing predicts zero deletes"),
+		FUeremcpSecurityDomainAdoption::PredictedDeletedForDestructiveReplace(false, true),
+		0);
+
+	const FUeremcpPathValidationResult EngineWrite =
+		FUeremcpSecurityDomainAdoption::ValidateWriteSoftPath(TEXT("/Engine/Content/Evil"));
+	TestFalse(TEXT("adoption helper rejects /Engine/ write"), EngineWrite.bAllowed);
+
+	const FUeremcpPathValidationResult GameWrite =
+		FUeremcpSecurityDomainAdoption::ValidateWriteSoftPath(TEXT("/Game/__UeremcpTests/NS_Probe"));
+	TestTrue(TEXT("adoption helper allows /Game/ write"), GameWrite.bAllowed);
+
+	const FUeremcpPermissionOptions Options =
+		FUeremcpSecurityDomainAdoption::MakePermissionOptions(false, false, false, 0);
+	const FUeremcpPermissionVerdict DeleteForced =
+		FUeremcpSecurityDomainAdoption::EvaluatePermission(
+			TEXT("delete_asset"), TEXT("delete"), Options, true);
+	TestTrue(TEXT("adoption helper forces destructive dry_run"), DeleteForced.bDryRunForced);
 
 	return true;
 }

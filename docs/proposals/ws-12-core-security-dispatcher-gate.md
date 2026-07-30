@@ -3,8 +3,12 @@
 - **From:** WS-12
 - **To:** WS-03 (`Plugins/UEREMCP/Source/UeremcpCore/**`)
 - **Date:** 2026-07-30
-- **Status:** Open
+- **Status:** Satisfied in Core — domain adoption residual
 - **Related:** ADR-0010 §§3–4, ADR-0009, `docs/SECURITY.md`
+- **Update (2026-07-30):** WS-03 landed `FUeremcpMutatingDispatch` in
+  `UeremcpCore`. Gameplay + Blueprint adopt it. Niagara/Material handoffs:
+  `ws-12-niagara-mutating-dispatch-handoff.md`,
+  `ws-12-material-mutating-dispatch-handoff.md`.
 
 ## Ownership blocker
 
@@ -70,7 +74,6 @@ its next poll, avoiding an abandoned waiter holding the active slot.
 
 ## Limitation
 
-No common mutating dispatcher exists in the synced tree, so WS-12 cannot demonstrate
-end-to-end enforcement until WS-03 adds this hook and each domain routes mutations
-through it. The owned queue and audit implementations are complete, but system-wide
-security enforcement remains **partially completed**.
+Core now ships `FUeremcpMutatingDispatch`. System-wide enforcement remains
+**partially completed** until every mutating domain routes live writes through it
+(Niagara + Material outstanding as of 2026-07-30).

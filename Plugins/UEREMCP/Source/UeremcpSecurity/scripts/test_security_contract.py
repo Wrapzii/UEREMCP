@@ -23,14 +23,37 @@ def main() -> int:
         errors.append("docs/SECURITY.md missing")
     else:
         body = security_md.read_text(encoding="utf-8")
-        for heading in ("Operator", "Agent", "UnrealWatch"):
+        for heading in (
+            "Operator",
+            "Agent",
+            "UnrealWatch",
+            "FUeremcpMutatingDispatch",
+            "Not a toolset",
+        ):
             if heading not in body:
-                errors.append(f"docs/SECURITY.md missing '{heading}' section")
+                errors.append(f"docs/SECURITY.md missing '{heading}' section/text")
+        if "RegisterToolsetClass" not in body:
+            errors.append("docs/SECURITY.md must document absence of RegisterToolsetClass")
+        if "R-07 stays open" not in body and "R-07 remains" not in body:
+            errors.append("docs/SECURITY.md must state R-07 remains open until domain adoption")
 
     required_headers = {
+        "UeremcpSecurity.h": ["UeremcpSecurityDomainAdoption.h", "UeremcpPermissionPolicy.h"],
+        "UeremcpSecurityDomainAdoption.h": [
+            "PreferredGateHeader",
+            "PredictedDeletedForDestructiveReplace",
+            "ValidateWriteSoftPath",
+            "UeremcpMutatingDispatch.h",
+        ],
         "UeremcpPathPolicy.h": ["ValidateSoftPath", "ValidateFilesystemPath"],
-        "UeremcpPermissionPolicy.h": ["Evaluate"],
-        "UeremcpMutatorQueue.h": ["TryAcquire", "Release", "CancelQueued", "PendingCount", "IsImplemented"],
+        "UeremcpPermissionPolicy.h": ["Evaluate", "IsUnsafeAction"],
+        "UeremcpMutatorQueue.h": [
+            "TryAcquire",
+            "Release",
+            "CancelQueued",
+            "PendingCount",
+            "IsImplemented",
+        ],
         "UeremcpAuditLog.h": ["Append", "AuditDirectory", "DailyLogFileName", "IsImplemented"],
         "UeremcpSecuritySettings.h": ["bAllowUnsafe", "AuditRetentionDays"],
     }
@@ -44,13 +67,30 @@ def main() -> int:
             if symbol not in text:
                 errors.append(f"{name} missing symbol {symbol}")
 
-    audit = (PUBLIC / "UeremcpAuditLog.h").read_text(encoding="utf-8") if (PUBLIC / "UeremcpAuditLog.h").is_file() else ""
+    adoption_cpp = ROOT / "Private" / "UeremcpSecurityDomainAdoption.cpp"
+    if not adoption_cpp.is_file():
+        errors.append("missing UeremcpSecurityDomainAdoption.cpp")
+
+    audit = (
+        (PUBLIC / "UeremcpAuditLog.h").read_text(encoding="utf-8")
+        if (PUBLIC / "UeremcpAuditLog.h").is_file()
+        else ""
+    )
     if "YYYY-MM-DD.jsonl" not in audit and "DailyLogFileName" not in audit:
         errors.append("audit log daily JSONL contract not documented in header")
 
-    proposal = REPO / "docs" / "proposals" / "ws-12-register-security-module.md"
-    if not proposal.is_file():
-        errors.append("missing ws-12-register-security-module.md proposal")
+    for proposal_name in (
+        "ws-12-register-security-module.md",
+        "ws-12-niagara-mutating-dispatch-handoff.md",
+        "ws-12-material-mutating-dispatch-handoff.md",
+    ):
+        proposal = REPO / "docs" / "proposals" / proposal_name
+        if not proposal.is_file():
+            errors.append(f"missing {proposal_name} proposal")
+
+    module_cpp = (ROOT / "Private" / "UeremcpSecurityModule.cpp").read_text(encoding="utf-8")
+    if "UToolsetRegistry::RegisterToolsetClass" in module_cpp or "RegisterToolsetClass(" in module_cpp:
+        errors.append("UeremcpSecurityModule must not call RegisterToolsetClass")
 
     if errors:
         for err in errors:
