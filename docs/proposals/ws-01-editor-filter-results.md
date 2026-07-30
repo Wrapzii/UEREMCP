@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `cb7d3e5` (VisualTest T1a freshness blocker note; superseded by live MCP PASS below)
+- **Current orchestration tip:** `62a1107` (VisualTest T1a freshness PASS record)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
