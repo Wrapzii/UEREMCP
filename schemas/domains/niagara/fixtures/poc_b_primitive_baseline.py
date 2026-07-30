@@ -72,6 +72,16 @@ def remove_template_emitters(system):
     return removed
 
 
+def case_tolerant_field(mapping, live_key):
+    if live_key in mapping:
+        return mapping[live_key]
+    folded_key = live_key.casefold()
+    for key, field_value in mapping.items():
+        if key.casefold() == folded_key:
+            return field_value
+    raise KeyError(live_key)
+
+
 def binding_path(property_values, renderer_class):
     if "SpriteRenderer" in renderer_class or "RibbonRenderer" in renderer_class:
         material = property_values["Material"]
@@ -80,7 +90,8 @@ def binding_path(property_values, renderer_class):
         overrides = property_values["OverrideMaterials"]
         if not property_values["bOverrideMaterials"] or not overrides:
             return ""
-        return overrides[0]["ExplicitMat"]["refPath"]
+        material = case_tolerant_field(overrides[0], "explicitMat")
+        return material["refPath"]
     return ""
 
 
@@ -97,7 +108,10 @@ def patch_renderer(property_values_json, renderer_class, material_ref):
             raise RuntimeError("mesh renderer exposes no material override slots")
         properties["bOverrideMaterials"] = True
         for override in overrides:
-            override["ExplicitMat"] = material_ref
+            for key in list(override):
+                if key.casefold() == "explicitmat":
+                    del override[key]
+            override["explicitMat"] = material_ref
     else:
         raise RuntimeError("unsupported renderer class: " + renderer_class)
     return json.dumps(properties, separators=(",", ":"))

@@ -1,6 +1,6 @@
 # WS-07 → WS-14: executable POC-B primitive baseline
 
-**Status:** Ready for a clean live REAgentTools/Epic trial; no timing claimed
+**Status:** One clean live trial passed; WS-14 repetition/archival remains
 **Owner:** WS-07 (fixture); WS-14 (execution and metrics)
 **Fixture:** `schemas/domains/niagara/fixtures/poc_b_primitive_baseline.py`
 
@@ -31,6 +31,16 @@ executable inputs. The fixture now fixes each item:
   binding. This avoids guessing renderer indices or dropping adjacent properties.
   [VERIFIED:
   `$UE_ROOT/Engine/Plugins/Experimental/Toolsets/NiagaraToolsets/Source/NiagaraToolsets/Private/NiagaraToolset_System.h:421-440,453-463`]
+- Mesh material overrides are written with the live NiagaraToolsets wire key
+  `explicitMat`. Reread accepts that key and case-tolerant aliases, including the
+  native reflected property spelling `ExplicitMat`, while writes remove duplicate
+  aliases and normalize back to `explicitMat`. The native UE property is
+  `FNiagaraMeshMaterialOverride::ExplicitMat`. [VERIFIED:
+  `$UE_ROOT/Engine/Plugins/FX/Niagara/Source/Niagara/Public/NiagaraMeshRendererProperties.h:59-75`]
+  The lower-camel wire spelling was observed in the live mesh renderer payload.
+  [VERIFIED-RUNTIME:
+  `NiagaraToolsets.NiagaraToolset_System.GetRendererData` on
+  `/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline`, 2026-07-30]
 - The material arm is fixed to six Epic
   `MaterialInstanceTools.create` calls. Each MI derives from a concrete, pre-UEREMCP
   project fireball/smoke/ribbon/impact Material and is bound to its matching role.
@@ -133,16 +143,33 @@ Record:
 as required by the original handoff. Do not report a reduction ratio from a failed,
 blocked, or partial run.
 
-## What still requires a live run
+## Live trial status and remaining handoff
 
-The fixture has been syntax-checked and its inputs were live-discovered, but WS-07
-does not claim an executed baseline trial here. A live RE editor with REAgentTools and
-the Epic toolsets must still:
+Three clean trials after inherited-emitter removal reached 42 primitive operations
+each, then failed mesh renderer reread because the fixture expected `ExplicitMat`
+instead of the live `explicitMat` wire key. Those are failed trials, not baseline
+measurements. [VERIFIED-RUNTIME:
+`docs/reviews/metrics/artifacts/poc_b_primitive_baseline_post_04b3541_failed_20260730.json`]
 
-1. execute the script from a clean output state;
-2. prove each renderer accepts the complete patched payload (especially the mesh
-   override on `FlameShell`);
-3. collect client wall clock and the returned actual primitive count;
-4. repeat clean trials and archive their raw results under WS-14-owned metrics paths.
+After correcting the wire key, one clean live trial passed all harness acceptance
+checks with `status == "created_and_validated"`, 63 executed primitive operations,
+and 6.4099332 seconds client wall clock. It removed the inherited `Minimal` emitter,
+reread all six renderer bindings including `FlameShell`, reported `UpToDate` with no
+compile errors, and left all seven saved outputs clean. [VERIFIED-RUNTIME:
+`python docs/reviews/metrics/run_poc_b_primitive_live.py --fixture
+schemas/domains/niagara/fixtures/poc_b_primitive_baseline.py --output
+%TEMP%/poc_b_primitive_baseline_ws07_fixed_20260730.json --trials 1
+--execute-cleanup`, 2026-07-30]
+
+WS-14 should repeat from clean state for the requested three-trial metrics set and
+archive the raw responses under its owned metrics path. The exact rerun command is:
+
+```powershell
+python docs/reviews/metrics/run_poc_b_primitive_live.py `
+  --fixture schemas/domains/niagara/fixtures/poc_b_primitive_baseline.py `
+  --output docs/reviews/metrics/artifacts/poc_b_primitive_baseline_fixed_20260730.json `
+  --trials 3 `
+  --execute-cleanup
+```
 
 This handoff does not claim overall POC-B.

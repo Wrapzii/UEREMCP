@@ -161,6 +161,49 @@ class NiagaraSpecificationTests(unittest.TestCase):
             ],
         )
 
+    def test_primitive_baseline_mesh_material_wire_key_aliases(self) -> None:
+        fixture_path = NIAGARA_DIR / "fixtures" / "poc_b_primitive_baseline.py"
+        namespace = {}
+        source = fixture_path.read_text(encoding="utf-8")
+        exec(compile(source, str(fixture_path), "exec"), namespace)
+
+        renderer_class = "/Script/Niagara.NiagaraMeshRendererProperties"
+        expected_path = "/Game/Test/MI_Test.MI_Test"
+        for key in ("explicitMat", "ExplicitMat", "EXPLICITMAT"):
+            with self.subTest(key=key):
+                properties = {
+                    "bOverrideMaterials": True,
+                    "OverrideMaterials": [{key: {"refPath": expected_path}}],
+                }
+                self.assertEqual(
+                    namespace["binding_path"](properties, renderer_class),
+                    expected_path,
+                )
+
+        patched_json = namespace["patch_renderer"](
+            json.dumps(
+                {
+                    "bOverrideMaterials": False,
+                    "OverrideMaterials": [
+                        {
+                            "ExplicitMat": {"refPath": "/Game/Old.Old"},
+                            "explicitMat": {"refPath": "/Game/Stale.Stale"},
+                        }
+                    ],
+                }
+            ),
+            renderer_class,
+            {"refPath": expected_path},
+        )
+        patched = json.loads(patched_json)
+        slot = patched["OverrideMaterials"][0]
+        self.assertTrue(patched["bOverrideMaterials"])
+        self.assertEqual(slot["explicitMat"]["refPath"], expected_path)
+        self.assertEqual(
+            [key for key in slot if key.casefold() == "explicitmat"],
+            ["explicitMat"],
+        )
+
     def test_readme_lossy_areas_documented(self) -> None:
         readme = (NIAGARA_DIR / "README.md").read_text(encoding="utf-8")
         for area in EXPECTED_LOSSY_AREAS:
