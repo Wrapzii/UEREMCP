@@ -1,0 +1,34 @@
+# Unreal build output
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+Build/
+*.tmp
+*.pdb
+*.suo
+*.sln
+*.vcxproj*
+.vs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.idea/
+*.swp
+
+# Agent scratch — keep transient working files out of the shared repo.
+# Research findings belong in docs/research/, not here.
+.scratch/
+*.local.md

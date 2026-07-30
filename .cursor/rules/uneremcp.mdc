@@ -1,0 +1,73 @@
+---
+description: UEREMCP operating contract — read before any edit
+alwaysApply: true
+---
+
+# UEREMCP — operating rules
+
+Full contract: `AGENTS.md`. Read it. This is the compressed version.
+
+## Read order
+
+1. `docs/WHY.md` — the problem and the cost model. Counterintuitive; read before making
+   design tradeoffs.
+2. `docs/GROUNDED_FACTS.md` — verified UE 5.8 API surface. Cite it; do not re-derive it.
+3. `docs/adr/` — frozen decisions.
+4. `docs/WORK_ALLOCATION.md` — your workstream and owned paths.
+5. `schemas/` — frozen JSON contracts.
+
+## Hard rules
+
+**Never claim an Unreal API exists without reading it.** Tag every API claim:
+`[VERIFIED: path:line]`, `[VERIFIED-RUNTIME: how]`, `[DOCS: url]`, `[UNVERIFIED]`.
+Untagged is treated as unverified. `[UNVERIFIED]` is banned from ADRs, schemas, and
+implementation comments. Open the header. Run the code.
+
+**Audit before you build.** Epic ships 27 domain toolsets; REAgentTools ships 15 more.
+Record the existing equivalent in `docs/audit/` and why it is insufficient before adding
+any primitive. Duplicating a working tool is a defect.
+
+**Edit only paths your workstream owns.** Many agents work this repo simultaneously. Need
+something you do not own? Write `docs/proposals/<your-ws>-<topic>.md` and keep working on
+what you do own. Do not block; do not edit it anyway.
+
+**Frozen ADRs are frozen.** Do not redesign, "improve," or implement alternatives to an
+`Accepted` ADR. Challenge with evidence via `docs/proposals/`, and continue against the
+accepted design meanwhile.
+
+**One semantic operation, not many primitive calls.** If a tool forces an
+inspect → mutate → inspect loop, the design is wrong. Cost is superlinear in call count
+and only linear in payload size — when choosing between returning more context now and
+letting the agent ask later, **return it now**. Never trim useful context to "optimise."
+
+**Verification, not tool-call completion.** "The tool returned OK" is not success.
+Re-read the result and check it. Honest statuses only: `created_and_validated`,
+`modified_and_validated`, `created_with_warnings`, `failed_validation`, `rolled_back`,
+`partially_completed`. Never claim `*_validated` for work you did not verify.
+
+**Tests ship with code.** No exceptions.
+
+**Never destroy user content.** Destructive operations default to `dry_run: true`.
+Deleting and recreating a *graph* for determinism is fine; deleting a user's *asset*
+because it was in the way is not.
+
+## Schema rule
+
+Extend `specification` only. Never the envelope, never the graph schema. Domain shapes
+live in `schemas/domains/<domain>/`.
+
+## Before committing
+
+```bash
+python tools/validate_schemas.py
+python tools/check_ownership.py --ws WS-nn
+```
+
+Branch `ws-<nn>-<slug>`. Commit subject `[WS-nn] <imperative summary>`. Never commit to
+`main`/`master`, or to `Binaries/`, `Intermediate/`, `Saved/`, `__pycache__/`.
+
+## Report honestly
+
+Partial completion is expected and fine. **Silent** partial completion is not. State what
+you finished, what you did not, and why. A precise blocker is worth more than a silent
+workaround.

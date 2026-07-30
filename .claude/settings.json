@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python tools/validate_schemas.py)",
+      "Bash(python tools/check_ownership.py:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Read($UE_ROOT/Engine/Plugins/**)",
+      "Read($UE_ROOT/Engine/Source/**)",
+      "Read(REAgentTools/**)",
+      "Read($UEREMCP_LEGACY_PROJECT/Source/**)",
+      "Read($UEREMCP_LEGACY_PROJECT/Plugins/**)",
+      "Read($UEREMCP_LEGACY_PROJECT/Config/**)",
+      "Read($UEREMCP_LEGACY_PROJECT/*.uproject)",
+      "Read($UEREMCP_LEGACY_PROJECT/Docs/**)"
+    ],
+    "deny": [
+      "Write($UE_INSTALL_ROOT/**)",
+      "Edit($UE_INSTALL_ROOT/**)",
+      "Read($UEREMCP_LEGACY_PROJECT/Content/**)",
+      "Read($UEREMCP_LEGACY_PROJECT/DerivedDataCache/**)",
+      "Read($UEREMCP_LEGACY_PROJECT/Intermediate/**)"
+    ]
+  }
+}

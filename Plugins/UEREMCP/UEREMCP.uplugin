@@ -1,0 +1,38 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1.0",
+	"FriendlyName": "UEREMCP",
+	"Description": "Goal-level Unreal Engine agent interface. Registers semantic, whole-asset and whole-graph operations as AICallable toolsets served through Epic's in-editor ModelContextProtocol server.",
+	"Category": "Scripting",
+	"CreatedBy": "RE Project",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": true,
+	"EditorOnly": true,
+	"EnabledByDefault": false,
+	"Modules": [
+		{
+			"Name": "UeremcpCore",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		},
+		{
+			"Name": "UeremcpProtocol",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ToolsetRegistry",
+			"Enabled": true
+		},
+		{
+			"Name": "ModelContextProtocol",
+			"Enabled": true
+		}
+	]
+}

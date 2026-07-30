@@ -1,0 +1,117 @@
+{
+  "x-schema": "batch/plan.schema.json",
+  "$comment": "POC D shape: one request producing a material, a Niagara effect, and a gameplay ability with dependency ordering and $ref result chaining. Validated by tools/validate_schemas.py.",
+
+  "transaction": {
+    "atomic": true,
+    "rollback_on_failure": true,
+    "compile_policy": "at_boundaries",
+    "validate_policy": "at_end"
+  },
+
+  "operations": [
+    {
+      "id": "core_material",
+      "action": "create_vfx_material",
+      "mode": "create_or_update",
+      "target": { "asset_path": "/Game/VFX/Materials/MI_Fireball_Core" },
+      "specification": {
+        "purpose": "fireball_core",
+        "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"]
+      }
+    },
+    {
+      "id": "trail_material",
+      "action": "create_vfx_material",
+      "mode": "create_or_update",
+      "optional": true,
+      "specification": {
+        "purpose": "fireball_ribbon_trail",
+        "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"]
+      }
+    },
+    {
+      "id": "projectile_fx",
+      "action": "create_niagara_effect",
+      "depends_on": ["core_material", "trail_material"],
+      "target": { "asset_path": "/Game/VFX/Spells/NS_Fireball" },
+      "specification": {
+        "name": "Fireball",
+        "effect_type": "projectile",
+        "components": ["core", "flame_shell", "sparks", "smoke", "ribbon_trail"],
+        "core_material": { "$ref": "core_material.result.primary_asset" },
+        "trail_material": { "$ref": "trail_material.result.primary_asset" },
+        "parameters": {
+          "primary_color": [1.0, 0.12, 0.01, 1.0],
+          "secondary_color": [1.0, 0.75, 0.05, 1.0],
+          "scale": 1.0,
+          "intensity": 8.0
+        }
+      }
+    },
+    {
+      "id": "impact_fx",
+      "action": "create_niagara_effect",
+      "depends_on": ["core_material"],
+      "target": { "asset_path": "/Game/VFX/Spells/NS_Fireball_Impact" },
+      "specification": {
+        "name": "FireballImpact",
+        "effect_type": "impact",
+        "components": ["impact_burst", "smoke", "ground_decal"],
+        "core_material": { "$ref": "core_material.result.primary_asset" }
+      }
+    },
+    {
+      "id": "damage_effect",
+      "action": "create_gameplay_effect",
+      "specification": {
+        "name": "GE_FireballDamage",
+        "duration_policy": "instant",
+        "modifiers": [
+          { "attribute": "Health", "operation": "add", "magnitude": -45.0 }
+        ],
+        "granted_tags": ["Status.Burning"]
+      }
+    },
+    {
+      "id": "ability",
+      "action": "create_gameplay_ability",
+      "depends_on": ["projectile_fx", "impact_fx", "damage_effect"],
+      "target": { "asset_path": "/Game/Abilities/GA_Fireball" },
+      "specification": {
+        "name": "GA_Fireball",
+        "input_tag": "Input.Ability.Primary",
+        "cast_animation": "/Game/Animations/AM_Cast_Fireball",
+        "projectile_effect": { "$ref": "projectile_fx.result.primary_asset" },
+        "impact_effect": { "$ref": "impact_fx.result.primary_asset" },
+        "damage_effect": { "$ref": "damage_effect.result.primary_asset" },
+        "delivery": {
+          "type": "projectile",
+          "speed": 2400,
+          "damage_radius": 175
+        },
+        "networking": {
+          "authority": "server",
+          "replicated": true
+        }
+      }
+    },
+    {
+      "id": "smoke_test",
+      "action": "validate_system",
+      "depends_on": ["ability"],
+      "condition": {
+        "operation_status": {
+          "id": "ability",
+          "is": ["created_and_validated", "modified_and_validated", "created_with_warnings"]
+        }
+      },
+      "specification": {
+        "root_asset": { "$ref": "ability.result.primary_asset" },
+        "checks": ["dependencies_resolve", "replication_valid", "cues_bound", "compiles"]
+      }
+    }
+  ],
+
+  "on_failure": "rollback_all"
+}

@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/template-library/template.schema.json",
+  "title": "UEREMCP Template / Pattern Library Item",
+  "description": "A reusable construction pattern, not a copied asset (master prompt §5.3). Domain-general: Niagara, material, Blueprint, gameplay, animation, replication, UI, AI patterns all use this shape. Owned by WS-01; substrate decision pending ADR-0008 / RB-10 (whether these are backed by Epic's UAgentSkill, which already supports agent-authored CreateSkill/UpdateSkill).",
+  "type": "object",
+  "required": ["template_id", "domain", "category", "version", "description"],
+  "additionalProperties": false,
+
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+\\.v[0-9]+$",
+      "description": "Dotted, version-suffixed.",
+      "examples": ["niagara.projectile.fireball.v1", "gameplay.ability.projectile_damage.v2"]
+    },
+
+    "domain": {
+      "type": "string",
+      "enum": ["niagara", "materials", "blueprints", "gameplay", "gameplay_abilities", "animation", "control_rig", "sequencer", "world", "level_design", "pcg", "behavior", "ai", "audio", "networking", "ui", "data_assets", "import_export", "validation", "project", "source_control", "testing", "assets"]
+    },
+
+    "category": { "type": "string", "examples": ["projectile", "explosion", "beam", "aura", "shield", "portal", "impact"] },
+    "version": { "type": "integer", "minimum": 1 },
+    "description": { "type": "string" },
+    "purpose": { "type": "string", "description": "What problem this pattern solves, in the project's language." },
+
+    "authored_by": { "type": "string", "enum": ["human", "agent", "promoted_from_asset"] },
+    "promoted_from": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+    "created_at": { "type": "string", "format": "date-time" },
+
+    "engine_compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_version": { "$ref": "../common/defs.schema.json#/$defs/engineVersion" },
+        "max_version": { "$ref": "../common/defs.schema.json#/$defs/engineVersion" },
+        "verified_on": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/engineVersion" } }
+      }
+    },
+
+    "inherits_from": { "type": "string", "description": "template_id of a parent pattern. Composition over duplication." },
+    "composes": { "type": "array", "items": { "type": "string" }, "description": "template_ids combined by this one." },
+    "deprecated_by": { "type": "string" },
+
+    "inputs": {
+      "type": "object",
+      "description": "JSON Schema (or a subset) describing the parameters this template accepts. This is what makes a template callable rather than merely descriptive."
+    },
+    "outputs": { "type": "object", "description": "What instantiating produces: asset roles and their classes." },
+
+    "required_components": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Structural parts that must exist, e.g. Niagara emitters or Blueprint functions."
+    },
+    "optional_components": { "type": "array", "items": { "type": "string" } },
+    "supported_modifiers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Named variations this pattern accepts, e.g. 'crystalline_fragments', 'reduce_trail_persistence'. Enables 'frost variant of the fireball' as ONE operation."
+    },
+
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "materials": { "type": "array", "items": { "type": "object" } },
+        "textures": { "type": "array", "items": { "type": "object" } },
+        "meshes": { "type": "array", "items": { "type": "object" } },
+        "curves": { "type": "array", "items": { "type": "object" } },
+        "gameplay_tags": { "type": "array", "items": { "type": "string" } },
+        "classes": { "type": "array", "items": { "type": "string" } },
+        "generate_if_missing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the service should procedurally generate absent dependencies rather than failing (master prompt §6)."
+        }
+      }
+    },
+
+    "construction_plan": {
+      "type": "array",
+      "description": "The ordered, machine-executable steps that build this pattern — the field that makes this a template rather than documentation. Each step is a batch-plan operation.",
+      "items": { "$ref": "../batch/plan.schema.json#/$defs/operation" }
+    },
+
+    "validation_rules": {
+      "type": "array",
+      "description": "Checks that must pass for an instance to be considered correct. Feed the response's validation.checks_performed.",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "check"],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": { "type": "string" },
+          "check": { "type": "string" },
+          "severity": { "$ref": "../common/defs.schema.json#/$defs/severity" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+
+    "typical_ranges": {
+      "type": "object",
+      "description": "Sane value ranges per parameter, so an agent picks plausible numbers without a round trip.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": { "min": { "type": "number" }, "max": { "type": "number" }, "typical": {} },
+        "additionalProperties": false
+      }
+    },
+
+    "quality_tiers": {
+      "type": "object",
+      "additionalProperties": { "type": "object" },
+      "description": "Named scalability presets, e.g. low/medium/high/cinematic."
+    },
+
+    "performance_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "budget_ms": { "type": "number" },
+        "max_particles": { "type": "integer" },
+        "gpu_simulation": { "type": "boolean" },
+        "overdraw_risk": { "type": "string", "enum": ["low", "medium", "high"] },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "known_failure_cases": {
+      "type": "array",
+      "description": "What has actually gone wrong with this pattern and how it was resolved. This is the field that makes the library compound in value — record failures, not just successes (master prompt §10).",
+      "items": {
+        "type": "object",
+        "required": ["symptom"],
+        "additionalProperties": false,
+        "properties": {
+          "symptom": { "type": "string" },
+          "cause": { "type": "string" },
+          "resolution": { "type": "string" },
+          "engine_version": { "$ref": "../common/defs.schema.json#/$defs/engineVersion" }
+        }
+      }
+    },
+
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "inputs": { "type": "object" },
+          "produced_asset": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "search_terms": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Similarity-matching aids, so 'I need a fiery projectile' finds this without exact naming."
+    }
+  }
+}

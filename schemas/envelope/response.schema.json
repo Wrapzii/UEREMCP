@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/envelope/response.schema.json",
+  "title": "UEREMCP Response Envelope",
+  "description": "The single JSON object every agent-facing UEREMCP tool returns. Frozen by ADR-0003. Owned by WS-01.",
+  "type": "object",
+  "required": ["protocol_version", "status", "summary", "metrics"],
+  "additionalProperties": false,
+
+  "properties": {
+    "protocol_version": { "$ref": "../common/defs.schema.json#/$defs/protocolVersion" },
+    "request_id": { "$ref": "../common/defs.schema.json#/$defs/requestId" },
+    "status": { "$ref": "../common/defs.schema.json#/$defs/status" },
+
+    "summary": {
+      "type": "string",
+      "description": "One or two sentences an agent can act on without parsing the rest. State what actually happened, including what was NOT done. This is the field most likely to be all the agent reads."
+    },
+
+    "understood": {
+      "type": "object",
+      "description": "What the service resolved the request to mean: derived paths, selected template, expanded defaults, inferred dependencies. Present when the service made non-trivial interpretive choices, so a wrong interpretation is visible without a second call (master prompt §2.2).",
+      "properties": {
+        "action": { "type": "string" },
+        "resolved_target": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+        "template_used": { "type": "string" },
+        "defaults_applied": { "type": "object" },
+        "interpretation_notes": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary_asset": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+        "created_assets": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" } },
+        "modified_assets": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" } },
+        "deleted_assets": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" } },
+        "reused_assets": {
+          "type": "array",
+          "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" },
+          "description": "Existing assets the operation depended on but did not modify. Reporting reuse is how an agent learns the project's vocabulary."
+        },
+        "dependencies": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" } },
+        "dependencies_created": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" } },
+        "unresolved_dependencies": {
+          "type": "array",
+          "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" },
+          "description": "Required but missing. Non-empty here is incompatible with a *_validated status."
+        },
+        "operations": {
+          "type": "array",
+          "description": "Per-operation results for batch requests, keyed by the plan's operation ids.",
+          "items": {
+            "type": "object",
+            "required": ["id", "status"],
+            "properties": {
+              "id": { "type": "string" },
+              "action": { "type": "string" },
+              "status": { "$ref": "../common/defs.schema.json#/$defs/status" },
+              "primary_asset": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+              "summary": { "type": "string" },
+              "skipped_reason": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+
+    "validation": {
+      "type": "object",
+      "description": "Evidence for the status field. Every boolean here must be the result of an actual check — an unperformed check is null, never true (AGENTS.md rule 6).",
+      "additionalProperties": false,
+      "properties": {
+        "compiled": { "type": ["boolean", "null"] },
+        "saved": { "type": ["boolean", "null"] },
+        "structurally_valid": { "type": ["boolean", "null"] },
+        "dependencies_resolved": { "type": ["boolean", "null"] },
+        "reread_after_write": {
+          "type": ["boolean", "null"],
+          "description": "Whether the service re-read the asset and compared it against intent, rather than trusting the write."
+        },
+        "runtime_smoke_test": { "type": ["boolean", "null"] },
+        "editor_validation_run": { "type": ["boolean", "null"] },
+        "checks_performed": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named checks that actually ran, e.g. graph.execution_paths_connected, niagara.renderer_bound."
+        },
+        "checks_skipped": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Checks not run, and implicitly why (options.validate false, unsupported, timed out). Silence about skipped checks is a defect."
+        },
+        "warnings": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "errors": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } }
+      }
+    },
+
+    "changes": {
+      "type": "array",
+      "items": { "$ref": "../common/defs.schema.json#/$defs/changeEntry" },
+      "description": "Machine-readable change manifest, derived from FGlobalSandbox::GetChanges() rather than hand-maintained (ADR-0005 rule 4)."
+    },
+
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "execution_trace": {
+          "type": "array",
+          "description": "Compact ordered trace of internal steps. Present at response_detail diagnostic or complete.",
+          "items": {
+            "type": "object",
+            "required": ["step"],
+            "properties": {
+              "step": { "type": "string" },
+              "duration_ms": { "type": "number" },
+              "ok": { "type": "boolean" },
+              "detail": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "graphs": {
+          "type": "array",
+          "items": { "$ref": "../graph/graph.schema.json" },
+          "description": "Full graph payloads. Present ONLY at response_detail complete (ADR-0004)."
+        },
+        "truncated": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when payload was elided for size. The agent must be told, and told how to get the rest."
+        },
+        "truncation_hint": { "type": "string" }
+      }
+    },
+
+    "revision": {
+      "$ref": "../common/defs.schema.json#/$defs/revision",
+      "description": "Revision of the primary asset AFTER the operation. Feed back as expected_revision on the next modification."
+    },
+
+    "conflict": {
+      "type": "object",
+      "description": "Present when status is rejected due to a revision conflict (ADR-0006 rule 4).",
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": { "$ref": "../common/defs.schema.json#/$defs/revision" },
+        "actual_revision": { "$ref": "../common/defs.schema.json#/$defs/revision" },
+        "diff_summary": { "type": "string" },
+        "current_state": {
+          "description": "Full current state, included only when on_revision_conflict was return_conflict — so the agent can merge without another round trip."
+        }
+      }
+    },
+
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean",
+          "description": "Reports false until the Rollback.MultiAssetDiscard integration test passes (ADR-0005 verification). Do not report true optimistically."
+        },
+        "performed": { "type": "boolean" },
+        "scope": { "type": "string", "enum": ["none", "partial", "full"] },
+        "sandbox_name": { "type": "string" },
+        "detail": { "type": "string" }
+      }
+    },
+
+    "job": {
+      "type": "object",
+      "description": "Present when the operation exceeded timeout_ms and continues asynchronously. The agent polls with the handle instead of resending the original request (master prompt §18).",
+      "required": ["job_id", "state"],
+      "additionalProperties": false,
+      "properties": {
+        "job_id": { "type": "string" },
+        "state": { "type": "string", "enum": ["queued", "running", "completed", "failed", "cancelled"] },
+        "progress": { "type": "number", "minimum": 0, "maximum": 1 },
+        "progress_message": { "type": "string" },
+        "cancellable": { "type": "boolean" },
+        "poll_action": { "type": "string", "default": "get_job_result" }
+      }
+    },
+
+    "metrics": { "$ref": "../common/defs.schema.json#/$defs/metrics" },
+
+    "capability_notes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Limitations that applied to THIS operation — e.g. 'Control Rig graph read-only in 5.8: hierarchy returned, node graph omitted'. Documenting unavoidable limitations is required (master prompt rule 19); silence about them is a defect."
+    }
+  },
+
+  "examples": [
+    {
+      "protocol_version": "1.0",
+      "request_id": "3f1c2e40-8a11-4c2b-9b7e-2e5d1a0c9f31",
+      "status": "created_and_validated",
+      "summary": "Created NS_Fireball with 6 emitters, reusing M_VFX_FlameCore and creating 2 material instances. Compiled and saved.",
+      "understood": {
+        "action": "create_niagara_effect",
+        "resolved_target": "/Game/VFX/Spells/NS_Fireball",
+        "template_used": "niagara.projectile.fireball.v1"
+      },
+      "result": {
+        "primary_asset": "/Game/VFX/Spells/NS_Fireball",
+        "created_assets": [
+          { "asset_path": "/Game/VFX/Spells/NS_Fireball", "asset_class": "NiagaraSystem" },
+          { "asset_path": "/Game/VFX/Materials/MI_Fireball_Core", "asset_class": "MaterialInstanceConstant", "role": "core" }
+        ],
+        "modified_assets": [],
+        "reused_assets": [
+          { "asset_path": "/Game/VFX/Materials/M_VFX_FlameCore", "asset_class": "Material", "role": "core_parent" }
+        ],
+        "unresolved_dependencies": []
+      },
+      "validation": {
+        "compiled": true,
+        "saved": true,
+        "structurally_valid": true,
+        "dependencies_resolved": true,
+        "reread_after_write": true,
+        "runtime_smoke_test": null,
+        "checks_performed": ["niagara.compiled", "niagara.renderer_bound", "niagara.emitters_present", "asset.saved"],
+        "checks_skipped": ["niagara.runtime_spawn_observed"],
+        "warnings": [],
+        "errors": []
+      },
+      "revision": "sha256:9f2c1ab4",
+      "rollback": { "available": false, "performed": false, "scope": "none" },
+      "metrics": {
+        "mcp_round_trips": 1,
+        "internal_operations": 68,
+        "timing_ms": { "planning": 120, "asset_creation": 780, "compilation": 430, "validation": 190 },
+        "assets_affected": 3
+      },
+      "capability_notes": [
+        "Runtime smoke test not run: requires PIE, which was not requested."
+      ]
+    }
+  ]
+}

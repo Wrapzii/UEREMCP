@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/batch/plan.schema.json",
+  "title": "UEREMCP Batch Plan",
+  "description": "The `specification` payload for action=execute_plan. Batching is first-class (master prompt §2.3): one request, many dependent operations, one consolidated result. Owned by WS-05. Prior art to audit before changing this: REAgentTools `execute_editor_batch` ($ref chaining, dry_run, 8 allowlisted actions) and Epic's `ProgrammaticToolset.execute_tool_script`.",
+  "type": "object",
+  "required": ["operations"],
+  "additionalProperties": false,
+
+  "properties": {
+    "transaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "atomic": { "type": "boolean", "default": true },
+        "rollback_on_failure": { "type": "boolean", "default": true },
+        "compile_policy": {
+          "type": "string",
+          "enum": ["per_operation", "at_boundaries", "at_end", "never"],
+          "default": "at_boundaries",
+          "description": "Compilation is expensive. 'at_boundaries' compiles only where a later operation depends on a compiled result — the pattern REAgentTools' NIAGARA_BATCHING.md found necessary. 'per_operation' is the slow, safe fallback."
+        },
+        "validate_policy": {
+          "type": "string",
+          "enum": ["per_operation", "at_boundaries", "at_end"],
+          "default": "at_end"
+        }
+      }
+    },
+
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/operation" }
+    },
+
+    "on_failure": {
+      "type": "string",
+      "enum": ["stop", "continue_independent", "rollback_all"],
+      "default": "rollback_all",
+      "description": "'continue_independent' attempts operations that do not transitively depend on the failed one, and yields partially_completed."
+    }
+  },
+
+  "$defs": {
+    "operation": {
+      "type": "object",
+      "required": ["id", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Unique within the plan. Used by depends_on and by $ref result substitution."
+        },
+        "action": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Operation ids that must complete first. The executor topologically sorts; a cycle is rejected before ANY operation runs."
+        },
+        "target": {
+          "type": "object",
+          "properties": {
+            "asset_path": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+            "graph_id": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "mode": { "$ref": "../common/defs.schema.json#/$defs/mode" },
+        "specification": {
+          "type": "object",
+          "description": "Action-specific, same as the top-level envelope. May contain $ref substitutions (see below)."
+        },
+        "expected_revision": { "$ref": "../common/defs.schema.json#/$defs/revision" },
+        "optional": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, failure does not fail the plan; it is reported and dependents are skipped."
+        },
+        "condition": {
+          "type": "object",
+          "description": "Run only if satisfied; otherwise the operation is skipped with a stated reason. Keeps agents from needing a round trip just to branch.",
+          "additionalProperties": false,
+          "properties": {
+            "asset_exists": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+            "asset_missing": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+            "operation_status": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "is": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/status" } }
+              },
+              "additionalProperties": false
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "transaction": { "atomic": true, "rollback_on_failure": true, "compile_policy": "at_boundaries" },
+      "operations": [
+        {
+          "id": "material",
+          "action": "create_vfx_material",
+          "specification": {
+            "purpose": "fireball_core",
+            "features": ["radial_falloff", "animated_noise", "fresnel", "erosion", "dynamic_color", "dynamic_intensity"]
+          }
+        },
+        {
+          "id": "niagara",
+          "action": "create_niagara_effect",
+          "depends_on": ["material"],
+          "specification": {
+            "name": "Fireball",
+            "effect_type": "projectile",
+            "core_material": { "$ref": "material.result.primary_asset" }
+          }
+        },
+        {
+          "id": "ability",
+          "action": "create_gameplay_ability",
+          "depends_on": ["niagara"],
+          "specification": {
+            "name": "GA_Fireball",
+            "cue_effect": { "$ref": "niagara.result.primary_asset" },
+            "networking": { "authority": "server", "replicated": true }
+          }
+        }
+      ],
+      "on_failure": "rollback_all"
+    }
+  ],
+
+  "$comment": "$ref substitution: any string-valued object of the form {\"$ref\": \"<operation_id>.<dotted.path.into.that.operation's.response>\"} is replaced with the referenced value before the operation executes. Resolution failure fails the operation rather than substituting null — a silently-null asset path produces a broken asset that validates. This mirrors REAgentTools' existing $ref convention; WS-02 must audit that implementation before WS-05 finalises the grammar."
+}

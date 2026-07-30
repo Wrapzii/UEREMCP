@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/envelope/request.schema.json",
+  "title": "UEREMCP Request Envelope",
+  "description": "The single JSON object every agent-facing UEREMCP tool accepts. Frozen by ADR-0003. Domain workstreams extend `specification` ONLY — never the envelope. Owned by WS-01.",
+  "type": "object",
+  "required": ["protocol_version", "action"],
+  "additionalProperties": false,
+
+  "properties": {
+    "protocol_version": {
+      "$ref": "../common/defs.schema.json#/$defs/protocolVersion"
+    },
+
+    "request_id": {
+      "$ref": "../common/defs.schema.json#/$defs/requestId"
+    },
+
+    "action": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "The goal-level operation, e.g. create_niagara_effect, replace_blueprint_graph, execute_plan. Selects which schema under schemas/domains/ validates `specification`. Registered actions are listed in docs/CAPABILITY_CATALOG.md."
+    },
+
+    "project": {
+      "$ref": "../common/defs.schema.json#/$defs/projectContext"
+    },
+
+    "target": {
+      "type": "object",
+      "description": "What the operation acts on. Omit for pure-create operations that derive their path from `specification` (ADR-0006 rule 1).",
+      "properties": {
+        "asset_path": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+        "object_path": { "$ref": "../common/defs.schema.json#/$defs/objectPath" },
+        "graph_id": {
+          "type": "string",
+          "description": "Graph within the asset, e.g. EventGraph. Required for graph-scoped actions."
+        },
+        "actor_label": {
+          "type": "string",
+          "description": "For level-scoped operations targeting a placed actor."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "mode": {
+      "$ref": "../common/defs.schema.json#/$defs/mode",
+      "default": "create_or_update"
+    },
+
+    "specification": {
+      "type": "object",
+      "description": "THE ONLY DOMAIN-EXTENSIBLE FIELD. Shape is selected by `action` and defined by the owning workstream under schemas/domains/<domain>/. Validated in two passes: envelope first, then the action-specific schema."
+    },
+
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dry_run": {
+          "type": "boolean",
+          "default": false,
+          "description": "Plan and execute inside a sandbox, report the full result, then discard (ADR-0005 rule 5). NOT a separate no-op code path — a dry run that exercises different code predicts nothing. Destructive actions default this to true; see docs/adr/ADR-0010 when written."
+        },
+        "atomic": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run inside a single FGlobalSandbox scope so the whole operation persists or discards together."
+        },
+        "rollback_on_failure": {
+          "type": "boolean",
+          "default": true,
+          "description": "Discard the sandbox on failure. With atomic:false, partial results may be persisted and the response is partially_completed."
+        },
+        "compile": { "type": "boolean", "default": true },
+        "validate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Setting false forfeits any *_validated status. The response will report partially_completed instead (AGENTS.md rule 6)."
+        },
+        "save": { "type": "boolean", "default": true },
+        "response_detail": {
+          "$ref": "../common/defs.schema.json#/$defs/responseDetail"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "0 or omitted means the service default. Exceeding it yields partially_completed with a job handle, never a silent truncation."
+        },
+        "on_revision_conflict": {
+          "$ref": "../common/defs.schema.json#/$defs/revisionConflictPolicy"
+        },
+        "continue_on_error": {
+          "type": "boolean",
+          "default": false,
+          "description": "Batch only. Attempt independent operations after a failure instead of stopping."
+        }
+      }
+    },
+
+    "expected_revision": {
+      "$ref": "../common/defs.schema.json#/$defs/revision",
+      "description": "Optimistic concurrency guard (ADR-0006). If it does not match current state, options.on_revision_conflict decides. Omit to skip the check — acceptable for creates, risky for modifications in a multi-agent project."
+    },
+
+    "idempotency_key": {
+      "type": ["string", "null"],
+      "maxLength": 128,
+      "description": "Retry deduplication (ADR-0006 rule 3). A repeat within the retention window returns the stored response with metrics.replayed = true and performs no work."
+    }
+  },
+
+  "examples": [
+    {
+      "protocol_version": "1.0",
+      "request_id": "3f1c2e40-8a11-4c2b-9b7e-2e5d1a0c9f31",
+      "action": "create_niagara_effect",
+      "project": {
+        "path": "$UEREMCP_LEGACY_PROJECT/RE.uproject",
+        "engine_version": "5.8"
+      },
+      "target": { "asset_path": "/Game/VFX/Spells/NS_Fireball" },
+      "mode": "create_or_update",
+      "specification": {
+        "name": "Fireball",
+        "effect_type": "projectile",
+        "components": ["core", "flame_shell", "sparks", "smoke", "ribbon_trail", "impact_burst"],
+        "parameters": {
+          "primary_color": [1.0, 0.12, 0.01, 1.0],
+          "secondary_color": [1.0, 0.75, 0.05, 1.0],
+          "scale": 1.0,
+          "intensity": 8.0
+        }
+      },
+      "options": {
+        "dry_run": false,
+        "atomic": true,
+        "rollback_on_failure": true,
+        "compile": true,
+        "validate": true,
+        "save": true,
+        "response_detail": "summary"
+      },
+      "expected_revision": null,
+      "idempotency_key": "poc-b-fireball-001"
+    }
+  ]
+}

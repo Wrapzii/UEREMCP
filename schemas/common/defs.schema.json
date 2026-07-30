@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/common/defs.schema.json",
+  "title": "UEREMCP Common Definitions",
+  "description": "Shared primitive definitions referenced by all UEREMCP schemas. Frozen by ADR-0003. Owned by WS-01 only.",
+
+  "$defs": {
+    "protocolVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "Major.minor. A mismatched MAJOR is rejected, never best-effort parsed (ADR-0003).",
+      "examples": ["1.0"]
+    },
+
+    "requestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Client-supplied correlation id, echoed on the response. A UUID is conventional but any stable string is accepted."
+    },
+
+    "assetPath": {
+      "type": "string",
+      "pattern": "^/[A-Za-z0-9_]+/[A-Za-z0-9_./-]*$",
+      "description": "Unreal package path, e.g. /Game/VFX/Spells/NS_Fireball. Not a filesystem path.",
+      "examples": ["/Game/VFX/Spells/NS_Fireball", "/Game/Player/BP_PlayerCharacter"]
+    },
+
+    "objectPath": {
+      "type": "string",
+      "description": "Fully qualified object path including subobject, e.g. /Game/X/BP_Y.BP_Y_C:EventGraph."
+    },
+
+    "contentHash": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+:[A-Fa-f0-9]+$",
+      "description": "Algorithm-prefixed content hash of canonicalised state. Stable across cosmetic churn (node reordering, position jitter, GUID regeneration); sensitive to semantic change. Canonicalisation rules are WS-05's to specify (ADR-0006 open question).",
+      "examples": ["sha256:9f2c1ab4"]
+    },
+
+    "revision": {
+      "type": ["string", "null"],
+      "description": "Opaque revision token for optimistic concurrency. Currently equal to contentHash; treat as opaque so the implementation can change."
+    },
+
+    "engineVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$",
+      "examples": ["5.8"]
+    },
+
+    "mode": {
+      "type": "string",
+      "enum": [
+        "create",
+        "create_or_update",
+        "replace",
+        "patch",
+        "rebuild_from_specification",
+        "repair",
+        "delete"
+      ],
+      "description": "Collision and modification semantics. Behaviour table is frozen in ADR-0006. Auto-suffixing a name to avoid a collision is prohibited."
+    },
+
+    "responseDetail": {
+      "type": "string",
+      "enum": ["minimal", "summary", "diagnostic", "complete"],
+      "default": "summary",
+      "description": "minimal: status + primary asset only. summary (default): change manifest, validation, metrics — must never contain raw Unreal object dumps. diagnostic: adds full diagnostics and execution trace. complete: adds full graph payloads."
+    },
+
+    "revisionConflictPolicy": {
+      "type": "string",
+      "enum": ["reject", "return_conflict", "merge", "replace", "force"],
+      "default": "reject",
+      "description": "ADR-0006. Default reject: silent last-writer-wins is unacceptable with concurrent agents. 'merge' is not required for v1."
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "created_and_validated",
+        "modified_and_validated",
+        "created_with_warnings",
+        "no_change_required",
+        "failed_validation",
+        "rolled_back",
+        "partially_completed",
+        "rejected",
+        "error"
+      ],
+      "description": "Reflects VERIFIED reality, never tool-call completion (AGENTS.md rule 6). An operation that could not verify returns partially_completed with a reason, never a *_validated status."
+    },
+
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warning", "error", "fatal"]
+    },
+
+    "verificationTag": {
+      "type": "string",
+      "enum": ["VERIFIED", "VERIFIED-RUNTIME", "DOCS", "UNVERIFIED"],
+      "description": "Confidence in an API/behaviour claim. See AGENTS.md rule 1."
+    },
+
+    "diagnostic": {
+      "type": "object",
+      "required": ["severity", "code", "message"],
+      "properties": {
+        "severity": { "$ref": "#/$defs/severity" },
+        "code": {
+          "type": "string",
+          "description": "Stable machine-readable code, e.g. graph.disconnected_subgraph, bp.compile_error, niagara.missing_renderer."
+        },
+        "message": { "type": "string" },
+        "asset_path": { "$ref": "#/$defs/assetPath" },
+        "graph_id": { "type": "string" },
+        "node_id": { "type": "string" },
+        "pin_id": { "type": "string" },
+        "operation_id": { "type": "string" },
+        "remediation": {
+          "type": "string",
+          "description": "What the agent could do about it. Omit rather than guess."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "assetRef": {
+      "type": "object",
+      "required": ["asset_path"],
+      "properties": {
+        "asset_path": { "$ref": "#/$defs/assetPath" },
+        "asset_class": { "type": "string", "examples": ["NiagaraSystem", "Blueprint", "MaterialInstanceConstant"] },
+        "revision": { "$ref": "#/$defs/revision" },
+        "role": {
+          "type": "string",
+          "description": "Why this asset is in the list, e.g. 'projectile_effect', 'impact_material'."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "changeEntry": {
+      "type": "object",
+      "required": ["kind", "asset_path"],
+      "description": "One entry of the machine-readable change manifest. Derived from FGlobalSandbox::GetChanges(), not hand-maintained (ADR-0005 rule 4).",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["created", "modified", "deleted", "reused", "renamed", "saved"]
+        },
+        "asset_path": { "$ref": "#/$defs/assetPath" },
+        "previous_path": { "$ref": "#/$defs/assetPath" },
+        "asset_class": { "type": "string" },
+        "revision_before": { "$ref": "#/$defs/revision" },
+        "revision_after": { "$ref": "#/$defs/revision" },
+        "detail": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "metrics": {
+      "type": "object",
+      "required": ["mcp_round_trips", "internal_operations"],
+      "description": "Mandatory on every response (ADR-0003 rule 3). Round-trip reduction is the project's headline success metric; an optional metric does not get measured.",
+      "properties": {
+        "mcp_round_trips": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "MCP calls the agent spent to achieve this result. Normally 1."
+        },
+        "internal_operations": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Primitive editor operations performed internally. The ratio to mcp_round_trips is the value this project delivers."
+        },
+        "timing_ms": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 },
+          "description": "Phase timings, e.g. planning, asset_creation, compilation, validation, save.",
+          "examples": [{ "planning": 120, "asset_creation": 780, "compilation": 430, "validation": 190 }]
+        },
+        "assets_affected": { "type": "integer", "minimum": 0 },
+        "bytes_returned": { "type": "integer", "minimum": 0 },
+        "replayed": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when this response was served from the idempotency store and no work was performed (ADR-0006)."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "projectContext": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string", "description": "Absolute path to the .uproject." },
+        "engine_version": { "$ref": "#/$defs/engineVersion" }
+      },
+      "additionalProperties": false
+    },
+
+    "vector3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+
+    "linearColor": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "RGBA, linear space, unclamped (values may exceed 1.0 for HDR/emissive)."
+    }
+  }
+}

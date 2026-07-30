@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/graph/graph.schema.json",
+  "title": "UEREMCP Graph Representation",
+  "description": "One representation shared by Blueprint, Niagara, Material, AnimBP, Control Rig, State Machine, Behavior Tree, StateTree, and PCG graphs. Frozen by ADR-0004. Family differences go in `extensions`, NOT in a forked schema. Owned by WS-01; domain workstreams own their `extensions` sub-schema.",
+  "type": "object",
+  "required": ["asset_path", "graph_id", "graph_type", "schema_version"],
+  "additionalProperties": false,
+
+  "properties": {
+    "asset_path": { "$ref": "../common/defs.schema.json#/$defs/assetPath" },
+    "graph_id": { "type": "string", "description": "Stable identifier of this graph within the asset." },
+    "graph_name": { "type": "string", "examples": ["EventGraph", "ConstructionScript", "Emitter_Core"] },
+
+    "graph_type": {
+      "type": "string",
+      "enum": [
+        "BlueprintEventGraph",
+        "BlueprintFunctionGraph",
+        "BlueprintMacroGraph",
+        "BlueprintConstructionScript",
+        "AnimBlueprintGraph",
+        "AnimStateMachine",
+        "ControlRigGraph",
+        "MaterialGraph",
+        "MaterialFunctionGraph",
+        "NiagaraSystemGraph",
+        "NiagaraEmitterGraph",
+        "NiagaraModuleStack",
+        "NiagaraScriptGraph",
+        "BehaviorTree",
+        "StateTree",
+        "PCGGraph"
+      ],
+      "description": "Discriminator selecting which `extensions` sub-schema applies."
+    },
+
+    "schema_version": { "type": "string", "examples": ["1.0"] },
+    "engine_version": { "$ref": "../common/defs.schema.json#/$defs/engineVersion" },
+    "content_hash": { "$ref": "../common/defs.schema.json#/$defs/contentHash" },
+    "revision": { "$ref": "../common/defs.schema.json#/$defs/revision" },
+    "retrieved_at": { "type": "string", "format": "date-time" },
+
+    "fidelity": {
+      "type": "object",
+      "description": "Honest declaration of how complete this representation is. A family that cannot round-trip says so HERE rather than silently returning partial data (AGENTS.md rule 6).",
+      "required": ["round_trip_supported"],
+      "additionalProperties": false,
+      "properties": {
+        "round_trip_supported": {
+          "type": "boolean",
+          "description": "True only when the domain's retrieve -> replace -> retrieve test passes with an unchanged content_hash (ADR-0004 verification)."
+        },
+        "lossy_areas": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Named aspects not captured, e.g. 'custom K2 node internal state', 'material expression preview settings'."
+        },
+        "omitted_for_size": { "type": "boolean", "default": false }
+      }
+    },
+
+    "semantic_summary": {
+      "type": "object",
+      "description": "The compact view returned at response_detail=summary. Designed to be useful WITHOUT the node list.",
+      "additionalProperties": false,
+      "properties": {
+        "purpose": { "type": "string" },
+        "systems": { "type": "array", "items": { "type": "string" } },
+        "node_count": { "type": "integer", "minimum": 0 },
+        "networking": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "replicated": { "type": "boolean" },
+            "server_rpc_count": { "type": "integer", "minimum": 0 },
+            "client_rpc_count": { "type": "integer", "minimum": 0 },
+            "multicast_rpc_count": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "entry_points": { "type": "array", "items": { "type": "string" } },
+    "exit_points": { "type": "array", "items": { "type": "string" } },
+
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+
+    "links": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/link" },
+      "description": "Edge list. Redundant with pin-level `links` and MUST agree with it; this form exists because it is far cheaper for an agent to reason over."
+    },
+
+    "variables": { "type": "array", "items": { "$ref": "#/$defs/variable" } },
+    "functions": { "type": "array", "items": { "type": "object" } },
+    "macros": { "type": "array", "items": { "type": "object" } },
+    "events": { "type": "array", "items": { "type": "object" } },
+    "subgraphs": { "type": "array", "items": { "type": "string" }, "description": "graph_ids of nested graphs, fetched separately." },
+
+    "comments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "comment_id": { "type": "string" },
+          "text": { "type": "string" },
+          "bounds": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+          "contained_nodes": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      },
+      "description": "Comment boxes double as logical grouping and are strong signal about author intent. Preserve them."
+    },
+
+    "execution_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "via": { "type": "array", "items": { "type": "string" } },
+          "valid": { "type": "boolean" },
+          "invalid_reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "data_paths": { "type": "array", "items": { "type": "object" } },
+
+    "dependencies": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/assetRef" } },
+    "unresolved_references": { "type": "array", "items": { "type": "string" } },
+
+    "diagnostics": {
+      "type": "object",
+      "description": "MANDATORY on retrieval, not opt-in (ADR-0004). An agent asking for a graph is nearly always about to change it; withholding 'this is disconnected' until a second call reintroduces the round-trip problem this project exists to solve.",
+      "additionalProperties": false,
+      "properties": {
+        "dead_nodes": { "type": "array", "items": { "type": "string" } },
+        "disconnected_subgraphs": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "string" } },
+          "description": "Each entry is a set of node_ids forming an island unreachable from any entry point."
+        },
+        "invalid_links": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "missing_required_inputs": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "unused_outputs": { "type": "array", "items": { "type": "string" } },
+        "type_mismatches": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "duplicate_logic": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "unsafe_replication": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "warnings": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } },
+        "errors": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } }
+      }
+    },
+
+    "compilation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "compiled": { "type": ["boolean", "null"] },
+        "compiled_at": { "type": "string", "format": "date-time" },
+        "messages": { "type": "array", "items": { "$ref": "../common/defs.schema.json#/$defs/diagnostic" } }
+      }
+    },
+
+    "extensions": {
+      "type": "object",
+      "description": "Family-specific data keyed by domain: `niagara`, `material`, `anim`, `control_rig`, `pcg`, `behavior_tree`, `state_tree`. Each key's shape is defined by the owning workstream under schemas/domains/<domain>/graph-ext.schema.json. This is the pressure valve that keeps one shared schema honest — if a family cannot fit here, that is an ADR-0004 challenge with evidence."
+    }
+  },
+
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["node_id", "node_class"],
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "description": "Stable WITHIN this retrieval only. Used by `links`. Not expected to survive a rebuild (ADR-0004)."
+        },
+        "semantic_id": {
+          "type": "string",
+          "description": "Stable ACROSS retrievals and rebuilds, derived from role rather than engine object identity. This is what patches and templates reference."
+        },
+        "node_class": { "type": "string", "description": "Unreal class, e.g. K2Node_CallFunction." },
+        "semantic_type": {
+          "type": "string",
+          "description": "Agent-facing type, e.g. 'call_function', 'branch', 'event_begin_play'. The layer that makes graphs reasonable about without Unreal class knowledge."
+        },
+        "title": { "type": "string" },
+        "position": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "properties": { "type": "object" },
+        "defaults": { "type": "object" },
+        "input_pins": { "type": "array", "items": { "$ref": "#/$defs/pin" } },
+        "output_pins": { "type": "array", "items": { "$ref": "#/$defs/pin" } },
+        "enabled": { "type": "boolean", "default": true },
+        "comment": { "type": "string" }
+      }
+    },
+
+    "pin": {
+      "type": "object",
+      "required": ["pin_id", "name", "direction"],
+      "additionalProperties": false,
+      "properties": {
+        "pin_id": { "type": "string" },
+        "name": { "type": "string" },
+        "direction": { "type": "string", "enum": ["input", "output"] },
+        "pin_type": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "category": { "type": "string", "examples": ["exec", "bool", "float", "struct", "object", "wildcard"] },
+            "sub_category": { "type": "string" },
+            "sub_category_object": { "type": "string" },
+            "container": { "type": "string", "enum": ["none", "array", "set", "map"], "default": "none" },
+            "is_reference": { "type": "boolean", "default": false },
+            "is_const": { "type": "boolean", "default": false }
+          }
+        },
+        "default_value": {},
+        "links": {
+          "type": "array",
+          "items": { "type": "object", "required": ["node_id", "pin_id"], "properties": { "node_id": { "type": "string" }, "pin_id": { "type": "string" } }, "additionalProperties": false }
+        },
+        "required": { "type": "boolean", "default": false },
+        "hidden": { "type": "boolean", "default": false }
+      }
+    },
+
+    "link": {
+      "type": "object",
+      "required": ["from_node", "from_pin", "to_node", "to_pin"],
+      "additionalProperties": false,
+      "properties": {
+        "from_node": { "type": "string" },
+        "from_pin": { "type": "string" },
+        "to_node": { "type": "string" },
+        "to_pin": { "type": "string" },
+        "kind": { "type": "string", "enum": ["exec", "data"] },
+        "valid": { "type": "boolean" }
+      }
+    },
+
+    "variable": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "object" },
+        "default_value": {},
+        "category": { "type": "string" },
+        "is_public": { "type": "boolean" },
+        "is_replicated": { "type": "boolean" },
+        "replication_condition": { "type": "string" },
+        "tooltip": { "type": "string" }
+      }
+    }
+  }
+}
