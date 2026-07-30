@@ -57,3 +57,8 @@ results, one-call accounting, and confirmed cross-operation rollback.
 
 Offline Python mirror: `Tests/py/test_plan_executor.py` (same semantics;
 includes continue_independent, optional failures, cycles, and atomic preflight).
+
+ADR-0006 idempotency tests live in
+`Private/Tests/UeremcpIdempotencyTests.cpp` with filter prefix
+`UEREMCP.Protocol.Idempotency`. They cover replay annotation, durable reload from
+`Saved/UEREMCP/idempotency/` (temp override), and the accepted durable root.
