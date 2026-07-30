@@ -408,7 +408,13 @@ namespace
 
 			if (bUsesMainTextureChain && MainTextureSample && UvChain)
 			{
-				if (!Connect(UvChain, TEXT(""), MainTextureSample, TEXT("Coordinates")))
+				// Texture sample UV pin is shortened to "UVs" in MaterialEditingLibrary
+				// [VERIFIED: MaterialGraphNode.cpp:597-605].
+				if (!ConnectToInputWithFallback(
+						UvChain,
+						TEXT(""),
+						MainTextureSample,
+						{TEXT("UVs"), TEXT("Coordinates"), TEXT("")}))
 				{
 					Result.Error = TEXT("Failed to connect UV chain to MainTexture.");
 					return false;
@@ -442,7 +448,11 @@ namespace
 					!ConnectToInputWithFallback(FlowSpeed, TEXT(""), FlowPannerSpeed, {TEXT("A"), TEXT("Input1"), TEXT("")}) ||
 					!ConnectToInputWithFallback(FlowPannerSpeedY, TEXT(""), FlowPannerSpeed, {TEXT("B"), TEXT("Input2"), TEXT("")}) ||
 					!ConnectToInputWithFallback(FlowPannerSpeed, TEXT(""), FlowPanner, {TEXT("Speed"), TEXT("")}) ||
-					!Connect(FlowPanner, TEXT(""), FlowMapSample, TEXT("Coordinates")))
+					!ConnectToInputWithFallback(
+						FlowPanner,
+						TEXT(""),
+						FlowMapSample,
+						{TEXT("UVs"), TEXT("Coordinates"), TEXT("")}))
 				{
 					Result.Error = TEXT("Failed to wire flow_maps.");
 					return false;

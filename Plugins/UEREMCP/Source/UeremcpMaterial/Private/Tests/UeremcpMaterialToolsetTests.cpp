@@ -35,6 +35,7 @@ namespace UeremcpMaterialTests
 		{
 			Subsystem->DeleteAsset(PackagePath);
 		}
+		UeremcpMaterialAssetLoad::ReleasePackageForCreate(PackagePath, Subsystem);
 	}
 
 	static void CleanupWs08MaterialScratch()
@@ -486,6 +487,7 @@ bool FUeremcpMaterialFireballRibbonTrailPocTest::RunTest(const FString& Paramete
 			if (FPaths::GetBaseFilename(AssetPath).StartsWith(TEXT("M_Ueremcp_ProjTrail")))
 			{
 				Subsystem->DeleteAsset(AssetPath);
+				UeremcpMaterialAssetLoad::ReleasePackageForCreate(AssetPath, Subsystem);
 			}
 		}
 	}
@@ -548,6 +550,7 @@ bool FUeremcpMaterialFireballRibbonTrailPocTest::RunTest(const FString& Paramete
 			if (FPaths::GetBaseFilename(AssetPath).StartsWith(TEXT("M_Ueremcp_ProjTrail")))
 			{
 				Subsystem->DeleteAsset(AssetPath);
+				UeremcpMaterialAssetLoad::ReleasePackageForCreate(AssetPath, Subsystem);
 			}
 		}
 	}

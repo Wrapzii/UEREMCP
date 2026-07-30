@@ -2,18 +2,17 @@
 
 #include "UeremcpMaterialMasterBuilder.h"
 
-#include "AssetToolsModule.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
-#include "Factories/MaterialFactoryNew.h"
-#include "IAssetTools.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
+#include "ObjectTools.h"
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialFeatureGraph.h"
 #include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialPaths.h"
+#include "UObject/UObjectGlobals.h"
 
 namespace
 {
@@ -40,21 +39,51 @@ namespace
 		return bSaved;
 	}
 
-	static UMaterial* CreateEmptyMaterial(const FString& FolderPath, const FString& AssetName, FString& OutError)
+	static UMaterial* CreateEmptyMaterial(
+		const FString& PackagePath,
+		UEditorAssetSubsystem* AssetSubsystem,
+		FString& OutError,
+		int32& InOutOps)
 	{
-		FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
-		UMaterialFactoryNew* Factory = NewObject<UMaterialFactoryNew>();
-		UObject* NewAsset = AssetToolsModule.Get().CreateAsset(
-			AssetName,
-			FolderPath,
-			UMaterial::StaticClass(),
-			Factory);
+		FString FolderPath;
+		FString AssetName;
+		if (!UeremcpMaterialPaths::SplitPackagePath(PackagePath, FolderPath, AssetName))
+		{
+			OutError = FString::Printf(TEXT("Invalid master package path '%s'."), *PackagePath);
+			return nullptr;
+		}
 
-		UMaterial* Material = Cast<UMaterial>(NewAsset);
+		UeremcpMaterialAssetLoad::ReleasePackageForCreate(PackagePath, AssetSubsystem);
+
+		const FString ObjectPath = FString::Printf(TEXT("%s.%s"), *PackagePath, *AssetName);
+		if (UObject* ExistingObject = StaticFindObject(UObject::StaticClass(), nullptr, *ObjectPath))
+		{
+			TArray<UObject*> ObjectsToDelete;
+			ObjectsToDelete.Add(ExistingObject);
+			ObjectTools::DeleteObjectsUnchecked(ObjectsToDelete);
+		}
+
+		UPackage* Package = CreatePackage(*PackagePath);
+		if (!Package)
+		{
+			OutError = TEXT("CreatePackage failed for master material.");
+			return nullptr;
+		}
+
+		UMaterial* Material = NewObject<UMaterial>(
+			Package,
+			UMaterial::StaticClass(),
+			FName(*AssetName),
+			RF_Public | RF_Standalone);
 		if (!Material)
 		{
-			OutError = TEXT("AssetTools.CreateAsset did not return UMaterial.");
+			OutError = FString::Printf(TEXT("NewObject<UMaterial> failed for '%s'."), *PackagePath);
+			return nullptr;
 		}
+
+		FAssetRegistryModule::AssetCreated(Material);
+		Material->GetOutermost()->MarkPackageDirty();
+		++InOutOps;
 		return Material;
 	}
 
@@ -80,21 +109,12 @@ namespace
 	static bool ApplyGraphToMaster(
 		UMaterial* Material,
 		const FUeremcpMaterialMasterBuildRequest& Request,
-		bool bRebuildStaleGraph,
 		FUeremcpMaterialMasterBuildResult& Result)
 	{
 		if (!Material)
 		{
 			Result.Error = TEXT("Null material for graph build.");
 			return false;
-		}
-
-		if (bRebuildStaleGraph)
-		{
-			UMaterialEditingLibrary::DeleteAllMaterialExpressions(Material);
-			++Result.InternalOperations;
-			Result.InterpretationNotes.Add(
-				TEXT("Deleted stale master expressions before feature-graph rebuild."));
 		}
 
 		const FUeremcpFeatureGraphBuildResult GraphResult = UeremcpMaterialFeatureGraph::BuildGraph(
@@ -149,6 +169,8 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 		return Result;
 	}
 
+	UEditorAssetSubsystem* AssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+
 	if (UMaterial* Existing = LoadRegisteredMaterialAtPath(Request.MasterPackagePath))
 	{
 		UeremcpMaterialFeatures::FFeatureGraphVerifyResult Verify;
@@ -163,42 +185,27 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 			return Result;
 		}
 
-		Result.bCreated = false;
 		Result.InterpretationNotes.Add(
 			FString::Printf(
-				TEXT("Existing master '%s' failed feature-graph verification; rebuilding in-process graph."),
+				TEXT("Existing master '%s' failed feature-graph verification; recreating package."),
 				*Request.MasterPackagePath));
-		if (ApplyGraphToMaster(Existing, Request, true, Result))
-		{
-			Result.InterpretationNotes.Add(
-				TEXT("Rebuilt feature graph on stale/incomplete persisted master."));
-		}
-		return Result;
-	}
-
-	FString FolderPath;
-	FString AssetName;
-	if (!UeremcpMaterialPaths::SplitPackagePath(Request.MasterPackagePath, FolderPath, AssetName))
-	{
-		Result.Error = FString::Printf(TEXT("Invalid master package path '%s'."), *Request.MasterPackagePath);
-		return Result;
+		UeremcpMaterialAssetLoad::ReleasePackageForCreate(Request.MasterPackagePath, AssetSubsystem);
 	}
 
 	FString CreateError;
-	UMaterial* Material = CreateEmptyMaterial(FolderPath, AssetName, CreateError);
+	UMaterial* Material = CreateEmptyMaterial(Request.MasterPackagePath, AssetSubsystem, CreateError, Result.InternalOperations);
 	if (!Material)
 	{
 		Result.Error = CreateError;
 		return Result;
 	}
 	Result.bCreated = true;
-	Result.InternalOperations += 1;
-	FAssetRegistryModule::AssetCreated(Material);
+	Result.InterpretationNotes.Add(
+		TEXT("Created feature-driven VFX master via MaterialEditingLibrary (MaterialTools-equivalent substrate)."));
 
-	if (ApplyGraphToMaster(Material, Request, false, Result))
+	if (ApplyGraphToMaster(Material, Request, Result))
 	{
-		Result.InterpretationNotes.Add(
-			TEXT("Created feature-driven VFX master via MaterialEditingLibrary (MaterialTools-equivalent substrate)."));
+		return Result;
 	}
 
 	return Result;

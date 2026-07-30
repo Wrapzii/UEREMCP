@@ -30,4 +30,9 @@ namespace UeremcpMaterialAssetLoad
 	UEREMCPMATERIAL_API UMaterialInstanceConstant* TryLoadRegisteredMaterialInstance(const FString& PackagePath);
 
 	UEREMCPMATERIAL_API UTexture2D* TryLoadTexture(const FString& PackagePath);
+
+	/** Clear registry, in-process, and on-disk remnants before recreating a scratch package. */
+	UEREMCPMATERIAL_API void ReleasePackageForCreate(
+		const FString& PackagePath,
+		UEditorAssetSubsystem* AssetSubsystem = nullptr);
 }

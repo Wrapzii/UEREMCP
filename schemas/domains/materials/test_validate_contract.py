@@ -102,9 +102,20 @@ class MaterialValidateContractTests(unittest.TestCase):
         self.assertIn("CreateMaterialInstanceAtPath", self.material_cpp)
         self.assertIn("CreatePackage(*PackagePath)", self.material_cpp)
         self.assertIn("NewObject<UMaterialInstanceConstant>", self.material_cpp)
-        self.assertIn("ReleaseInProcessPackageForCreate", self.material_cpp)
+        self.assertIn("ReleasePackageForCreate", self.material_cpp)
         self.assertIn("TryLoadRegisteredMaterialInstance", self.material_cpp)
         self.assertIn("!Request.bSave", self.material_cpp)
+
+    def test_master_create_uses_create_package_after_release(self) -> None:
+        master_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialMasterBuilder.cpp"
+        ).read_text(encoding="utf-8")
+        asset_load_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialAssetLoad.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("ReleasePackageForCreate", asset_load_cpp)
+        self.assertIn("NewObject<UMaterial>", master_cpp)
+        self.assertIn("failed feature-graph verification; recreating package", master_cpp)
 
     def test_create_vfx_material_reports_mi_save_failure(self) -> None:
         self.assertIn("ReportMiSaveFailure", self.material_cpp)
@@ -119,8 +130,8 @@ class MaterialValidateContractTests(unittest.TestCase):
     def test_master_builder_verifies_or_rebuilds_existing_master(self) -> None:
         master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
         self.assertIn("VerifyFeatureGraph", master_cpp)
-        self.assertIn("DeleteAllMaterialExpressions", master_cpp)
-        self.assertIn("failed feature-graph verification; rebuilding", master_cpp)
+        self.assertIn("ReleasePackageForCreate", master_cpp)
+        self.assertIn("failed feature-graph verification; recreating package", master_cpp)
         self.assertIn("Reused verified master", master_cpp)
 
     def test_incomplete_master_not_persisted_on_graph_failure(self) -> None:
@@ -167,6 +178,8 @@ class MaterialValidateContractTests(unittest.TestCase):
         self.assertIn("Failed to wire depth_fade.", feature_graph)
         self.assertIn("TEXT(\"Opacity\")", feature_graph)
         self.assertIn("Failed to wire panning_textures.", feature_graph)
+        self.assertIn("TEXT(\"UVs\")", feature_graph)
+        self.assertIn("Failed to connect UV chain to MainTexture.", feature_graph)
 
     def test_create_vfx_material_reports_reused_assets_for_master_reuse(self) -> None:
         self.assertIn("ReusedAssets", self.material_cpp)

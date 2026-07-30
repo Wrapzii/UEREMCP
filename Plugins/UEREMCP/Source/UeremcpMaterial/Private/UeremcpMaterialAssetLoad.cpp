@@ -4,11 +4,16 @@
 
 #include "Editor.h"
 #include "Engine/Texture2D.h"
+#include "HAL/FileManager.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
+#include "Misc/Paths.h"
+#include "ObjectTools.h"
 #include "Subsystems/EditorAssetSubsystem.h"
-#include "UeremcpMaterialPaths.h"
+#include "UObject/Package.h"
 #include "UObject/UObjectGlobals.h"
+#include "UeremcpMaterialPaths.h"
+#include "PackageTools.h"
 
 namespace
 {
@@ -99,4 +104,39 @@ UTexture2D* UeremcpMaterialAssetLoad::TryLoadTexture(const FString& PackagePath)
 	}
 
 	return FindInProcessObject<UTexture2D>(PackagePath);
+}
+
+void UeremcpMaterialAssetLoad::ReleasePackageForCreate(
+	const FString& PackagePath,
+	UEditorAssetSubsystem* AssetSubsystem)
+{
+	if (PackagePath.IsEmpty())
+	{
+		return;
+	}
+
+	if (!AssetSubsystem)
+	{
+		AssetSubsystem = GetEditorAssetSubsystem();
+	}
+
+	if (AssetSubsystem && AssetSubsystem->DoesAssetExist(PackagePath))
+	{
+		AssetSubsystem->DeleteAsset(PackagePath);
+	}
+
+	if (UPackage* ExistingPackage = FindPackage(nullptr, *PackagePath))
+	{
+		TArray<UPackage*> PackagesToUnload;
+		PackagesToUnload.Add(ExistingPackage);
+		UPackageTools::UnloadPackages(PackagesToUnload);
+	}
+
+	const FString PackageFilename = FPackageName::LongPackageNameToFilename(
+		PackagePath,
+		FPackageName::GetAssetPackageExtension());
+	if (FPaths::FileExists(PackageFilename))
+	{
+		IFileManager::Get().Delete(*PackageFilename);
+	}
 }

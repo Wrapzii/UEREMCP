@@ -36,25 +36,7 @@ namespace
 		const FString& PackagePath,
 		UEditorAssetSubsystem* AssetSubsystem)
 	{
-		if (AssetSubsystem && AssetSubsystem->DoesAssetExist(PackagePath))
-		{
-			AssetSubsystem->DeleteAsset(PackagePath);
-		}
-
-		if (UPackage* ExistingPackage = FindPackage(nullptr, *PackagePath))
-		{
-			TArray<UPackage*> PackagesToUnload;
-			PackagesToUnload.Add(ExistingPackage);
-			UPackageTools::UnloadPackages(PackagesToUnload);
-		}
-
-		const FString PackageFilename = FPackageName::LongPackageNameToFilename(
-			PackagePath,
-			FPackageName::GetAssetPackageExtension());
-		if (FPaths::FileExists(PackageFilename))
-		{
-			IFileManager::Get().Delete(*PackageFilename);
-		}
+		UeremcpMaterialAssetLoad::ReleasePackageForCreate(PackagePath, AssetSubsystem);
 	}
 
 	static bool SaveAssetObject(
