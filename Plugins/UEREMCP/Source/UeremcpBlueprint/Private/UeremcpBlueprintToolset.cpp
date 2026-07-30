@@ -1,6 +1,7 @@
 #include "UeremcpBlueprintToolset.h"
 
 #include "UeremcpBlueprintGraphReader.h"
+#include "UeremcpBlueprintGraphWriter.h"
 #include "UeremcpEnvelope.h"
 
 #include "Engine/Blueprint.h"
@@ -299,10 +300,9 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 	{
 		Response.Status = TEXT("rejected");
 		Response.Summary = FString::Printf(
-			TEXT("submit_graph mode '%s' is not implemented; the current P2 slice accepts unchanged replace submissions only."),
+			TEXT("submit_graph mode '%s' is not implemented; the current P2 slice supports replace on scratch assets only."),
 			*Request.Mode);
 		Response.CapabilityNotes = {
-			TEXT("submit_graph.changed_replace_not_implemented"),
 			TEXT("submit_graph.patch_not_implemented"),
 		};
 		return FUeremcpEnvelope::SerializeResponse(Response);
@@ -413,18 +413,146 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
 
-	Response.Status = TEXT("rejected");
-	Response.Summary = TEXT(
-		"Changed graph replacement is not implemented in this P2 slice; no mutation was performed.");
-	Response.CapabilityNotes = {
-		TEXT("submit_graph.unchanged_replace_supported"),
-		TEXT("submit_graph.changed_replace_not_implemented"),
-		TEXT("submit_graph.patch_not_implemented"),
+	if (!FUeremcpBlueprintGraphWriter::IsScratchAssetPath(Request.TargetAssetPath))
+	{
+		Response.Status = TEXT("rejected");
+		Response.Summary = FString::Printf(
+			TEXT("Changed graph replace for '%s' is restricted to /Game/__UeremcpTests/ scratch assets; no mutation was performed."),
+			*Request.TargetAssetPath);
+		Response.CapabilityNotes = {
+			TEXT("submit_graph.scratch_path_only"),
+			TEXT("submit_graph.unchanged_replace_supported"),
+		};
+		AttachSubmitValidation(
+			Response,
+			true,
+			{
+				TEXT("blueprint.current_graph_read"),
+				TEXT("blueprint.expected_revision_compare"),
+				TEXT("blueprint.submitted_graph_hash_compare"),
+			},
+			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	FUeremcpBlueprintReplaceGraphOptions WriteOptions;
+	WriteOptions.AssetPath = Request.TargetAssetPath;
+	WriteOptions.GraphId = ReadOptions.GraphId;
+	WriteOptions.bDryRun = Request.bDryRun;
+	WriteOptions.bCompile = Request.bCompile;
+	WriteOptions.bValidate = Request.bValidate;
+	WriteOptions.bSave = Request.bSave;
+
+	FUeremcpBlueprintReplaceGraphResult WriteResult;
+	if (!FUeremcpBlueprintGraphWriter::ReplaceGraph(
+			Blueprint,
+			SubmittedGraph,
+			WriteOptions,
+			WriteResult))
+	{
+		Response.Status = TEXT("failed_validation");
+		Response.Summary = WriteResult.Error.IsEmpty()
+			? TEXT("Graph replace failed before validation completed.")
+			: WriteResult.Error;
+		Response.CapabilityNotes = WriteResult.CapabilityNotes;
+		Response.CapabilityNotes.Append(WriteResult.LossyAreas);
+		Response.Metrics.InternalOperations += WriteResult.InternalOperations;
+		AttachSubmitValidation(
+			Response,
+			false,
+			{TEXT("blueprint.current_graph_read"), TEXT("blueprint.submitted_graph_hash_compare")},
+			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	Response.Metrics.InternalOperations += WriteResult.InternalOperations;
+	Response.CapabilityNotes = WriteResult.LossyAreas;
+	Response.CapabilityNotes.Append(WriteResult.CapabilityNotes);
+
+	if (Request.bDryRun)
+	{
+		Response.Status = TEXT("partially_completed");
+		Response.Summary = FString::Printf(
+			TEXT("dry_run: would replace graph '%s' on scratch asset '%s' via write_graph_dsl (%d bytes DSL); no mutation, compile, or re-read was performed."),
+			ReadOptions.GraphId.IsEmpty() ? TEXT("EventGraph") : *ReadOptions.GraphId,
+			*Request.TargetAssetPath,
+			WriteResult.DslUsed.Len());
+		Response.Revision = Current.ContentHash;
+		AttachSubmitValidation(
+			Response,
+			true,
+			{
+				TEXT("blueprint.current_graph_read"),
+				TEXT("blueprint.expected_revision_compare"),
+				TEXT("blueprint.submitted_graph_hash_compare"),
+				TEXT("blueprint.dsl_resolution"),
+			},
+			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	Response.Revision = WriteResult.RevisionAfter;
+
+	TArray<FString> PerformedChecks = {
+		TEXT("blueprint.current_graph_read"),
+		TEXT("blueprint.expected_revision_compare"),
+		TEXT("blueprint.submitted_graph_hash_compare"),
+		TEXT("blueprint.graph_write"),
+		TEXT("blueprint.reread_after_write"),
 	};
-	AttachSubmitValidation(
-		Response,
-		true,
-		{TEXT("blueprint.current_graph_read"), TEXT("blueprint.submitted_graph_hash_compare")},
-		{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+	TArray<FString> SkippedChecks;
+	if (Request.bCompile)
+	{
+		PerformedChecks.Add(TEXT("blueprint.compile"));
+	}
+	else
+	{
+		SkippedChecks.Add(TEXT("blueprint.compile"));
+	}
+
+	const bool bHashMatches = WriteResult.RereadHash.Equals(SubmittedHash, ESearchCase::CaseSensitive);
+	if (Request.bValidate && Request.bCompile && bHashMatches)
+	{
+		Response.Status = TEXT("modified_and_validated");
+		Response.Summary = FString::Printf(
+			TEXT("Replaced graph on scratch asset '%s'; compile succeeded and re-read semantic hash matches submitted graph."),
+			*Request.TargetAssetPath);
+		PerformedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+	}
+	else
+	{
+		Response.Status = TEXT("partially_completed");
+		if (!Request.bValidate)
+		{
+			Response.Summary = FString::Printf(
+				TEXT("Replaced graph on scratch asset '%s' but options.validate=false; compile/re-read were not used for a validated claim."),
+				*Request.TargetAssetPath);
+			SkippedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+		}
+		else if (!Request.bCompile)
+		{
+			Response.Summary = FString::Printf(
+				TEXT("Replaced graph on scratch asset '%s' but options.compile=false; cannot claim modified_and_validated."),
+				*Request.TargetAssetPath);
+			SkippedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+		}
+		else
+		{
+			Response.Summary = FString::Printf(
+				TEXT("Replaced graph on scratch asset '%s' and re-read, but re-read hash '%s' does not match submitted hash '%s'."),
+				*Request.TargetAssetPath,
+				*WriteResult.RereadHash,
+				*SubmittedHash);
+			PerformedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+			Response.CapabilityNotes.Add(TEXT("submit_graph.reread_hash_mismatch"));
+		}
+	}
+
+	if (Request.bValidate && !Request.bCompile)
+	{
+		SkippedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+	}
+
+	AttachSubmitValidation(Response, WriteResult.bSuccess, PerformedChecks, SkippedChecks);
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }

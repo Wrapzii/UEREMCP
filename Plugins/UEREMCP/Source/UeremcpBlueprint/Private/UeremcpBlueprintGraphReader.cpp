@@ -1,5 +1,6 @@
 #include "UeremcpBlueprintGraphReader.h"
 
+#include "UeremcpBlueprintEpicBridge.h"
 #include "UeremcpContentHash.h"
 
 #include "BlueprintEditorLibrary.h"
@@ -547,45 +548,12 @@ namespace UeremcpBlueprintGraphReader
 	}
 
 	static bool ExecuteEpicToolSync(
-		const FString& ToolsetName,
 		const FString& ToolName,
 		const FString& JsonInput,
 		FString& OutJsonResult,
 		FString& OutError)
 	{
-		if (!UToolsetRegistry::IsAvailable())
-		{
-			OutError = TEXT("ToolsetRegistry is not available");
-			return false;
-		}
-
-		UToolCallAsyncResultString* AsyncResult = UToolsetRegistry::ExecuteTool(ToolsetName, ToolName, JsonInput);
-		if (!AsyncResult)
-		{
-			OutError = TEXT("ExecuteTool returned null");
-			return false;
-		}
-
-		const double Deadline = FPlatformTime::Seconds() + 30.0;
-		while (!AsyncResult->bIsComplete && FPlatformTime::Seconds() < Deadline)
-		{
-			FPlatformProcess::Sleep(0.01f);
-		}
-
-		if (!AsyncResult->bIsComplete)
-		{
-			OutError = TEXT("Epic tool call timed out");
-			return false;
-		}
-
-		if (!AsyncResult->Error.IsEmpty())
-		{
-			OutError = AsyncResult->Error;
-			return false;
-		}
-
-		OutJsonResult = AsyncResult->GetValueAsJsonString();
-		return true;
+		return FUeremcpBlueprintEpicBridge::ExecuteToolSync(ToolName, JsonInput, OutJsonResult, OutError);
 	}
 
 	static bool TryAttachDslExtension(
@@ -608,7 +576,6 @@ namespace UeremcpBlueprintGraphReader
 		FString ToolError;
 		++InOutInternalOps;
 		if (!ExecuteEpicToolSync(
-				TEXT("editor_toolset.toolsets.blueprint.BlueprintTools"),
 				TEXT("read_graph_dsl"),
 				Input,
 				ToolResult,

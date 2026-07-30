@@ -1,0 +1,111 @@
+{
+  "$comment": "Representative submit_graph replace payload with Epic DSL extension (WS-06 P2).",
+  "asset_path": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch.BP_ReadGraph_Scratch",
+  "graph_id": "EventGraph",
+  "graph_name": "EventGraph",
+  "graph_type": "BlueprintEventGraph",
+  "schema_version": "1.0",
+  "engine_version": "5.8.0",
+  "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "retrieved_at": "2026-07-30T06:00:00Z",
+  "fidelity": {
+    "round_trip_supported": false,
+    "lossy_areas": [
+      "multigate_no_dsl_roundtrip",
+      "timeline_special_spawn",
+      "math_expression_unproven",
+      "dsl_bind_elision",
+      "reroute_knots_elided",
+      "node_guid_not_preserved",
+      "positions_not_semantic",
+      "collapsed_composite_subgraphs_unproven",
+      "project_custom_k2_nodes_unknown"
+    ]
+  },
+  "semantic_summary": {
+    "purpose": "Blueprint graph 'EventGraph'",
+    "node_count": 2
+  },
+  "entry_points": [
+    "n11111111111111111111111111111111"
+  ],
+  "nodes": [
+    {
+      "node_id": "n11111111111111111111111111111111",
+      "semantic_id": "EventGraph/event:EventBeginPlay/n001:Event|ReceiveBeginPlay",
+      "node_class": "K2Node_Event",
+      "semantic_type": "event:EventBeginPlay",
+      "title": "Event BeginPlay",
+      "position": [0, 0],
+      "properties": {
+        "type_id": "Event|ReceiveBeginPlay"
+      },
+      "input_pins": [],
+      "output_pins": [
+        {
+          "pin_id": "p11111111111111111111111111111111",
+          "name": "then",
+          "direction": "output",
+          "pin_type": {
+            "category": "exec",
+            "container": "none"
+          },
+          "links": [
+            {
+              "node_id": "n33333333333333333333333333333333",
+              "pin_id": "p33333333333333333333333333333333"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "node_id": "n33333333333333333333333333333333",
+      "semantic_id": "EventGraph/event:EventBeginPlay/n002:Development|PrintString#PrintString",
+      "node_class": "K2Node_CallFunction",
+      "semantic_type": "call_function",
+      "title": "Print String",
+      "position": [300, 0],
+      "properties": {
+        "type_id": "Development|PrintString"
+      },
+      "defaults": {
+        "InString": "hello from submit"
+      },
+      "input_pins": [
+        {
+          "pin_id": "p33333333333333333333333333333333",
+          "name": "execute",
+          "direction": "input",
+          "pin_type": {
+            "category": "exec",
+            "container": "none"
+          },
+          "links": [
+            {
+              "node_id": "n11111111111111111111111111111111",
+              "pin_id": "p11111111111111111111111111111111"
+            }
+          ]
+        }
+      ],
+      "output_pins": []
+    }
+  ],
+  "links": [
+    {
+      "from_node": "n11111111111111111111111111111111",
+      "from_pin": "then",
+      "to_node": "n33333333333333333333333333333333",
+      "to_pin": "execute",
+      "kind": "exec",
+      "valid": true
+    }
+  ],
+  "extensions": {
+    "blueprint": {
+      "dsl": "(event EventBeginPlay\n  (Development|PrintString :InString \"hello from submit\"))"
+    }
+  }
+}

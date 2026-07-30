@@ -213,7 +213,8 @@ namespace UeremcpBlueprintReadGraphTest
 		const FString& RequestId,
 		const FString& AssetPath,
 		const TSharedPtr<FJsonObject>& Graph,
-		const FString& ExpectedRevision)
+		const FString& ExpectedRevision,
+		bool bDryRun = false)
 	{
 		TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>();
 		Request->SetStringField(TEXT("protocol_version"), TEXT("1.0"));
@@ -229,6 +230,10 @@ namespace UeremcpBlueprintReadGraphTest
 		Target->SetStringField(TEXT("asset_path"), AssetPath);
 		Target->SetStringField(TEXT("graph_id"), TEXT("EventGraph"));
 		Request->SetObjectField(TEXT("target"), Target);
+
+		TSharedPtr<FJsonObject> Options = MakeShared<FJsonObject>();
+		Options->SetBoolField(TEXT("dry_run"), bDryRun);
+		Request->SetObjectField(TEXT("options"), Options);
 
 		TSharedPtr<FJsonObject> Specification = MakeShared<FJsonObject>();
 		Specification->SetObjectField(TEXT("graph"), Graph);
@@ -404,6 +409,39 @@ bool FUeremcpBlueprintSubmitGraphValidationTest::RunTest(const FString& Paramete
 	FString CurrentRevision;
 	StaleRoot->TryGetStringField(TEXT("revision"), CurrentRevision);
 	TestEqual(TEXT("conflict returns current revision"), CurrentRevision, Revision);
+
+	TSharedPtr<FJsonObject> ChangedGraph = MakeShared<FJsonObject>();
+	ChangedGraph->Values = Graph->Values;
+	TSharedPtr<FJsonObject> Extensions = MakeShared<FJsonObject>();
+	TSharedPtr<FJsonObject> BlueprintExt = MakeShared<FJsonObject>();
+	BlueprintExt->SetStringField(
+		TEXT("dsl"),
+		TEXT("(event EventBeginPlay\n  (Development|PrintString :InString \"dry_run changed\"))"));
+	Extensions->SetObjectField(TEXT("blueprint"), BlueprintExt);
+	ChangedGraph->SetObjectField(TEXT("extensions"), Extensions);
+	ChangedGraph->SetStringField(
+		TEXT("content_hash"),
+		TEXT("sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+	ChangedGraph->SetStringField(
+		TEXT("revision"),
+		TEXT("sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"));
+
+	TSharedPtr<FJsonObject> DryRunRoot;
+	const FString DryRunRequest = MakeSubmitReplaceRequest(
+		TEXT("bp-submit-dry-run"),
+		AssetPath,
+		ChangedGraph,
+		Revision,
+		true);
+	if (!ParseResponse(UUeremcpBlueprintToolset::SubmitGraph(DryRunRequest), DryRunRoot, *this))
+	{
+		return false;
+	}
+	DryRunRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("changed replace dry_run is partial"), Status, FString(TEXT("partially_completed")));
+	FString DryRunRevision;
+	DryRunRoot->TryGetStringField(TEXT("revision"), DryRunRevision);
+	TestEqual(TEXT("dry_run leaves revision unchanged"), DryRunRevision, Revision);
 	return true;
 }
 
