@@ -342,11 +342,237 @@ namespace UeremcpBlueprintGraphWriter
 		OutLossyNotes.Add(TEXT("exotic_nodes_require_extensions_blueprint_dsl"));
 		return true;
 	}
+
+	static bool ValidateExpectedAfterWriteShape(
+		const TSharedPtr<FJsonObject>& Expected,
+		FString& OutError)
+	{
+		if (!Expected.IsValid())
+		{
+			return true;
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* Nodes = nullptr;
+		const TArray<TSharedPtr<FJsonValue>>* Links = nullptr;
+		if (!Expected->TryGetArrayField(TEXT("nodes"), Nodes) || !Nodes || Nodes->Num() == 0)
+		{
+			OutError = TEXT("expected_after_write.nodes must contain at least one node selector");
+			return false;
+		}
+		if (!Expected->TryGetArrayField(TEXT("links"), Links) || !Links || Links->Num() == 0)
+		{
+			OutError = TEXT("expected_after_write.links must contain at least one link assertion");
+			return false;
+		}
+
+		TSet<FString> Keys;
+		for (const TSharedPtr<FJsonValue>& Value : *Nodes)
+		{
+			const TSharedPtr<FJsonObject> Selector = Value->AsObject();
+			FString Key;
+			if (!Selector.IsValid()
+				|| !Selector->TryGetStringField(TEXT("key"), Key)
+				|| Key.IsEmpty())
+			{
+				OutError = TEXT("each expected_after_write.nodes item requires a non-empty key");
+				return false;
+			}
+			if (Keys.Contains(Key))
+			{
+				OutError = FString::Printf(TEXT("duplicate expected_after_write node key '%s'"), *Key);
+				return false;
+			}
+			Keys.Add(Key);
+			if (!Selector->HasField(TEXT("node_class"))
+				&& !Selector->HasField(TEXT("semantic_type"))
+				&& !Selector->HasField(TEXT("function")))
+			{
+				OutError = FString::Printf(
+					TEXT("expected_after_write node '%s' requires node_class, semantic_type, or function"),
+					*Key);
+				return false;
+			}
+		}
+
+		for (const TSharedPtr<FJsonValue>& Value : *Links)
+		{
+			const TSharedPtr<FJsonObject> Link = Value->AsObject();
+			FString From;
+			FString FromPin;
+			FString To;
+			FString ToPin;
+			if (!Link.IsValid()
+				|| !Link->TryGetStringField(TEXT("from"), From)
+				|| !Link->TryGetStringField(TEXT("from_pin"), FromPin)
+				|| !Link->TryGetStringField(TEXT("to"), To)
+				|| !Link->TryGetStringField(TEXT("to_pin"), ToPin)
+				|| From.IsEmpty()
+				|| FromPin.IsEmpty()
+				|| To.IsEmpty()
+				|| ToPin.IsEmpty())
+			{
+				OutError = TEXT("each expected_after_write.links item requires from, from_pin, to, and to_pin");
+				return false;
+			}
+			if (!Keys.Contains(From) || !Keys.Contains(To))
+			{
+				OutError = FString::Printf(
+					TEXT("expected_after_write link references unknown node key '%s' or '%s'"),
+					*From,
+					*To);
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	static bool NodeMatchesSelector(
+		const TSharedPtr<FJsonObject>& Node,
+		const TSharedPtr<FJsonObject>& Selector)
+	{
+		for (const TCHAR* Field : {TEXT("node_class"), TEXT("semantic_type")})
+		{
+			FString ExpectedValue;
+			if (Selector->TryGetStringField(Field, ExpectedValue))
+			{
+				FString ActualValue;
+				if (!Node->TryGetStringField(Field, ActualValue)
+					|| !ActualValue.Equals(ExpectedValue, ESearchCase::CaseSensitive))
+				{
+					return false;
+				}
+			}
+		}
+
+		FString ExpectedFunction;
+		if (Selector->TryGetStringField(TEXT("function"), ExpectedFunction))
+		{
+			const TSharedPtr<FJsonObject>* Properties = nullptr;
+			FString ActualFunction;
+			if (!Node->TryGetObjectField(TEXT("properties"), Properties)
+				|| !Properties
+				|| !Properties->IsValid()
+				|| !(*Properties)->TryGetStringField(TEXT("function"), ActualFunction)
+				|| !ActualFunction.Equals(ExpectedFunction, ESearchCase::CaseSensitive))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	static bool ValidateExpectedAfterWrite(
+		const TSharedPtr<FJsonObject>& Graph,
+		const TSharedPtr<FJsonObject>& Expected,
+		FString& OutError)
+	{
+		if (!Expected.IsValid())
+		{
+			return true;
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* ActualNodes = nullptr;
+		const TArray<TSharedPtr<FJsonValue>>* ExpectedNodes = nullptr;
+		const TArray<TSharedPtr<FJsonValue>>* ActualLinks = nullptr;
+		const TArray<TSharedPtr<FJsonValue>>* ExpectedLinks = nullptr;
+		if (!Graph.IsValid()
+			|| !Graph->TryGetArrayField(TEXT("nodes"), ActualNodes)
+			|| !ActualNodes
+			|| !Graph->TryGetArrayField(TEXT("links"), ActualLinks)
+			|| !ActualLinks
+			|| !Expected->TryGetArrayField(TEXT("nodes"), ExpectedNodes)
+			|| !ExpectedNodes
+			|| !Expected->TryGetArrayField(TEXT("links"), ExpectedLinks)
+			|| !ExpectedLinks)
+		{
+			OutError = TEXT("post-write graph or expectation arrays are unavailable");
+			return false;
+		}
+
+		TMap<FString, FString> NodeIdByKey;
+		for (const TSharedPtr<FJsonValue>& SelectorValue : *ExpectedNodes)
+		{
+			const TSharedPtr<FJsonObject> Selector = SelectorValue->AsObject();
+			FString Key;
+			Selector->TryGetStringField(TEXT("key"), Key);
+			TArray<FString> Matches;
+			for (const TSharedPtr<FJsonValue>& NodeValue : *ActualNodes)
+			{
+				const TSharedPtr<FJsonObject> Node = NodeValue->AsObject();
+				FString NodeId;
+				if (Node.IsValid()
+					&& NodeMatchesSelector(Node, Selector)
+					&& Node->TryGetStringField(TEXT("node_id"), NodeId))
+				{
+					Matches.Add(NodeId);
+				}
+			}
+			if (Matches.Num() != 1)
+			{
+				OutError = FString::Printf(
+					TEXT("post-write node assertion '%s' matched %d nodes; expected exactly one"),
+					*Key,
+					Matches.Num());
+				return false;
+			}
+			NodeIdByKey.Add(Key, Matches[0]);
+		}
+
+		for (const TSharedPtr<FJsonValue>& ExpectedLinkValue : *ExpectedLinks)
+		{
+			const TSharedPtr<FJsonObject> ExpectedLink = ExpectedLinkValue->AsObject();
+			FString FromKey;
+			FString FromPin;
+			FString ToKey;
+			FString ToPin;
+			ExpectedLink->TryGetStringField(TEXT("from"), FromKey);
+			ExpectedLink->TryGetStringField(TEXT("from_pin"), FromPin);
+			ExpectedLink->TryGetStringField(TEXT("to"), ToKey);
+			ExpectedLink->TryGetStringField(TEXT("to_pin"), ToPin);
+
+			bool bFound = false;
+			for (const TSharedPtr<FJsonValue>& ActualLinkValue : *ActualLinks)
+			{
+				const TSharedPtr<FJsonObject> ActualLink = ActualLinkValue->AsObject();
+				FString FromNode;
+				FString ActualFromPin;
+				FString ToNode;
+				FString ActualToPin;
+				if (ActualLink.IsValid()
+					&& ActualLink->TryGetStringField(TEXT("from_node"), FromNode)
+					&& ActualLink->TryGetStringField(TEXT("from_pin"), ActualFromPin)
+					&& ActualLink->TryGetStringField(TEXT("to_node"), ToNode)
+					&& ActualLink->TryGetStringField(TEXT("to_pin"), ActualToPin)
+					&& FromNode.Equals(NodeIdByKey[FromKey], ESearchCase::CaseSensitive)
+					&& ActualFromPin.Equals(FromPin, ESearchCase::CaseSensitive)
+					&& ToNode.Equals(NodeIdByKey[ToKey], ESearchCase::CaseSensitive)
+					&& ActualToPin.Equals(ToPin, ESearchCase::CaseSensitive))
+				{
+					bFound = true;
+					break;
+				}
+			}
+			if (!bFound)
+			{
+				OutError = FString::Printf(
+					TEXT("post-write link assertion failed: %s.%s -> %s.%s"),
+					*FromKey,
+					*FromPin,
+					*ToKey,
+					*ToPin);
+				return false;
+			}
+		}
+
+		return true;
+	}
 }
 
 bool FUeremcpBlueprintGraphWriter::IsScratchAssetPath(const FString& AssetPath)
 {
-	return AssetPath.StartsWith(TEXT("/Game/__UeremcpTests/"), ESearchCase::CaseSensitive);
+	return AssetPath.StartsWith(TEXT("/Game/__UeremcpTests/"), ESearchCase::CaseSensitive)
+		|| AssetPath.StartsWith(TEXT("/Game/__UeremcpPoc/"), ESearchCase::CaseSensitive);
 }
 
 namespace UeremcpBlueprintGraphWriterValidate
@@ -543,8 +769,18 @@ bool FUeremcpBlueprintGraphWriter::ReplaceGraph(
 
 	if (!IsScratchAssetPath(Options.AssetPath))
 	{
-		OutResult.Error = TEXT("submit_graph replace writes are restricted to /Game/__UeremcpTests/ scratch assets");
+		OutResult.Error = TEXT("submit_graph replace writes are restricted to /Game/__UeremcpTests/ or /Game/__UeremcpPoc/ scratch assets");
 		OutResult.CapabilityNotes.Add(TEXT("submit_graph.scratch_path_only"));
+		return false;
+	}
+
+	FString ExpectedShapeError;
+	if (!UeremcpBlueprintGraphWriter::ValidateExpectedAfterWriteShape(
+			Options.ExpectedAfterWrite,
+			ExpectedShapeError))
+	{
+		OutResult.Error = ExpectedShapeError;
+		OutResult.CapabilityNotes.Add(TEXT("submit_graph.expected_after_write_invalid"));
 		return false;
 	}
 
@@ -640,6 +876,24 @@ bool FUeremcpBlueprintGraphWriter::ReplaceGraph(
 
 	OutResult.RereadHash = Reread.ContentHash;
 	OutResult.RevisionAfter = Reread.ContentHash;
+	OutResult.RereadGraph = Reread.Graph;
+	OutResult.bRereadAfterWrite = true;
+	if (Options.ExpectedAfterWrite.IsValid())
+	{
+		OutResult.bExpectedStructureChecked = true;
+		FString ExpectedError;
+		OutResult.bExpectedStructureMatches =
+			UeremcpBlueprintGraphWriter::ValidateExpectedAfterWrite(
+				Reread.Graph,
+				Options.ExpectedAfterWrite,
+				ExpectedError);
+		if (!OutResult.bExpectedStructureMatches)
+		{
+			OutResult.Error = ExpectedError;
+			OutResult.CapabilityNotes.Add(TEXT("submit_graph.expected_after_write_mismatch"));
+			return false;
+		}
+	}
 	OutResult.bSuccess = true;
 	return true;
 }

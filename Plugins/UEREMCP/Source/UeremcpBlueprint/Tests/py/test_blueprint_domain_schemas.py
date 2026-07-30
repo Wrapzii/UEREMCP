@@ -52,6 +52,26 @@ class BlueprintDomainSchemaTests(unittest.TestCase):
         errors = validation_errors(self.submit_validator, spec)
         self.assertEqual(errors, [], msg="\n".join(errors))
 
+    def test_submit_graph_expected_after_write_validates(self) -> None:
+        graph = load_fixture("translate_branch_if.fixture.json")
+        spec = {
+            "graph_id": "EventGraph",
+            "graph": graph,
+            "expected_after_write": {
+                "nodes": [
+                    {"key": "event", "node_class": "K2Node_Event"},
+                    {"key": "branch", "node_class": "K2Node_IfThenElse"},
+                    {"key": "print", "node_class": "K2Node_CallFunction"},
+                ],
+                "links": [
+                    {"from": "event", "from_pin": "then", "to": "branch", "to_pin": "execute"},
+                    {"from": "branch", "from_pin": "then", "to": "print", "to_pin": "execute"},
+                ],
+            },
+        }
+        errors = validation_errors(self.submit_validator, spec)
+        self.assertEqual(errors, [], msg="\n".join(errors))
+
     def test_submit_graph_schema_examples_validate(self) -> None:
         schema_path = repo_root() / "schemas" / "domains" / "blueprints" / "submit_graph.schema.json"
         schema = json.loads(schema_path.read_text(encoding="utf-8"))

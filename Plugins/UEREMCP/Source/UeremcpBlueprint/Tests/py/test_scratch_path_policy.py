@@ -50,7 +50,7 @@ class ScratchPathPolicyTests(unittest.TestCase):
 
     def test_poc_root_allowed_for_blueprint_but_not_ws11(self) -> None:
         poc_path = "/Game/__UeremcpPoc/Fireball/BP_Fireball.BP_Fireball"
-        self.assertFalse(is_blueprint_submit_scratch_path(poc_path))
+        self.assertTrue(is_blueprint_submit_scratch_path(poc_path))
         self.assertFalse(is_ws11_safe_scratch_path(poc_path))
 
     def test_make_scratch_package_path_examples(self) -> None:

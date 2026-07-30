@@ -11,6 +11,7 @@ struct FUeremcpBlueprintReplaceGraphOptions
 {
 	FString AssetPath;
 	FString GraphId;
+	TSharedPtr<FJsonObject> ExpectedAfterWrite;
 	bool bDryRun = false;
 	bool bCompile = true;
 	bool bValidate = true;
@@ -24,8 +25,12 @@ struct FUeremcpBlueprintReplaceGraphResult
 	FString DslUsed;
 	FString RevisionAfter;
 	FString RereadHash;
+	TSharedPtr<FJsonObject> RereadGraph;
 	bool bCompiled = false;
 	bool bSaved = false;
+	bool bRereadAfterWrite = false;
+	bool bExpectedStructureChecked = false;
+	bool bExpectedStructureMatches = false;
 	int32 InternalOperations = 0;
 	TArray<FString> LossyAreas;
 	TArray<FString> CapabilityNotes;
@@ -34,7 +39,7 @@ struct FUeremcpBlueprintReplaceGraphResult
 class UEREMCPBLUEPRINT_API FUeremcpBlueprintGraphWriter
 {
 public:
-	/** Scratch writes only — /Game/__UeremcpTests/ (RB-14). */
+	/** Scratch writes only — test and POC roots. */
 	static bool IsScratchAssetPath(const FString& AssetPath);
 
 	/** Pre-flight ADR-0004 shape + DSL resolution before load/write (honest failed_validation). */

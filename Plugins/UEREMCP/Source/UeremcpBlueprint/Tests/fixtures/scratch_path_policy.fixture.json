@@ -3,12 +3,13 @@
   "blueprint_submit_allow": [
     "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch.BP_ReadGraph_Scratch",
     "/Game/__UeremcpTests/Foo/Bar/BP_Test.BP_Test",
-    "/Game/__UeremcpTests/_suite/nested/asset"
+    "/Game/__UeremcpTests/_suite/nested/asset",
+    "/Game/__UeremcpPoc/Fireball/BP_Fireball.BP_Fireball"
   ],
   "blueprint_submit_deny": [
     "/Game/Characters/BP_Hero.BP_Hero",
-    "/Game/__UeremcpPoc/Fireball/BP_Fireball.BP_Fireball",
     "/Game/__UeremcpTests",
+    "/Game/__UeremcpPoc",
     "/Game/__UeremcpTestsFake/BP_X.BP_X",
     "",
     "/Engine/EditorResources/EmptyActor"

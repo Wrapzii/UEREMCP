@@ -10,12 +10,15 @@ from __future__ import annotations
 
 TESTS_CONTENT_ROOT = "/Game/__UeremcpTests"
 POC_CONTENT_ROOT = "/Game/__UeremcpPoc"
-BLUEPRINT_SUBMIT_PREFIX = f"{TESTS_CONTENT_ROOT}/"
+BLUEPRINT_SUBMIT_PREFIXES = (
+    f"{TESTS_CONTENT_ROOT}/",
+    f"{POC_CONTENT_ROOT}/",
+)
 
 
 def is_blueprint_submit_scratch_path(asset_path: str) -> bool:
     """Mirror FUeremcpBlueprintGraphWriter::IsScratchAssetPath (prefix guard)."""
-    return asset_path.startswith(BLUEPRINT_SUBMIT_PREFIX)
+    return asset_path.startswith(BLUEPRINT_SUBMIT_PREFIXES)
 
 
 def is_ws11_safe_scratch_path(soft_path: str) -> bool:

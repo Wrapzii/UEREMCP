@@ -1,6 +1,7 @@
 # UeremcpBlueprint
 
-**Owner:** WS-06 (Blueprint Specialist). **Status:** P1 `read_graph` implemented; P2 unchanged-replace validation implemented.
+**Owner:** WS-06 (Blueprint Specialist). **Status:** P1 `read_graph` and P2
+scratch changed/unchanged replace implemented; live A6 editor evidence pending orch merge.
 
 ## Purpose
 
@@ -36,7 +37,7 @@ implements graph read/submit.
 | Tool / action | Purpose |
 |---|---|
 | `ReadGraph` / `read_graph` | One call → `graph.schema.json` + diagnostics + `content_hash` |
-| `SubmitGraph` / `submit_graph` | Scratch-only changed/unchanged `replace` via `write_graph_dsl`; dry_run-first; rejects stale revisions and invalid graphs before mutation; honest status ladder; `FUeremcpBlueprintMutatingGate` uses enabled Core dispatch |
+| `SubmitGraph` / `submit_graph` | Scratch-only changed/unchanged `replace` via `write_graph_dsl`; optional `expected_after_write` selectors assert re-read nodes and links before `modified_and_validated`; dry_run-first; stale revisions rejected |
 
 ## Planned (P2+)
 
@@ -58,6 +59,7 @@ Automation tests under `Private/Tests/` (editor; run via orch junction after mer
 - `UeremcpBlueprint.Toolset.Register`
 - `UeremcpBlueprint.Toolset.ReadGraphRoundTrip`
 - `UeremcpBlueprint.Toolset.SubmitGraphValidation`
+- `UeremcpBlueprint.Toolset.PocA6Reread`
 
 Run via editor automation or `tests/run_editor_tests.ps1` once the module is registered
 in `UEREMCP.uplugin` (see `docs/proposals/ws-06-register-blueprint-module.md`).

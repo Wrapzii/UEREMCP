@@ -40,6 +40,10 @@ class SubmitGraphWriterPolicyTests(unittest.TestCase):
         path = "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_ReadGraph_Scratch.BP_ReadGraph_Scratch"
         self.assertTrue(is_scratch_asset_path(path))
 
+    def test_scratch_path_guard_allows_poc_root(self) -> None:
+        path = "/Game/__UeremcpPoc/Blueprint_ReadGraph/BP_PocA6_Scratch.BP_PocA6_Scratch"
+        self.assertTrue(is_scratch_asset_path(path))
+
     def test_scratch_path_guard_rejects_production_assets(self) -> None:
         self.assertFalse(is_scratch_asset_path("/Game/Characters/BP_Hero.BP_Hero"))
         self.assertFalse(is_scratch_asset_path("/Game/__UeremcpTestsFake/BP_X.BP_X"))

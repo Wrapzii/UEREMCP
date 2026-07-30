@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/blueprints/submit_graph.schema.json",
   "title": "submit_graph specification",
-  "description": "specification payload for action=submit_graph (Blueprint domain, WS-06 P2). Supports unchanged and changed mode=replace on scratch assets under /Game/__UeremcpTests/; patch writes remain proposal-only.",
+  "description": "specification payload for action=submit_graph (Blueprint domain, WS-06 P2). Supports unchanged and changed mode=replace on scratch assets under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/; patch writes remain proposal-only.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -13,6 +13,63 @@
     "graph": {
       "$ref": "../../graph/graph.schema.json",
       "description": "Complete graph document for mode=replace (ADR-0004)."
+    },
+    "expected_after_write": {
+      "type": "object",
+      "description": "Required post-write node/link assertions evaluated against the complete programmatic re-read before modified_and_validated may be returned.",
+      "additionalProperties": false,
+      "required": ["nodes", "links"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key"],
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Request-local key used by link assertions."
+              },
+              "node_class": {
+                "type": "string",
+                "minLength": 1
+              },
+              "semantic_type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "function": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Exact properties.function path emitted by read_graph."
+              }
+            },
+            "anyOf": [
+              { "required": ["node_class"] },
+              { "required": ["semantic_type"] },
+              { "required": ["function"] }
+            ]
+          }
+        },
+        "links": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "from_pin", "to", "to_pin"],
+            "properties": {
+              "from": { "type": "string", "minLength": 1 },
+              "from_pin": { "type": "string", "minLength": 1 },
+              "to": { "type": "string", "minLength": 1 },
+              "to_pin": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
     },
     "patch": {
       "type": "object",

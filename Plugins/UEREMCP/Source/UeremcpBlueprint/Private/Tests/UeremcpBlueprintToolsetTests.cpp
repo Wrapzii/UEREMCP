@@ -28,7 +28,7 @@
 
 namespace UeremcpBlueprintReadGraphTest
 {
-	static const TCHAR* TestsRoot = TEXT("/Game/__UeremcpTests");
+	static const TCHAR* TestsRoot = TEXT("/Game/__UeremcpPoc");
 	static const TCHAR* SuiteName = TEXT("Blueprint_ReadGraph");
 
 	static FString MakePackagePath(const FString& AssetName)
@@ -214,7 +214,8 @@ namespace UeremcpBlueprintReadGraphTest
 		const FString& AssetPath,
 		const TSharedPtr<FJsonObject>& Graph,
 		const FString& ExpectedRevision,
-		bool bDryRun = false)
+		bool bDryRun = false,
+		const TSharedPtr<FJsonObject>& ExpectedAfterWrite = nullptr)
 	{
 		TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>();
 		Request->SetStringField(TEXT("protocol_version"), TEXT("1.0"));
@@ -237,8 +238,68 @@ namespace UeremcpBlueprintReadGraphTest
 
 		TSharedPtr<FJsonObject> Specification = MakeShared<FJsonObject>();
 		Specification->SetObjectField(TEXT("graph"), Graph);
+		if (ExpectedAfterWrite.IsValid())
+		{
+			Specification->SetObjectField(TEXT("expected_after_write"), ExpectedAfterWrite);
+		}
 		Request->SetObjectField(TEXT("specification"), Specification);
 		return SerializeObject(Request);
+	}
+
+	static TSharedPtr<FJsonObject> MakeBranchExpectedAfterWrite()
+	{
+		TSharedPtr<FJsonObject> Expected = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> Nodes;
+		for (const TPair<FString, FString>& Pair : {
+				TPair<FString, FString>(TEXT("begin_play"), TEXT("K2Node_Event")),
+				TPair<FString, FString>(TEXT("branch"), TEXT("K2Node_IfThenElse")),
+				TPair<FString, FString>(TEXT("print"), TEXT("K2Node_CallFunction"))})
+		{
+			TSharedPtr<FJsonObject> Node = MakeShared<FJsonObject>();
+			Node->SetStringField(TEXT("key"), Pair.Key);
+			Node->SetStringField(TEXT("node_class"), Pair.Value);
+			Nodes.Add(MakeShared<FJsonValueObject>(Node));
+		}
+		Expected->SetArrayField(TEXT("nodes"), Nodes);
+
+		TArray<TSharedPtr<FJsonValue>> Links;
+		auto AddLink = [&Links](
+			const TCHAR* From,
+			const TCHAR* FromPin,
+			const TCHAR* To,
+			const TCHAR* ToPin)
+		{
+			TSharedPtr<FJsonObject> Link = MakeShared<FJsonObject>();
+			Link->SetStringField(TEXT("from"), From);
+			Link->SetStringField(TEXT("from_pin"), FromPin);
+			Link->SetStringField(TEXT("to"), To);
+			Link->SetStringField(TEXT("to_pin"), ToPin);
+			Links.Add(MakeShared<FJsonValueObject>(Link));
+		};
+		AddLink(TEXT("begin_play"), TEXT("then"), TEXT("branch"), TEXT("execute"));
+		AddLink(TEXT("branch"), TEXT("then"), TEXT("print"), TEXT("execute"));
+		Expected->SetArrayField(TEXT("links"), Links);
+		return Expected;
+	}
+
+	static TSharedPtr<FJsonObject> ExtractSingleGraph(
+		const TSharedPtr<FJsonObject>& Root,
+		FAutomationTestBase& Test)
+	{
+		const TSharedPtr<FJsonObject>* Diagnostics = nullptr;
+		const TArray<TSharedPtr<FJsonValue>>* Graphs = nullptr;
+		if (!Test.TestTrue(
+				TEXT("response contains one complete graph"),
+				Root.IsValid()
+					&& Root->TryGetObjectField(TEXT("diagnostics"), Diagnostics)
+					&& Diagnostics
+					&& (*Diagnostics)->TryGetArrayField(TEXT("graphs"), Graphs)
+					&& Graphs
+					&& Graphs->Num() == 1))
+		{
+			return nullptr;
+		}
+		return (*Graphs)[0]->AsObject();
 	}
 }
 
@@ -442,6 +503,203 @@ bool FUeremcpBlueprintSubmitGraphValidationTest::RunTest(const FString& Paramete
 	FString DryRunRevision;
 	DryRunRoot->TryGetStringField(TEXT("revision"), DryRunRevision);
 	TestEqual(TEXT("dry_run leaves revision unchanged"), DryRunRevision, Revision);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpBlueprintPocA6RereadTest,
+	"UeremcpBlueprint.Toolset.PocA6Reread",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpBlueprintPocA6RereadTest::RunTest(const FString& Parameters)
+{
+	using namespace UeremcpBlueprintReadGraphTest;
+
+	FScratchGuard Guard;
+	static const FString AssetName = TEXT("BP_PocA6_Scratch");
+	if (!CreateScratchBlueprint(AssetName, *this))
+	{
+		return false;
+	}
+	const FString AssetPath = MakePackagePath(AssetName) + TEXT(".") + AssetName;
+	const FString ReadRequest = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"poc-a6-read-before","action":"read_graph","target":{"asset_path":"%s","graph_id":"EventGraph"},"options":{"response_detail":"complete"}})"),
+		*AssetPath);
+
+	TSharedPtr<FJsonObject> BeforeRoot;
+	if (!ParseResponse(UUeremcpBlueprintToolset::ReadGraph(ReadRequest), BeforeRoot, *this))
+	{
+		return false;
+	}
+	FString BeforeRevision;
+	TestTrue(TEXT("A1 initial read revision"), BeforeRoot->TryGetStringField(TEXT("revision"), BeforeRevision));
+	const TSharedPtr<FJsonObject> BeforeGraph = ExtractSingleGraph(BeforeRoot, *this);
+	if (!BeforeGraph.IsValid())
+	{
+		return false;
+	}
+
+	// A4: externally modify the complete JSON's write intent to insert Branch -> PrintString.
+	TSharedPtr<FJsonObject> ChangedGraph = MakeShared<FJsonObject>();
+	ChangedGraph->Values = BeforeGraph->Values;
+	TSharedPtr<FJsonObject> Extensions = MakeShared<FJsonObject>();
+	TSharedPtr<FJsonObject> BlueprintExt = MakeShared<FJsonObject>();
+	BlueprintExt->SetStringField(
+		TEXT("dsl"),
+		TEXT("(event EventBeginPlay\n  (if true\n    (Development|PrintString :InString \"A6 branch confirmed\")))"));
+	Extensions->SetObjectField(TEXT("blueprint"), BlueprintExt);
+	ChangedGraph->SetObjectField(TEXT("extensions"), Extensions);
+
+	TSharedPtr<FJsonObject> SubmitRoot;
+	const FString SubmitRequest = MakeSubmitReplaceRequest(
+		TEXT("poc-a6-submit"),
+		AssetPath,
+		ChangedGraph,
+		BeforeRevision,
+		false,
+		MakeBranchExpectedAfterWrite());
+	if (!ParseResponse(UUeremcpBlueprintToolset::SubmitGraph(SubmitRequest), SubmitRoot, *this))
+	{
+		return false;
+	}
+
+	FString Status;
+	SubmitRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("A7 status modified_and_validated"), Status, FString(TEXT("modified_and_validated")));
+	const TSharedPtr<FJsonObject>* Validation = nullptr;
+	bool bRereadAfterWrite = false;
+	TestTrue(
+		TEXT("A7 validation object"),
+		SubmitRoot->TryGetObjectField(TEXT("validation"), Validation) && Validation && Validation->IsValid());
+	if (Validation && Validation->IsValid())
+	{
+		TestTrue(
+			TEXT("A7 reread_after_write true"),
+			(*Validation)->TryGetBoolField(TEXT("reread_after_write"), bRereadAfterWrite)
+				&& bRereadAfterWrite);
+	}
+
+	const FString AfterReadRequest = FString::Printf(
+		TEXT(R"({"protocol_version":"1.0","request_id":"poc-a6-read-after","action":"read_graph","target":{"asset_path":"%s","graph_id":"EventGraph"},"options":{"response_detail":"complete"}})"),
+		*AssetPath);
+	TSharedPtr<FJsonObject> AfterRoot;
+	if (!ParseResponse(UUeremcpBlueprintToolset::ReadGraph(AfterReadRequest), AfterRoot, *this))
+	{
+		return false;
+	}
+	const TSharedPtr<FJsonObject> AfterGraph = ExtractSingleGraph(AfterRoot, *this);
+	if (!AfterGraph.IsValid())
+	{
+		return false;
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* Nodes = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* Links = nullptr;
+	TestTrue(TEXT("A6 reread nodes"), AfterGraph->TryGetArrayField(TEXT("nodes"), Nodes) && Nodes);
+	TestTrue(TEXT("A6 reread links"), AfterGraph->TryGetArrayField(TEXT("links"), Links) && Links);
+	TMap<FString, FString> NodeIdByClass;
+	if (Nodes)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : *Nodes)
+		{
+			const TSharedPtr<FJsonObject> Node = Value->AsObject();
+			FString NodeClass;
+			FString NodeId;
+			if (Node.IsValid()
+				&& Node->TryGetStringField(TEXT("node_class"), NodeClass)
+				&& Node->TryGetStringField(TEXT("node_id"), NodeId))
+			{
+				NodeIdByClass.Add(NodeClass, NodeId);
+			}
+		}
+	}
+	TestTrue(TEXT("A6 BeginPlay node exists"), NodeIdByClass.Contains(TEXT("K2Node_Event")));
+	TestTrue(TEXT("A6 Branch node exists"), NodeIdByClass.Contains(TEXT("K2Node_IfThenElse")));
+	TestTrue(TEXT("A6 function-call node exists"), NodeIdByClass.Contains(TEXT("K2Node_CallFunction")));
+
+	auto HasLink = [&NodeIdByClass, Links](
+		const TCHAR* FromClass,
+		const TCHAR* FromPin,
+		const TCHAR* ToClass,
+		const TCHAR* ToPin) -> bool
+	{
+		if (!Links || !NodeIdByClass.Contains(FromClass) || !NodeIdByClass.Contains(ToClass))
+		{
+			return false;
+		}
+		for (const TSharedPtr<FJsonValue>& Value : *Links)
+		{
+			const TSharedPtr<FJsonObject> Link = Value->AsObject();
+			FString FromNode;
+			FString ActualFromPin;
+			FString ToNode;
+			FString ActualToPin;
+			if (Link.IsValid()
+				&& Link->TryGetStringField(TEXT("from_node"), FromNode)
+				&& Link->TryGetStringField(TEXT("from_pin"), ActualFromPin)
+				&& Link->TryGetStringField(TEXT("to_node"), ToNode)
+				&& Link->TryGetStringField(TEXT("to_pin"), ActualToPin)
+				&& FromNode == NodeIdByClass[FromClass]
+				&& ActualFromPin == FromPin
+				&& ToNode == NodeIdByClass[ToClass]
+				&& ActualToPin == ToPin)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	TestTrue(
+		TEXT("A6 BeginPlay.then -> Branch.execute"),
+		HasLink(TEXT("K2Node_Event"), TEXT("then"), TEXT("K2Node_IfThenElse"), TEXT("execute")));
+	TestTrue(
+		TEXT("A6 Branch.then -> PrintString.execute"),
+		HasLink(TEXT("K2Node_IfThenElse"), TEXT("then"), TEXT("K2Node_CallFunction"), TEXT("execute")));
+
+	FString AfterHash;
+	TestTrue(TEXT("A8 first reread hash"), AfterGraph->TryGetStringField(TEXT("content_hash"), AfterHash));
+	TSharedPtr<FJsonObject> NoOpRoot;
+	const FString NoOpRequest =
+		MakeSubmitReplaceRequest(TEXT("poc-a8-noop"), AssetPath, AfterGraph, AfterHash);
+	if (!ParseResponse(UUeremcpBlueprintToolset::SubmitGraph(NoOpRequest), NoOpRoot, *this))
+	{
+		return false;
+	}
+	NoOpRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("A8 unchanged replace is no-op"), Status, FString(TEXT("no_change_required")));
+
+	TSharedPtr<FJsonObject> IdentityRoot;
+	if (ParseResponse(UUeremcpBlueprintToolset::ReadGraph(AfterReadRequest), IdentityRoot, *this))
+	{
+		FString IdentityHash;
+		IdentityRoot->TryGetStringField(TEXT("revision"), IdentityHash);
+		TestEqual(TEXT("A8 unchanged replace hash identity"), IdentityHash, AfterHash);
+	}
+
+	TSharedPtr<FJsonObject> RepeatedNoOpRoot;
+	const FString RepeatedNoOpRequest =
+		MakeSubmitReplaceRequest(TEXT("poc-a11-repeat"), AssetPath, AfterGraph, AfterHash);
+	if (!ParseResponse(
+			UUeremcpBlueprintToolset::SubmitGraph(RepeatedNoOpRequest),
+			RepeatedNoOpRoot,
+			*this))
+	{
+		return false;
+	}
+	RepeatedNoOpRoot->TryGetStringField(TEXT("status"), Status);
+	TestEqual(TEXT("A11 second identical replace is no-op"), Status, FString(TEXT("no_change_required")));
+	const TSharedPtr<FJsonObject>* NoOpValidation = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* SkippedChecks = nullptr;
+	TestTrue(
+		TEXT("A11 no-op validation skips compile"),
+		RepeatedNoOpRoot->TryGetObjectField(TEXT("validation"), NoOpValidation)
+			&& NoOpValidation
+			&& (*NoOpValidation)->TryGetArrayField(TEXT("checks_skipped"), SkippedChecks)
+			&& SkippedChecks
+			&& SkippedChecks->ContainsByPredicate([](const TSharedPtr<FJsonValue>& Value)
+			{
+				return Value.IsValid() && Value->AsString() == TEXT("blueprint.compile");
+			}));
 	return true;
 }
 

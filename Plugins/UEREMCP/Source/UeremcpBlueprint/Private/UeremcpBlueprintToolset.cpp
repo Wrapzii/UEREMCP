@@ -112,7 +112,8 @@ namespace UeremcpBlueprintToolset
 		FUeremcpResponse& Response,
 		bool bStructurallyValid,
 		const TArray<FString>& Performed,
-		const TArray<FString>& Skipped)
+		const TArray<FString>& Skipped,
+		bool bRereadAfterWrite = false)
 	{
 		if (!Response.ExtraFields.IsValid())
 		{
@@ -120,6 +121,7 @@ namespace UeremcpBlueprintToolset
 		}
 		TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
 		Validation->SetBoolField(TEXT("structurally_valid"), bStructurallyValid);
+		Validation->SetBoolField(TEXT("reread_after_write"), bRereadAfterWrite);
 
 		TArray<TSharedPtr<FJsonValue>> Checks;
 		for (const FString& Check : Performed)
@@ -460,7 +462,7 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 	{
 		Response.Status = TEXT("rejected");
 		Response.Summary = FString::Printf(
-			TEXT("Changed graph replace for '%s' is restricted to /Game/__UeremcpTests/ scratch assets; no mutation was performed."),
+			TEXT("Changed graph replace for '%s' is restricted to /Game/__UeremcpTests/ or /Game/__UeremcpPoc/ scratch assets; no mutation was performed."),
 			*Request.TargetAssetPath);
 		Response.CapabilityNotes = {
 			TEXT("submit_graph.scratch_path_only"),
@@ -485,6 +487,13 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 	WriteOptions.bCompile = Request.bCompile;
 	WriteOptions.bValidate = Request.bValidate;
 	WriteOptions.bSave = Request.bSave;
+	const TSharedPtr<FJsonObject>* ExpectedAfterWrite = nullptr;
+	if (Request.Specification->TryGetObjectField(TEXT("expected_after_write"), ExpectedAfterWrite)
+		&& ExpectedAfterWrite
+		&& ExpectedAfterWrite->IsValid())
+	{
+		WriteOptions.ExpectedAfterWrite = *ExpectedAfterWrite;
+	}
 
 	TOptional<FUeremcpBlueprintMutatingGate> MutatingGate;
 	if (!Request.bDryRun)
@@ -520,11 +529,32 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 		Response.CapabilityNotes = WriteResult.CapabilityNotes;
 		Response.CapabilityNotes.Append(WriteResult.LossyAreas);
 		Response.Metrics.InternalOperations += WriteResult.InternalOperations;
+		TArray<FString> FailedPerformedChecks = {
+			TEXT("blueprint.current_graph_read"),
+			TEXT("blueprint.submitted_graph_hash_compare"),
+		};
+		TArray<FString> FailedSkippedChecks = {
+			TEXT("blueprint.graph_write"),
+			TEXT("blueprint.compile"),
+			TEXT("blueprint.reread_after_write"),
+		};
+		if (WriteResult.bRereadAfterWrite)
+		{
+			FailedPerformedChecks.Add(TEXT("blueprint.graph_write"));
+			FailedPerformedChecks.Add(TEXT("blueprint.compile"));
+			FailedPerformedChecks.Add(TEXT("blueprint.reread_after_write"));
+			FailedSkippedChecks.Reset();
+			if (WriteResult.bExpectedStructureChecked)
+			{
+				FailedPerformedChecks.Add(TEXT("blueprint.expected_nodes_and_links"));
+			}
+		}
 		AttachSubmitValidation(
 			Response,
 			false,
-			{TEXT("blueprint.current_graph_read"), TEXT("blueprint.submitted_graph_hash_compare")},
-			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+			FailedPerformedChecks,
+			FailedSkippedChecks,
+			WriteResult.bRereadAfterWrite);
 		return FinishSubmitResponse(Response);
 	}
 
@@ -574,13 +604,30 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 	}
 
 	const bool bHashMatches = WriteResult.RereadHash.Equals(SubmittedHash, ESearchCase::CaseSensitive);
-	if (Request.bValidate && Request.bCompile && bHashMatches)
+	const bool bExpectedStructureValidated =
+		WriteResult.bExpectedStructureChecked && WriteResult.bExpectedStructureMatches;
+	if (bExpectedStructureValidated)
+	{
+		PerformedChecks.Add(TEXT("blueprint.expected_nodes_and_links"));
+	}
+	if (Request.bValidate && Request.bCompile && (bHashMatches || bExpectedStructureValidated))
 	{
 		Response.Status = TEXT("modified_and_validated");
-		Response.Summary = FString::Printf(
-			TEXT("Replaced graph on scratch asset '%s'; compile succeeded and re-read semantic hash matches submitted graph."),
-			*Request.TargetAssetPath);
-		PerformedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+		if (bHashMatches)
+		{
+			Response.Summary = FString::Printf(
+				TEXT("Replaced graph on scratch asset '%s'; compile succeeded and re-read semantic hash matches submitted graph."),
+				*Request.TargetAssetPath);
+			PerformedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+		}
+		else
+		{
+			Response.Summary = FString::Printf(
+				TEXT("Replaced graph on scratch asset '%s'; compile succeeded and programmatic re-read confirmed all expected nodes and links."),
+				*Request.TargetAssetPath);
+			PerformedChecks.Add(TEXT("blueprint.submitted_vs_reread_hash_compare"));
+			Response.CapabilityNotes.Add(TEXT("submit_graph.reread_hash_mismatch_structure_validated"));
+		}
 	}
 	else
 	{
@@ -623,6 +670,11 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 			TEXT("FUeremcpMutatingDispatch owns permission, path, queue, audit, and release when enabled."));
 	}
 
-	AttachSubmitValidation(Response, WriteResult.bSuccess, PerformedChecks, SkippedChecks);
+	AttachSubmitValidation(
+		Response,
+		WriteResult.bSuccess,
+		PerformedChecks,
+		SkippedChecks,
+		WriteResult.bRereadAfterWrite);
 	return FinishSubmitResponse(Response);
 }
