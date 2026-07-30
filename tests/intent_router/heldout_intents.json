@@ -1,0 +1,191 @@
+[
+  {
+    "id": "ho-01",
+    "intent": "Inspect the emitters, renderers, and exposed parameters in /Game/VFX/NS_FrostNova.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpNiagara.UeremcpNiagaraToolset",
+    "expected_top1_tool": "InspectSystem",
+    "expected_any_of_toolsets": ["UeremcpNiagara.UeremcpNiagaraToolset"],
+    "should_abstain": false,
+    "notes": "Direct Niagara system inspection. Independently authored 2026-07-30."
+  },
+  {
+    "id": "ho-02",
+    "intent": "Create a looping rain impact effect with short-lived splashes and ground mist.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpNiagara.UeremcpNiagaraToolset",
+    "expected_top1_tool": "CreateNiagaraEffect",
+    "expected_any_of_toolsets": ["UeremcpNiagara.UeremcpNiagaraToolset"],
+    "should_abstain": false,
+    "notes": "Single-domain Niagara authoring."
+  },
+  {
+    "id": "ho-03",
+    "intent": "Generate a tileable grayscale cellular-noise texture for a dissolve mask.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpMaterial.UeremcpMaterialToolset",
+    "expected_top1_tool": "CreateProceduralTexture",
+    "expected_any_of_toolsets": ["UeremcpMaterial.UeremcpMaterialToolset"],
+    "should_abstain": false,
+    "notes": "Procedural texture generation."
+  },
+  {
+    "id": "ho-04",
+    "intent": "Create a translucent cyan shield material with edge fresnel and animated distortion.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpMaterial.UeremcpMaterialToolset",
+    "expected_top1_tool": "CreateVfxMaterial",
+    "expected_any_of_toolsets": ["UeremcpMaterial.UeremcpMaterialToolset"],
+    "should_abstain": false,
+    "notes": "Semantic VFX material creation."
+  },
+  {
+    "id": "ho-05",
+    "intent": "Read the complete EventGraph structure from /Game/Characters/BP_Mage without modifying it.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpBlueprint.UeremcpBlueprintToolset",
+    "expected_top1_tool": "ReadGraph",
+    "expected_any_of_toolsets": ["UeremcpBlueprint.UeremcpBlueprintToolset"],
+    "should_abstain": false,
+    "notes": "Explicit Blueprint graph inspection."
+  },
+  {
+    "id": "ho-06",
+    "intent": "Replace the specified Blueprint function graph from this complete node-and-edge JSON document.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpBlueprint.UeremcpBlueprintToolset",
+    "expected_top1_tool": "SubmitGraph",
+    "expected_any_of_toolsets": ["UeremcpBlueprint.UeremcpBlueprintToolset"],
+    "should_abstain": false,
+    "notes": "Complete-state Blueprint submission."
+  },
+  {
+    "id": "ho-07",
+    "intent": "Create a gameplay ability for a self-cast ice barrier that grants a temporary armor buff and consumes mana.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpGameplay.UeremcpGameplayToolset",
+    "expected_top1_tool": "CreateSpell",
+    "expected_any_of_toolsets": ["UeremcpGameplay.UeremcpGameplayToolset"],
+    "should_abstain": false,
+    "notes": "GAS spell creation without projectile behavior."
+  },
+  {
+    "id": "ho-08",
+    "intent": "Inspect the sections, notify tracks, and timing of /Game/Animation/AM_SwordCombo.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpAnimation.UeremcpAnimationToolset",
+    "expected_top1_tool": "InspectMontage",
+    "expected_any_of_toolsets": ["UeremcpAnimation.UeremcpAnimationToolset"],
+    "should_abstain": false,
+    "notes": "Read-only montage inspection."
+  },
+  {
+    "id": "ho-09",
+    "intent": "Read the state machines and transition rules in /Game/Characters/ABP_Rogue.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpAnimation.UeremcpAnimationToolset",
+    "expected_top1_tool": "ReadAnimBp",
+    "expected_any_of_toolsets": ["UeremcpAnimation.UeremcpAnimationToolset"],
+    "should_abstain": false,
+    "notes": "Read-only Animation Blueprint inspection."
+  },
+  {
+    "id": "ho-10",
+    "intent": "Find a reusable template for a channeled area-of-effect ability.",
+    "category": "ambiguous",
+    "expected_top1_toolset": "UeremcpTemplates.UeremcpTemplatesToolset",
+    "expected_top1_tool": "SearchTemplates",
+    "expected_any_of_toolsets": ["UeremcpTemplates.UeremcpTemplatesToolset"],
+    "should_abstain": false,
+    "notes": "Template search preferred."
+  },
+  {
+    "id": "ho-11",
+    "intent": "Create an asset from the best matching electric trap template and apply my supplied radius and cooldown values.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpTemplates.UeremcpTemplatesToolset",
+    "expected_top1_tool": "InstantiateTemplate",
+    "expected_any_of_toolsets": ["UeremcpTemplates.UeremcpTemplatesToolset"],
+    "should_abstain": false,
+    "notes": "Explicit template instantiation."
+  },
+  {
+    "id": "ho-12",
+    "intent": "Capture six evenly spaced frames of /Game/VFX/NS_PoisonCloud for visual review.",
+    "category": "ambiguous",
+    "expected_top1_toolset": "UeremcpValidation.UeremcpVisualCaptureToolset",
+    "expected_top1_tool": "CaptureEffectFrames",
+    "expected_any_of_toolsets": [
+      "UeremcpValidation.UeremcpVisualCaptureToolset",
+      "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools"
+    ],
+    "should_abstain": false,
+    "notes": "UEREMCP capture preferred; RECapture acceptable if not registered."
+  },
+  {
+    "id": "ho-13",
+    "intent": "Run this supplied semantic execution plan and return its consolidated result.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpCore.UeremcpReferenceToolset",
+    "expected_top1_tool": "ExecutePlan",
+    "expected_any_of_toolsets": ["UeremcpCore.UeremcpReferenceToolset"],
+    "should_abstain": false,
+    "notes": "Explicit plan execution."
+  },
+  {
+    "id": "ho-14",
+    "intent": "Create a violet portal surface material, build a swirling portal particle effect that uses it, then capture verification frames.",
+    "category": "multi_domain",
+    "expected_top1_toolset": "UeremcpMaterial.UeremcpMaterialToolset",
+    "expected_top1_tool": "CreateVfxMaterial",
+    "expected_any_of_toolsets": [
+      "UeremcpCore.UeremcpReferenceToolset",
+      "UeremcpMaterial.UeremcpMaterialToolset",
+      "UeremcpNiagara.UeremcpNiagaraToolset",
+      "UeremcpValidation.UeremcpVisualCaptureToolset",
+      "UeremcpTemplates.UeremcpTemplatesToolset"
+    ],
+    "should_abstain": false,
+    "notes": "Multi-domain; top-1 may be first dependency (material) or plan/template."
+  },
+  {
+    "id": "ho-15",
+    "intent": "Lay out a medieval village across the open world with roads, houses, foliage, and terrain shaping.",
+    "category": "unsupported",
+    "expected_top1_toolset": null,
+    "expected_top1_tool": null,
+    "expected_any_of_toolsets": [],
+    "should_abstain": true,
+    "notes": "World building unsupported."
+  },
+  {
+    "id": "ho-16",
+    "intent": "Compose and import an adaptive combat music system with exploration, tension, and boss layers.",
+    "category": "unsupported",
+    "expected_top1_toolset": null,
+    "expected_top1_tool": null,
+    "expected_any_of_toolsets": [],
+    "should_abstain": true,
+    "notes": "Audio unsupported."
+  },
+  {
+    "id": "ho-17",
+    "intent": "Build a multiplayer lobby screen that discovers sessions, displays ping, and lets players join a server.",
+    "category": "unsupported",
+    "expected_top1_toolset": null,
+    "expected_top1_tool": null,
+    "expected_any_of_toolsets": [],
+    "should_abstain": true,
+    "notes": "Networking UI unsupported."
+  },
+  {
+    "id": "ho-18",
+    "intent": "Make the game feel more responsive and polished.",
+    "category": "ambiguous",
+    "expected_top1_toolset": null,
+    "expected_top1_tool": null,
+    "expected_any_of_toolsets": [],
+    "should_abstain": true,
+    "notes": "Underspecified; must abstain."
+  }
+]

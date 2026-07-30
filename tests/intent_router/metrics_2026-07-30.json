@@ -1,0 +1,18 @@
+{
+  "as_of": "2026-07-30",
+  "snapshot": "tools/registry_snapshot.json",
+  "baseline_opus_7": {"top1": 4, "top3": 5, "n": 7, "prototype_top1": 2, "prototype_top3": 4},
+  "heldout": {
+    "n": 18,
+    "n_routable": 14,
+    "n_abstain": 4,
+    "top1": 9,
+    "top3": 12,
+    "top1_rate": 0.6428571428571429,
+    "top3_rate": 0.8571428571428571,
+    "mrr": 0.625,
+    "confident_wrong": 2,
+    "abstention_accuracy": 1.0
+  },
+  "note": "Routing accuracy is not end-to-end completion. Report E2E separately after live deploy."
+}
