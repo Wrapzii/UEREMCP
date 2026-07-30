@@ -26,6 +26,9 @@ public class UeremcpNiagara : ModuleRules
 			"Projects",
 
 			"UeremcpCore",
+			// Epic's tool-declaration layer (UToolsetDefinition / AICallable). ADR-0002.
+			"ToolsetRegistry",
+
 			"UeremcpProtocol",
 
 			// Epic Niagara editor surface — used when inspect/create is implemented.
