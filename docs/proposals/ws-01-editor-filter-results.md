@@ -1,17 +1,31 @@
 # WS-01 editor automation filter results
 
-- **Current integration tip:** `bd9b2ba` (`[WS-05] Expose agent-facing execute_plan adapter`)
+- **Current integration tip:** `a9977cf` (`[WS-07] Initialize Niagara particle fire color`)
 - **Latest Blueprint acceptance re-run tip:** `3756244` (**overall POC A**, CompleteRoundTrip A1–A11)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `64a2130` (B10 particle observation fixed; production **FAIL**, canary **PASS**)
+- **Latest Niagara re-run tip:** `a9977cf` (fresh fireball create **PASS**; production B10 **FAIL**, 0 warm / ~412 live / 715 spawned)
 - **Latest Material re-run tip:** `d691316` (**PASS 14/14**); current tip also includes Material security integration `d3e35cd`
 - **Latest transport integration tip:** `dae0e5c`
 - **Latest Templates re-run tip:** `f15ea96`
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. WS-11 `64a2130` closed the B10 particle-observation defect with deterministic Niagara advance and forced-solo synchronization. Production now reports 715 spawned / 422 peak live particles but still **FAILS** `visible_fire_signature_not_observed` with 0 warm pixels; the canary **PASSES** with 43 warm pixels, 50 peak live, and 444 spawned. Production color/visibility remains with WS-07, or WS-08 if materials are proven causal. POC-B metrics and the current-lineage evidence bundle remain open. **No overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244`. On `a9977cf`, WS-07 writes the requested warm value to `Particles.Color`; fresh fireball create **PASSES**, while production B10 still **FAILS** `visible_fire_signature_not_observed` with 0 warm pixels, approximately 412 live particles, and 715 spawned. Harness observation and emission are closed. Remaining ownership is WS-08's visually black generated materials; see [`ws-07-b10-warm-signature-fix.md`](./ws-07-b10-warm-signature-fix.md). POC-B metrics and the current-lineage evidence bundle remain open. **No overall POC-B claim.**
 - **Junction:** Not changed.
+
+## WS-07 warm-color re-run (`a9977cf`)
+
+WS-07 now writes the fixture's warm color into `Particles.Color` for each generated
+emitter. Fresh fireball creation **PASSES**. The unchanged production B10 gate still
+**FAILS** `visible_fire_signature_not_observed` with 0 warm pixels, approximately
+412 live particles, and 715 total spawned particles.
+
+This closes both the harness-observation and emission residuals. The remaining B10
+owner is WS-08: the generated materials are visually black. The diagnostic evidence
+and material handoff are recorded in
+[`ws-07-b10-warm-signature-fix.md`](./ws-07-b10-warm-signature-fix.md).
+Metrics and the complete current-lineage evidence bundle remain open.
+**No overall POC-B claim.**
 
 ## B10 particle observation closed (`64a2130`)
 
@@ -551,13 +565,13 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Overall POC A claimed via Python-free CRT on `3756244`; support only if regressions appear. |
-| WS-07 | Production fireball now reports **185 particles** under the fixed B10 harness but **0 warm pixels**. Finish create-path runtime scaffold (`bAllowSystemStateFastPath=false`, remove template emitters, spawn/color/renderer visibility) until B10 warm signature appears; keep B1–B9 structural gates green. |
-| WS-08 | Stand by: engage only if WS-07 proves bound materials are invisible (opacity/emissive/blend) rather than particle attributes/renderers. |
+| WS-07 | Warm `Particles.Color` writes landed on `a9977cf`; fresh create PASS and production emission are closed. Material handoff recorded in [`ws-07-b10-warm-signature-fix.md`](./ws-07-b10-warm-signature-fix.md). |
+| WS-08 | Own the remaining B10 blocker: generated materials are visually black despite approximately 412 live / 715 spawned particles and warm `Particles.Color`; diagnose the generated material output/binding per the WS-07 handoff. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | B10 methodology closed on `0049153` (canary PASS). Production still FAIL. Next after visible fire: MCP `timing_ms` rerun + WS-07 primitive baseline with WS-14 metrics capture. |
+| WS-11 | B10 harness observation is closed. Production still FAILS with 0 warm pixels. After the WS-08 material fix: rerun B10, MCP `timing_ms`, and the primitive baseline with WS-14 metrics capture. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS as structural proofs. B10 harness can observe particles (`0049153` canary PASS). Production fireball still fails warm signature (`185` particles, `0` warm). Complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS as structural proofs. On `a9977cf`, harness observation and emission are closed: fresh fireball create PASSES, while production B10 still FAILS with 0 warm pixels, approximately 412 live particles, and 715 spawned. WS-08 owns the visually black generated-material residual. Complete metrics/baseline and the current-lineage evidence bundle remain open. No overall POC-B claim. No junction retarget.
 
 ---
 
