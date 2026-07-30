@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. The post-`79d9d65` MCP run is crash-free, but returns `partially_completed` with B1/B6 false because compile awaiting is deferred. B10 and complete metrics remain blocked — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. Script-state-only MCP compile await `d07f8f1` landed and rebuilt cleanly; WS-11 must rerun B1/B6 and prove one round trip. B10 and complete metrics remain blocked — **no overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; post-`79d9d65` MCP B1 is crash-free but incomplete (B1/B6 false), blocking required B10 and complete metrics. No overall POC-B claim.
+Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; B1/B6 rerun is pending after script-state await `d07f8f1`, blocking required B10 and complete metrics. No overall POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -170,6 +170,12 @@ WS-07 owns a safe compile-complete path that avoids the crashing query. ADR-0009
 job completion is the other accepted architecture path, but any MCP poll calls
 must count as additional round trips and therefore do not satisfy B1's current
 “no follow-up calls” criterion.
+
+WS-07 `4dc53b7` then landed as orch `d07f8f1`. The MCP path now observes
+script compile state without the crash-inducing completion query. Niagara rebuilt
+cleanly with no editor running; the DLL must be loaded for the next run. WS-11
+must prove `B1_single_request_complete: true`, `B6_compile_awaited: true`, and
+`metrics.mcp_round_trips: 1`. No acceptance claim follows from build success.
 
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
@@ -399,7 +405,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-07 + WS-11 | Implement safe MCP compile completion (or honest ADR-0009 job handling), rerun B1/B6, then run B10 and record complete metrics/baseline. |
+| WS-11 | Rerun canonical MCP B1/B6 on `d07f8f1`, then run B10 and record complete metrics/baseline only after the gates pass. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; post-`79d9d65` MCP is crash-free but B1/B6 remain false, blocking B10 and complete metrics. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1/B6 rerun is pending after `d07f8f1`, blocking B10 and complete metrics. No overall POC-B claim. No junction retarget.
