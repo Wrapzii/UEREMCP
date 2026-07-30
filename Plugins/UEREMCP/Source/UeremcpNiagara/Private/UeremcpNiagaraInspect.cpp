@@ -80,12 +80,21 @@ namespace
 			Out->SetStringField(TEXT("mode"), TEXT("data_interface"));
 			if (const FNiagaraExt_StackInputData_DataInterface* DI = Value.GetPtr<FNiagaraExt_StackInputData_DataInterface>())
 			{
-				TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
-				if (DI->DataInterfaceClass)
+				// UE 5.8: FNiagaraExt_StackInputData_DataInterface exposes PropertyValues JSON only
+				// [VERIFIED: NiagaraExternalSystemEditorUtilities.h:574-580]
+				if (!DI->PropertyValues.IsEmpty())
 				{
-					Payload->SetStringField(TEXT("class"), DI->DataInterfaceClass->GetPathName());
+					TSharedPtr<FJsonObject> ParsedValues;
+					const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(DI->PropertyValues);
+					if (FJsonSerializer::Deserialize(Reader, ParsedValues) && ParsedValues.IsValid())
+					{
+						Out->SetObjectField(TEXT("data_interface"), ParsedValues);
+					}
+					else
+					{
+						Out->SetStringField(TEXT("property_values_json"), DI->PropertyValues);
+					}
 				}
-				Out->SetObjectField(TEXT("data_interface"), Payload);
 			}
 		}
 		else if (StructName.Contains(TEXT("DynamicInput")))
