@@ -45,12 +45,24 @@ Done:
 3. RB-03 q6 schema captured verbatim (bare `type:string` + description).
 4. In-editor automation Ping/Echo/Schema previously 3/3 Success.
 
-Still open (blocks R-04 full close):
-- MCP `call_tool` Ping/Echo against **target project RE**. Live `:8000` session
-  is `visualtest` — `PluginToolset` does not discover `UEREMCP` there
-  `[VERIFIED-RUNTIME: UnrealEditor.exe command line; ListDiscoveredPlugins]`.
+**Closed — 2026-07-30 (WS-01, R-04):**
 
-**Closed here:** Shipping `Rollback.MultiAssetDiscard` with `-KeepUeremcp`
+MCP on target project RE, shipping UEREMCP only (`-NoProbe`; probe disabled):
+
+| Step | Result | Tag |
+|---|---|---|
+| Process | `UnrealEditor.exe` → `RE.uproject`, MCP `:8000` LISTENING (pid 38972) | `[VERIFIED-RUNTIME: Get-CimInstance Win32_Process; netstat 2026-07-30]` |
+| `list_toolsets` | includes `UeremcpCore.UeremcpReferenceToolset` | `[VERIFIED-RUNTIME: user-unreal-mcp list_toolsets 2026-07-30]` |
+| `describe_toolset` | Ping (no args); Echo `requestJson` `type:string` (RB-03 q6) | `[VERIFIED-RUNTIME: describe_toolset UeremcpCore.UeremcpReferenceToolset 2026-07-30]` |
+| `call_tool` Ping | `status=no_change_required`, `protocol_version=1.0.0` | `[VERIFIED-RUNTIME: call_tool Ping 2026-07-30]` |
+| `call_tool` Echo | `request_id=mcp-echo-r04` echoed, `status=no_change_required` | `[VERIFIED-RUNTIME: call_tool Echo 2026-07-30]` |
+| Cmd automation | Ping/Echo/RegisterAndCaptureSchema 3/3 Success | `[VERIFIED-RUNTIME: run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter UeremcpCore.ReferenceToolset]` |
+
+**Operator note:** If Unreal prompts to rebuild **`UeremcpValidationProbe`**, click **No**.
+Disable/remove the probe plugin; keep **UEREMCP** enabled. The probe is interim
+launch-smoke only — shipping gate is `UeremcpValidation` inside `UEREMCP.uplugin`.
+
+**Also closed:** Shipping `Rollback.MultiAssetDiscard` with `-KeepUeremcp`
 `[VERIFIED-RUNTIME: WS-11 bf30d8f]`. R-03 mitigated for Content/ full-Discard.
 
-Wave 2 implementation stays gated until Phase 1 exit.
+Wave 2 implementation stays gated until Phase 1 exit (R-01 impl, R-06 runtime).
