@@ -13,6 +13,7 @@
 #include "PackageTools.h"
 #include "ScopedTransaction.h"
 #include "Subsystems/EditorAssetSubsystem.h"
+#include "UeremcpContentHash.h"
 #include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialCapabilityNotes.h"
 #include "UeremcpMaterialElementPresets.h"
@@ -27,6 +28,115 @@
 
 namespace
 {
+	static bool ShouldBypassMaterialRevisionConflict(const FString& OnRevisionConflict)
+	{
+		return OnRevisionConflict.Equals(TEXT("replace"), ESearchCase::CaseSensitive)
+			|| OnRevisionConflict.Equals(TEXT("force"), ESearchCase::CaseSensitive);
+	}
+
+	static TSharedPtr<FJsonObject> BuildMaterialStateFingerprint(
+		const FString& MasterPath,
+		const FString& Purpose,
+		const FString& Element,
+		const FUeremcpMaterialParameterSet& Params)
+	{
+		TSharedPtr<FJsonObject> Fingerprint = MakeShared<FJsonObject>();
+		Fingerprint->SetStringField(TEXT("asset_class"), TEXT("MaterialInstanceConstant"));
+		Fingerprint->SetStringField(TEXT("master_path"), MasterPath);
+		Fingerprint->SetStringField(TEXT("purpose"), Purpose);
+		Fingerprint->SetStringField(TEXT("element"), Element);
+
+		TSharedPtr<FJsonObject> ParamObj = MakeShared<FJsonObject>();
+		ParamObj->SetNumberField(TEXT("ParticleColor.R"), FMath::RoundToFloat(Params.ParticleColor.R * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("ParticleColor.G"), FMath::RoundToFloat(Params.ParticleColor.G * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("ParticleColor.B"), FMath::RoundToFloat(Params.ParticleColor.B * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("ParticleColor.A"), FMath::RoundToFloat(Params.ParticleColor.A * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("ColorSecondary.R"), FMath::RoundToFloat(Params.ColorSecondary.R * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("ColorSecondary.G"), FMath::RoundToFloat(Params.ColorSecondary.G * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("ColorSecondary.B"), FMath::RoundToFloat(Params.ColorSecondary.B * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("ColorSecondary.A"), FMath::RoundToFloat(Params.ColorSecondary.A * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("EmissiveScale"), FMath::RoundToFloat(Params.EmissiveScale * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("FlowSpeed"), FMath::RoundToFloat(Params.FlowSpeed * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("Turbulence"), FMath::RoundToFloat(Params.Turbulence * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("SoftEdge"), FMath::RoundToFloat(Params.SoftEdge * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("DepthFade"), FMath::RoundToFloat(Params.DepthFade * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("DissolveAmount"), FMath::RoundToFloat(Params.DissolveAmount * 1000.0f) / 1000.0f);
+		ParamObj->SetNumberField(TEXT("DistortionStrength"), FMath::RoundToFloat(Params.DistortionStrength * 1000.0f) / 1000.0f);
+		Fingerprint->SetObjectField(TEXT("parameters"), ParamObj);
+		return Fingerprint;
+	}
+
+	static bool TryReadInstanceParameterSet(
+		UMaterialInstanceConstant* Instance,
+		FUeremcpMaterialParameterSet& OutParams)
+	{
+		if (!Instance)
+		{
+			return false;
+		}
+		OutParams.ParticleColor = UMaterialEditingLibrary::GetMaterialInstanceVectorParameterValue(
+			Instance, FName(TEXT("ParticleColor")));
+		OutParams.ColorSecondary = UMaterialEditingLibrary::GetMaterialInstanceVectorParameterValue(
+			Instance, FName(TEXT("ColorSecondary")));
+		OutParams.EmissiveScale = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("EmissiveScale")));
+		OutParams.FlowSpeed = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("FlowSpeed")));
+		OutParams.Turbulence = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("Turbulence")));
+		OutParams.SoftEdge = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("SoftEdge")));
+		OutParams.DepthFade = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("DepthFade")));
+		OutParams.DissolveAmount = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("DissolveAmount")));
+		OutParams.DistortionStrength = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("DistortionStrength")));
+		return true;
+	}
+
+	static bool TryComputeDesiredMaterialRevision(
+		const FString& MasterPath,
+		const FString& Purpose,
+		const FString& Element,
+		const FUeremcpMaterialParameterSet& Params,
+		FString& OutRevision,
+		FString& OutError)
+	{
+		OutRevision = FUeremcpContentHash::HashJsonObject(
+			BuildMaterialStateFingerprint(MasterPath, Purpose, Element, Params),
+			&OutError);
+		return !OutRevision.IsEmpty();
+	}
+
+	static bool TryComputeExistingMaterialRevision(
+		UMaterialInstanceConstant* Instance,
+		const FString& Purpose,
+		const FString& Element,
+		FString& OutRevision,
+		FString& OutError)
+	{
+		if (!Instance)
+		{
+			OutError = TEXT("No material instance for revision.");
+			return false;
+		}
+		FString MasterPath;
+		if (UMaterialInterface* Parent = Instance->Parent)
+		{
+			MasterPath = Parent->GetPathName();
+			// Soft package path without .Object suffix for stable hashing.
+			MasterPath = FPackageName::ObjectPathToPackageName(MasterPath);
+		}
+		FUeremcpMaterialParameterSet LiveParams;
+		if (!TryReadInstanceParameterSet(Instance, LiveParams))
+		{
+			OutError = TEXT("Failed to read material instance parameters for revision.");
+			return false;
+		}
+		return TryComputeDesiredMaterialRevision(
+			MasterPath, Purpose, Element, LiveParams, OutRevision, OutError);
+	}
 	static UEditorAssetSubsystem* GetEditorAssetSubsystem()
 	{
 		return GEditor ? GEditor->GetEditorSubsystem<UEditorAssetSubsystem>() : nullptr;
@@ -802,6 +912,73 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
+	FString DesiredRevision;
+	FString DesiredRevisionError;
+	if (!TryComputeDesiredMaterialRevision(
+		MasterPath, Purpose, Element, Params, DesiredRevision, DesiredRevisionError))
+	{
+		Result.Status = TEXT("failed_validation");
+		Result.Summary = DesiredRevisionError.IsEmpty()
+			? TEXT("Failed to compute desired material revision.")
+			: DesiredRevisionError;
+		return Result;
+	}
+
+	UMaterialInstanceConstant* ExistingInstance =
+		UeremcpMaterialAssetLoad::TryLoadRegisteredMaterialInstance(Request.TargetAssetPath);
+	FString CurrentRevision;
+	if (ExistingInstance)
+	{
+		FString CurrentRevisionError;
+		if (!TryComputeExistingMaterialRevision(
+			ExistingInstance, Purpose, Element, CurrentRevision, CurrentRevisionError))
+		{
+			Result.Status = TEXT("failed_validation");
+			Result.Summary = CurrentRevisionError.IsEmpty()
+				? TEXT("Failed to compute current material revision.")
+				: CurrentRevisionError;
+			return Result;
+		}
+		Result.Revision = CurrentRevision;
+		++Result.InternalOperations;
+
+		if (Request.bHasExpectedRevision
+			&& !Request.ExpectedRevision.Equals(CurrentRevision, ESearchCase::CaseSensitive)
+			&& !ShouldBypassMaterialRevisionConflict(Request.OnRevisionConflict))
+		{
+			Result.bSuccess = true;
+			Result.Status = TEXT("rejected");
+			Result.Summary = FString::Printf(
+				TEXT("expected_revision '%s' does not match current revision '%s'; no mutation was performed."),
+				*Request.ExpectedRevision,
+				*CurrentRevision);
+			Result.PrimaryAsset = Request.TargetAssetPath;
+			Result.CapabilityNotes.Add(TEXT("revision_conflict.no_mutation"));
+			return Result;
+		}
+
+		FString ParentPackage;
+		if (UMaterialInterface* Parent = ExistingInstance->Parent)
+		{
+			ParentPackage = FPackageName::ObjectPathToPackageName(Parent->GetPathName());
+		}
+		FString VerifyError;
+		const bool bParentMatches = ParentPackage.Equals(MasterPath, ESearchCase::IgnoreCase);
+		const bool bParamsMatch = VerifyInstanceParameters(ExistingInstance, Params, VerifyError);
+		if (bParentMatches && bParamsMatch)
+		{
+			Result.bSuccess = true;
+			Result.Status = TEXT("no_change_required");
+			Result.Summary = FString::Printf(
+				TEXT("Material instance '%s' already matches the requested purpose/element/parameters at revision %s; no mutation was performed."),
+				*Request.TargetAssetPath,
+				*CurrentRevision);
+			Result.PrimaryAsset = Request.TargetAssetPath;
+			Result.CapabilityNotes.Add(TEXT("idempotency.repeated_create_no_change"));
+			return Result;
+		}
+	}
+
 	if (Request.bDryRun)
 	{
 		Result.bSuccess = true;
@@ -813,6 +990,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 			Element.IsEmpty() ? TEXT("(unset)") : *Element,
 			*FString::Join(Features, TEXT(", ")));
 		Result.PrimaryAsset = Request.TargetAssetPath;
+		Result.Revision = DesiredRevision;
 		return Result;
 	}
 
@@ -1118,6 +1296,20 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Purpose,
 		Element,
 		Features);
+
+	{
+		FString PostRevision;
+		FString PostRevisionError;
+		if (TryComputeExistingMaterialRevision(
+			Instance, Purpose, Element, PostRevision, PostRevisionError))
+		{
+			Result.Revision = PostRevision;
+		}
+		else
+		{
+			Result.Revision = DesiredRevision;
+		}
+	}
 
 	FUeremcpAssetRef InstanceRef;
 	InstanceRef.AssetPath = Request.TargetAssetPath;

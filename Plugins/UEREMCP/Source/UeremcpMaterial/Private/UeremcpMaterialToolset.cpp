@@ -130,6 +130,7 @@ FString UUeremcpMaterialToolset::CreateVfxMaterial(const FString& RequestJson)
 	Response.UnderstoodAction = Request.Action;
 	Response.UnderstoodTarget = Request.TargetAssetPath;
 	Response.PrimaryAsset = CreateResult.PrimaryAsset;
+	Response.Revision = CreateResult.Revision;
 	Response.CreatedAssets = CreateResult.CreatedAssets;
 	Response.ModifiedAssets = CreateResult.ModifiedAssets;
 	Response.ReusedAssets = CreateResult.ReusedAssets;
