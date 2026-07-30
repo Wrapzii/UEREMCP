@@ -5,6 +5,7 @@
 - **Integrated code under test:** `ddd18909f68c4fb840b0834de41ff0852e94ce22`
 - **POC C source commits:** `ead0cc4` / `b6bb8d4`
 - **Integrated POC C equivalents:** `81d819f` / `ddd1890`
+- **Integrated POC D live-fix commits:** `00fd824` / `2ae2e01`
 - **Overall result:** partial; POC C, POC D, and POC E are not fully claimed
 - **Main ready for another C/D/E fast-forward:** **no**
 
@@ -48,29 +49,33 @@ Exact live blockers:
 
 | # | Result | Live evidence |
 |---|---|---|
-| D1 | **NOT MET live** | `LiveUpsertViaPlan` failed before a verified row upsert. |
+| D1 | **MET live** | `LiveUpsertViaPlan` passed a real `execute_plan` row upsert. |
 | D2 | **MET live** | `UEREMCP.Gameplay.PocD.DependsOnAndRef` passed dependency-order assertions. |
 | D3 | **MET live** | The same test passed nested `$ref` substitution assertions. |
-| D4 | **MET in passing contract test** | The passing test asserted the requested RE spell identity fields. |
+| D4 | **MET live** | Passing Gameplay automation asserted the requested RE spell identity fields. |
 | D5 | **MET static only** | RE Pattern B remains a static checklist; no multi-client proof is claimed. |
-| D6 | **NOT MET live** | DataTable import rejected `ElementColor`; save/re-read was not completed. |
-| D7 | **NOT MET live** | `RollbackOnFailure` failed while seeding the row, before the intended rollback proof. |
-| D8 | **MET in passing contract test** | The passing plan test asserted one consolidated operation response. |
+| D6 | **MET live** | `ElementColor` imported as an `FLinearColor` object; save/re-read validation passed. |
+| D7 | **MET live** | `RollbackOnFailure` passed with aggregate `rolled_back` and no partial result claim. |
+| D8 | **MET live** | Passing plan tests asserted one consolidated response with per-op results. |
 
 Filters:
 
-- `UEREMCP.Gameplay` — **CRASH** at
-  `FUeremcpPlanExecutor::ExecuteRequest`, `UeremcpPlanExecutor.cpp:719`;
-  `SuccessfulResponses.Last()` was evaluated when the array was empty
-  (`editor_UEREMCP_Gameplay_20260730_114443.log`).
-- `UEREMCP.Gameplay.PocD` — **1 PASS / 2 FAIL**:
-  `DependsOnAndRef` passed; `LiveUpsertViaPlan` and `RollbackOnFailure` failed
-  (`editor_UEREMCP_Gameplay_PocD_20260730_114851.log`).
+- `UEREMCP.Gameplay` — **10/10 PASS**
+  (`editor_UEREMCP_Gameplay_20260730_120758.log`).
+- `UEREMCP.Gameplay.PocD` — **3/3 PASS**
+  (`editor_UEREMCP_Gameplay_PocD_20260730_120648.log`).
+- `UEREMCP.Protocol.PlanExecutor` — **10/10 PASS**, including the zero-success
+  regression (`editor_UEREMCP_Protocol_PlanExecutor_20260730_120828.log`).
 
-The live row blocker is a contract mismatch: `FUeremcpSpellPlanner` emits
-`ElementColor` as a four-number JSON array, while RE's DataTable UStruct import rejects
-that representation (`array size ... has 4 elements, but needs 1`). POC D therefore
-remains code-partial and is not upgraded to live-MET.
+The four-number `ElementColor` array was replaced by the object representation consumed
+by RE's `FLinearColor` UStruct field. The live run also exposed and fixed a second
+request-composition issue: nested plan request IDs contain `:`, so the DataTable mutator
+now sanitizes FileSandbox names before `FGlobalSandbox::Enter`
+`[VERIFIED-RUNTIME: LiveUpsertViaPlan passed save/re-read on 2026-07-30]`.
+
+The executor now guards the zero-success aggregate path and reports
+`failed_validation` when no operation completed and no rollback occurred. Overall POC D
+is still **not** claimed: D5 remains static-only until a multi-client runtime proof lands.
 
 ## POC E
 
@@ -107,10 +112,6 @@ scratch restart pair.
 2. Ensure template construction operations inherit `validate=true` and do not treat an
    honest but incomplete material response as sufficient for a required dependency.
 3. Add a real networking/damage source contract before reconsidering C5.
-4. Serialize `ElementColor` in the RE DataTable representation accepted by
-   `FJsonObjectConverter`, then rerun POC D live upsert and rollback
-   `[VERIFIED-RUNTIME: the 2026-07-30 PocD filter rejected the four-number array during
-   UStruct import]`.
-5. Guard `SuccessfulResponses.Last()` when a non-rollback plan has zero successful
-   operations.
-6. Extend E1 restart proof to all successful POC A-D results and close E7 metrics.
+4. Add the D5 multi-client networking proof; static Pattern B checks remain the only
+   unresolved POC D criterion.
+5. Extend E1 restart proof to all successful POC A-D results and close E7 metrics.
