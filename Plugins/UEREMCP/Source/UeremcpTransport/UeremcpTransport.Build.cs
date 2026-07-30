@@ -12,6 +12,7 @@ public class UeremcpTransport : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
+			"UeremcpProtocol",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
@@ -22,7 +23,6 @@ public class UeremcpTransport : ModuleRules
 			"JsonUtilities",
 			"Projects",
 			"UeremcpCore",
-			"UeremcpProtocol",
 			"ToolsetRegistry",
 
 			// Public Epic MCP surface only — introspection, not reimplementation.

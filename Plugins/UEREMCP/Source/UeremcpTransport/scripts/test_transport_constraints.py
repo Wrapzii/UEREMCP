@@ -20,6 +20,8 @@ REFERENCE_TOOLSET_HEADER = (
 )
 BUILD_RULES = ROOT / "UeremcpTransport.Build.cs"
 AUTOMATION_TESTS = ROOT / "Private" / "Tests" / "UeremcpTransportAutomationTests.cpp"
+SCHEDULER_HEADER = ROOT / "Public" / "UeremcpJobScheduler.h"
+SCHEDULER_SOURCE = ROOT / "Private" / "UeremcpJobScheduler.cpp"
 
 REQUIRED_JOB_CAPABILITIES = {
     "In-process job registry with stable job_id (envelope job block)",
@@ -182,7 +184,7 @@ def validate_unskip_gate(errors: list[str]) -> str:
         )
 
     validate_wrapper_and_residual_scope(automation_source, errors)
-    return "ready (wrappers active; notification + timeout residuals tracked)"
+    return "ready (scheduler active; notification cancellation residual tracked)"
 
 
 def validate_wrapper_and_residual_scope(
@@ -208,7 +210,6 @@ def validate_wrapper_and_residual_scope(
 
     residual_markers = {
         "MCP notifications/cancelled is not mapped": "cancellation notification",
-        "no production timeout scheduler": "production timeout/SSE",
     }
     for marker, residual_name in residual_markers.items():
         if marker not in automation_source:
@@ -217,9 +218,19 @@ def validate_wrapper_and_residual_scope(
     residual_count = automation_source.count("SKIP residual:")
     if residual_count != len(residual_markers):
         errors.append(
-            "Transport must carry exactly the two verified residual SKIPs "
-            f"(notification cancellation and timeout/SSE); found {residual_count}"
+            "Transport must carry exactly the verified notification-cancellation "
+            f"residual SKIP; found {residual_count}"
         )
+
+    for path in (SCHEDULER_HEADER, SCHEDULER_SOURCE):
+        if not path.is_file():
+            errors.append(f"missing production timeout scheduler source: {path}")
+    if SCHEDULER_HEADER.is_file() and "FUeremcpJobScheduler" not in SCHEDULER_HEADER.read_text(
+        encoding="utf-8"
+    ):
+        errors.append("production timeout scheduler header missing FUeremcpJobScheduler")
+    if "FUeremcpJobScheduler::Dispatch(" not in automation_source:
+        errors.append("Timeout.PartiallyCompleted must invoke the production scheduler")
 
     poll_start = automation_source.find("bool FUeremcpTransportJobRegistryPollTest::RunTest")
     cancel_start = automation_source.find("bool FUeremcpTransportJobRegistryCancelTest::RunTest")

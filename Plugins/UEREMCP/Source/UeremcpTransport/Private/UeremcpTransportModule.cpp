@@ -9,7 +9,7 @@ public:
 	virtual void StartupModule() override
 	{
 		UE_LOG(LogUeremcpTransport, Log,
-			TEXT("UEREMCP transport module loaded (capability probe + job constraints only; Epic owns HTTP/SSE)."));
+			TEXT("UEREMCP transport module loaded (job timeout scheduler + capability probe; Epic owns HTTP/SSE)."));
 	}
 
 	virtual void ShutdownModule() override {}

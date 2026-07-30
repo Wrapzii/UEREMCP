@@ -1,14 +1,17 @@
 // WS-04 transport automation tests (ADR-0009 constraints + drift guard).
 
 #include "UeremcpJobConstraints.h"
+#include "UeremcpJobScheduler.h"
 #include "UeremcpTransportProbe.h"
 #include "UeremcpEnvelope.h"
 #include "UeremcpJobRegistry.h"
 #include "UeremcpReferenceToolset.h"
 
 #include "Async/Async.h"
+#include "Containers/Ticker.h"
 #include "Dom/JsonObject.h"
 #include "HAL/Event.h"
+#include "HAL/PlatformProcess.h"
 #include "HAL/PooledSyncEvent.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/FileHelper.h"
@@ -638,33 +641,50 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FUeremcpTransportTimeoutPartialResponseTest::RunTest(const FString& Parameters)
 {
+	FUeremcpJobRegistry& Registry = FUeremcpJobRegistry::Get();
+	Registry.Clear();
 	int32 InlineExecutions = 0;
-	const auto ExecuteInline = [&InlineExecutions]()
-	{
-		++InlineExecutions;
-		return UeremcpTransportTest::MakeTerminalResponse(
-			TEXT("transport-timeout-inline"),
-			TEXT("Inline fixture completed before returning."),
-			1);
-	};
-
 	TestEqual(
 		TEXT("timeout_ms zero selects inline execution"),
 		UeremcpTransport::ResolveDispatchModel(0),
 		EUeremcpJobDispatchModel::InlineComplete);
-	const FUeremcpResponse Inline = ExecuteInline();
+
+	FPooledSyncEvent InlineReady(true);
+	FUeremcpResponse Inline;
+	FString InlineJobId;
+	FString Error;
+	TestTrue(
+		TEXT("production scheduler accepts inline work"),
+		FUeremcpJobScheduler::Dispatch(
+			TEXT("transport-timeout-inline"),
+			0,
+			false,
+			FString(),
+			[&InlineExecutions](
+				const FString& JobId,
+				const TSharedRef<FThreadSafeBool, ESPMode::ThreadSafe>& CancelRequested)
+			{
+				++InlineExecutions;
+				return UeremcpTransportTest::MakeTerminalResponse(
+					TEXT("transport-timeout-inline"),
+					TEXT("Inline fixture completed before returning."),
+					1);
+			},
+			[&Inline, &InlineReady](const FUeremcpResponse& Response)
+			{
+				Inline = Response;
+				InlineReady->Trigger();
+			},
+			InlineJobId,
+			Error));
+	TestTrue(TEXT("inline scheduler callback completes"), InlineReady->Wait(5000));
 	TestEqual(TEXT("inline fixture executes once"), InlineExecutions, 1);
 	TestEqual(TEXT("inline fixture returns terminal status"), Inline.Status, FString(TEXT("created_and_validated")));
 	TestFalse(TEXT("inline fixture has no timeout job handle"), Inline.bHasJob);
+	TestTrue(TEXT("inline scheduler does not allocate job id"), InlineJobId.IsEmpty());
 
-	FUeremcpJobRegistry Registry;
-	FString Error;
 	FString JobId;
 	const FString RequestId = TEXT("transport-timeout-positive");
-	TestTrue(
-		TEXT("positive-timeout fixture registers"),
-		Registry.CreateJob(RequestId, false, TEXT("Blocked beyond timeout"), JobId, Error));
-	TestTrue(TEXT("positive-timeout fixture starts"), Registry.StartJob(JobId, Error));
 	TestEqual(
 		TEXT("positive timeout selects poll-after-timeout"),
 		UeremcpTransport::ResolveDispatchModel(1),
@@ -672,36 +692,57 @@ bool FUeremcpTransportTimeoutPartialResponseTest::RunTest(const FString& Paramet
 
 	FPooledSyncEvent WorkerBlocked(true);
 	FPooledSyncEvent ReleaseWorker(true);
-	bool bWorkerCompleted = false;
+	FPooledSyncEvent TimeoutReady(true);
 	int32 WorkerExecutions = 0;
-	FString WorkerError;
-	TFuture<void> Worker = Async(EAsyncExecution::ThreadPool, [&]()
-	{
-		WorkerBlocked->Trigger();
-		ReleaseWorker->Wait();
-		++WorkerExecutions;
-		bWorkerCompleted = Registry.CompleteJob(
+	FUeremcpResponse Timeout;
+	TestTrue(
+		TEXT("production scheduler accepts positive-timeout work"),
+		FUeremcpJobScheduler::Dispatch(
+			RequestId,
+			20,
+			false,
+			TEXT("Blocked beyond timeout"),
+			[&WorkerBlocked, &ReleaseWorker, &WorkerExecutions, &RequestId](
+				const FString& ScheduledJobId,
+				const TSharedRef<FThreadSafeBool, ESPMode::ThreadSafe>& CancelRequested)
+			{
+				WorkerBlocked->Trigger();
+				ReleaseWorker->Wait();
+				++WorkerExecutions;
+				return UeremcpTransportTest::MakeTerminalResponse(
+					RequestId,
+					TEXT("Blocked fixture completed after release."),
+					3);
+			},
+			[&Timeout, &TimeoutReady](const FUeremcpResponse& Response)
+			{
+				Timeout = Response;
+				TimeoutReady->Trigger();
+			},
 			JobId,
-			UeremcpTransportTest::MakeTerminalResponse(
-				RequestId,
-				TEXT("Blocked fixture completed after release."),
-				3),
-			WorkerError);
-	});
+			Error));
+	TestFalse(TEXT("positive-timeout scheduler allocates job id"), JobId.IsEmpty());
 
 	const bool bWorkerReachedBarrier = WorkerBlocked->Wait(5000);
 	TestTrue(TEXT("positive-timeout worker reaches barrier"), bWorkerReachedBarrier);
 	if (!bWorkerReachedBarrier)
 	{
 		ReleaseWorker->Trigger();
-		Worker.Wait();
+		Registry.Clear();
 		return false;
 	}
 
-	FUeremcpResponse Timeout;
-	TestTrue(
-		TEXT("blocked fixture returns timeout response"),
-		Registry.GetTimeoutResponse(JobId, Timeout, Error));
+	bool bTimeoutDelivered = false;
+	for (int32 Attempt = 0; Attempt < 500 && !bTimeoutDelivered; ++Attempt)
+	{
+		FTSTicker::GetCoreTicker().Tick(0.01f);
+		bTimeoutDelivered = TimeoutReady->Wait(0);
+		if (!bTimeoutDelivered)
+		{
+			FPlatformProcess::SleepNoStats(0.01f);
+		}
+	}
+	TestTrue(TEXT("scheduler returns when timeout expires"), bTimeoutDelivered);
 	TestEqual(TEXT("timeout response is partial"), Timeout.Status, FString(TEXT("partially_completed")));
 	TestEqual(TEXT("timeout response state is running"), Timeout.Job.State, FString(TEXT("running")));
 	TestEqual(TEXT("timeout response preserves job id"), Timeout.Job.JobId, JobId);
@@ -718,24 +759,26 @@ bool FUeremcpTransportTimeoutPartialResponseTest::RunTest(const FString& Paramet
 	TestEqual(TEXT("running poll counts initial call plus poll"), RunningPoll.Metrics.McpRoundTrips, 2);
 
 	ReleaseWorker->Trigger();
-	Worker.Wait();
-	TestTrue(TEXT("released timeout worker completes"), bWorkerCompleted);
-	if (!WorkerError.IsEmpty())
-	{
-		AddError(WorkerError);
-	}
-	TestEqual(TEXT("released fixture executes once"), WorkerExecutions, 1);
-
 	FUeremcpResponse TerminalPoll;
-	TestTrue(TEXT("released fixture reaches terminal poll"), Registry.GetJobResult(JobId, TerminalPoll, Error));
+	bool bTerminalReached = false;
+	for (int32 Attempt = 0; Attempt < 100 && !bTerminalReached; ++Attempt)
+	{
+		if (Registry.GetJobResult(JobId, TerminalPoll, Error))
+		{
+			bTerminalReached = TerminalPoll.Job.State == TEXT("completed");
+		}
+		if (!bTerminalReached)
+		{
+			FPlatformProcess::SleepNoStats(0.01f);
+		}
+	}
+	TestTrue(TEXT("released fixture reaches terminal poll"), bTerminalReached);
+	TestEqual(TEXT("released fixture executes once"), WorkerExecutions, 1);
 	TestEqual(TEXT("terminal poll returns validated result"), TerminalPoll.Status, FString(TEXT("created_and_validated")));
 	TestEqual(TEXT("terminal poll reports completed state"), TerminalPoll.Job.State, FString(TEXT("completed")));
 	TestEqual(TEXT("terminal poll preserves stable job id"), TerminalPoll.Job.JobId, JobId);
-	TestEqual(TEXT("terminal poll counts initial call plus polls"), TerminalPoll.Metrics.McpRoundTrips, 3);
-
-	AddInfo(TEXT(
-		"SKIP residual: no production timeout scheduler currently invokes this registry "
-		"lifecycle or closes the MCP SSE stream; deterministic registry lifecycle is covered."));
+	TestTrue(TEXT("terminal poll counts originating call and all polls"), TerminalPoll.Metrics.McpRoundTrips >= 3);
+	Registry.Clear();
 	return true;
 }
 
