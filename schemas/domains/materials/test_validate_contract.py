@@ -61,6 +61,16 @@ class MaterialValidateContractTests(unittest.TestCase):
             r"parameters applied, parent recompiled, re-read verified",
         )
 
+    def test_cap_partial_fails_when_primary_mi_absent(self) -> None:
+        self.assertRegex(
+            self.material_cpp,
+            r"if\s*\(\s*!Instance\s*\)[\s\S]*Result\.bSuccess = false[\s\S]*TEXT\(\"failed_validation\"\)[\s\S]*PrimaryAsset\.Reset\(\)",
+        )
+        self.assertIn(
+            "persisted master-only assets do not satisfy create_vfx_material",
+            self.material_cpp,
+        )
+
     def test_create_vfx_material_summary_conditional_on_validate(self) -> None:
         self.assertIn("BuildMaterialSuccessSummary", self.material_cpp)
         self.assertIn("options.validate=false", self.material_cpp)
@@ -135,6 +145,14 @@ class MaterialValidateContractTests(unittest.TestCase):
         self.assertIn("ConnectToInputWithFallback", feature_graph)
         self.assertIn("World Position", feature_graph)
         self.assertIn("Failed to wire animated_noise.", feature_graph)
+
+    def test_trail_depth_fade_wires_opacity_pin_with_fallback(self) -> None:
+        feature_graph = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialFeatureGraph.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Failed to wire depth_fade.", feature_graph)
+        self.assertIn("TEXT(\"Opacity\")", feature_graph)
+        self.assertIn("Failed to wire panning_textures.", feature_graph)
 
     def test_create_vfx_material_reports_reused_assets_for_master_reuse(self) -> None:
         self.assertIn("ReusedAssets", self.material_cpp)

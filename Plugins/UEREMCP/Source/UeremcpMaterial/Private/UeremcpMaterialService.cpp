@@ -281,17 +281,25 @@ namespace
 		UMaterialInstanceConstant* Instance,
 		const FString& Detail)
 	{
+		if (!Instance)
+		{
+			Result.bSuccess = false;
+			Result.Status = TEXT("failed_validation");
+			Result.PrimaryAsset.Reset();
+			Result.Summary = Detail;
+			Result.CapabilityNotes.Add(
+				TEXT("No loadable MaterialInstanceConstant — primary MI was not created; persisted master-only assets do not satisfy create_vfx_material."));
+			return;
+		}
+
 		Result.bSuccess = true;
 		Result.Status = TEXT("partially_completed");
 		Result.PrimaryAsset = TargetPath;
 		Result.Summary = Detail;
 		Result.CapabilityNotes.Add(
 			TEXT("validate: post-create proof unavailable under NullRHI automation — cannot claim *_validated."));
-		if (Instance)
-		{
-			Result.InterpretationNotes.Add(
-				TEXT("In-process UMaterialInstanceConstant exists; disk/registry persistence not proven."));
-		}
+		Result.InterpretationNotes.Add(
+			TEXT("In-process UMaterialInstanceConstant exists; disk/registry persistence not proven."));
 	}
 
 	static bool IsKnownTextureSlot(const FString& SlotName)
