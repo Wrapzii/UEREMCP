@@ -59,7 +59,8 @@ contract exists in WS-15-owned paths.
 Register `create_vfx_material` and `create_niagara_effect` semantic handlers plus
 complete begin/commit/rollback transaction callbacks. Until those capabilities are
 registered, the bound executor rejects before mutation; binding alone does not make
-elemental instantiation complete.
+elemental instantiation complete. Exact lifecycle, adapter, and ownership handoff:
+`ws-15-plan-handler-registration.md`.
 
 ### WS-01
 

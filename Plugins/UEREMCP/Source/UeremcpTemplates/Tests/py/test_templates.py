@@ -753,6 +753,77 @@ class TemplateExecutorBindingTests(unittest.TestCase):
         self.assertLess(module_source.index(clear), module_source.rindex("GTemplatesModule = nullptr;"))
 
 
+class TemplateDomainHandlerContractTests(unittest.TestCase):
+    def test_every_plan_action_has_a_documented_registration_owner(self) -> None:
+        actions: set[str] = set()
+        for path in sorted((ROOT / "templates").rglob("*.json")):
+            if path.parent.name == "elements":
+                continue
+            document = json.loads(path.read_text(encoding="utf-8"))
+            for operation in document.get("construction_plan", []):
+                actions.add(operation["action"])
+
+        self.assertEqual(
+            actions,
+            {"create_vfx_material", "create_niagara_effect"},
+        )
+        handoff = (
+            ROOT
+            / "docs"
+            / "proposals"
+            / "ws-15-plan-handler-registration.md"
+        ).read_text(encoding="utf-8")
+        expected_owners = {
+            "create_vfx_material": "WS-08",
+            "create_niagara_effect": "WS-07",
+        }
+        for action, owner in expected_owners.items():
+            with self.subTest(action=action):
+                self.assertIn(f"`{action}`", handoff)
+                self.assertIn(owner, handoff)
+                self.assertIn(
+                    f'UnregisterAction(TEXT("{action}"))',
+                    handoff,
+                )
+
+    def test_handler_handoff_matches_existing_toolset_entry_points(self) -> None:
+        material_header = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpMaterial"
+            / "Public"
+            / "UeremcpMaterialToolset.h"
+        ).read_text(encoding="utf-8")
+        niagara_header = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpNiagara"
+            / "Public"
+            / "UeremcpNiagaraToolset.h"
+        ).read_text(encoding="utf-8")
+        executor_source = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpProtocol"
+            / "Private"
+            / "UeremcpPlanExecutor.cpp"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("static FString CreateVfxMaterial(", material_header)
+        self.assertIn("static FString CreateNiagaraEffect(", niagara_header)
+        self.assertIn("no handler registered for '%s'", executor_source)
+        self.assertIn(
+            "atomic execute_plan requires transaction callbacks",
+            executor_source,
+        )
+
+
 def main() -> int:
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
@@ -761,6 +832,7 @@ def main() -> int:
     suite.addTests(loader.loadTestsFromTestCase(TemplateInstantiateTests))
     suite.addTests(loader.loadTestsFromTestCase(TemplatePromotionTests))
     suite.addTests(loader.loadTestsFromTestCase(TemplateExecutorBindingTests))
+    suite.addTests(loader.loadTestsFromTestCase(TemplateDomainHandlerContractTests))
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     return 0 if result.wasSuccessful() else 1
 
