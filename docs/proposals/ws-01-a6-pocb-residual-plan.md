@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `b295549` (POC A slice note; B4 fix re-run on `279f09a`)
+- **Orch tip at writing:** `7cd6c93` (WS-06 complete submit evidence / CompleteRoundTrip scaffolding)
 - **Date:** 2026-07-30
-- **Status:** POC A slice remains partial and overall POC A unclaimed. Fireball re-run on `279f09a` **FAILS full B4**: 5/6 roles verified; `ribbon_trail` has no MI and fails binding re-read. Aggregate B4 booleans incorrectly reported true over only five resolved roles, so WS-07 must require all requested roles. No B4 / overall POC-B claim.
+- **Status:** WS-06 `7cd6c93` (`eded4f8`) lands complete read/replace graph payloads and expanded A1/A2/A5/A8/A10 editor assertions, with handoff `docs/proposals/ws-06-a1-a2-a5-ws11-complete-round-trip.md`. **A1/A2/A5/A9/A10 and overall POC A remain unclaimed** until WS-11 runs CompleteRoundTrip. Fireball B4 still FAIL at 5/6 (`ribbon_trail`).
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -67,13 +67,14 @@ Aggregate filter missing: no matching `editor_UEREMCP_Blueprint_POCA_CompleteRou
 | **A6 code on orch** | WS-06 | Landed `13bf529` (`2a0b2cd`): programmatic reread-after-write validation + harness handoff `docs/proposals/ws-06-a6-ws11-harness.md`. |
 | **A6 selector/no-op fix** | WS-06 | Landed `7b2ed34` (`90b8a6d`): multi-event endpoint IDs + hash-based no-op. |
 | Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **PASS on `c87b1db`** — `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_052810.log`; test Success, exit 0 |
-| A1 / A2 / A5 MCP one-call / complete payload | WS-06 + WS-11 | Slice SKIP — need live MCP call evidence |
+| Complete submit evidence scaffolding | WS-06 | Landed `7cd6c93` (`eded4f8`): complete payloads + expanded A1/A2/A5/A8/A10 assertions; proposal `ws-06-a1-a2-a5-ws11-complete-round-trip.md`. **Not a POC-A claim.** |
+| A1 / A2 / A5 MCP one-call / complete payload | WS-11 | Prior slice SKIP; code ready — needs CompleteRoundTrip editor/MCP run |
 | A9 MCP round-trip metrics | WS-11 | Slice SKIP |
-| A10 `fidelity.lossy_areas` | WS-06 + WS-11 | Slice SKIP — not asserted |
-| Aggregate `POCA.CompleteRoundTrip` marker | WS-11 | No matching editor log marker |
+| A10 `fidelity.lossy_areas` | WS-11 | Prior slice SKIP; assertions expanded — needs CompleteRoundTrip run |
+| Aggregate `POCA.CompleteRoundTrip` marker | WS-11 | No matching editor log marker yet; filter must be run |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** keep overall POC A unclaimed until A1/A2/A5/A9/A10 and an aggregate CompleteRoundTrip marker exist.
+**WS-01 next step:** tip WS-11 to run CompleteRoundTrip; refuse A1/A2/A5/A9/A10 and overall POC-A claims until that PASS exists.
 
 ---
 
@@ -134,7 +135,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Close POC A SKIPs (A1/A2/A5 MCP, A9 metrics, A10 lossy_areas) + aggregate CompleteRoundTrip marker | WS-06 + WS-11 | Slice partial; refuse overall POC-A |
+| P0 | Run CompleteRoundTrip after `7cd6c93`; close A1/A2/A5/A9/A10 SKIPs | WS-11 | Scaffold landed; refuse overall POC-A until PASS |
 | P0 | Create/resolve `ribbon_trail` MI, bind/re-read it, and make B4 gate require all requested roles; then re-run | WS-07 (+ WS-08 if `create_spec`) + WS-11 | Latest fireball 5/6; B4 FAIL |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |

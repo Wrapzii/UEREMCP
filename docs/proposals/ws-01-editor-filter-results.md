@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `b295549` (POC A slice note; B4 re-run was on `279f09a`)
+- **Current orchestration tip:** `7cd6c93` (WS-06 complete submit evidence scaffolding)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** POC A remains partial and overall POC A unclaimed. Fireball on `279f09a` **FAILS full B4**: 5/6 roles verified, but `ribbon_trail` MI was not created and its binding failed. Aggregate B4 booleans incorrectly reported true for only five resolved roles. No B4 / overall POC-B claim.
+- **Status:** WS-06 complete submit evidence landed as `7cd6c93` (`eded4f8`); A1/A2/A5/A9/A10 and overall POC A remain unclaimed pending WS-11 CompleteRoundTrip. Fireball B4 still FAIL at 5/6 (`ribbon_trail`). No B4 / overall POC-B claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: POC A slice partial (PASS A3/A4/A6/A7/A8/A11; SKIP A1/A2/A5/A9/A10); overall POC A unclaimed. Fireball direct-binding re-run reached 5/6 roles. `ribbon_trail` MI is absent and B4 gate completeness is dishonest; WS-07 owns the gate/bind fix, with WS-08 if ribbon `create_spec` is responsible. Material **PASS 14/14**.
+Residuals: WS-06 `7cd6c93` expands A1/A2/A5/A8/A10 payloads/assertions; CompleteRoundTrip still unrun — A1/A2/A5/A9/A10 and overall POC A unclaimed. Fireball B4 is 5/6 with dishonest aggregate gating on `ribbon_trail`. Material **PASS 14/14**.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -52,7 +52,7 @@ Residuals: POC A slice partial (PASS A3/A4/A6/A7/A8/A11; SKIP A1/A2/A5/A9/A10); 
 | A10 | **SKIP** | `lossy_areas` not asserted |
 | A11 | **PASS** | |
 
-Aggregate filter missing: no matching `editor_UEREMCP_Blueprint_POCA_CompleteRoundTrip_...` marker. **Overall POC A unclaimed.**
+Aggregate filter missing: no matching `editor_UEREMCP_Blueprint_POCA_CompleteRoundTrip_...` marker. WS-06 scaffolding for complete payloads/assertions is now at `7cd6c93` (`eded4f8`); handoff `docs/proposals/ws-06-a1-a2-a5-ws11-complete-round-trip.md`. **Overall POC A unclaimed until WS-11 runs CompleteRoundTrip.**
 
 ## Acceptance runtime follow-up on tip `d691316` (WS-11)
 
@@ -283,11 +283,11 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-06 | POC A slice: close A1/A2/A5 MCP gaps and A10 `lossy_areas` with WS-11. |
+| WS-06 | Complete submit evidence landed as `7cd6c93`; A1/A2/A5/A9/A10 and overall POC A not claimed until CompleteRoundTrip. |
 | WS-07 | Fix missing `ribbon_trail` MI/binding and require all requested roles before either B4 aggregate boolean can be true. |
-| WS-08 | Material API landed as `58036dd`; Material remains **PASS 14/14**. |
+| WS-08 | Material API landed as `58036dd`; Material remains **PASS 14/14**. Assist if ribbon `create_spec` is the MI gap. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run fireball after WS-07 gate/binding fix. Close POC A SKIPs + CompleteRoundTrip marker. Keep overall POC-A/B4/POC-B unclaimed. |
+| WS-11 | Run CompleteRoundTrip after `7cd6c93`. Re-run fireball after WS-07 gate/binding fix. Keep overall POC-A/B4/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Material is green at 14/14. POC A is partial. Fireball B4 is 5/6 and aggregate honesty is open. No overall POC-A / B4 / overall POC-B claims. No junction retarget.
+Material is green at 14/14. POC A scaffolding ready for CompleteRoundTrip; overall POC A unclaimed. Fireball B4 is 5/6 and aggregate honesty is open. No overall POC-A / B4 / overall POC-B claims. No junction retarget.
