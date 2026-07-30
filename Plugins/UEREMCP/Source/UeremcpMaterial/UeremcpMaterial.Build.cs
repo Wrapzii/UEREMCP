@@ -20,7 +20,6 @@ public class UeremcpMaterial : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"UnrealEd",
-			"Editor",
 			"AssetTools",
 			"Json",
 			"JsonUtilities",
