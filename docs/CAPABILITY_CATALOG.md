@@ -66,7 +66,7 @@ names below are the semantic actions; notes map to the live tool surface.
 
 | Action | Domain | WS | Status | Notes |
 |---|---|---|---|---|
-| `execute_plan` | project | WS-05 | partial | Internal plan executor + domain handlers; templates delegate to it. **Not** a direct agent-facing `AICallable` (audit P1). |
+| `execute_plan` | project | WS-05 / WS-03 | partial | Agent-facing `UUeremcpReferenceToolset::ExecutePlan` (`AICallable`) delegates to `FUeremcpPlanActions` / `FUeremcpPlanExecutor` (`fc98fbc` / `bd9b2ba`). Templates also bind the executor internally. Still partial: RE/MCP smoke and real domain-handler plan run not yet recorded on this tip. |
 | `validate_asset` | validation | WS-11 | planned | |
 | `validate_system` | validation | WS-11 | planned | |
 
