@@ -2,7 +2,7 @@
 
 - **Orch tip at writing:** `40cb2a5` (WS-07 MCP B1/B10 handoffs landed; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball B2–B6/B9 and B8 Create→restart→Verify pass. WS-07's poll-only `AwaitCompile` crash fix landed as `088bd64` (`132bb54`) and Niagara rebuilt; WS-11 MCP B1 rerun remains required. B10 and metrics remain blocked — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** — CRT on tip `3756244` passes A1–A11 (`tests/integration/_logs/poc_a_complete_round_trip_3756244.json`; 3 MCP calls, 4 internal ops, 2.30s, no errors). Scope caveat: demonstrated simple-graph / native `EventBeginPlay→Branch→PrintString` slice with honest A10 lossy_areas. Post-UV editor fireball B2–B6/B9 and B8 Create→restart→Verify pass. WS-11's MCP B1 rerun with `088bd64` loaded still crashes on a SharedPointer `IsValid` assertion in `AwaitCompile`; WS-07 is investigating further. B10 and metrics remain blocked — **no overall POC-B claim.**
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -215,11 +215,16 @@ uses poll-only completion and avoids reentrant game-thread draining. The
 `UeremcpNiagara` module rebuilt successfully. This is fix readiness only:
 WS-11 must rerun `poc_b_mcp_fireball_request.json` before B1 can pass.
 
+**Post-fix MCP rerun on orch `8322ee6`: FAIL.** With `088bd64` loaded, the
+canonical WS-11 B1 run still crashes on a SharedPointer `IsValid` assertion at
+`UeremcpNiagaraCreate.cpp:593` during `AwaitCompile`. The editor fireball
+filter remains PASS. WS-07 is investigating the remaining MCP-only crash.
+
 ### POC B checklist (B1–B10)
 
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
-| B1 | One MCP request produces the complete effect — no follow-ups | **OPEN after `088bd64` fix** — prior MCP run crashed; WS-11 canonical fixture rerun required | WS-07 + WS-11 |
+| B1 | One MCP request produces the complete effect — no follow-ups | **FAIL on `8322ee6`** — post-`088bd64` MCP rerun still crashes at line 593 in `AwaitCompile`; editor gate remains PASS | WS-07 + WS-11 |
 | B2 | Materials created or reused; reuse in `result.reused_assets` | **PASS on `8a8c75d` editor fireball** — all six MI roles represented | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **PASS on `8a8c75d` editor fireball** | WS-07 + WS-11 |
 | B4 | Renderers configured and bound to valid materials | **PASS on `8a8c75d` editor fireball** — all six, including `ribbon_trail` | WS-07 + WS-08 |
@@ -238,7 +243,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | Rerun canonical MCP fixture after poll-only `AwaitCompile` fix | WS-11 | Fix landed/rebuilt as `088bd64`; editor PASS is not MCP transport proof |
+| P0 | Investigate remaining MCP-only `AwaitCompile` SharedPointer crash, then rerun | WS-07 + WS-11 | Post-fix B1 rerun still FAIL; editor PASS is not MCP transport proof |
 | P0 | Place and visibly render the fireball with non-screenshot validation | WS-11 | Blocked by MCP B1; B10 remains honestly `null` |
 | P0 | Record POC-B MCP/internal-operation/token/wall metrics and equivalent primitive-call count | WS-11 / WS-14 | Blocked by MCP B1; required before overall claim |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | POC A numbers exist in CRT evidence; empty metrics file is not a claim |
