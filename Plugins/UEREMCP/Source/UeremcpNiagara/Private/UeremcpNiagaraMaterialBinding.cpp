@@ -25,8 +25,8 @@ namespace
 
 	bool IsAllowedMaterialProbePath(const FString& AssetPath)
 	{
-		return AssetPath.StartsWith(GMaterialsProbeRoot)
-			|| UeremcpNiagaraPaths::IsAllowedProbePath(AssetPath);
+		return UeremcpNiagaraPaths::IsAllowedProbePath(AssetPath)
+			|| AssetPath.StartsWith(GMaterialsProbeRoot);
 	}
 
 	TSharedPtr<FJsonObject> ParsePropertyValuesJson(const FString& JsonText)
@@ -300,7 +300,7 @@ bool FUeremcpNiagaraMaterialBinding::ResolveDirectMaterialPaths(
 				*Request.Role,
 				*Request.ExistingAssetPath,
 				GMaterialsProbeRoot,
-				UeremcpNiagaraPaths::TestsContentRoot);
+				*UeremcpNiagaraPaths::AllowedContentRootsDescription());
 			return false;
 		}
 
@@ -349,7 +349,7 @@ bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
 					*Request.Role,
 					*TargetPath,
 					GMaterialsProbeRoot,
-					UeremcpNiagaraPaths::TestsContentRoot);
+					*UeremcpNiagaraPaths::AllowedContentRootsDescription());
 				return false;
 			}
 
@@ -450,7 +450,7 @@ bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
 				*Request.Role,
 				*Request.ExistingAssetPath,
 				GMaterialsProbeRoot,
-				UeremcpNiagaraPaths::TestsContentRoot);
+				*UeremcpNiagaraPaths::AllowedContentRootsDescription());
 			return false;
 		}
 

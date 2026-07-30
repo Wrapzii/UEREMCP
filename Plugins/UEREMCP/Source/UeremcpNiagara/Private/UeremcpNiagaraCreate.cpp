@@ -341,7 +341,7 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		OutResult.Error = FString::Printf(
 			TEXT("create_niagara_effect probes only assets under %s (got '%s')."),
-			UeremcpNiagaraPaths::TestsContentRoot,
+			*UeremcpNiagaraPaths::AllowedContentRootsDescription(),
 			*Request.TargetAssetPath);
 		return false;
 	}
@@ -436,7 +436,7 @@ bool FUeremcpNiagaraCreate::Run(
 			OutResult.Error = FString::Printf(
 				TEXT("Asset already exists at '%s'. Use envelope mode 'replace' for idempotent probes under %s."),
 				*CreatedPath,
-				UeremcpNiagaraPaths::TestsContentRoot);
+				*UeremcpNiagaraPaths::AllowedContentRootsDescription());
 			return false;
 		}
 	}

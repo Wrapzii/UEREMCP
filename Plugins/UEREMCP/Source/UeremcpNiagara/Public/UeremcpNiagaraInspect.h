@@ -50,7 +50,7 @@ public:
 		FUeremcpNiagaraInspectSpec& OutSpec,
 		FString& OutError);
 
-	/** Wave 2 probe guard — only /Game/__UeremcpTests/ assets. */
+	/** Wave 2 probe guard — only /Game/__UeremcpTests/ or /Game/__UeremcpPoc/ assets. */
 	static bool IsAllowedProbePath(const FString& AssetPath);
 
 	/**

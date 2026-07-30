@@ -116,8 +116,8 @@ bool UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath(const FString& AssetPath,
 	if (!UeremcpNiagaraPaths::IsAllowedProbePath(AssetPath))
 	{
 		OutError = FString::Printf(
-			TEXT("Refusing to delete asset outside probe root %s (got '%s')."),
-			UeremcpNiagaraPaths::TestsContentRoot,
+			TEXT("Refusing to delete asset outside probe roots %s (got '%s')."),
+			*UeremcpNiagaraPaths::AllowedContentRootsDescription(),
 			*AssetPath);
 		return false;
 	}

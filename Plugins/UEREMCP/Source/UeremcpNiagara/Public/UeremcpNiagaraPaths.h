@@ -1,20 +1,53 @@
 // UEREMCP — Niagara scratch-path conventions (WS-07).
 //
-// Aligns with tests/README.md and UeremcpScratchPaths.h (WS-11).
+// Aligns with UeremcpScratchPaths.h (WS-11) and docs/POC_ACCEPTANCE.md.
 
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Misc/PackageName.h"
 
 namespace UeremcpNiagaraPaths
 {
-	/** Soft package root for WS-07 editor probes. Trailing path segments allowed. */
+	/** WS-11 integration / wave-2 probe root. Trailing path segments allowed. */
 	inline const TCHAR* TestsContentRoot = TEXT("/Game/__UeremcpTests");
 
-	/** True when AssetPath is under TestsContentRoot. */
+	/** POC scratch root (POC_ACCEPTANCE.md global rules). Trailing path segments allowed. */
+	inline const TCHAR* PocContentRoot = TEXT("/Game/__UeremcpPoc");
+
+	inline bool IsUnderContentRoot(const FString& AssetPath, const TCHAR* Root)
+	{
+		if (AssetPath.IsEmpty() || !Root || Root[0] == TEXT('\0'))
+		{
+			return false;
+		}
+
+		FString Normalized = AssetPath;
+		Normalized.TrimStartAndEndInline();
+		if (!Normalized.StartsWith(TEXT("/")))
+		{
+			Normalized = TEXT("/") + Normalized;
+		}
+
+		const int32 RootLen = FCString::Strlen(Root);
+		if (!Normalized.StartsWith(Root, ESearchCase::CaseSensitive))
+		{
+			return false;
+		}
+
+		return Normalized.Len() == RootLen || Normalized[RootLen] == TEXT('/');
+	}
+
+	/** True when AssetPath is under TestsContentRoot or PocContentRoot (strict prefix). */
 	inline bool IsAllowedProbePath(const FString& AssetPath)
 	{
-		return AssetPath.StartsWith(TestsContentRoot);
+		return IsUnderContentRoot(AssetPath, TestsContentRoot)
+			|| IsUnderContentRoot(AssetPath, PocContentRoot);
+	}
+
+	inline FString AllowedContentRootsDescription()
+	{
+		return FString::Printf(TEXT("%s or %s"), TestsContentRoot, PocContentRoot);
 	}
 
 	/** Package folder from a soft object path (strips /AssetName suffix if present). */

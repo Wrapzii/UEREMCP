@@ -21,8 +21,16 @@ bool FUeremcpNiagaraCreatePathGuardTest::RunTest(const FString& Parameters)
 {
 	TestTrue(TEXT("tests root allowed"),
 		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/__UeremcpTests/NS_WS07_CreateProbe")));
+	TestTrue(TEXT("poc root allowed"),
+		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/__UeremcpPoc/Fireball/NS_Fireball")));
+	TestTrue(TEXT("poc root exact allowed"),
+		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/__UeremcpPoc")));
 	TestFalse(TEXT("game content rejected"),
 		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/VFX/NS_Fireball")));
+	TestFalse(TEXT("tests prefix trick rejected"),
+		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/__UeremcpTestsEvil/NS_Probe")));
+	TestFalse(TEXT("poc prefix trick rejected"),
+		UeremcpNiagaraPaths::IsAllowedProbePath(TEXT("/Game/__UeremcpPocExtra/NS_Fireball")));
 	return true;
 }
 

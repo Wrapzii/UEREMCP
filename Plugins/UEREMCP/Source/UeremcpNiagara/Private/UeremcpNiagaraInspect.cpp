@@ -400,7 +400,7 @@ bool FUeremcpNiagaraInspect::Run(
 	{
 		OutResult.Error = FString::Printf(
 			TEXT("inspect_system probes only assets under %s (got '%s')."),
-			UeremcpNiagaraPaths::TestsContentRoot,
+			*UeremcpNiagaraPaths::AllowedContentRootsDescription(),
 			*Request.TargetAssetPath);
 		return false;
 	}

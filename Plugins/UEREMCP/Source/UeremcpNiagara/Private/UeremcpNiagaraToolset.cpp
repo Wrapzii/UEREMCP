@@ -9,6 +9,7 @@
 #include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraMaterialBindingDiagnostics.h"
+#include "UeremcpNiagaraPaths.h"
 #include "UeremcpNiagaraPocBGates.h"
 #include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraRoundTrip.h"
@@ -94,7 +95,9 @@ FString UUeremcpNiagaraToolset::InspectSystem(const FString& RequestJson)
 	{
 		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
-			TEXT("inspect_system probes only assets under /Game/__UeremcpTests/."));
+			FString::Printf(
+				TEXT("inspect_system probes only assets under %s."),
+				*UeremcpNiagaraPaths::AllowedContentRootsDescription()));
 	}
 
 	FUeremcpNiagaraInspectSpec Spec;
@@ -221,14 +224,18 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	{
 		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
-			TEXT("create_niagara_effect requires target.asset_path under /Game/__UeremcpTests/."));
+			FString::Printf(
+				TEXT("create_niagara_effect requires target.asset_path under %s."),
+				*UeremcpNiagaraPaths::AllowedContentRootsDescription()));
 	}
 
 	if (!FUeremcpNiagaraInspect::IsAllowedProbePath(Request.TargetAssetPath))
 	{
 		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
-			TEXT("create_niagara_effect probes only assets under /Game/__UeremcpTests/."));
+			FString::Printf(
+				TEXT("create_niagara_effect probes only assets under %s."),
+				*UeremcpNiagaraPaths::AllowedContentRootsDescription()));
 	}
 
 	FUeremcpNiagaraCreateSpec Spec;

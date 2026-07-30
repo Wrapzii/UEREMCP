@@ -67,11 +67,18 @@ bool FUeremcpNiagaraInspectPathGuardTest::RunTest(const FString& Parameters)
 {
 	TestTrue(TEXT("tests root allowed"),
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/__UeremcpTests/NS_WS07_Probe")));
+	TestTrue(TEXT("poc root allowed"),
+		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/__UeremcpPoc/Fireball/NS_Fireball")));
 	TestFalse(TEXT("game content rejected"),
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/VFX/NS_Fireball")));
+	TestFalse(TEXT("poc prefix trick rejected"),
+		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/__UeremcpPocFake/NS_Fireball")));
 	TestTrue(
-		TEXT("probe inspect skips GetStackIssues"),
+		TEXT("probe inspect skips GetStackIssues for tests root"),
 		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/__UeremcpTests/NS_POCB_FireballProbe")));
+	TestTrue(
+		TEXT("probe inspect skips GetStackIssues for poc root"),
+		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/__UeremcpPoc/Fireball/NS_Fireball")));
 	TestFalse(
 		TEXT("non-probe inspect may collect stack issues"),
 		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/VFX/NS_Fireball")));
