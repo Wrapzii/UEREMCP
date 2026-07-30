@@ -41,6 +41,8 @@ class MaterialFunctionCompositionTests(unittest.TestCase):
 
     def test_proposal_status_is_not_implemented(self) -> None:
         self.assertIn("not implemented", self.proposal.lower())
+        self.assertIn("Phase C", self.proposal)
+        self.assertIn("UeremcpMaterialFunctionComposer", self.proposal)
 
     def test_composition_json_covers_implemented_features(self) -> None:
         features_cpp = (

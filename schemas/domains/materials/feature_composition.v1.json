@@ -13,9 +13,9 @@
   "features": {
     "radial_falloff": { "strategy": "expression_fallback", "notes": "SphereMask expression wired in feature_graph_v1" },
     "animated_noise": { "strategy": "expression_fallback", "notes": "MaterialExpressionNoise wired in feature_graph_v1" },
-    "fresnel": { "strategy": "expression_fallback", "engine_material_function_path": null },
+    "fresnel": { "strategy": "engine_material_function", "engine_material_function_path": null, "fallback": "expression_fallback" },
     "erosion": { "strategy": "expression_fallback" },
-    "depth_fade": { "strategy": "expression_fallback", "engine_material_function_path": null },
+    "depth_fade": { "strategy": "engine_material_function", "engine_material_function_path": null, "fallback": "expression_fallback" },
     "distortion": { "strategy": "expression_fallback", "notes": "BumpOffset UV parallax — not engine MF refraction" },
     "panning_textures": { "strategy": "expression_fallback" },
     "flow_maps": { "strategy": "expression_fallback" },

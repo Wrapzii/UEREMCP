@@ -113,6 +113,8 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 	Result.InternalOperations += GraphResult.InternalOperations;
 	Result.WiredFeatures = GraphResult.WiredFeatures;
 	Result.SkippedFeatures = GraphResult.SkippedFeatures;
+	Result.InterpretationNotes = GraphResult.InterpretationNotes;
+	Result.CapabilityNotes = GraphResult.CapabilityNotes;
 
 	if (!GraphResult.bSuccess)
 	{

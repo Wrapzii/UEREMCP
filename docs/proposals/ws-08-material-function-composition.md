@@ -2,7 +2,7 @@
 
 - **From:** WS-08
 - **Date:** 2026-07-30
-- **Status:** proposal — **not implemented** in `feature_graph_v1`
+- **Status:** proposal — Phase C **stub** landed (`UeremcpMaterialFunctionComposer`); runtime MF compose **not implemented**
 - **Supersedes:** partial notes in `RB-08-materials-and-textures.md` §A4 / §B7
 
 ## Problem
@@ -112,4 +112,7 @@ strategy satisfied.
 
 - `feature_graph_v1`: expression-only wiring for all implemented tokens including
   `distortion` and `flipbook_subuv` graph hooks.
-- MaterialFunction composition: **not implemented** — this document is the handoff artifact.
+- **Phase C stub:** `UeremcpMaterialFunctionComposer::ProbeComposition` reports
+  `partially_completed` for engine MF candidates (`fresnel`, `depth_fade`) and surfaces
+  notes; expression graph fallback still builds the master.
+- MaterialFunction runtime composition via `SetMaterialFunction`: **not implemented**.

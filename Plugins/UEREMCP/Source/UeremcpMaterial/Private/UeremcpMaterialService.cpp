@@ -568,6 +568,8 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Result.CapabilityNotes.Add(
 			FString::Printf(TEXT("Skipped unimplemented feature token '%s' on master build."), *Skipped));
 	}
+	Result.InterpretationNotes.Append(MasterResult.InterpretationNotes);
+	Result.CapabilityNotes.Append(MasterResult.CapabilityNotes);
 
 	if (!MasterResult.bSuccess)
 	{

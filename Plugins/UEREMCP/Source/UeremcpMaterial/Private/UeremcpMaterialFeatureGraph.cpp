@@ -21,6 +21,7 @@
 #include "Materials/MaterialExpressionTime.h"
 #include "Materials/MaterialExpressionVectorParameter.h"
 #include "UeremcpMaterialFeatures.h"
+#include "UeremcpMaterialFunctionComposer.h"
 
 namespace
 {
@@ -540,6 +541,16 @@ FUeremcpFeatureGraphBuildResult UeremcpMaterialFeatureGraph::BuildGraph(
 	{
 		Result.Error = TEXT("Null material.");
 		return Result;
+	}
+
+	const FUeremcpMaterialFunctionComposeResult ComposeProbe =
+		UeremcpMaterialFunctionComposer::ProbeComposition(Material, Features);
+	Result.CompositionStatus = ComposeProbe.Status;
+	Result.InterpretationNotes.Append(ComposeProbe.InterpretationNotes);
+	Result.CapabilityNotes.Append(ComposeProbe.CapabilityNotes);
+	if (!ComposeProbe.Summary.IsEmpty() && ComposeProbe.DeferredFeatures.Num() > 0)
+	{
+		Result.InterpretationNotes.Add(ComposeProbe.Summary);
 	}
 
 	FFeatureGraphBuilder Builder(Material, Features, Result.InternalOperations);

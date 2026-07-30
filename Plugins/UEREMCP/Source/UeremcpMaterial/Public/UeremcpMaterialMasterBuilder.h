@@ -25,6 +25,8 @@ struct FUeremcpMaterialMasterBuildResult
 	int32 InternalOperations = 0;
 	TArray<FString> WiredFeatures;
 	TArray<FString> SkippedFeatures;
+	TArray<FString> InterpretationNotes;
+	TArray<FString> CapabilityNotes;
 };
 
 namespace UeremcpMaterialMasterBuilder
