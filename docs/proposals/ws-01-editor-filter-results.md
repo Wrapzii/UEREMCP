@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `9d6ed26` (ordered WS-08 → WS-07 MI co-location stack)
+- **Current orchestration tip:** `7b2ed34` (WS-06 A6 selector/no-op fix)
 - **Latest Blueprint acceptance re-run tip:** `d691316` (**FAIL**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: A6 runtime **FAIL** on `d691316`: missing BeginPlay→Branch link; A8/A11 no-op failed. Fireball runtime **FAIL** on `d691316`: MIs under test root, B4 false, B2 harness manifest-path issue. Parsing fix is `674c439`; ordered MI co-location stack is WS-08 `58036dd` (`81b56e2`) then WS-07 `dc4f118` (`60cb3a4`) — **ready for WS-11 re-run; B4/POC-B not claimed**. Material **PASS 14/14**.
+Residuals: A6 runtime **FAIL** on `d691316`; WS-06 selector/no-op fix `7b2ed34` (`90b8a6d`) is now **ready for `PocA6Reread` re-run; A6 not claimed**. Fireball runtime **FAIL** on `d691316`; ordered MI co-location stack `58036dd` → `dc4f118` is ready for WS-11 re-run, with B4/POC-B unclaimed. Material **PASS 14/14**.
 
 ## Acceptance runtime follow-up on tip `d691316` (WS-11)
 
@@ -252,11 +252,11 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | POC A / A6: deliver programmatic modify→re-read proof; Wave 2 Blueprint 4/4 is not A6. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`. |
-| WS-06 | Fix missing BeginPlay→Branch link and A8/A11 no-op after PocA6Reread **FAIL** on `d691316`. |
+| WS-06 | Selector/no-op fix landed as `7b2ed34`; `PocA6Reread` re-run pending. No A6 claim. |
 | WS-07 | MI co-location call sites landed as `dc4f118` after the WS-08 API; B4 remains unproven pending WS-11 re-run. |
 | WS-08 | Material API landed as `58036dd`; Material remains **PASS 14/14**. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run fireball after stack `58036dd` → `dc4f118`; re-run A6 after WS-06 fix. Keep A6/POC-A/B2/B4/POC-B unclaimed until PASS. |
+| WS-11 | Re-run `PocA6Reread` after `7b2ed34` and fireball after `58036dd` → `dc4f118`. Keep A6/POC-A/B2/B4/POC-B unclaimed until PASS. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
 Material is green at 14/14. A6 still fails; Fireball has a co-location fix landed but no re-proof. No A6 / POC-A / B1 / B2 / B4 / overall POC-B claims. No junction retarget.

@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `9d6ed26` (ordered WS-08 → WS-07 MI co-location stack)
+- **Orch tip at writing:** `7b2ed34` (WS-06 A6 selector/no-op fix)
 - **Date:** 2026-07-30
-- **Status:** Runtime acceptance follow-up on `d691316` **failed**. The ordered MI co-location stack is now on orch: WS-08 `58036dd` (`81b56e2`) then WS-07 `dc4f118` (`60cb3a4`). It is ready for a WS-11 fireball re-run, but **B4 / POC-B remain unproven**. A6 still fails on missing BeginPlay→Branch and A8/A11 no-op. Material Toolset **PASS 14/14**. No A6 / POC A / B1 / B2 / B4 / overall POC-B claim.
+- **Status:** Runtime acceptance follow-up on `d691316` **failed**. WS-06 selector/no-op fix is now on orch as `7b2ed34` (`90b8a6d`) and is ready for a `PocA6Reread` re-run; **A6 remains unproven**. The ordered MI co-location stack `58036dd` → `dc4f118` is ready for a WS-11 fireball re-run, but B4 / POC-B remain unproven. Material Toolset **PASS 14/14**. No A6 / POC A / B1 / B2 / B4 / overall POC-B claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -47,12 +47,13 @@ Filter-results already declines an A6 claim. That remains correct.
 | Gap | Owner | Evidence needed |
 |---|---|---|
 | **A6 code on orch** | WS-06 | Landed `13bf529` (`2a0b2cd`): programmatic reread-after-write validation + harness handoff `docs/proposals/ws-06-a6-ws11-harness.md`. **Not an A6 claim.** |
+| **A6 selector/no-op fix** | WS-06 | Landed `7b2ed34` (`90b8a6d`): multi-event endpoint IDs + hash-based no-op. **Ready for re-run; not an A6 claim.** |
 | Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **FAIL on `d691316`** — BeginPlay→Branch link missing; A8/A11 no-op failed. Log: `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_050942.log` |
 | End-to-end POC A (A1–A11) or A8 patch escape + A10 | WS-06 + WS-11 | Full scenario metrics under `/Game/__UeremcpPoc/` |
 | A7 / A8 / A11 fields on success path | WS-06 | Proven only after editor run |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** WS-06 fixes the missing execution link and A8/A11 no-op behavior; WS-11 re-runs. Refuse A6/POC-A claims until PASS.
+**WS-01 next step:** WS-11 re-runs `PocA6Reread` with `7b2ed34`. Refuse A6/POC-A claims until PASS.
 
 ---
 
@@ -111,7 +112,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | POC A scenario including explicit A6 programmatic re-read | WS-06 | Track; do not claim until WS-11 editor/MCP evidence lands |
-| P0 | Fix BeginPlay→Branch link and A8/A11 no-op, then re-run A6 | WS-06 + WS-11 | Current runtime result FAIL; refuse A6/POC-A |
+| P0 | Re-run `PocA6Reread` after selector/no-op fix `7b2ed34` | WS-11 | Fix ready; prior runtime result FAIL; refuse A6/POC-A until PASS |
 | P0 | Re-run fireball after MI co-location stack `58036dd` → `dc4f118` | WS-11 | Stack ready; prior result FAIL; refuse B1/B2/B4 until PASS |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
