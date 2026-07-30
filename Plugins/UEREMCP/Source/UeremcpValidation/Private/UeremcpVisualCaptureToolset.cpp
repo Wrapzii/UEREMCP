@@ -685,3 +685,178 @@ FString UUeremcpVisualCaptureToolset::CaptureEffectFrames(
 {
 	return CaptureEffectFramesImpl(RequestJson, true);
 }
+
+FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
+				*Request.ProtocolVersion,
+				*FUeremcpEnvelope::ProtocolVersion()));
+	}
+	if (!Request.Action.Equals(TEXT("capture_world_frames"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("CaptureWorldFrames received action '%s'. Use action 'capture_world_frames'."),
+				*Request.Action));
+	}
+
+	FUeremcpMutatingDispatch Dispatch;
+	FString Blocked;
+	if (!Dispatch.TryBegin(RequestJson, true, 0, true, Blocked))
+	{
+		return Blocked;
+	}
+
+	if (Dispatch.IsEffectiveDryRun())
+	{
+		FUeremcpResponse Response;
+		Response.RequestId = Dispatch.GetRequest().RequestId;
+		Response.UnderstoodAction = Dispatch.GetRequest().Action;
+		Response.UnderstoodTarget = Dispatch.GetRequest().TargetAssetPath;
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = TEXT("Dry-run capture_world_frames — no render targets written.");
+		Response.Metrics.McpRoundTrips = 1;
+		Response.CapabilityNotes.Add(
+			TEXT("World capture is evidence for human review, not a quality gate (BACKLOG 5.8)."));
+		return Dispatch.Complete(Response);
+	}
+
+	if (!GEditor)
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Dispatch.GetRequest().RequestId, TEXT("GEditor unavailable"));
+	}
+	UWorld* World = GEditor->GetEditorWorldContext().World();
+	if (!World)
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Dispatch.GetRequest().RequestId, TEXT("No editor world"));
+	}
+
+	int32 FrameCount = 2;
+	int32 WarmUpTicks = 30;
+	int32 Width = 1280;
+	int32 Height = 720;
+	if (Dispatch.GetRequest().Specification.IsValid())
+	{
+		const TSharedPtr<FJsonObject>& Spec = Dispatch.GetRequest().Specification;
+		if (Spec->HasField(TEXT("frame_count")))
+		{
+			FrameCount = FMath::Clamp(int32(Spec->GetNumberField(TEXT("frame_count"))), 1, 8);
+		}
+		if (Spec->HasField(TEXT("warm_up_ticks")))
+		{
+			WarmUpTicks = FMath::Clamp(int32(Spec->GetNumberField(TEXT("warm_up_ticks"))), 0, 300);
+		}
+		if (Spec->HasField(TEXT("width")))
+		{
+			Width = FMath::Clamp(int32(Spec->GetNumberField(TEXT("width"))), 64, 3840);
+		}
+		if (Spec->HasField(TEXT("height")))
+		{
+			Height = FMath::Clamp(int32(Spec->GetNumberField(TEXT("height"))), 64, 2160);
+		}
+	}
+
+	ASceneCapture2D* CaptureActor = World->SpawnActor<ASceneCapture2D>();
+	USceneCaptureComponent2D* Capture = CaptureActor ? CaptureActor->GetCaptureComponent2D() : nullptr;
+	UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>();
+	if (!Capture || !RT)
+	{
+		if (CaptureActor)
+		{
+			CaptureActor->Destroy();
+		}
+		return FUeremcpEnvelope::MakeRejection(
+			Dispatch.GetRequest().RequestId, TEXT("Failed to create scene capture"));
+	}
+	RT->InitCustomFormat(Width, Height, PF_B8G8R8A8, false);
+	RT->UpdateResourceImmediate(true);
+	Capture->TextureTarget = RT;
+	Capture->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+	Capture->bCaptureEveryFrame = false;
+	Capture->bCaptureOnMovement = false;
+	CaptureActor->SetActorLocation(FVector(0, -2500, 1200));
+	CaptureActor->SetActorRotation(FRotator(-25, 90, 0));
+
+	for (int32 Tick = 0; Tick < WarmUpTicks; ++Tick)
+	{
+		World->Tick(LEVELTICK_All, SimTickDelta);
+	}
+	FlushRenderingCommands();
+
+	const FString OutDir = FPaths::ProjectSavedDir() / TEXT("UEREMCP") / TEXT("WorldCapture");
+	IFileManager::Get().MakeDirectory(*OutDir, true);
+
+	TArray<TSharedPtr<FJsonValue>> FrameInfos;
+	int32 OkFrames = 0;
+	for (int32 Frame = 0; Frame < FrameCount; ++Frame)
+	{
+		World->Tick(LEVELTICK_All, SimTickDelta);
+		FlushRenderingCommands();
+		Capture->CaptureScene();
+		FlushRenderingCommands();
+
+		FFrameStats Stats;
+		const bool bStats = ReadStats(RT, Stats);
+		const FString Path = OutDir / FString::Printf(TEXT("world_frame_%02d.png"), Frame);
+		UKismetRenderingLibrary::ExportRenderTarget(World, RT, FPaths::GetPath(Path), FPaths::GetCleanFilename(Path));
+		const bool bPng = IsNonEmptyPng(Path);
+		if (bPng)
+		{
+			++OkFrames;
+		}
+		TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
+		Info->SetStringField(TEXT("path"), Path);
+		Info->SetBoolField(TEXT("png_ok"), bPng);
+		if (bStats)
+		{
+			Info->SetNumberField(TEXT("mean_luminance"), Stats.Mean);
+			Info->SetNumberField(TEXT("lit_pixels"), Stats.LitPixels);
+			Info->SetNumberField(TEXT("max_luminance"), Stats.Max);
+		}
+		FrameInfos.Add(MakeShared<FJsonValueObject>(Info));
+	}
+
+	CaptureActor->Destroy();
+
+	FUeremcpResponse Response;
+	Response.RequestId = Dispatch.GetRequest().RequestId;
+	Response.UnderstoodAction = Dispatch.GetRequest().Action;
+	Response.UnderstoodTarget = Dispatch.GetRequest().TargetAssetPath;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = WarmUpTicks + FrameCount;
+	Response.CapabilityNotes.Add(
+		TEXT("capture_world_frames: warm-up ticks + SceneCapture2D pixel stats; not a beauty gate."));
+	if (OkFrames > 0)
+	{
+		Response.Status = TEXT("created_with_warnings");
+		Response.Summary = FString::Printf(
+			TEXT("Captured %d/%d world frames (%dx%d) after %d warm-up ticks"),
+			OkFrames, FrameCount, Width, Height, WarmUpTicks);
+	}
+	else
+	{
+		Response.Status = TEXT("failed_validation");
+		Response.Summary = TEXT("World capture produced no valid PNG frames");
+	}
+	TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+	Extra->SetArrayField(TEXT("frames"), FrameInfos);
+	Extra->SetNumberField(TEXT("warm_up_ticks"), WarmUpTicks);
+	Response.ExtraFields = Extra;
+	return Dispatch.Complete(Response);
+}

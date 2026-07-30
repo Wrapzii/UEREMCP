@@ -1,0 +1,3 @@
+run_id,date,scenario_id,arm,agent,tool_calls_total,tool_calls_failed,retries,mcp_round_trips,internal_operations,tokens_input,tokens_output,tokens_total,wall_clock_seconds,completed,verification_method,failure_mode
+example-001,2026-07-30,T1a-material,baseline,grok-4.5,14,3,3,n/a,n/a,48200,6100,54300,142,true,"re-read material params; confirmed fresnel+hex+2 dynamic params present",""
+example-002,2026-07-30,T1a-material,ueremcp,grok-4.5,1,0,0,1,9,9800,1200,11000,18,true,"re-read via inspect_system-equivalent; response.result matched request",""

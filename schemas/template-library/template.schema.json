@@ -17,7 +17,24 @@
 
     "domain": {
       "type": "string",
-      "enum": ["niagara", "materials", "blueprints", "gameplay", "gameplay_abilities", "animation", "control_rig", "sequencer", "world", "level_design", "pcg", "behavior", "ai", "audio", "networking", "ui", "data_assets", "import_export", "validation", "project", "source_control", "testing", "assets"]
+      "description": "Only domains that ship a UEREMCP module/toolset (or are explicitly provisional). Fictional domains world/level_design/pcg were removed 2026-07-30 (BACKLOG 0.3). Use environment for procedural worlds.",
+      "enum": [
+        "niagara",
+        "materials",
+        "blueprints",
+        "gameplay",
+        "gameplay_abilities",
+        "animation",
+        "control_rig",
+        "templates",
+        "validation",
+        "environment",
+        "audio",
+        "networking",
+        "world_partition",
+        "testing",
+        "assets"
+      ]
     },
 
     "category": { "type": "string", "examples": ["projectile", "explosion", "beam", "aura", "shield", "portal", "impact"] },

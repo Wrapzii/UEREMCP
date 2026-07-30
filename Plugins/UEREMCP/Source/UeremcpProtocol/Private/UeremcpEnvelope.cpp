@@ -557,6 +557,36 @@ FString FUeremcpEnvelope::MakeRejection(const FString& RequestId, const FString&
 	Response.Summary = Reason;
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = 0;
+
+	// Echo the contract on every rejection.
+	//
+	// Agent-facing tools take a single opaque `requestJson` string, so MCP cannot
+	// publish a JSON Schema for the envelope the way it does for Epic's typed
+	// tools. Without this, a rejection is purely subtractive — it says which
+	// field is wrong and never which fields are right — so an agent discovers
+	// the shape one failed round trip at a time, or not at all.
+	//
+	// Measured 2026-07-30: reaching one successful dry-run call took 3 rejections
+	// plus reading three schema files straight from the repo. An agent with no
+	// repo access cannot get there.
+	//
+	// Rides in capability_notes rather than a new envelope field (ADR-0003), and
+	// only on the error path, where per WHY.md payload is nearly free and the
+	// round trip it saves is not.
+	Response.CapabilityNotes.Add(TEXT(
+		"envelope: top-level fields are protocol_version (required), action (required), "
+		"request_id, target, specification, options, mode, project, expected_revision, "
+		"idempotency_key. No others are accepted."));
+	Response.CapabilityNotes.Add(TEXT(
+		"common mistake: dry_run is options.dry_run, NOT top-level."));
+	Response.CapabilityNotes.Add(TEXT(
+		"minimal example: {\"protocol_version\":\"1.0\",\"action\":\"<action>\","
+		"\"target\":{\"asset_path\":\"/Game/__UeremcpTests/Foo\"},"
+		"\"options\":{\"dry_run\":true},\"specification\":{}}"));
+	Response.CapabilityNotes.Add(TEXT(
+		"next: fix the rejected field, or call UeremcpCore.UeremcpReferenceToolset.GetStarted "
+		"then ResolveIntent for a worked request_json."));
+
 	return SerializeResponse(Response);
 }
 

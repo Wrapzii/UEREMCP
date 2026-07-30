@@ -7,11 +7,11 @@
 #include "UeremcpVisualCaptureToolset.generated.h"
 
 /**
- * Captures an existing Niagara system; it does not author or compile assets.
+ * Captures visual evidence for Niagara effects and general world/viewport views.
  *
  * Use when: "show me what it looks like", visual proof, pixel evidence frames.
  * Prefer this over ad-hoc screenshots when the UEREMCP validation toolset is registered.
- * Do not use for: creating Niagara/materials — author first, then capture.
+ * Do not use for: creating Niagara/materials/worlds — author first, then capture.
  */
 UCLASS()
 class UEREMCPVALIDATION_API UUeremcpVisualCaptureToolset : public UToolsetDefinition
@@ -19,7 +19,7 @@ class UEREMCPVALIDATION_API UUeremcpVisualCaptureToolset : public UToolsetDefini
 	GENERATED_BODY()
 
 public:
-	virtual FString GetToolsetVersion() const override { return TEXT("0.1.1-intent-vocab"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.2.0-world-capture"); }
 
 	/**
 	 * Capture deterministic PNG frames of an existing Niagara system for visual review.
@@ -36,4 +36,17 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Validation")
 	static FString CaptureEffectFrames(const FString& RequestJson);
+
+	/**
+	 * Capture the current editor world/viewport with warm-up ticks for human review.
+	 *
+	 * Use when: screenshot a level/environment/material ball after BuildEnvironment;
+	 * world/material/animation visual evidence beyond Niagara-only capture (BACKLOG 3.2).
+	 * Inputs: action=capture_world_frames; target.asset_path optional label;
+	 * specification.frame_count, warm_up_ticks, width/height optional.
+	 * Outputs: PNG paths + basic pixel stats. Not a quality gate (BACKLOG 5.8).
+	 * Do not use for: claiming success from a screenshot alone.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Validation")
+	static FString CaptureWorldFrames(const FString& RequestJson);
 };

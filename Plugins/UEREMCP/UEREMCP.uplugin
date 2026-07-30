@@ -77,6 +77,12 @@
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"TargetAllowList": [ "Editor" ]
+		},
+		{
+			"Name": "UeremcpEnvironment",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
 		}
 	],
 	"Plugins": [
@@ -98,6 +104,14 @@
 		},
 		{
 			"Name": "EditorToolset",
+			"Enabled": true
+		},
+		{
+			"Name": "Water",
+			"Enabled": true
+		},
+		{
+			"Name": "GeometryScripting",
 			"Enabled": true
 		}
 	]

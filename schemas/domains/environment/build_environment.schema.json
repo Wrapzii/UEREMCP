@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/environment/build_environment.schema.json",
+  "title": "UEREMCP build_environment specification",
+  "description": "Goal-level seeded environment build (BACKLOG Tier 4–5). Extends specification only (ADR-0003).",
+  "type": "object",
+  "required": ["seed"],
+  "additionalProperties": true,
+  "properties": {
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Mandatory determinism seed (BACKLOG 5.4). Pure function of (seed, parameters)."
+    },
+    "destination_level_path": {
+      "type": "string",
+      "description": "Scratch destination under /Game/__UeremcpPoc/ or /Game/__UeremcpTests/."
+    },
+    "fallback_policy": {
+      "type": "string",
+      "enum": ["prefer_real", "allow_approximate"],
+      "default": "prefer_real"
+    },
+    "terrain": {
+      "type": "object",
+      "properties": {
+        "size_x": { "type": "integer", "minimum": 2, "description": "Heightmap verts X; must be N*QuadsPerComponent+1" },
+        "size_y": { "type": "integer", "minimum": 2 },
+        "mountain_amplitude": { "type": "number", "minimum": 0 },
+        "valley_depth": { "type": "number", "minimum": 0 },
+        "scale_xy": { "type": "number", "minimum": 1 },
+        "scale_z": { "type": "number", "minimum": 1 }
+      }
+    },
+    "river": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "number", "minimum": 1 }
+      }
+    },
+    "biome": {
+      "type": "object",
+      "properties": {
+        "forest_bank_width": { "type": "number", "minimum": 1 },
+        "max_foliage_instances": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "mesh_path": { "type": "string", "description": "Static mesh for foliage instances" }
+      }
+    },
+    "weather": {
+      "type": "object",
+      "properties": {
+        "rain_system_path": { "type": "string", "description": "Niagara system for rain" }
+      }
+    },
+    "include": {
+      "type": "object",
+      "properties": {
+        "terrain": { "type": "boolean" },
+        "river": { "type": "boolean" },
+        "forest": { "type": "boolean" },
+        "rain": { "type": "boolean" },
+        "lighting": { "type": "boolean" },
+        "capture": { "type": "boolean" }
+      }
+    }
+  },
+  "examples": [
+    {
+      "seed": 42,
+      "destination_level_path": "/Game/__UeremcpPoc/MountainRiverRain",
+      "terrain": { "mountain_amplitude": 0.55, "valley_depth": 0.12 },
+      "river": { "width": 600 },
+      "biome": { "forest_bank_width": 3500, "max_foliage_instances": 800 },
+      "include": { "terrain": true, "river": true, "forest": true, "rain": true, "lighting": true, "capture": true }
+    }
+  ]
+}

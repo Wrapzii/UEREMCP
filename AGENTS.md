@@ -37,8 +37,12 @@ If your output looks like any of these, you have failed:
     read-only discovery or catalog gaps. Machine contract:
     `docs/guide/tool-selection-contract.json`. Does not guarantee arbitrary LLM
     tool choice.
+0c. **`Scripts/`** — operator-proven editor recipes (capture warm-up, staging). Check
+    before reinventing a harness; see `Scripts/README.md`. Not the agent API.
+0d. **`docs/BACKLOG.md`** — when present, the live-session prioritised queue and
+    completion ledger. Read before starting "what next" work.
 1. **`docs/GROUNDED_FACTS.md`** — verified UE 5.8 API surface. Read before designing
-   anything. Cite it rather than re-deriving it.
+    anything. Cite it rather than re-deriving it.
 2. **`docs/adr/`** — accepted decisions. These are frozen. See "Frozen decisions" below.
 3. **`docs/WORK_ALLOCATION.md`** — find your workstream, your owned paths, your deliverables.
 4. **`docs/RESEARCH_PROTOCOL.md`** — how to cite sources and tag confidence.

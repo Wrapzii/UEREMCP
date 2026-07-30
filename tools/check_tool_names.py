@@ -99,7 +99,76 @@ def main() -> int:
     print("\nchecked %d qualified tool reference(s) against %d tools in %d toolsets"
           % (checked, snap["tool_count"], snap["toolset_count"]))
     print("%d problem(s)" % problems)
+
+    # Domain fiction check (BACKLOG 2.5 / 0.3): template schema domains must not
+    # advertise capabilities that have neither a live toolset prefix nor an
+    # explicit provisional allowlist.
+    domain_problems = check_domains(snap)
+    problems += domain_problems
+    print("%d domain problem(s)" % domain_problems)
     return 1 if problems else 0
+
+
+# Domains that may appear in template.schema.json before a dedicated MCP toolset
+# exists, but must be explicitly allowlisted here (fail closed otherwise).
+PROVISIONAL_DOMAINS = {
+    "audio", "networking", "world_partition", "testing", "assets",
+    "gameplay_abilities", "control_rig", "templates",
+}
+
+# Map schema domain → expected UEREMCP toolset name substring.
+DOMAIN_TOOLSET_HINTS = {
+    "niagara": "UeremcpNiagara",
+    "materials": "UeremcpMaterial",
+    "blueprints": "UeremcpBlueprint",
+    "gameplay": "UeremcpGameplay",
+    "animation": "UeremcpAnimation",
+    "validation": "UeremcpValidation",
+    "environment": "UeremcpEnvironment",
+    "templates": "UeremcpTemplates",
+}
+
+FORBIDDEN_FICTION = {"world", "level_design", "pcg", "behavior", "ai", "ui",
+                     "data_assets", "import_export", "project", "source_control",
+                     "sequencer"}
+
+
+def check_domains(snap) -> int:
+    import pathlib
+    schema_path = pathlib.Path(ROOT) / "schemas" / "template-library" / "template.schema.json"
+    if not schema_path.exists():
+        print("domain check: template.schema.json missing")
+        return 1
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    try:
+        domains = schema["properties"]["domain"]["enum"]
+    except KeyError:
+        print("domain check: cannot find properties.domain.enum")
+        return 1
+
+    toolsets = set(snap.get("toolsets", {}).keys())
+    problems = 0
+    for d in domains:
+        if d in FORBIDDEN_FICTION:
+            print("FICTIONAL DOMAIN still advertised: %s" % d)
+            problems += 1
+            continue
+        hint = DOMAIN_TOOLSET_HINTS.get(d)
+        if hint and any(hint in ts for ts in toolsets):
+            continue
+        if d in PROVISIONAL_DOMAINS:
+            continue
+        if hint:
+            # New domains may land in source before the registry snapshot is
+            # refreshed. Fail closed only on FORBIDDEN fiction above; treat
+            # missing snapshot coverage as a warning so CI can update via
+            # dump_tool_registry.py after editor rebuild.
+            print("WARNING: DOMAIN WITHOUT LIVE TOOLSET in snapshot: %s (expected ~%s) — refresh snapshot after deploy"
+                  % (d, hint))
+            continue
+        print("DOMAIN UNMAPPED: %s — add to DOMAIN_TOOLSET_HINTS or PROVISIONAL_DOMAINS" % d)
+        problems += 1
+    return problems
 
 
 if __name__ == "__main__":
