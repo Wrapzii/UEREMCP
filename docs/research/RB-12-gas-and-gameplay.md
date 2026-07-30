@@ -1,11 +1,11 @@
 # RB-12: Gameplay Ability System and player-system authoring
 
 - **Owner:** WS-09
-- **Status:** complete (research); `create_spell` preflight implemented, mutation gated
-- **Blocks:** POC D DataTable mutation/re-read and cross-domain execution
+- **Status:** complete (research); POC D `create_spell` + `execute_plan` handler landed on `ws-09-poc-d-create-spell`; live editor run blocked on RE junction
+- **Blocks:** live multi-domain VFX+spell batch against RE (junction + WS-07/08 runtime)
 - **Priority:** medium-high
 - **Last updated:** 2026-07-30
-- **Worktree:** `$UEREMCP_ROOT-ws09` @ `ws-09-gameplay`
+- **Worktree:** `$UEREMCP_ROOT-poc-d` @ `ws-09-poc-d-create-spell`
 
 ## Framing
 
@@ -404,36 +404,32 @@ agent-facing actions. Internal templates (WS-15) may specialize defaults by elem
 
 ## Implementation status (2026-07-30)
 
-WS-01 accepted the RE-native POC D reinterpretation and Phase 1 exited. WS-09
-implemented the largest independently executable owned slice:
+WS-01 accepted the RE-native POC D reinterpretation. On integration tip
+`5235698` + branch `ws-09-poc-d-create-spell`, WS-09 owns:
 
-- `schemas/domains/gameplay/create_spell.schema.json`;
-- deterministic specification-to-`FREAbilityDef` row planning;
-- static Pattern B validation;
-- an envelope-shaped `AICallable` `CreateSpell` preflight;
-- strict optional-field type/bounds validation;
-- deterministic guarded DataTable write planning without mutation;
-- complete dry-run response evidence (empty changes, null write checks, rollback
-  not performed, execution trace);
-- schema/local-header drift tests and C++ automation tests.
+- `schemas/domains/gameplay/create_spell.schema.json` + POC D fixtures;
+- deterministic specification-to-`FREAbilityDef` row planning + Pattern B checks;
+- sandboxed DataTable upsert/save/re-read via `FUeremcpAbilityTableMutator`;
+- non-dry admission through `FUeremcpMutatingDispatch` (ADR-0010);
+- `FUeremcpGameplayPlanHandlers` registering `create_spell` with
+  `FUeremcpPlanExecutor` for `execute_plan`;
+- automation covering plan registration, depends_on/`$ref`, live upsert-via-plan,
+  and rollback-on-failure;
+- honest claim: `docs/proposals/ws-09-poc-d-acceptance-claim.md`.
 
-The preflight returns `partially_completed` and performs no mutation. Two upstream
-gates are recorded precisely in
-`docs/proposals/ws-09-gameplay-runtime-gates.md`: WS-03 must register the module in
-`UEREMCP.uplugin`, and WS-12 must implement the ADR-0010 single-mutator queue.
-The attempted shipping build did not reach WS-09 code because the current upstream
-plugin graph first failed on `UeremcpMaterial.Build.cs` referencing an unknown
-module `Editor` `[VERIFIED-RUNTIME: Build.bat REEditor -Module=UeremcpGameplay,
-2026-07-30]`.
+Live RE editor proof is blocked while
+`RE/Plugins/UEREMCP` junctions to `UEREMCP-ws01` (do not steal without
+coordination). Exact NullRHI commands are in the acceptance claim.
 
 | Step | Work | Depends |
 |---|---|---|
 | P0 | Land proposals: POC D reshape, tag concurrency, cue↔VFX contract, audit rows | WS-01/02/05/07 |
 | P1 | `schemas/domains/gameplay/` — `create_spell`; **no** `create_gameplay_ability` | **implemented** |
-| P2a | `UeremcpGameplay` toolset + deterministic row plan + static validation | **implemented (preflight)** |
-| P2b | DataTable row upsert, save, re-read, conflict/no-op handling | WS-03 module registration + WS-12 mutator queue |
-| P3 | Batch with WS-07/WS-08 artifacts under `/Game/__UeremcpTests/`; atomic transaction | WS-05/11 |
-| P4 | Static replication checklist in `validate_ability`; honest statuses | WS-09 |
+| P2a | `UeremcpGameplay` toolset + deterministic row plan + static validation | **implemented** |
+| P2b | DataTable row upsert, save, re-read, conflict/no-op handling | **implemented** (live editor run blocked on RE junction) |
+| P2c | `create_spell` `execute_plan` handler registration | **implemented** |
+| P3 | Batch with WS-07/WS-08 artifacts under `/Game/__UeremcpTests/`; atomic transaction | stub/$ref proven; live VFX batch needs junction |
+| P4 | Static replication checklist in `validate_ability`; honest statuses | **implemented** (Pattern B in create_spell) |
 | P5 | Optional PIE smoke via existing capture pattern; multi-client deferred to RB-14 | WS-11 |
 | P6 | Promote elemental templates to WS-15 only after POC D green | WS-15 |
 
@@ -445,24 +441,24 @@ module `Editor` `[VERIFIED-RUNTIME: Build.bat REEditor -Module=UeremcpGameplay,
 - [x] `schemas/domains/gameplay/create_spell.schema.json`
 - [x] deterministic `FREAbilityDef` row planner + static Pattern B validation
 - [x] offline 40-field `FREAbilityDef` header drift guard + dry-run response golden
-- [x] guarded DataTable write plan (no mutation or success claim)
-- [ ] guarded DataTable row upsert / save / re-read — upstream gates documented
-- [ ] POC D batch — blocked on guarded mutation and WS-07/WS-08 execution
-- [x] Replication validation checklist — §Q8
+- [x] guarded DataTable write plan
+- [x] guarded DataTable row upsert / save / re-read (+ MutatingDispatch)
+- [x] `create_spell` registered with `FUeremcpPlanExecutor`
+- [x] POC D fixtures + depends_on/`$ref` automation
+- [ ] POC D live editor NullRHI green — blocked on RE `UEREMCP` junction → `UEREMCP-ws01`
+- [x] Replication validation checklist — §Q8 (static; multi-client = WS-11)
 - [x] Cue↔VFX contract drafted for WS-07 — `docs/proposals/ws-09-cue-vfx-contract.md`
 - [x] Montage note for WS-10 — optional; not blocking (proposal cross-link)
 - [x] Gameplay-tag concurrency hazard raised — `docs/proposals/ws-09-tag-concurrency-adr0006.md`
 - [x] Audit row proposal for WS-02 — `docs/proposals/ws-09-audit-gas-toolsets.md`
 - [x] POC D RE-native reshape — `docs/proposals/ws-09-poc-d-re-native.md`
+- [x] Honest acceptance claim — `docs/proposals/ws-09-poc-d-acceptance-claim.md`
 
 ## Open questions / blockers
 
-1. **WS-01:** Accept RE-native POC D (DT row + VFX + validate) vs require Epic GAS
-   assets that RE cannot execute?
-2. **WS-05:** Revise example batch schema / action names for gameplay domain.
-3. **WS-02:** Merge GAS/GameplayTags audit rows from proposal.
-4. **Editor health:** MCP transport flaked; need stable editor for
-   `/Game/__UeremcpTests/` runtime proofs.
-5. **WS-11 / RB-14:** Listen-server automation for D5 "replication validated".
-6. **Production DT policy:** never use delete+recreate seeder from agent tools;
+1. **RE junction:** `RE/Plugins/UEREMCP` → `UEREMCP-ws01`. Coordinate before retargeting to `UEREMCP-poc-d` for NullRHI `UEREMCP.Gameplay` runs.
+2. **WS-01/WS-05:** Revise `schemas/examples/batch-fireball-ability.json` to match `create_spell.schema.json` (element_color, impact/presentation placement, `Burn` not `Burning`).
+3. **WS-11 / RB-14:** Listen-server automation for D5 "replication validated".
+4. **Production DT policy:** never use delete+recreate seeder from agent tools;
    confirm test-table vs namespaced row strategy with project owners.
+5. **`validate_system`:** present in shared example; not a WS-09 action — needs owner.

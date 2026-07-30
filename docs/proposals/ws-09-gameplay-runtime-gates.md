@@ -147,3 +147,7 @@ orchestration lane.
   or DataTable work. Dry-run never reads or writes the store. Disk durability across
   editor restart remains WS-05; row equality still yields `no_change_required` when a
   distinct key is used.
+- **POC D follow-up (2026-07-30):** `create_spell` is now registered with
+  `FUeremcpPlanExecutor`. Live NullRHI proof is documented in
+  `docs/proposals/ws-09-poc-d-acceptance-claim.md` and blocked on the RE plugin
+  junction currently targeting `UEREMCP-ws01`.
