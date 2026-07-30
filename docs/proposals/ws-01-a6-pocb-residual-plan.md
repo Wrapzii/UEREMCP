@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `7cd6c93` (WS-06 complete submit evidence / CompleteRoundTrip scaffolding)
+- **Orch tip at writing:** `13412dd` (WS-08 trail fixes + WS-07 B4 honesty/defaults)
 - **Date:** 2026-07-30
-- **Status:** WS-06 `7cd6c93` (`eded4f8`) lands complete read/replace graph payloads and expanded A1/A2/A5/A8/A10 editor assertions, with handoff `docs/proposals/ws-06-a1-a2-a5-ws11-complete-round-trip.md`. **A1/A2/A5/A9/A10 and overall POC A remain unclaimed** until WS-11 runs CompleteRoundTrip. Fireball B4 still FAIL at 5/6 (`ribbon_trail`).
+- **Status:** Material fixes `a567a3a` (`4f17911`) and `a73bef7` (`6b1b4a0`) landed before Niagara `13412dd` (`799fc94`). Trail FlowMap/defaults and all-requested B4 honesty are ready for fireball re-run. WS-06 CompleteRoundTrip scaffolding remains at `7cd6c93`. **No B4 / POC-B / overall POC-A claim** until WS-11 re-runs fireball and CompleteRoundTrip.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -102,6 +102,9 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Material system-path API | `58036dd` (`81b56e2`) | Provides `ExecuteCreateVfxMaterialForNiagaraSystem` before Niagara call sites |
 | Inline Niagara material co-location fix | `dc4f118` (`60cb3a4`) | Uses system-path resolve/execute APIs; **B4 not yet re-proven** |
 | Direct sprite/ribbon B4 binding fix | `72241c2` (`4e82c68`) | Replaces mismatched `SetRendererData` JSON path with direct bind + UObject re-read; **not yet re-proven** |
+| Trail graph depth-fade/panning fix | `a567a3a` (`4f17911`) | Material-side trail master graph fix; awaiting fireball re-run |
+| Honest master-only partial failure | `a73bef7` (`6b1b4a0`) | Fails honestly when primary MI is absent |
+| FlowMap defaults + all-requested B4 honesty | `13412dd` (`799fc94`) | Injects trail FlowMap and requires every requested role; awaiting fireball re-run |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
 
 ### POC-root allowlist status
@@ -117,9 +120,9 @@ Prior blocker (`docs/proposals/ws-11-pocb-poc-root-blocker.md`): Niagara/Materia
 | # | Criterion (short) | Status vs current evidence | Owner |
 |---|---|---|---|
 | B1 | One MCP request produces the complete effect — no follow-ups | **Still open** — filter is one direct editor tool call, not MCP; live fireball MCP missing | WS-07 + WS-11 |
-| B2 | Materials created or reused; reuse in `result.reused_assets` | Prior manifest/path slice passed on `c87b1db`; latest run lacks the requested `ribbon_trail` MI, so full current fireball proof remains open | WS-08 + WS-07 |
+| B2 | Materials created or reused; reuse in `result.reused_assets` | Trail graph/default and honest failure fixes landed (`a567a3a`, `a73bef7`, `13412dd`); full current fireball proof awaits re-run | WS-08 + WS-07 |
 | B3 | Niagara system exists with all six requested emitters | **Partial scaffolding** — needs fireball acceptance run | WS-07 |
-| B4 | Renderers configured and bound to valid materials | **FAIL on `279f09a`** — 5/6 verified; `ribbon_trail` MI absent/binding failed; aggregate gate dishonestly ignored unresolved role | WS-07 (+ WS-08 if ribbon `create_spec`) |
+| B4 | Renderers configured and bound to valid materials | **Fixes landed, not proven** — FlowMap/defaults + all-requested honesty at `13412dd`; prior run 5/6 | WS-07 + WS-08 |
 | B5 | User params for colour, scale, intensity | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B6 | System compiles; compile genuinely awaited | **Partial scaffolding** — acceptance run missing | WS-07 |
 | B7 | Structural validation: emitters non-empty, renderers bound, no missing DIs | **PASS scaffold** on `825e4f4` only — not overall POC-B | WS-07 |
@@ -136,7 +139,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
 | P0 | Run CompleteRoundTrip after `7cd6c93`; close A1/A2/A5/A9/A10 SKIPs | WS-11 | Scaffold landed; refuse overall POC-A until PASS |
-| P0 | Create/resolve `ribbon_trail` MI, bind/re-read it, and make B4 gate require all requested roles; then re-run | WS-07 (+ WS-08 if `create_spec`) + WS-11 | Latest fireball 5/6; B4 FAIL |
+| P0 | Re-run fireball after Material `a567a3a`/`a73bef7` + Niagara `13412dd` | WS-11 | Fix stack ready; prior fireball 5/6; refuse B4/POC-B |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
 | P1 | Editor-restart survival for POC B assets (B8) and cross-POC E1 | WS-11 | Harness / live restart proof |
 | P1 | Record measured metrics in `docs/reviews/poc-metrics.md` (E7) | WS-11 / WS-14 | WS-01 may scaffold the file when first real numbers exist — **empty metrics file is not a claim** |
