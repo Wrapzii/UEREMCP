@@ -61,7 +61,9 @@
           "renderer_index": { "type": "integer", "minimum": 0 },
           "renderer_class": { "type": "string" },
           "property_values": { "type": "object" },
-          "material_path": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" }
+          "property_values_json": { "type": "string" },
+          "material_path": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+          "material_path_fidelity": { "type": "string" }
         }
       }
     },

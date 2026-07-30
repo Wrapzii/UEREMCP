@@ -34,6 +34,38 @@
     "fidelity_note": "Modules empty: GetEmitterTopology omits ParticleEventScript stacks; placeholder only.",
     "modules": []
   },
+  "emitter_graph_example": {
+    "graph_type": "NiagaraEmitterGraph",
+    "graph_id": "/Game/__UeremcpTests/NS_WS07_Probe::ProbeBurst",
+    "fidelity": {
+      "round_trip_supported": false,
+      "lossy_areas": [
+        "event_handler_stacks",
+        "module_reorder_without_readd",
+        "script_graph_internals",
+        "renderer_material_bindings"
+      ]
+    },
+    "nodes": [
+      {
+        "semantic_type": "niagara_renderer",
+        "semantic_id": "ProbeBurst/Renderer/0",
+        "renderer_index": 0
+      }
+    ],
+    "extensions": {
+      "niagara": {
+        "emitter_name": "ProbeBurst",
+        "renderers": [
+          {
+            "renderer_index": 0,
+            "renderer_class": "/Script/Niagara.NiagaraSpriteRendererProperties",
+            "material_path_fidelity": "extracted_from_property_values_not_validated"
+          }
+        ]
+      }
+    }
+  },
   "module_stack_example": {
     "graph_type": "NiagaraModuleStack",
     "graph_id": "/Game/__UeremcpTests/NS_WS07_Probe::ProbeBurst::ParticleUpdateScript",

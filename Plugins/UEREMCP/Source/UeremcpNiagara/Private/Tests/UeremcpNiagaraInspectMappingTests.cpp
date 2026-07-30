@@ -4,6 +4,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
+#include "NiagaraRendererProperties.h"
 #include "UeremcpNiagaraInspectMapping.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -51,6 +52,36 @@ bool FUeremcpNiagaraEventHandlerPlaceholderTest::RunTest(const FString& Paramete
 	const TArray<TSharedPtr<FJsonValue>>* Modules = nullptr;
 	TestTrue(TEXT("modules array present"), Handler->TryGetArrayField(TEXT("modules"), Modules));
 	TestTrue(TEXT("modules empty (lossy)"), Modules && Modules->Num() == 0);
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraRendererMappingOfflineTest,
+	"UEREMCP.Niagara.Inspect.RendererMappingOffline",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraRendererMappingOfflineTest::RunTest(const FString& Parameters)
+{
+	FNiagaraExt_EmitterTopology Topology;
+	FNiagaraExt_RendererRef RendererRef;
+	RendererRef.RendererIndex = 0;
+	RendererRef.RendererClass = UNiagaraRendererProperties::StaticClass();
+	Topology.Renderers.Add(RendererRef);
+
+	const TArray<TSharedPtr<FJsonValue>> Nodes =
+		FUeremcpNiagaraInspectMapping::BuildRendererGraphNodes(TEXT("ProbeBurst"), Topology);
+	TestEqual(TEXT("one renderer node"), Nodes.Num(), 1);
+
+	const TSharedPtr<FJsonObject> Fidelity =
+		FUeremcpNiagaraInspectMapping::MakeEmitterGraphFidelity(true);
+	const TArray<TSharedPtr<FJsonValue>>* Lossy = nullptr;
+	TestTrue(TEXT("fidelity lossy_areas"), Fidelity->TryGetArrayField(TEXT("lossy_areas"), Lossy));
+	TestTrue(TEXT("includes renderer_material_bindings"), Lossy && Lossy->Num() >= 4);
+
+	const FString MaterialPath = FUeremcpNiagaraInspectMapping::TryExtractMaterialPath(
+		TEXT("{\"Material\":{\"asset_path\":\"/Game/Materials/M_Test\"}}"));
+	TestEqual(TEXT("material path extracted"), MaterialPath, FString(TEXT("/Game/Materials/M_Test")));
 
 	return true;
 }

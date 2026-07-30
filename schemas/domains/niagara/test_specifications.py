@@ -100,6 +100,7 @@ class NiagaraSpecificationTests(unittest.TestCase):
             REPO_ROOT
             / "Plugins/UEREMCP/Source/UeremcpNiagara/Public/UeremcpNiagaraCapabilityNotes.h"
         ).read_text(encoding="utf-8")
+        self.assertIn("renderer_material_bindings", header)
         for area in EXPECTED_LOSSY_AREAS:
             self.assertIn(area, header, f"Capability header must define {area}")
 
@@ -137,6 +138,20 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertEqual(placeholder["script_usage"], "ParticleEventScript")
         self.assertEqual(placeholder["modules"], [])
         self.assertIn("fidelity_note", placeholder)
+
+    def test_emitter_graph_renderer_fixture(self) -> None:
+        fixture = load_fixture("inspect_probe_minimal.json")
+        emitter = fixture["emitter_graph_example"]
+        self.assertEqual(emitter["graph_type"], "NiagaraEmitterGraph")
+        self.assertIn("renderer_material_bindings", emitter["fidelity"]["lossy_areas"])
+
+        nodes = emitter["nodes"]
+        self.assertEqual(nodes[0]["semantic_type"], "niagara_renderer")
+        renderer = emitter["extensions"]["niagara"]["renderers"][0]
+        self.assertEqual(
+            renderer["material_path_fidelity"],
+            "extracted_from_property_values_not_validated",
+        )
 
     def test_round_trip_fixture_expectations(self) -> None:
         fixture = load_fixture("inspect_probe_minimal.json")

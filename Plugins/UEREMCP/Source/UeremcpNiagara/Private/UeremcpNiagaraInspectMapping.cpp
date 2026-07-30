@@ -2,7 +2,12 @@
 
 #include "UeremcpNiagaraInspectMapping.h"
 
+#include "UeremcpNiagaraCapabilityNotes.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
+#include "NiagaraSystem.h"
+
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 namespace
 {
@@ -53,6 +58,172 @@ namespace
 		Tail.TrimStartAndEndInline();
 		return Tail;
 	}
+
+	FString ReadMaterialPathField(const TSharedPtr<FJsonObject>& Object, const TCHAR* FieldName)
+	{
+		if (!Object.IsValid())
+		{
+			return FString();
+		}
+
+		FString Direct;
+		if (Object->TryGetStringField(FieldName, Direct) && !Direct.IsEmpty())
+		{
+			return Direct;
+		}
+
+		const TSharedPtr<FJsonObject>* Nested = nullptr;
+		if (Object->TryGetObjectField(FieldName, Nested) && Nested && Nested->IsValid())
+		{
+			FString AssetPath;
+			if ((*Nested)->TryGetStringField(TEXT("asset_path"), AssetPath))
+			{
+				return AssetPath;
+			}
+			if ((*Nested)->TryGetStringField(TEXT("AssetPath"), AssetPath))
+			{
+				return AssetPath;
+			}
+			if ((*Nested)->TryGetStringField(TEXT("ObjectPath"), AssetPath))
+			{
+				return AssetPath;
+			}
+		}
+
+		return FString();
+	}
+}
+
+TSharedPtr<FJsonObject> FUeremcpNiagaraInspectMapping::MakeEmitterGraphFidelity(bool bHasRenderers)
+{
+	TSharedPtr<FJsonObject> Fidelity = MakeShared<FJsonObject>();
+	Fidelity->SetBoolField(TEXT("round_trip_supported"), false);
+
+	TArray<TSharedPtr<FJsonValue>> Lossy;
+	for (const FString& Area : UeremcpNiagaraCapability::EmitterGraphLossyAreas(bHasRenderers))
+	{
+		Lossy.Add(MakeShared<FJsonValueString>(Area));
+	}
+	Fidelity->SetArrayField(TEXT("lossy_areas"), Lossy);
+	return Fidelity;
+}
+
+FString FUeremcpNiagaraInspectMapping::TryExtractMaterialPath(const FString& PropertyValuesJson)
+{
+	if (PropertyValuesJson.IsEmpty())
+	{
+		return FString();
+	}
+
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(PropertyValuesJson);
+	if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
+	{
+		return FString();
+	}
+
+	static const TCHAR* MaterialFields[] = {
+		TEXT("Material"),
+		TEXT("MaterialOverride"),
+		TEXT("MaterialUserParamBinding"),
+		TEXT("MaterialInterface"),
+	};
+
+	for (const TCHAR* FieldName : MaterialFields)
+	{
+		const FString Path = ReadMaterialPathField(Root, FieldName);
+		if (!Path.IsEmpty())
+		{
+			return Path;
+		}
+	}
+
+	return FString();
+}
+
+TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererExtensionEntries(
+	UNiagaraSystem* System,
+	const FName& EmitterName,
+	const FNiagaraExt_EmitterTopology& Topology,
+	FNiagaraExternalEditContext& Context,
+	int32& InOutInternalOperations,
+	bool& bOutFetchedPropertyValues)
+{
+	TArray<TSharedPtr<FJsonValue>> Renderers;
+	bOutFetchedPropertyValues = false;
+
+	for (const FNiagaraExt_RendererRef& Renderer : Topology.Renderers)
+	{
+		TSharedPtr<FJsonObject> RendererObj = MakeShared<FJsonObject>();
+		RendererObj->SetNumberField(TEXT("renderer_index"), Renderer.RendererIndex);
+		if (Renderer.RendererClass)
+		{
+			RendererObj->SetStringField(TEXT("renderer_class"), Renderer.RendererClass->GetPathName());
+		}
+
+		FNiagaraExt_StackItemReference RendererRef(System, EmitterName);
+		RendererRef.SetRenderer(Renderer.RendererIndex);
+
+		FNiagaraExt_RendererData RendererData;
+		UNiagaraExternalEditUtilities::GetRendererData(RendererRef, RendererData, Context);
+		++InOutInternalOperations;
+		bOutFetchedPropertyValues = true;
+
+		if (!RendererData.PropertyValues.IsEmpty())
+		{
+			TSharedPtr<FJsonObject> ParsedValues;
+			const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(RendererData.PropertyValues);
+			if (FJsonSerializer::Deserialize(Reader, ParsedValues) && ParsedValues.IsValid())
+			{
+				RendererObj->SetObjectField(TEXT("property_values"), ParsedValues);
+			}
+			else
+			{
+				RendererObj->SetStringField(TEXT("property_values_json"), RendererData.PropertyValues);
+			}
+
+			const FString MaterialPath = TryExtractMaterialPath(RendererData.PropertyValues);
+			if (!MaterialPath.IsEmpty())
+			{
+				RendererObj->SetStringField(TEXT("material_path"), MaterialPath);
+				RendererObj->SetStringField(
+					TEXT("material_path_fidelity"),
+					TEXT("extracted_from_property_values_not_validated"));
+			}
+		}
+
+		Renderers.Add(MakeShared<FJsonValueObject>(RendererObj));
+	}
+
+	return Renderers;
+}
+
+TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererGraphNodes(
+	const FString& EmitterName,
+	const FNiagaraExt_EmitterTopology& Topology)
+{
+	TArray<TSharedPtr<FJsonValue>> Nodes;
+
+	for (const FNiagaraExt_RendererRef& Renderer : Topology.Renderers)
+	{
+		TSharedPtr<FJsonObject> Node = MakeShared<FJsonObject>();
+		const FString SemanticId = FString::Printf(
+			TEXT("%s/Renderer/%d"),
+			*EmitterName,
+			Renderer.RendererIndex);
+		Node->SetStringField(TEXT("node_id"), FString::Printf(TEXT("renderer_%s_%d"), *EmitterName, Renderer.RendererIndex));
+		Node->SetStringField(TEXT("semantic_id"), SemanticId);
+		Node->SetStringField(TEXT("semantic_type"), TEXT("niagara_renderer"));
+		Node->SetNumberField(TEXT("renderer_index"), Renderer.RendererIndex);
+		if (Renderer.RendererClass)
+		{
+			Node->SetStringField(TEXT("node_class"), Renderer.RendererClass->GetName());
+			Node->SetStringField(TEXT("title"), Renderer.RendererClass->GetName());
+		}
+		Nodes.Add(MakeShared<FJsonValueObject>(Node));
+	}
+
+	return Nodes;
 }
 
 TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildEventHandlerPlaceholders(

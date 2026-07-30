@@ -38,6 +38,7 @@ struct FUeremcpNiagaraInspectResult
 	int32 InternalOperations = 0;
 	int32 EmitterCount = 0;
 	int32 ModuleCount = 0;
+	int32 RendererCount = 0;
 };
 
 /** Maps Epic Niagara topology into ADR-0004 graph shapes + extensions.niagara. */

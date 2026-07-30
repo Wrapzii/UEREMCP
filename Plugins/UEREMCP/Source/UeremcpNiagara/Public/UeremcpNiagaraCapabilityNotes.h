@@ -13,12 +13,14 @@ namespace UeremcpNiagaraCapability
 	inline const TCHAR* LossyAreaEventHandlerStacks = TEXT("event_handler_stacks");
 	inline const TCHAR* LossyAreaModuleReorder = TEXT("module_reorder_without_readd");
 	inline const TCHAR* LossyAreaScriptGraphInternals = TEXT("script_graph_internals");
+	inline const TCHAR* LossyAreaRendererMaterialBindings = TEXT("renderer_material_bindings");
 
 	/** Human-readable capability_notes for Wave 2 inspect stub and partial responses. */
 	inline TArray<FString> DefaultInspectCapabilityNotes()
 	{
 		return {
 			TEXT("inspect_system reads topology via UNiagaraExternalEditUtilities (Epic NiagaraToolsets composition surface)."),
+			TEXT("GetEmitterTopology supplies renderer refs; GetRendererData propertyValues are mapped to extensions.niagara.renderers[] without material validation (renderer_material_bindings lossy on emitter graphs)."),
 			TEXT("event_handler_stacks: GetEmitterTopology omits ParticleEventScript stacks; extensions.niagara.event_handlers[] holds inferred placeholders from GetStackIssues / compile per_script only."),
 			TEXT("module_reorder_without_readd: no ReorderModule AICallable on NiagaraToolsets; reorder requires remove+re-add or internal MoveModule."),
 			TEXT("script_graph_internals: NiagaraScriptGraph (module/dynamic-input EdGraphs) is out of POC B/C scope."),
@@ -46,5 +48,15 @@ namespace UeremcpNiagaraCapability
 			LossyAreaModuleReorder,
 			LossyAreaScriptGraphInternals,
 		};
+	}
+
+	inline TArray<FString> EmitterGraphLossyAreas(bool bHasRenderers)
+	{
+		TArray<FString> Areas = DefaultFidelityLossyAreas();
+		if (bHasRenderers)
+		{
+			Areas.Add(LossyAreaRendererMaterialBindings);
+		}
+		return Areas;
 	}
 }

@@ -8,6 +8,7 @@
 
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraSystem.h"
+#include "NiagaraRendererProperties.h"
 
 #include "Misc/PackageName.h"
 #include "UObject/SoftObjectPath.h"
@@ -469,7 +470,11 @@ bool FUeremcpNiagaraInspect::Run(
 		EmitterGraph->SetStringField(TEXT("graph_name"), EmitterName);
 		EmitterGraph->SetStringField(TEXT("graph_type"), TEXT("NiagaraEmitterGraph"));
 		EmitterGraph->SetStringField(TEXT("schema_version"), GGraphSchemaVersion);
-		EmitterGraph->SetObjectField(TEXT("fidelity"), MakeFidelityObject());
+
+		const bool bHasRenderers = Spec.bIncludeRenderers && Topology.Renderers.Num() > 0;
+		EmitterGraph->SetObjectField(
+			TEXT("fidelity"),
+			FUeremcpNiagaraInspectMapping::MakeEmitterGraphFidelity(bHasRenderers));
 
 		TArray<FString> StackSubgraphIds;
 		static const FName StackNames[] = {
@@ -520,20 +525,55 @@ bool FUeremcpNiagaraInspect::Run(
 		EmitterExt->SetBoolField(TEXT("bEnabled"), Topology.bEnabled);
 		EmitterExt->SetStringField(TEXT("sim_target"), SimTargetToString(Topology.SimTarget));
 
-		if (Spec.bIncludeRenderers && Topology.Renderers.Num() > 0)
+		if (Topology.RendererClasses.Num() > 0)
 		{
-			TArray<TSharedPtr<FJsonValue>> Renderers;
-			for (const FNiagaraExt_RendererRef& Renderer : Topology.Renderers)
+			TArray<TSharedPtr<FJsonValue>> RendererClasses;
+			for (const TSubclassOf<UNiagaraRendererProperties>& RendererClass : Topology.RendererClasses)
 			{
-				TSharedPtr<FJsonObject> RendererObj = MakeShared<FJsonObject>();
-				RendererObj->SetNumberField(TEXT("renderer_index"), Renderer.RendererIndex);
-				if (Renderer.RendererClass)
+				if (RendererClass)
 				{
-					RendererObj->SetStringField(TEXT("renderer_class"), Renderer.RendererClass->GetPathName());
+					RendererClasses.Add(MakeShared<FJsonValueString>(RendererClass->GetPathName()));
 				}
-				Renderers.Add(MakeShared<FJsonValueObject>(RendererObj));
 			}
-			EmitterExt->SetArrayField(TEXT("renderers"), Renderers);
+			EmitterExt->SetArrayField(TEXT("renderer_classes"), RendererClasses);
+		}
+
+		TArray<TSharedPtr<FJsonValue>> RendererNodes;
+		if (Spec.bIncludeRenderers)
+		{
+			if (Topology.Renderers.Num() > 0)
+			{
+				bool bFetchedRendererData = false;
+				const TArray<TSharedPtr<FJsonValue>> Renderers =
+					FUeremcpNiagaraInspectMapping::BuildRendererExtensionEntries(
+						System,
+						EmitterSummary.EmitterName,
+						Topology,
+						Context,
+						OutResult.InternalOperations,
+						bFetchedRendererData);
+				EmitterExt->SetArrayField(TEXT("renderers"), Renderers);
+				OutResult.RendererCount += Topology.Renderers.Num();
+				OutResult.ChecksPerformed.Add(TEXT("niagara.emitter_renderer_topology"));
+
+				if (bFetchedRendererData)
+				{
+					OutResult.ChecksPerformed.Add(TEXT("niagara.renderer_data"));
+				}
+
+				if (!bOmitNodes)
+				{
+					RendererNodes = FUeremcpNiagaraInspectMapping::BuildRendererGraphNodes(EmitterName, Topology);
+				}
+			}
+			else
+			{
+				EmitterExt->SetArrayField(TEXT("renderers"), TArray<TSharedPtr<FJsonValue>>());
+			}
+		}
+		else
+		{
+			OutResult.ChecksSkipped.Add(TEXT("niagara.emitter_renderers"));
 		}
 
 		FNiagaraExt_EmitterData EmitterData;
@@ -548,6 +588,22 @@ bool FUeremcpNiagaraInspect::Run(
 
 		EmitterExtRoot->SetObjectField(TEXT("niagara"), EmitterExt);
 		EmitterGraph->SetObjectField(TEXT("extensions"), EmitterExtRoot);
+
+		if (!bOmitNodes && RendererNodes.Num() > 0)
+		{
+			EmitterGraph->SetArrayField(TEXT("nodes"), RendererNodes);
+		}
+
+		if (bHasRenderers)
+		{
+			TSharedPtr<FJsonObject> EmitterDiag = MakeShared<FJsonObject>();
+			EmitterDiag->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{
+				MakeShared<FJsonValueString>(
+					TEXT("renderer material_path values are read from GetRendererData propertyValues but not validated or round-tripped (renderer_material_bindings)"))
+			});
+			EmitterGraph->SetObjectField(TEXT("diagnostics"), EmitterDiag);
+		}
+
 		OutResult.Graphs.Add(MakeShared<FJsonValueObject>(EmitterGraph));
 		++OutResult.EmitterCount;
 
@@ -690,10 +746,11 @@ bool FUeremcpNiagaraInspect::Run(
 		FString::Printf(TEXT("%d emitters, %d module nodes"), OutResult.EmitterCount, OutResult.ModuleCount));
 
 	OutResult.Summary = FString::Printf(
-		TEXT("Inspected Niagara system '%s': %d emitter graph(s), %d module stack node(s) via UNiagaraExternalEditUtilities. Event handler stacks remain lossy (extensions.niagara.event_handlers not populated). round_trip_supported=false."),
+		TEXT("Inspected Niagara system '%s': %d emitter graph(s), %d module stack node(s), %d renderer ref(s) via UNiagaraExternalEditUtilities. Event handler stacks and renderer material bindings remain lossy. round_trip_supported=false."),
 		*Summary.SystemName.ToString(),
 		OutResult.EmitterCount,
-		OutResult.ModuleCount);
+		OutResult.ModuleCount,
+		OutResult.RendererCount);
 
 	OutResult.bSuccess = true;
 	OutResult.ChecksPerformed.Add(TEXT("niagara.topology_read"));

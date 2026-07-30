@@ -47,7 +47,7 @@ parameter bindings:
 | Data | Location |
 |---|---|
 | Value modes (local, linked, DI, HLSL, dynamic chain) | `extensions.niagara.inputs[pin_id]` |
-| Renderer `propertyValues` JSON | `extensions.niagara.renderers[]` |
+| Renderer `propertyValues` JSON | `extensions.niagara.renderers[]` (+ optional `material_path`, unvalidated) |
 | Event handler stacks (topology gap) | `extensions.niagara.event_handlers[]` (inferred placeholders from `GetStackIssues` / compile `per_script`; modules empty) |
 | Inheritance metadata | `extensions.niagara.inheritance` |
 | Compile aggregate + per-script | `extensions.niagara.compile` |
@@ -86,6 +86,7 @@ UEREMCP does **not** re-expose NiagaraToolsets' 46 primitives. Internal batching
 | Gap | Severity | Mitigation |
 |---|---|---|
 | Event handler stacks omitted from `GetEmitterTopology` | High | `extensions.niagara.event_handlers[]` inferred placeholders; modules remain lossy |
+| Renderer material paths from `GetRendererData` | Medium | `material_path` best-effort extract; `renderer_material_bindings` on emitter graphs |
 | No `ReorderModule` AICallable | High | remove+re-add or internal `MoveModule` proposal to WS-03 |
 | `CreateNiagaraSystem` requires template | By design | duplicate-and-modify |
 | No headless particle sim | Medium | compile + structure + save; optional place |

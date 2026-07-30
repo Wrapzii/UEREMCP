@@ -66,6 +66,7 @@ bool FUeremcpNiagaraInspectSystemRuntimeTest::RunTest(const FString& Parameters)
 
 	bool bFoundSystemGraph = false;
 	bool bFoundModuleStack = false;
+	bool bFoundRendererOnEmitterGraph = false;
 	for (const TSharedPtr<FJsonValue>& GraphValue : *Graphs)
 	{
 		const TSharedPtr<FJsonObject> Graph = GraphValue->AsObject();
@@ -95,6 +96,50 @@ bool FUeremcpNiagaraInspectSystemRuntimeTest::RunTest(const FString& Parameters)
 		if (GraphType == TEXT("NiagaraModuleStack"))
 		{
 			bFoundModuleStack = true;
+		}
+		if (GraphType == TEXT("NiagaraEmitterGraph"))
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Nodes = nullptr;
+			if (Graph->TryGetArrayField(TEXT("nodes"), Nodes) && Nodes)
+			{
+				for (const TSharedPtr<FJsonValue>& NodeValue : *Nodes)
+				{
+					const TSharedPtr<FJsonObject> Node = NodeValue->AsObject();
+					if (!Node.IsValid())
+					{
+						continue;
+					}
+					FString SemanticType;
+					if (Node->TryGetStringField(TEXT("semantic_type"), SemanticType)
+						&& SemanticType == TEXT("niagara_renderer"))
+					{
+						bFoundRendererOnEmitterGraph = true;
+						break;
+					}
+				}
+			}
+
+			const TSharedPtr<FJsonObject>* Fidelity = nullptr;
+			if (Graph->TryGetObjectField(TEXT("fidelity"), Fidelity) && Fidelity && Fidelity->IsValid())
+			{
+				const TArray<TSharedPtr<FJsonValue>>* Lossy = nullptr;
+				if ((*Fidelity)->TryGetArrayField(TEXT("lossy_areas"), Lossy) && Lossy)
+				{
+					bool bHasRendererLossy = false;
+					for (const TSharedPtr<FJsonValue>& AreaValue : *Lossy)
+					{
+						if (AreaValue->AsString() == TEXT("renderer_material_bindings"))
+						{
+							bHasRendererLossy = true;
+							break;
+						}
+					}
+					if (bFoundRendererOnEmitterGraph)
+					{
+						TestTrue(TEXT("emitter graph lists renderer_material_bindings"), bHasRendererLossy);
+					}
+				}
+			}
 		}
 	}
 
