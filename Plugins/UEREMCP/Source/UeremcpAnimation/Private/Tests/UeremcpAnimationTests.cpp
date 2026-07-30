@@ -8,11 +8,9 @@
 
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimCompositeBase.h"
-#include "Animation/AnimData/IAnimationDataController.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimNotifies/AnimNotify_ResetDynamics.h"
 #include "Animation/AnimNotifies/AnimNotifyState_DisableRootMotion.h"
-#include "Animation/AnimSequence.h"
 #include "Animation/AnimTypes.h"
 #include "Animation/Skeleton.h"
 #include "AnimationGraph.h"
@@ -63,13 +61,11 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 	Montage->SlotAnimTracks.Reset();
 	FSlotAnimationTrack& Slot = Montage->AddSlot(TEXT("UpperBody"));
 
-	UAnimSequence* Sequence = NewObject<UAnimSequence>(GetTransientPackage(), TEXT("A_WS10_Source"));
-	// A transient UAnimSequence has no MovieScene until its sequencer data model is
-	// initialized; FAnimSegment::SetAnimReference immediately queries that model.
-	// [VERIFIED: AnimSequencerController.cpp:2509-2524; AnimCompositeBase.cpp:753-759,785-792]
-	Sequence->GetController().InitializeModel();
+	// Keep the synthetic segment reference null. Creating a transient UAnimSequence
+	// without a skeleton is not a valid shortcut: UE initializes its Sequencer model
+	// through an FKControlRig that requires a target skeleton.
+	// [VERIFIED: AnimSequencerController.cpp:2509-2539]
 	FAnimSegment Segment;
-	Segment.SetAnimReference(Sequence);
 	Segment.StartPos = 0.25f;
 	Segment.AnimStartTime = 0.1f;
 	Segment.AnimEndTime = 0.9f;
@@ -103,7 +99,7 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 	StateEvent.NotifyStateClass = NewObject<UAnimNotifyState_DisableRootMotion>(Montage);
 	// UE creates the state object before assigning duration; GetDuration only
 	// returns EndLink - start time when NotifyStateClass is set.
-	// [VERIFIED: AnimationBlueprintLibrary.cpp:796-826; AnimTypes.cpp:96-105]
+	// [VERIFIED: AnimTypes.h:407-415; AnimationBlueprintLibrary.cpp:796-826; AnimTypes.cpp:96-105]
 	StateEvent.SetDuration(0.3f);
 	Montage->Notifies.Add(StateEvent);
 
@@ -167,7 +163,10 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 				TestEqual(TEXT("state name"), StateObject->GetStringField(TEXT("name")), FString(TEXT("DisableRootMotion")));
 				TestTrue(
 					TEXT("notify state duration"),
-					FMath::IsNearlyEqual(StateObject->GetNumberField(TEXT("duration")), 0.3));
+					FMath::IsNearlyEqual(
+						StateObject->GetNumberField(TEXT("duration")),
+						0.3,
+						UE_KINDA_SMALL_NUMBER));
 				TestTrue(TEXT("state is marked as state"), StateObject->GetBoolField(TEXT("is_state")));
 				TestTrue(
 					TEXT("state concrete class"),
