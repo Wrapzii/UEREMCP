@@ -1,0 +1,32 @@
+{
+  "$comment": "Offline honesty probe: mutating create_vfx_material without validate must stay partially_completed (WS-08).",
+  "action": "create_vfx_material",
+  "request": {
+    "protocol_version": "1.0",
+    "request_id": "ws08-honesty-mutating",
+    "action": "create_vfx_material",
+    "target": {
+      "asset_path": "/Game/__UeremcpTests/Materials/MI_WS08_HonestyMutating"
+    },
+    "specification": {
+      "purpose": "elemental_projectile_core",
+      "element": "fire",
+      "features": [
+        "radial_falloff",
+        "animated_noise",
+        "fresnel",
+        "dynamic_color",
+        "dynamic_intensity"
+      ]
+    },
+    "options": {
+      "dry_run": false,
+      "validate": false
+    }
+  },
+  "expectations": {
+    "honest_status": "partially_completed",
+    "validation_never_claims": ["created_and_validated", "modified_and_validated"],
+    "requires_ws11_runtime_gate": true
+  }
+}

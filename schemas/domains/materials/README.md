@@ -114,6 +114,7 @@ Runtime probes and created assets: **`/Game/__UeremcpTests/Materials/**` only.
 ```bash
 python tools/validate_schemas.py
 python schemas/domains/materials/test_specifications.py
+python schemas/domains/materials/test_plan_handlers.py
 python schemas/domains/materials/test_element_presets.py
 python schemas/domains/materials/test_element_presets_loader.py
 python schemas/domains/materials/test_resources_materials.py
@@ -128,4 +129,5 @@ Editor automation (RE project + compiled plugin):
 
 ```bash
 # WS-11 harness — UeremcpMaterial.Toolset.CreateVfxMaterial.ProjectileCore|ProjectileTrail
+# Plan handler honesty — UEREMCP.Material.PlanHandlers.Registration|AtomicPreflightBlocked|CreateHonestyDryRun
 ```
