@@ -1,0 +1,24 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 17,
+  "cpp_tools": [
+    "AddBody",
+    "AddConstraint",
+    "CreateFromMesh",
+    "GetBodyMassScale",
+    "GetBodyNames",
+    "GetBodyPhysicsMode",
+    "GetBodyShapes",
+    "GetConstraints",
+    "RemoveBody",
+    "RemoveConstraint",
+    "RemoveShape",
+    "SetBodyMassScale",
+    "SetBodyPhysicsMode",
+    "SetBox",
+    "SetCapsule",
+    "SetConstraintLimits",
+    "SetSphere"
+  ]
+}

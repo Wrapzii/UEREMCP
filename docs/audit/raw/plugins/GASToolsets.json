@@ -1,0 +1,21 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 14,
+  "cpp_tools": [
+    "AddCueTag",
+    "CreateCueNotifyAsset",
+    "ExecuteCueOnSelectedActor",
+    "FindAttributeSetClasses",
+    "FindCueNotifyAssets",
+    "FindCueTagsWithoutNotifies",
+    "GetActiveEffects",
+    "GetActiveTags",
+    "GetAttributeValues",
+    "GetCueInfo",
+    "GetGrantedAbilities",
+    "ListAttributes",
+    "ListCues",
+    "RemoveCueTag"
+  ]
+}

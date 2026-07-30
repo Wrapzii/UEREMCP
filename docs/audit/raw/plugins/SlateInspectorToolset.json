@@ -1,0 +1,21 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 14,
+  "cpp_tools": [
+    "Click",
+    "Drag",
+    "FillForm",
+    "Hover",
+    "ListObservers",
+    "Observe",
+    "PressKey",
+    "Screenshot",
+    "SelectOption",
+    "Snapshot",
+    "Type",
+    "Unobserve",
+    "WaitFor",
+    "Windows"
+  ]
+}

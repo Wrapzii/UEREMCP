@@ -1,0 +1,39 @@
+{
+  "audit_date": "2026-07-29",
+  "method_attempted": "MCP runtime enumeration via user-unreal-mcp (list_toolsets, describe_toolset)",
+  "editor_mcp_endpoint": "http://127.0.0.1:8000/mcp",
+  "proxy_endpoint": "http://127.0.0.1:8001/mcp",
+  "findings": [
+    {
+      "call": "user-unreal-mcp.list_toolsets",
+      "attempt_1": {
+        "result": "error",
+        "message": "MCP error -32000: Unreal tools/call queue busy (lock timeout: tools_call.lock)"
+      },
+      "attempt_2": {
+        "result": "error",
+        "message": "MCP error -32000: Unreal MCP transport error: [WinError 10061] No connection could be made because the target machine actively refused it"
+      },
+      "tag": "[VERIFIED-RUNTIME: MCP client error payload 2026-07-29]"
+    },
+    {
+      "call": "user-unreal-watch.check_unreal",
+      "result": "error",
+      "message": "Timed out waiting for connection to unreal-watch MCP scope",
+      "tag": "[VERIFIED-RUNTIME: MCP client timeout 2026-07-29]"
+    },
+    {
+      "call": "HTTP POST 127.0.0.1:8000/mcp tools/list",
+      "result": "error",
+      "message": "Unable to connect to the remote server (port 8000 closed)",
+      "tag": "[VERIFIED-RUNTIME: Test-NetConnection + Invoke-RestMethod 2026-07-29]"
+    },
+    {
+      "call": "HTTP POST 127.0.0.1:8001/mcp tools/list",
+      "result": "error",
+      "message": "Proxy reachable but backend refused: WinError 10061 through proxy to editor MCP",
+      "tag": "[VERIFIED-RUNTIME: Test-NetConnection port 8001 open, 8000 closed; HTTP error 2026-07-29]"
+    }
+  ],
+  "conclusion": "Runtime toolset enumeration and JSON Schema dumps were NOT obtained. Inventory below is from static source scan of UE 5.8 installed headers/Python with line citations. Re-run list_toolsets/describe_toolset when RE editor is up with ModelContextProtocol serving on :8000."
+}

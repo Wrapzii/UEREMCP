@@ -1,0 +1,14 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 7,
+  "cpp_tools": [
+    "GetItems",
+    "GetRegistryInfo",
+    "GetSchema",
+    "ListDataSources",
+    "ListItems",
+    "ListRegistries",
+    "ListRuntimeSources"
+  ]
+}

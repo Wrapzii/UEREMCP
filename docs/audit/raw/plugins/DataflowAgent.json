@@ -1,0 +1,29 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 22,
+  "cpp_tools": [
+    "AddCommentBox",
+    "AddNode",
+    "AddVariable",
+    "AssignDataflowTemplate",
+    "ConnectNodePins",
+    "CreateDataflowCompatibleAsset",
+    "CreateDataflowCompatibleAssetFromTemplate",
+    "CreateGraph",
+    "DisconnectNodePins",
+    "GetGraphStructure",
+    "GetNodeInfo",
+    "GetNodeTypeSchema",
+    "ListDataflowCompatibleAssetTypes",
+    "ListDataflowTemplatesForAssetClass",
+    "ListNodeTypes",
+    "ListVariables",
+    "RemoveCommentBox",
+    "RemoveNode",
+    "RemoveVariable",
+    "RepositionNode",
+    "SetVariable",
+    "UpdateNode"
+  ]
+}

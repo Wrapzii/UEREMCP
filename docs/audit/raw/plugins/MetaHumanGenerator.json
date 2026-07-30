@@ -1,0 +1,18 @@
+{
+  "python_toolset_classes": {
+    "MetaHumanToolset": [
+      "begin_edit",
+      "create",
+      "end_edit",
+      "get_body_shape",
+      "get_eye_color",
+      "get_skin_tone",
+      "set_body_shape",
+      "set_eye_color",
+      "set_skin_tone"
+    ]
+  },
+  "python_tool_count": 9,
+  "cpp_tool_count": 0,
+  "cpp_tools": []
+}

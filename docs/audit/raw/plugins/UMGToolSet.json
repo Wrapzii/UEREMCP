@@ -1,0 +1,30 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 23,
+  "cpp_tools": [
+    "AddUIComponent",
+    "AddWidget",
+    "BindToEventProperty",
+    "CompileWidgetBlueprint",
+    "CreateWidgetBlueprint",
+    "GetNamedSlots",
+    "GetWidgetClassInfo",
+    "GetWidgetDescription",
+    "GetWidgetTreeDepth",
+    "GetWidgets",
+    "ListWidgetBlueprints",
+    "ListWidgetClasses",
+    "MoveUIComponent",
+    "MoveWidget",
+    "RemoveUIComponent",
+    "RemoveWidget",
+    "RenameWidget",
+    "ReplaceWidgetWithChild",
+    "ReplaceWidgetWithNamedSlot",
+    "ReplaceWidgetWithTemplate",
+    "SetNamedSlotContent",
+    "ToggleWidgetAsVariable",
+    "WrapWidgets"
+  ]
+}

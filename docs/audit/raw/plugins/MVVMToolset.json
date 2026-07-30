@@ -1,0 +1,16 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 9,
+  "cpp_tools": [
+    "AddViewModelProperty",
+    "AddViewModelToWidget",
+    "CreateViewBinding",
+    "CreateViewModel",
+    "ListConversionFunctions",
+    "ListViewModels",
+    "ListWidgetViewBindings",
+    "ListWidgetViewModels",
+    "RemoveWidgetViewBinding"
+  ]
+}

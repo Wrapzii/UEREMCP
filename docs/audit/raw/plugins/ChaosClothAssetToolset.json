@@ -1,0 +1,13 @@
+{
+  "python_toolset_classes": {},
+  "python_tool_count": 0,
+  "cpp_tool_count": 6,
+  "cpp_tools": [
+    "AssignClothingToSection",
+    "ConvertClothingAssetCommonToChaosClothAsset",
+    "CreateClothingAsset",
+    "GetSectionClothing",
+    "ListClothingAssets",
+    "RemoveClothingFromSection"
+  ]
+}
