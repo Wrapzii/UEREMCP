@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -23,22 +24,24 @@ METRIC_FIELDS = (
     "primitive_call_equivalent",
 )
 POC_A_CRITERIA = tuple(f"A{index}" for index in range(1, 12))
+POC_B_CRITERIA = tuple(f"B{index}" for index in range(1, 11))
 
 
 def extract_last_evidence(log_text: str) -> dict[str, Any] | None:
     """Return the last syntactically valid evidence object in a log."""
     evidence = None
-    for line in log_text.splitlines():
-        marker_at = line.find(MARKER)
-        if marker_at < 0:
-            continue
-        candidate = line[marker_at + len(MARKER) :].strip()
+    decoder = json.JSONDecoder()
+    search_at = 0
+    while (marker_at := log_text.find(MARKER, search_at)) >= 0:
+        candidate = log_text[marker_at + len(MARKER) :].lstrip()
         try:
-            parsed = json.loads(candidate)
+            parsed, _ = decoder.raw_decode(candidate)
         except json.JSONDecodeError:
+            search_at = marker_at + len(MARKER)
             continue
         if isinstance(parsed, dict):
             evidence = parsed
+        search_at = marker_at + len(MARKER)
     return evidence
 
 
@@ -125,11 +128,60 @@ def validate_evidence(
     return errors
 
 
+def validate_poc_b_bundle(bundle: Any) -> list[str]:
+    """Validate a criterion-indexed POC-B evidence summary."""
+    errors: list[str] = []
+    if not isinstance(bundle, dict):
+        return ["bundle must be an object"]
+    if bundle.get("schema_version") != 1:
+        errors.append("schema_version must be 1")
+    if bundle.get("scenario") != "poc_b":
+        errors.append("scenario must be 'poc_b'")
+    if bundle.get("overall_poc_b_claimed") is not False:
+        errors.append("overall_poc_b_claimed must be false")
+    tested_tip = bundle.get("tested_tip_sha")
+    if not isinstance(tested_tip, str) or not re.fullmatch(r"[0-9a-f]{40}", tested_tip):
+        errors.append("tested_tip_sha must be a full lowercase Git SHA")
+    if not isinstance(bundle.get("generated_at_utc"), str):
+        errors.append("generated_at_utc is required")
+
+    criteria = bundle.get("criteria")
+    if not isinstance(criteria, dict):
+        return errors + ["criteria object is required"]
+    for name in POC_B_CRITERIA:
+        criterion = criteria.get(name)
+        if not isinstance(criterion, dict):
+            errors.append(f"{name} object is required")
+            continue
+        if criterion.get("status") not in {"pass", "fail", "skip"}:
+            errors.append(f"{name}.status must be pass, fail, or skip")
+        evidence = criterion.get("evidence")
+        if not isinstance(evidence, list) or not evidence:
+            errors.append(f"{name}.evidence must be a non-empty array")
+        elif any(
+            not isinstance(item, dict)
+            or not isinstance(item.get("path"), str)
+            or not item["path"]
+            for item in evidence
+        ):
+            errors.append(f"{name}.evidence entries require path")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--scenario", required=True)
-    parser.add_argument("--log", type=Path, required=True)
+    parser.add_argument("--scenario")
+    parser.add_argument("--log", type=Path)
+    parser.add_argument("--bundle", type=Path)
     args = parser.parse_args()
+
+    if args.bundle:
+        bundle = json.loads(args.bundle.read_text(encoding="utf-8-sig"))
+        errors = validate_poc_b_bundle(bundle)
+        print(json.dumps({"valid": not errors, "errors": errors}, separators=(",", ":")))
+        return 0 if not errors else 1
+    if not args.scenario or not args.log:
+        parser.error("--scenario and --log are required unless --bundle is used")
 
     evidence = extract_last_evidence(args.log.read_text(encoding="utf-8", errors="replace"))
     errors = validate_evidence(evidence, args.scenario)

@@ -55,6 +55,22 @@ class EvidenceExtractionTest(unittest.TestCase):
             "last",
         )
 
+    def test_pretty_printed_multiline_marker_is_extracted(self):
+        log = "\n".join(
+            (
+                "prefix UEREMCP_POC_EVIDENCE={",
+                '  "run_id": "restart",',
+                '  "outcome": "pass",',
+                '  "checkpoint": {"id": "cp-1"}',
+                "}",
+                "ordinary trailing log line",
+            )
+        )
+        self.assertEqual(
+            poc_evidence.extract_last_evidence(log)["checkpoint"]["id"],
+            "cp-1",
+        )
+
     def test_missing_marker_returns_none(self):
         self.assertIsNone(poc_evidence.extract_last_evidence("ordinary log line"))
 
@@ -141,6 +157,38 @@ class B8EvidenceTest(unittest.TestCase):
         self.assertIn("$createId -ne $verifyId", runner)
         self.assertIn("restart verify checkpoint does not match create phase", runner)
         self.assertNotIn("retarget", runner.lower())
+
+
+class PocBBundleTest(unittest.TestCase):
+    def test_complete_honest_bundle_passes_with_transport_skip(self):
+        bundle = {
+            "schema_version": 1,
+            "scenario": "poc_b",
+            "tested_tip_sha": "a" * 40,
+            "generated_at_utc": "2026-07-30T14:05:00Z",
+            "overall_poc_b_claimed": False,
+            "criteria": {
+                f"B{index}": {
+                    "status": "skip" if index == 1 else "pass",
+                    "evidence": [{"path": f"tests/evidence/b{index}.log"}],
+                }
+                for index in range(1, 11)
+            },
+        }
+        self.assertEqual(poc_evidence.validate_poc_b_bundle(bundle), [])
+
+    def test_bundle_rejects_missing_criterion_and_overall_claim(self):
+        bundle = {
+            "schema_version": 1,
+            "scenario": "poc_b",
+            "tested_tip_sha": "b" * 40,
+            "generated_at_utc": "2026-07-30T14:05:00Z",
+            "overall_poc_b_claimed": True,
+            "criteria": {},
+        }
+        errors = poc_evidence.validate_poc_b_bundle(bundle)
+        self.assertIn("overall_poc_b_claimed must be false", errors)
+        self.assertIn("B10 object is required", errors)
 
 
 if __name__ == "__main__":
