@@ -627,7 +627,9 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 		|| QuerySet.Contains(TEXT("alive")) || QuerySet.Contains(TEXT("probe"));
 	for (int32 i = 0; i < Docs.Num(); ++i)
 	{
-		if ((Docs[i].Tool.Equals(TEXT("Ping")) || Docs[i].Tool.Equals(TEXT("Echo"))) && !bAllowProbeTools)
+		if ((Docs[i].Tool.Equals(TEXT("Ping")) || Docs[i].Tool.Equals(TEXT("Echo"))
+			|| Docs[i].Tool.Equals(TEXT("GetStarted")) || Docs[i].Tool.Equals(TEXT("ResolveIntent"))
+			|| Docs[i].Tool.Equals(TEXT("DescribeOperation"))) && !bAllowProbeTools)
 		{
 			continue;
 		}

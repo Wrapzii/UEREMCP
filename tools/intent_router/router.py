@@ -70,7 +70,7 @@ PLAN_ALLOW_PREFIXES = (
 )
 
 # Never recommend these as goal routes (reachability/protocol probes only).
-ROUTE_EXCLUDE_TOOLS = {"Ping", "Echo"}
+ROUTE_EXCLUDE_TOOLS = {"Ping", "Echo", "GetStarted", "ResolveIntent", "DescribeOperation"}
 
 DOMAIN_ANCHORS = {
     "niagara", "material", "blueprint", "montage", "anim", "spell", "helix", "capture",
