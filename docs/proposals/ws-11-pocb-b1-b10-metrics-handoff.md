@@ -1,7 +1,7 @@
 # WS-11 handoff: POC B transport, visible render, and metrics
 
-**Status:** B1/B6 closed; B10 harness pending orch build; metrics incomplete  
-**Observed orch tips:** `29b4b06`, `d07f8f1`  
+**Status:** B1/B6 closed; metrics evidence advanced but incomplete  
+**Observed orch tips:** `29b4b06`, `d07f8f1`, `cd08c64`  
 **Owners requested:** WS-14 (metrics record)
 
 ## Update after `d07f8f1`
@@ -28,69 +28,88 @@ operations, but not total tokens or wall-clock time, and the equivalent primitiv
 workflow/count has not been measured. WS-14 still owns
 `docs/reviews/poc-metrics.md`.
 
-## B1 transport result
+## Successful transport evidence
 
-WS-11 started the real RE editor with the orch junction unchanged, confirmed the
-UEREMCP Niagara toolset over Streamable HTTP MCP, and issued exactly one
-`CreateNiagaraEffect` tool call. The request used:
+The successful run used one `CreateNiagaraEffect` call with all six components,
+all six inline material specifications, and `compile`, `validate`, and `save`
+enabled. Its structured response records:
 
-- request id `ws11-poc-b1-mcp-29b4b06`
-- target `/Game/__UeremcpPoc/NS_POCB_Fireball_MCP`
-- all six roles (`core`, `flame_shell`, `sparks`, `smoke`, `ribbon_trail`,
-  `impact_burst`)
-- all six inline material specifications
-- `compile`, `validate`, and `save` enabled
+- `metrics.mcp_round_trips = 1`
+- `metrics.internal_operations = 46`
+- `poc_b_gates.B1_single_request_complete = true`
+- `poc_b_gates.B6_compile_awaited = true`
+- six material assets in `result.reused_assets`
 
-The editor crashed before returning an MCP response:
+The editor log records dispatch at `2026-07-30 11:14:53.492` and completion of
+the final synchronous content-validation record at `11:14:55.811`. The observed
+server-side interval is therefore **2.319 seconds**. This is a reproducible lower
+bound, not wall-clock completion: the log has no response-write marker and the
+calling harness did not retain a client start/end timestamp. It must not be copied
+into `wall_clock_seconds`.
 
-```text
-Assertion failed: IsValid()
-FUeremcpNiagaraCreate::Run()
-UeremcpNiagaraCreate.cpp:589
-UUeremcpNiagaraToolset::CreateNiagaraEffect()
-```
+Evidence:
+`$UEREMCP_LEGACY_PROJECT/Saved/Logs/RE-backup-2026.07.30-11.18.22.log`,
+lines 3034-3075. [VERIFIED-RUNTIME: one-call MCP run on orch `d07f8f1`]
 
-Editor log:
-`$UEREMCP_LEGACY_PROJECT/Saved/Logs/RE.log`,
-timestamps `2026-07-30 10:52:14` through `10:52:22`.
+## Token applicability
 
-The failing line calls `AwaitCompile(System, Context, TimeoutSeconds,
-CompileState)`. [VERIFIED:
-Plugins/UEREMCP/Source/UeremcpNiagara/Private/UeremcpNiagaraCreate.cpp:585-590]
+The run was issued through Cursor's MCP caller, which did not expose per-call
+agent usage. Consequently:
 
-**Result:** B1 FAIL. A real one-request MCP transport call was made, but no
-structured response was returned. The successful editor automation filter is not
-a substitute for this criterion.
+- total input/output tokens are **unavailable**, not zero;
+- `wire_bytes / 4` from the historical REAgentTools harness is only an estimated
+  payload-token proxy, not total agent tokens;
+- the response body size cannot recover prompt, cache-read, retry, or surrounding
+  session usage after the fact.
 
-### WS-07 request
+A token result requires a fresh isolated trial using an agent harness that reports
+input and output usage for the complete goal. If that facility remains unavailable,
+WS-14 should record `unavailable (harness does not expose usage)` rather than a
+number. [VERIFIED:
+`REAgentTools/Docs/BENCHMARK_REPORT.md:6-15`]
 
-Fix or guard the invalid shared pointer reached by the MCP-dispatched compile-await
-path, then ask WS-11 to repeat the same one-call request. The rerun must retain
-`compile:true`, `validate:true`, and `save:true`; disabling validation is not an
-acceptable POC result.
+## Equivalent primitive baseline: negative finding
 
-## B10 visible-render status
+No measured fireball-equivalent primitive baseline exists in
+`REAgentTools/Docs/benchmark_ab_live.json`. Its measured scenarios are actor spawn
+and batch movement only. The Niagara guidance recommends one
+`ProgrammaticToolset.execute_tool_script` for system authoring, so its single MCP
+round trip is a batch container and is not a measured primitive-operation count.
+[VERIFIED:
+`REAgentTools/Docs/NIAGARA_BATCHING.md:1-18`]
 
-No executable visible-render validation was produced in this run. Existing
-structural/material/compile/restart gates establish B2-B9, but do not establish
-that the placed system visibly renders as a fireball. A screenshot by itself is
-supplementary evidence and cannot close B10.
+Do not substitute any of these as the POC B baseline:
 
-### WS-07 request
+- the owner-reported approximately `5:1` general efficiency;
+- UEREMCP's `46` internal operations;
+- a hand-count inferred from six emitters or materials;
+- REAgentTools' one script call.
 
-Define and implement the domain-owned runtime placement/render validation needed
-for B10. WS-11 can then own the editor automation wrapper and evidence extraction.
-The handoff should identify the machine-checkable condition that accompanies any
-screenshot (for example, the domain-approved runtime/render observation); WS-11
-must not invent that condition from screenshots.
+### Reproducible baseline handoff
+
+WS-14 needs a fresh baseline trial against the same starting state and acceptance
+checks as the UEREMCP run:
+
+1. Reset `/Game/__UeremcpPoc/NS_POCB_Fireball_Baseline` and its generated
+   dependencies.
+2. Use only pre-UEREMCP Epic/REAgentTools tools.
+3. Build the same six roles and six material specifications, expose colour, scale,
+   and intensity, await compile, save, then re-read for structural verification.
+4. Count every primitive operation executed inside any programmatic batch as well
+   as every MCP round trip; retain failures and retries.
+5. Capture client monotonic start/end time and the harness-reported total token
+   usage.
+6. Repeat at least three trials from clean state and preserve raw per-call records.
+
+WS-07 must identify the exact Epic primitive/tool sequence because Niagara domain
+ownership is required to establish semantic equivalence. WS-11 can execute and
+validate the trials once that sequence and a token-reporting harness are available.
 
 ## Metrics status
 
-POC B metrics are not recordable from this attempt because the transport operation
-crashed without returning a response. The acceptance contract requires measured
-`mcp_round_trips`, `internal_operations`, total tokens, wall-clock time, and an
-equivalent primitive-call count. [VERIFIED:
-docs/POC_ACCEPTANCE.md:17-25]
+The acceptance contract requires measured `mcp_round_trips`,
+`internal_operations`, total tokens, wall-clock time, and an equivalent
+primitive-call count. [VERIFIED: docs/POC_ACCEPTANCE.md:17-25]
 
 The editor-only B8 evidence reported `mcp_round_trips: 1`,
 `internal_operations: 10`, `tokens_total: 0`, and
@@ -99,16 +118,18 @@ not a successful B1 create, and must not be reused as POC B creation metrics.
 
 ### WS-14 request
 
-After B1 and B10 pass, record the measured POC B values in
-`docs/reviews/poc-metrics.md` and document the equivalent primitive workflow used
-for the baseline comparison. The repository's current general baseline is the
-owner-reported approximately 5:1 REAgentTools efficiency, not a measured fireball
-primitive count. [VERIFIED: docs/WHY.md:14-17]
+Create `docs/reviews/poc-metrics.md` with only the two measured values above and
+the 2.319-second server-side lower bound clearly separated from wall-clock time.
+Leave total tokens, wall-clock time, and primitive baseline open until the
+instrumented trials above run. WS-14 owns `docs/reviews/**`, so WS-11 does not edit
+that path. [VERIFIED: docs/WORK_ALLOCATION.md:34-41]
 
 ## Honest completion status
 
-- B1: **FAIL** — editor crash, no MCP response
-- B10: **OPEN** — no machine-checkable visible-render proof
-- POC B metrics: **BLOCKED** — successful transport timing/operation counts and
-  primitive baseline unavailable
+- B1/B6: **PASS** — one call, compile genuinely awaited
+- measured metrics: `mcp_round_trips=1`, `internal_operations=46`
+- timing evidence: **2.319-second server-side lower bound only**
+- total tokens: **OPEN** — caller exposed no usage; not zero
+- wall-clock time: **OPEN** — client timestamps were not captured
+- primitive baseline: **OPEN** — no equivalent measured Niagara scenario exists
 - Overall POC B: **NOT CLAIMED**
