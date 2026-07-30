@@ -435,7 +435,8 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
 
-	if (SubmittedHash.Equals(Current.ContentHash, ESearchCase::CaseSensitive))
+	if (SubmittedHash.Equals(Current.ContentHash, ESearchCase::CaseSensitive)
+		&& !FUeremcpBlueprintGraphWriter::WriteIntentDiffers(SubmittedGraph, Current.Graph))
 	{
 		Response.Status = TEXT("no_change_required");
 		Response.Summary = FString::Printf(

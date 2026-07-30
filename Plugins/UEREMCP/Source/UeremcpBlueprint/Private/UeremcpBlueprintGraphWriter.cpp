@@ -500,6 +500,32 @@ bool FUeremcpBlueprintGraphWriter::ResolveWriteDsl(
 		OutError);
 }
 
+bool FUeremcpBlueprintGraphWriter::WriteIntentDiffers(
+	const TSharedPtr<FJsonObject>& SubmittedGraph,
+	const TSharedPtr<FJsonObject>& CurrentGraph)
+{
+	if (!SubmittedGraph.IsValid() || !CurrentGraph.IsValid())
+	{
+		return true;
+	}
+
+	auto ResolveDsl = [](const TSharedPtr<FJsonObject>& Graph, FString& OutDsl) -> bool
+	{
+		FString Error;
+		TArray<FString> LossyNotes;
+		return ResolveWriteDsl(Graph, OutDsl, LossyNotes, Error) && !OutDsl.IsEmpty();
+	};
+
+	FString SubmittedDsl;
+	FString CurrentDsl;
+	if (!ResolveDsl(SubmittedGraph, SubmittedDsl) || !ResolveDsl(CurrentGraph, CurrentDsl))
+	{
+		return true;
+	}
+
+	return !SubmittedDsl.Equals(CurrentDsl, ESearchCase::CaseSensitive);
+}
+
 bool FUeremcpBlueprintGraphWriter::ReplaceGraph(
 	UBlueprint* Blueprint,
 	const TSharedPtr<FJsonObject>& SubmittedGraph,

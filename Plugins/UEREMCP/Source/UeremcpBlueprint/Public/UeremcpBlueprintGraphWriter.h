@@ -51,6 +51,11 @@ public:
 		TArray<FString>& OutLossyNotes,
 		FString& OutError);
 
+	/** True when resolved DSL differs; extensions.blueprint.dsl is part of write intent. */
+	static bool WriteIntentDiffers(
+		const TSharedPtr<FJsonObject>& SubmittedGraph,
+		const TSharedPtr<FJsonObject>& CurrentGraph);
+
 	static bool ReplaceGraph(
 		UBlueprint* Blueprint,
 		const TSharedPtr<FJsonObject>& SubmittedGraph,
