@@ -61,10 +61,16 @@ validation tests and failed with C1083:
 `UeremcpValidation` `[VERIFIED-RUNTIME: full REEditor UBT build on 2026-07-30]`.
 
 Owner: **WS-11**, because the failing consumer and its module rules are under
-`Plugins/UEREMCP/Source/UeremcpValidation/**`. Requested fix: declare the
-required `UeremcpCore` dependency/include visibility in
-`UeremcpValidation.Build.cs`, then rebuild `UeremcpValidation` and the full
-target. WS-01 does not edit that foreign-owned build rule.
+`Plugins/UEREMCP/Source/UeremcpValidation/**`. WS-11 commit `623e19e`
+(integrated as `072400a`) added `UeremcpCore`, which exposed the next required
+public dependency: `UeremcpMutatingDispatch.h` includes
+`UeremcpSecurityTypes.h`, but Validation cannot resolve it. The targeted
+`UeremcpValidation` rebuild still exits `6` with C1083
+`[VERIFIED-RUNTIME: targeted UeremcpValidation UBT build on 2026-07-30]`.
+
+Requested residual fix: declare the required `UeremcpSecurity` dependency/include
+visibility in `UeremcpValidation.Build.cs`, then rebuild `UeremcpValidation` and
+the full target. WS-01 does not edit that foreign-owned build rule.
 
 ## Integration consequence
 
