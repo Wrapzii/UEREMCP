@@ -1,10 +1,10 @@
 # RB-12: Gameplay Ability System and player-system authoring
 
 - **Owner:** WS-09
-- **Status:** complete (research); Phase 4 implementation **not authorized**
-- **Blocks:** POC D (batched gameplay ability) — design gate only until Wave 3
+- **Status:** complete (research); `create_spell` preflight implemented, mutation gated
+- **Blocks:** POC D DataTable mutation/re-read and cross-domain execution
 - **Priority:** medium-high
-- **Last updated:** 2026-07-29
+- **Last updated:** 2026-07-30
 - **Worktree:** `$UEREMCP_ROOT-ws09` @ `ws-09-gameplay`
 
 ## Framing
@@ -402,15 +402,32 @@ agent-facing actions. Internal templates (WS-15) may specialize defaults by elem
 9. **REAgentTools `get_plugin_project_notes` understates combat tooling** (claims no
    ability tools while `pie_cast_and_capture` exists).
 
-## Conditional implementation plan (Phase 4 — not this run)
+## Implementation status (2026-07-30)
 
-**Gate:** Wave 3 + WS-01 acceptance of RE-native POC D reinterpretation.
+WS-01 accepted the RE-native POC D reinterpretation and Phase 1 exited. WS-09
+implemented the largest independently executable owned slice:
+
+- `schemas/domains/gameplay/create_spell.schema.json`;
+- deterministic specification-to-`FREAbilityDef` row planning;
+- static Pattern B validation;
+- an envelope-shaped `AICallable` `CreateSpell` preflight;
+- schema and C++ automation tests.
+
+The preflight returns `partially_completed` and performs no mutation. Two upstream
+gates are recorded precisely in
+`docs/proposals/ws-09-gameplay-runtime-gates.md`: WS-03 must register the module in
+`UEREMCP.uplugin`, and WS-12 must implement the ADR-0010 single-mutator queue.
+The attempted shipping build did not reach WS-09 code because the current upstream
+plugin graph first failed on `UeremcpMaterial.Build.cs` referencing an unknown
+module `Editor` `[VERIFIED-RUNTIME: Build.bat REEditor -Module=UeremcpGameplay,
+2026-07-30]`.
 
 | Step | Work | Depends |
 |---|---|---|
 | P0 | Land proposals: POC D reshape, tag concurrency, cue↔VFX contract, audit rows | WS-01/02/05/07 |
-| P1 | `schemas/domains/gameplay/` — `create_spell`, `upsert_ability_row`, `validate_ability` only; **no** `create_gameplay_ability` unless dual-mode ADR | WS-09 + WS-05 review |
-| P2 | `UeremcpGameplay` toolset: deterministic path derivation; DataTable row upsert via Epic `DataTableTools` or C++ equivalent; dry_run default for deletes | WS-03 plugin base |
+| P1 | `schemas/domains/gameplay/` — `create_spell`; **no** `create_gameplay_ability` | **implemented** |
+| P2a | `UeremcpGameplay` toolset + deterministic row plan + static validation | **implemented (preflight)** |
+| P2b | DataTable row upsert, save, re-read, conflict/no-op handling | WS-03 module registration + WS-12 mutator queue |
 | P3 | Batch with WS-07/WS-08 artifacts under `/Game/__UeremcpTests/`; atomic transaction | WS-05/11 |
 | P4 | Static replication checklist in `validate_ability`; honest statuses | WS-09 |
 | P5 | Optional PIE smoke via existing capture pattern; multi-client deferred to RB-14 | WS-11 |
@@ -421,8 +438,10 @@ agent-facing actions. Internal templates (WS-15) may specialize defaults by elem
 ## Deliverables checklist
 
 - [x] Written description of RE's actual ability architecture (this brief §Q1)
-- [ ] `schemas/domains/gameplay/` — **deferred** (Phase 4; not authorized this run)
-- [ ] POC D batch — **deferred** (blocked on Wave 3 + proposal acceptance)
+- [x] `schemas/domains/gameplay/create_spell.schema.json`
+- [x] deterministic `FREAbilityDef` row planner + static Pattern B validation
+- [ ] guarded DataTable row upsert / save / re-read — upstream gates documented
+- [ ] POC D batch — blocked on guarded mutation and WS-07/WS-08 execution
 - [x] Replication validation checklist — §Q8
 - [x] Cue↔VFX contract drafted for WS-07 — `docs/proposals/ws-09-cue-vfx-contract.md`
 - [x] Montage note for WS-10 — optional; not blocking (proposal cross-link)

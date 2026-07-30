@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/gameplay/create_spell.schema.json",
+  "title": "create_spell specification",
+  "description": "RE-native goal-level spell specification. Produces one FREAbilityDef DataTable row and references presentation assets created by other domain operations. It does not create Epic GAS GameplayAbility or GameplayEffect assets. Owned by WS-09.",
+  "type": "object",
+  "required": [
+    "row_name",
+    "element",
+    "element_color",
+    "delivery",
+    "networking"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Player-facing display name. Defaults to row_name."
+    },
+    "row_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+      "description": "Stable DataTable row name and FREAbilityDef.AbilityId. Never auto-suffixed."
+    },
+    "element": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "RE spell school, such as Fire, Frost, Storm, Nature, Arcane, or Holy. Open for project extensions."
+    },
+    "line_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+      "description": "Family grouping. Defaults deterministically to lowercase element."
+    },
+    "element_color": {
+      "$ref": "../../common/defs.schema.json#/$defs/linearColor"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["S", "M", "L", "XL"],
+      "default": "S",
+      "description": "RE recipe role: Bolt, Sigil, Field, or Ritual."
+    },
+    "wheel": {
+      "type": "string",
+      "enum": ["Q", "E", ""],
+      "default": "Q"
+    },
+    "circle_tier": {
+      "type": "string",
+      "enum": [
+        "circle_hand",
+        "circle_personal",
+        "circle_body",
+        "circle_ground",
+        "circle_arena"
+      ],
+      "default": "circle_hand"
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cast_time_sec": { "type": "number", "minimum": 0, "default": 0 },
+        "cooldown_sec": { "type": "number", "minimum": 0, "default": 0.5 },
+        "stamina_cost": { "type": "number", "minimum": 0, "default": 10 },
+        "duration_sec": { "type": "number", "minimum": 0, "default": 0 }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["projectile", "ground_target", "self_cast", "channel_beam"]
+        },
+        "speed": { "type": "number", "minimum": 0, "default": 3200 },
+        "range": { "type": "number", "minimum": 0, "default": 3000 },
+        "projectile_radius": { "type": "number", "minimum": 0, "default": 18 },
+        "gravity_scale": { "type": "number", "default": 0 },
+        "homing": { "type": "number", "minimum": 0, "maximum": 1, "default": 0 },
+        "spawn_entity": {
+          "type": "string",
+          "enum": ["", "spell_wall", "spell_field"],
+          "default": ""
+        },
+        "entity_length_cm": { "type": "number", "minimum": 50, "default": 800 },
+        "entity_thickness_cm": { "type": "number", "minimum": 20, "default": 60 },
+        "entity_height_cm": { "type": "number", "minimum": 50, "default": 300 }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "damage": { "type": "number", "minimum": 0, "default": 12 },
+        "aoe_radius": { "type": "number", "minimum": 0, "default": 0 },
+        "status": {
+          "type": "string",
+          "enum": ["None", "Freeze", "ChillSlow", "Burn", "Stagger", "Shock", "Root", "Bleed"],
+          "default": "None"
+        },
+        "status_duration": { "type": "number", "minimum": 0, "default": 0 },
+        "escalate_to": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+        }
+      }
+    },
+    "effect_tag": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "RE FName effect identifier. This is not a GameplayTag and does not mutate gameplay-tag INI files."
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cast_effect": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "projectile_effect": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "impact_effect": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "circle_material": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "vfx_definition": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "circle_diameter_cm": { "type": "number", "exclusiveMinimum": 0, "default": 60 },
+        "audio_cast": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "audio_travel": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "audio_impact": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+        "audio_fail": { "$ref": "../../common/defs.schema.json#/$defs/assetPath" }
+      }
+    },
+    "progression": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "unlock_skill_node": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+        },
+        "min_classification": {
+          "type": "string",
+          "minLength": 1,
+          "description": "EREClassificationBand enumerator name. Runtime reflection validates the project-specific value."
+        }
+      }
+    },
+    "networking": {
+      "type": "object",
+      "required": ["pattern", "authority", "cast_path"],
+      "additionalProperties": false,
+      "properties": {
+        "pattern": { "const": "B" },
+        "authority": { "const": "server" },
+        "cast_path": { "const": "AuthorityCastAbility" }
+      },
+      "description": "Declaration checked against RE Pattern B. It does not create or modify RPCs."
+    }
+  },
+  "examples": [
+    {
+      "name": "Fireball UEREMCP",
+      "row_name": "Fireball_Ueremcp",
+      "element": "Fire",
+      "element_color": [1.0, 0.12, 0.01, 1.0],
+      "tier": "S",
+      "wheel": "Q",
+      "timing": {
+        "cooldown_sec": 1.25,
+        "stamina_cost": 15
+      },
+      "delivery": {
+        "type": "projectile",
+        "speed": 2400,
+        "range": 3200,
+        "projectile_radius": 24
+      },
+      "impact": {
+        "damage": 45,
+        "aoe_radius": 175,
+        "status": "Burn",
+        "status_duration": 3
+      },
+      "presentation": {
+        "projectile_effect": "/Game/__UeremcpTests/VFX/Spells/NS_Fireball",
+        "impact_effect": "/Game/__UeremcpTests/VFX/Spells/NS_Fireball_Impact"
+      },
+      "networking": {
+        "pattern": "B",
+        "authority": "server",
+        "cast_path": "AuthorityCastAbility"
+      }
+    }
+  ]
+}
