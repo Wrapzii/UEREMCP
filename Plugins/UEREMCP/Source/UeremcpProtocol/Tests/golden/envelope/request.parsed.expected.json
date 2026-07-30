@@ -7,6 +7,7 @@
   "engine_version": "5.8",
   "dry_run": false,
   "atomic": true,
+  "allow_destructive": true,
   "response_detail": "summary",
   "timeout_ms": 120000,
   "has_expected_revision": false,

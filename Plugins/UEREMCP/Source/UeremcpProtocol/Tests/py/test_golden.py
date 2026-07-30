@@ -56,6 +56,7 @@ class GoldenVectorTests(unittest.TestCase):
             "engine_version": parsed["engine_version"],
             "dry_run": parsed["dry_run"],
             "atomic": parsed["atomic"],
+            "allow_destructive": parsed["allow_destructive"],
             "response_detail": parsed["response_detail"],
             "timeout_ms": parsed["timeout_ms"],
             "has_expected_revision": parsed["has_expected_revision"],

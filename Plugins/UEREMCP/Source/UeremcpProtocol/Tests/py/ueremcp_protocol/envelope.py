@@ -70,6 +70,7 @@ _OPTIONS_ALLOWED = frozenset(
         "timeout_ms",
         "on_revision_conflict",
         "continue_on_error",
+        "allow_destructive",
     }
 )
 
@@ -131,6 +132,7 @@ def parse_request(json_text: str) -> dict[str, Any]:
         "timeout_ms": 0,
         "on_revision_conflict": "reject",
         "continue_on_error": False,
+        "allow_destructive": False,
         "expected_revision": None,
         "has_expected_revision": False,
         "idempotency_key": "",
@@ -180,6 +182,7 @@ def parse_request(json_text: str) -> dict[str, Any]:
             ("validate", True),
             ("save", True),
             ("continue_on_error", False),
+            ("allow_destructive", False),
         ):
             out[key] = bool(options[key]) if key in options else default
         if "response_detail" in options:

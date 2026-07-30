@@ -68,6 +68,8 @@ struct UEREMCPPROTOCOL_API FUeremcpRequest
 	bool bValidate = true;
 	bool bSave = true;
 	FString ResponseDetail = TEXT("summary");
+	/** ADR-0010 destructive-tier request opt-in. */
+	bool bAllowDestructive = false;
 
 	/**
 	 * ADR-0009: 0 / omitted → complete inline on MCP SSE.

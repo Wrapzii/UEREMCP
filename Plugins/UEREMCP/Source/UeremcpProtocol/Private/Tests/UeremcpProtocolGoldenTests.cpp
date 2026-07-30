@@ -258,6 +258,10 @@ bool FUeremcpProtocolGoldenEnvelope::RunTest(const FString& Parameters)
 	TestEqual(TEXT("engine_version"), Request.EngineVersion, ExpectedParsed->GetStringField(TEXT("engine_version")));
 	TestEqual(TEXT("dry_run"), Request.bDryRun, ExpectedParsed->GetBoolField(TEXT("dry_run")));
 	TestEqual(TEXT("atomic"), Request.bAtomic, ExpectedParsed->GetBoolField(TEXT("atomic")));
+	TestEqual(
+		TEXT("allow_destructive"),
+		Request.bAllowDestructive,
+		ExpectedParsed->GetBoolField(TEXT("allow_destructive")));
 	TestEqual(TEXT("response_detail"), Request.ResponseDetail, ExpectedParsed->GetStringField(TEXT("response_detail")));
 	TestEqual(TEXT("timeout_ms"), Request.TimeoutMs, static_cast<int32>(ExpectedParsed->GetNumberField(TEXT("timeout_ms"))));
 	TestEqual(TEXT("has_expected_revision"), Request.bHasExpectedRevision, ExpectedParsed->GetBoolField(TEXT("has_expected_revision")));

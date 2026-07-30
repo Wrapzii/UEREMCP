@@ -282,7 +282,7 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		static const TSet<FString> OptAllowed = {
 			TEXT("dry_run"), TEXT("atomic"), TEXT("rollback_on_failure"), TEXT("compile"),
 			TEXT("validate"), TEXT("save"), TEXT("response_detail"), TEXT("timeout_ms"),
-			TEXT("on_revision_conflict"), TEXT("continue_on_error")
+			TEXT("on_revision_conflict"), TEXT("continue_on_error"), TEXT("allow_destructive")
 		};
 		for (const auto& Pair : Options->Values)
 		{
@@ -300,6 +300,7 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		SetBoolDefault(Options, TEXT("validate"), true, OutRequest.bValidate);
 		SetBoolDefault(Options, TEXT("save"), true, OutRequest.bSave);
 		SetBoolDefault(Options, TEXT("continue_on_error"), false, OutRequest.bContinueOnError);
+		SetBoolDefault(Options, TEXT("allow_destructive"), false, OutRequest.bAllowDestructive);
 
 		if (Options->HasField(TEXT("response_detail")))
 		{
