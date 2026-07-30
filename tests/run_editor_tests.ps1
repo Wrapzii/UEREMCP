@@ -31,6 +31,7 @@ param(
     [string]$EnablePlugins = "UeremcpValidationProbe",
     [string]$DisablePlugins = "UEREMCP",
     [string]$PocBScaffold = "",
+    [string]$PocBMaterials = "",
     [string[]]$ExtraArgs = @(),
     [switch]$KeepUeremcp,
     [switch]$NoProbe
@@ -81,6 +82,9 @@ if ($effectiveDisable) {
 if ($PocBScaffold) {
     $argList.Add("-UeremcpPocBScaffold=`"$PocBScaffold`"")
 }
+if ($PocBMaterials) {
+    $argList.Add("-UeremcpPocBMaterials=`"$PocBMaterials`"")
+}
 foreach ($extraArg in $ExtraArgs) {
     if ($extraArg) {
         $argList.Add($extraArg)
@@ -93,7 +97,7 @@ Write-Host "Exit code: $($proc.ExitCode)"
 # Surface automation summary lines for agents that cannot open the full log.
 if (Test-Path $LogFile) {
     Write-Host "---- automation result lines ----"
-    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|SKIP:|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|UEREMCP\.Transport|UEREMCP\.Niagara\.Inspect|UeremcpMaterial\.Toolset|created_and_validated|Sandbox\.Library|Automation Test Queue|UEREMCP_POC_B_GATE_OUTCOME" |
+    Select-String -Path $LogFile -Pattern "Test Completed|FAIL|SUCCESS|SKIP:|Error:|Q1 |Q3 |Rollback\.MultiAssetDiscard|UEREMCP\.Validation|UEREMCP\.Transport|UEREMCP\.Niagara\.Inspect|UeremcpMaterial\.Toolset|created_and_validated|Sandbox\.Library|Automation Test Queue|UEREMCP_POC_B_GATE_OUTCOME|UEREMCP_POC_B_FIREBALL_OUTCOME" |
         Select-Object -Last 80 |
         ForEach-Object { $_.Line }
 }
