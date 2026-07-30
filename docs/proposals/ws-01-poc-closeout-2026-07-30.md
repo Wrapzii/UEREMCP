@@ -12,7 +12,7 @@
 | Question | Answer |
 |---|---|
 | **POC-complete?** | **Yes** — POC A–E claimed under frozen `docs/POC_ACCEPTANCE.md` wording, with previously scoped E3/E4 Niagara/Material domain gates now live-gated. |
-| **Production-ready?** | **No** — B10 warm-pixel / visual perfection residuals, optional D5 multi-client, Epic MCP cancel unwired, metrics cells often `unavailable`, protocol CurveFloat idempotency harness currently flaky, and broader project surfaces remain partial. |
+| **Production-ready?** | **No** — see hardening consolidation (`ws-01-hardening-consolidation-2026-07-30.md`). D5 multi-client + B10 warm-pixel + CurveFloat flake + durable idempotency + cooperative `cancel_job` closed after this closeout; Epic MCP `notifications/cancelled` remains an immutable adapter limitation; metrics cells often `unavailable`; broader surfaces remain partial. |
 
 ## Finished in this closeout
 
@@ -34,14 +34,20 @@
 
 ## Explicit residuals (not silent)
 
-| Residual | Disposition |
-|---|---|
-| **D5 multi-client** | **Optional / deferred** under accepted POC D wording. No reliable unattended PIE/net harness; do not invent proof. |
-| **Epic MCP `notifications/cancelled` → AICallable** | **Blocked** by Epic ToolsetRegistry adapter (no `CancelAsync` override). Use UEREMCP `cancel_job`. `[VERIFIED: ADR-0009; RB-04; UeremcpJobConstraints.cpp]` |
-| **B10 warm pixels / production visibility** | Residual visual/metrics quality — does not reopen structural POC B claim text already on tip. |
-| **`UEREMCP.Validation.Idempotency.RepeatedCreate` (CurveFloat harness)** | **Failing on this tip** (`created_and_validated` ×3; store replay not observed). Domain Niagara/Material/Blueprint E3 gates **PASS**. Treat protocol harness as residual flake/regression separate from domain closeout. |
-| **Idempotency across editor restart** | Still session-scoped store; not claimed persistent (prior residual). |
-| **Scratch / `__UeremcpPoc` cleanup** | Left in place (E1 durability evidence). Suite cleanup API: `UeremcpCleanupScratchSuite` under `/Game/__UeremcpTests/` only. Never auto-delete POC or user assets. |
+> **Supersession (2026-07-30 hardening):** D5 multi-client, B10 warm-pixel, CurveFloat
+> harness flake, and durable restart idempotency are **CLOSED** on the hardening
+> consolidation tip — see `ws-01-hardening-consolidation-2026-07-30.md` and the
+> WS-04/WS-05/WS-11 closeout proposals. Rows below retain historical disposition for
+> this closeout tip; do not treat them as still-open on `main` after that consolidation.
+
+| Residual | Disposition (this closeout tip) | Post-hardening |
+|---|---|---|
+| **D5 multi-client** | **Optional / deferred** under accepted POC D wording. No reliable unattended PIE/net harness; do not invent proof. | **CLOSED (live)** — `UEREMCP.Validation.Gameplay.PatternB.MultiClientPIE` |
+| **Epic MCP `notifications/cancelled` → AICallable** | **Blocked** by Epic ToolsetRegistry adapter (no `CancelAsync` override). Use UEREMCP `cancel_job`. `[VERIFIED: ADR-0009; RB-04; UeremcpJobConstraints.cpp]` | **Still open / immutable** — cooperative `cancel_job` verified; protocol cancel remains unwired |
+| **B10 warm pixels / production visibility** | Residual visual/metrics quality — does not reopen structural POC B claim text already on tip. | **CLOSED (live rendered)** — `UEREMCP.Niagara.POCB.VisibleRender`; production visual perfection across all scenes still not claimed |
+| **`UEREMCP.Validation.Idempotency.RepeatedCreate` (CurveFloat harness)** | **Failing on this tip** (`created_and_validated` ×3; store replay not observed). Domain Niagara/Material/Blueprint E3 gates **PASS**. Treat protocol harness as residual flake/regression separate from domain closeout. | **CLOSED** — isolated memory store + durable Claim/Complete |
+| **Idempotency across editor restart** | Still session-scoped store; not claimed persistent (prior residual). | **CLOSED for `execute_plan`** — durable store + restart Create/Verify pair; crash/migration caveats remain |
+| **Scratch / `__UeremcpPoc` cleanup** | Left in place (E1 durability evidence). Suite cleanup API: `UeremcpCleanupScratchSuite` under `/Game/__UeremcpTests/` only. Never auto-delete POC or user assets. | Unchanged |
 
 ## Exact commands / evidence
 

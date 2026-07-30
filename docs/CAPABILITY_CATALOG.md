@@ -5,9 +5,11 @@
 The registry of every agent-facing `action`. An action that is not listed here does not
 exist as far as agents are concerned.
 
-**Freshness:** 2026-07-30 — post POC A–E closeout
-(`docs/proposals/ws-01-poc-closeout-2026-07-30.md`). Overall POC A–E claimed under
-accepted criteria. **Not production-ready.**
+**Freshness:** 2026-07-30 — post production-hardening consolidation
+(`docs/proposals/ws-01-hardening-consolidation-2026-07-30.md`). Overall POC A–E
+claimed; D5 multi-client and B10 rendered warm-pixel proofs closed live. **Not
+production-ready** — Epic MCP cancel adapter limitation and durable-idempotency
+crash/migration caveats remain.
 
 ## How to register an action
 
@@ -39,8 +41,8 @@ grouping on top of it rather than replacing it (ADR-0002).
 | `get_schema` | project | planned | |
 | `get_examples` | project | planned | |
 | `get_project_capabilities` | project | planned | |
-| `get_job_result` | project | partial | Registered on `UeremcpReferenceToolset`; ADR-0009 poll path. Transport timeout/cancel SKIP residuals remain (audit P1). |
-| `cancel_job` | project | partial | Registered on `UeremcpReferenceToolset`; cooperative cancel. Same ADR-0009 residuals. |
+| `get_job_result` | project | available | Registered on `UeremcpReferenceToolset`; ADR-0009 process-local poll path. Timeout behaviour remains domain-adoption dependent. |
+| `cancel_job` | project | available | Cooperative cancel for jobs that advertise `cancellable: true`; editor-verified via `UEREMCP.Transport.JobRegistry.Cancel`. **Not** Epic MCP `notifications/cancelled` — ToolsetRegistry adapter has no `CancelAsync` override (immutable UE 5.8 limitation). |
 
 ## Actions
 
@@ -66,7 +68,7 @@ names below are the semantic actions; notes map to the live tool surface.
 
 | Action | Domain | WS | Status | Notes |
 |---|---|---|---|---|
-| `execute_plan` | project | WS-05 / WS-03 | partial | Agent-facing `UUeremcpReferenceToolset::ExecutePlan` (`AICallable`) delegates to `FUeremcpPlanActions` / `FUeremcpPlanExecutor` (`fc98fbc` / `bd9b2ba`). Templates also bind the executor internally. Still partial: RE/MCP smoke and real domain-handler plan run not yet recorded on this tip. |
+| `execute_plan` | project | WS-05 / WS-03 | partial | Agent-facing `UUeremcpReferenceToolset::ExecutePlan` (`AICallable`) delegates to `FUeremcpPlanActions` / `FUeremcpPlanExecutor`. Durable Claim/Complete idempotency under `Saved/UEREMCP/idempotency` (fingerprint-bound; restart replay verified). Still partial: metadata+package are not one atomic transaction; crash-after-mutation leaves a reclaimable in-progress claim; legacy `Put`/`TryGetReplay` call sites lack fingerprint conflict detection until migrated. |
 | `validate_asset` | validation | WS-11 | planned | |
 | `validate_system` | validation | WS-11 | planned | |
 
@@ -75,7 +77,7 @@ names below are the semantic actions; notes map to the live tool surface.
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
 | `inspect_system` | niagara | WS-07 | partial | RB-07 — AICallable registered; editor Inspect filter PASS on recorded tips; topology intentionally lossy |
-| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — POC B structural create live; ADR-0006 repeated-create + stale `expected_revision` gated (`UEREMCP.Validation.Domain.Niagara.*`); MutatingDispatch wired. B10 warm-pixel / production visibility remains a residual — do not claim visual perfection. |
+| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — POC B structural create live; ADR-0006 repeated-create + stale `expected_revision` gated (`UEREMCP.Validation.Domain.Niagara.*`); MutatingDispatch wired. B10 rendered warm-pixel / particle gate PASS via `UEREMCP.Niagara.POCB.VisibleRender` — do not equate that with production visual perfection across all scenes/hardware. |
 | `create_niagara_template` | niagara | WS-07 | partial | POC C variation path landed via create + Templates; see POC C claim docs |
 | `create_effect_variation` | niagara | WS-07 | partial | POC C ice/wind variation + C7 third generation claimed |
 
@@ -93,7 +95,7 @@ names below are the semantic actions; notes map to the live tool surface.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_spell` | gameplay | WS-09 | partial | RB-12 — live `execute_plan` / upsert under `/Game/__UeremcpTests/`; POC D MET under accepted D5 static Pattern B wording; multi-client optional/deferred |
+| `create_spell` | gameplay | WS-09 | partial | RB-12 — live `execute_plan` / upsert under `/Game/__UeremcpTests/`; POC D MET; D5 static Pattern B minimum plus live multi-client listen-server proof via `tests/run_d5_multiclient.ps1` (`UEREMCP.Validation.Gameplay.PatternB.MultiClientPIE`) |
 | `create_gameplay_ability` | gameplay_abilities | WS-09 | research | RB-12 — textbook GAS out of RE POC D scope |
 | `create_gameplay_effect` | gameplay_abilities | WS-09 | research | RB-12 |
 | `create_player_ability` | gameplay | WS-09 | planned | RB-12 |

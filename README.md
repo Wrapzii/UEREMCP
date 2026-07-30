@@ -8,10 +8,12 @@ request, and receives **one** validated structured response with a complete chan
 manifest. Instead of several hundred primitive editor calls.
 
 > **Status: POC A–E claimed on local tip (2026-07-30).** Goal-level create/inspect
-> surfaces are implemented and live-verified under NullRHI against the RE project.
-> This is **POC-complete, not production-ready** — see
-> `docs/proposals/ws-01-poc-closeout-2026-07-30.md` for residuals (B10 warm pixels,
-> D5 multi-client optional, Epic MCP cancel unwired, metrics gaps).
+> surfaces are implemented and live-verified against the RE project. This is
+> **POC-complete, not production-ready** — see
+> `docs/proposals/ws-01-hardening-consolidation-2026-07-30.md`. Closed live: D5
+> multi-client, B10 rendered warm-pixel gate, cooperative `cancel_job`, durable
+> idempotency Claim/Complete. Remaining: Epic MCP `notifications/cancelled`
+> adapter limitation, durable-idempotency crash/migration caveats, metrics gaps.
 
 ## The problem
 

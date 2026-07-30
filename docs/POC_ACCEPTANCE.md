@@ -80,7 +80,7 @@ Request: the fireball specification in `schemas/envelope/request.schema.json`'s 
 | B7 | Structural validation passes: emitters non-empty, renderers bound, no missing data interfaces |
 | B8 | Assets are saved and survive an editor restart |
 | B9 | One structured response with a complete change manifest |
-| B10 | It visibly renders as a fireball when placed — screenshot as **supplementary** evidence only, never as the validation itself |
+| B10 | It visibly renders as a fireball when placed — programmatic warm-pixel / particle gate is the PASS criterion (`UEREMCP.Niagara.POCB.VisibleRender`); screenshot is **supplementary** evidence only, never the validation itself `[VERIFIED-RUNTIME: tests/run_poc_b10_visible_render.ps1]` |
 
 ---
 
@@ -126,7 +126,7 @@ Elemental variants (fire/frost/storm/nature/…) share **one** parameterized
 | D2 | Operations execute in dependency order derived from `depends_on` |
 | D3 | `$ref` substitution correctly passes earlier results into later operations |
 | D4 | RE identity fields are set (`Element` / `EffectTag` / `ImpactStatus` as applicable). Gameplay-tag INI mutation is **not** required for RE POC D |
-| D5 | Replication follows RE Pattern B: static checklist + optional `pie_cast_and_capture`; multi-client net proof is RB-14 / WS-11, not a silent skip |
+| D5 | Replication follows RE Pattern B: static checklist is the minimum acceptance bar; optional `pie_cast_and_capture` remains available. Live multi-client listen-server proof ships as `UEREMCP.Validation.Gameplay.PatternB.MultiClientPIE` (`tests/run_d5_multiclient.ps1`) with machine JSON evidence — not a silent skip `[VERIFIED-RUNTIME: tests/integration/_artifacts/d5_pattern_b_multiclient.json]` |
 | D6 | Everything compiles and saves; DataTable row is re-readable and matches the request |
 | D7 | A deliberately failed operation triggers rollback; no partial test assets remain |
 | D8 | One consolidated response with per-operation results |
