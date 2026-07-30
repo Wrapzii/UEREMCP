@@ -9,7 +9,7 @@
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceConstant.h"
-#include "Misc/ScopedTransaction.h"
+#include "ScopedTransaction.h"
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UeremcpMaterialCapabilityNotes.h"
 #include "UeremcpMaterialElementPresets.h"
