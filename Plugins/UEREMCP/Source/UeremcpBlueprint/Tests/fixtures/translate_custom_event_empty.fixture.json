@@ -1,0 +1,27 @@
+{
+  "$comment": "Custom event with empty exec body — translator golden.",
+  "asset_path": "/Game/__UeremcpTests/Blueprint_Translate/BP_CustomEvent_Scratch.BP_CustomEvent_Scratch",
+  "graph_id": "EventGraph",
+  "graph_type": "BlueprintEventGraph",
+  "schema_version": "1.0",
+  "entry_points": ["n_custom"],
+  "nodes": [
+    {
+      "node_id": "n_custom",
+      "semantic_type": "custom_event:UeremcpProbeEvent",
+      "node_class": "K2Node_CustomEvent",
+      "properties": { "type_id": "AddEvent|Custom|UeremcpProbeEvent" },
+      "input_pins": [],
+      "output_pins": [
+        {
+          "pin_id": "p_then",
+          "name": "then",
+          "direction": "output",
+          "pin_type": { "category": "exec", "container": "none" },
+          "links": []
+        }
+      ]
+    }
+  ],
+  "links": []
+}

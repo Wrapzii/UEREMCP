@@ -1,0 +1,6 @@
+{
+  "$comment": "read_graph specification payload (offline domain schema gate).",
+  "graph_id": "EventGraph",
+  "include_dsl": true,
+  "response_detail_hint": "complete"
+}

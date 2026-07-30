@@ -101,6 +101,14 @@ class GraphJsonToDslTests(unittest.TestCase):
         self.assertIn("(if ", dsl)
         self.assertEqual(lossy, [])
 
+    def test_custom_event_empty_body_matches_golden(self) -> None:
+        graph = load_fixture("translate_custom_event_empty.fixture.json")
+        dsl, _lossy = translate_graph_json_to_dsl(graph)
+        self.assertEqual(
+            dsl.strip() + "\n",
+            load_golden_dsl("translate_custom_event_empty.golden.dsl"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

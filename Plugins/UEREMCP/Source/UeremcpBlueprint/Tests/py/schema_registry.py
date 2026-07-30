@@ -35,3 +35,16 @@ def graph_schema_validator(registry: Registry | None = None) -> Draft202012Valid
     graph_path = repo_root() / "schemas" / "graph" / "graph.schema.json"
     graph_schema = json.loads(graph_path.read_text(encoding="utf-8"))
     return Draft202012Validator(graph_schema, registry=reg)
+
+
+def blueprint_domain_validator(
+    domain: str,
+    registry: Registry | None = None,
+) -> Draft202012Validator:
+    """Validator for schemas/domains/blueprints/<domain>.schema.json."""
+    if domain not in ("read_graph", "submit_graph"):
+        raise ValueError(f"unknown blueprint domain schema: {domain}")
+    reg = registry or load_schema_registry()
+    schema_path = repo_root() / "schemas" / "domains" / "blueprints" / f"{domain}.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    return Draft202012Validator(schema, registry=reg)

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/blueprints/submit_graph.schema.json",
   "title": "submit_graph specification",
-  "description": "specification payload for action=submit_graph (Blueprint domain, WS-06 P2). Unchanged mode=replace submissions and revision conflicts are validated; changed replace and patch writes remain unsupported.",
+  "description": "specification payload for action=submit_graph (Blueprint domain, WS-06 P2). Supports unchanged and changed mode=replace on scratch assets under /Game/__UeremcpTests/; patch writes remain proposal-only.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -57,6 +57,19 @@
     }
   },
   "examples": [
+    {
+      "graph_id": "EventGraph",
+      "graph": {
+        "asset_path": "/Game/__UeremcpTests/Blueprint_ReadGraph/BP_Scratch.BP_Scratch",
+        "graph_id": "EventGraph",
+        "graph_type": "BlueprintEventGraph",
+        "schema_version": "1.0",
+        "fidelity": {
+          "round_trip_supported": false,
+          "lossy_areas": ["node_guid_not_preserved"]
+        }
+      }
+    },
     {
       "graph_id": "EventGraph",
       "patch": {
