@@ -46,6 +46,20 @@ EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
     "execute_plan",
 )
 
+# Mirrors FUeremcpEnvelope::ParseRequest OptAllowed (UeremcpEnvelope.cpp).
+ENVELOPE_OPTIONS_ALLOWED = frozenset({
+    "dry_run",
+    "atomic",
+    "rollback_on_failure",
+    "compile",
+    "validate",
+    "save",
+    "response_detail",
+    "timeout_ms",
+    "on_revision_conflict",
+    "continue_on_error",
+})
+
 
 def load_fixture(name: str) -> dict:
     return json.loads((NIAGARA_DIR / "fixtures" / name).read_text(encoding="utf-8"))
@@ -350,6 +364,11 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertTrue(create["target"]["asset_path"].startswith("/Game/__UeremcpTests/"))
         self.assertTrue(create["options"]["validate"])
         self.assertFalse(create["options"]["dry_run"])
+        self.assertTrue(
+            set(create["options"]).issubset(ENVELOPE_OPTIONS_ALLOWED),
+            msg=f"create_request.options must parse through envelope; unknown keys: "
+            f"{set(create['options']) - ENVELOPE_OPTIONS_ALLOWED}",
+        )
         self.assertEqual(honesty["status"], "partially_completed")
         self.assertIn("B7_renderers_bound", honesty["extra_poc_b_gates"])
         self.assertIn("inspect_fidelity", honesty["extra_poc_b_gates"])

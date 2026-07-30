@@ -45,8 +45,7 @@
       "dry_run": false,
       "compile": true,
       "validate": true,
-      "save": true,
-      "include_dependencies": true
+      "save": true
     }
   },
   "expected_response_honesty": {
@@ -76,7 +75,7 @@
     "Run create_request against probe path with replace mode.",
     "Assert response.status is partially_completed until full B4/B7/B10 proof exists.",
     "Assert extra.poc_b_gates.never_claims excludes *_validated statuses.",
-    "When options.validate=true and inspect succeeds, assert inspect_fidelity object present.",
+    "When options.validate=true and inspect succeeds, assert inspect_fidelity object present (post-create inspect enables include_dependencies via round-trip defaults, not envelope options).",
     "Assert B7_renderers_bound stays false unless material_bindings diagnostics report full re-read verify.",
     "Do not treat inspect_fidelity.renderers_with_extracted_material_path as binding proof.",
     "Record checks_performed / checks_skipped in extra.validation for manifest honesty."

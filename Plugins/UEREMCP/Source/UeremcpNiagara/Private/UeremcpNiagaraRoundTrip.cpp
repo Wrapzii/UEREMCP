@@ -109,6 +109,10 @@ bool FUeremcpNiagaraRoundTrip::ValidateCreateResult(
 		InspectSpec = FUeremcpNiagaraInspectSpec();
 	}
 	InspectSpec.bIncludeInputValues = false;
+	if (OriginalRequest.bValidate)
+	{
+		InspectSpec.bIncludeDependencies = true;
+	}
 
 	FUeremcpNiagaraInspectResult InspectResult;
 	if (!FUeremcpNiagaraInspect::Run(InspectRequest, InspectSpec, InspectResult))
