@@ -17,6 +17,7 @@ struct FUeremcpMaterialParameterSet
 	float SoftEdge = 0.75f;
 	float DepthFade = 100.0f;
 	float DissolveAmount = 0.0f;
+	float DistortionStrength = 0.05f;
 };
 
 namespace UeremcpMaterialElementPresets

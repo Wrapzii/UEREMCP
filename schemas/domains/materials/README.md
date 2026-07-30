@@ -60,11 +60,13 @@ Elemental VFX materials use **one tooling surface** (`create_vfx_material`) with
 | `depth_fade` | `DepthFade`(`DepthFade` param) → `MP_Opacity` | `[VERIFIED: MaterialExpressionDepthFade.h]` |
 | `erosion` | `OneMinus`(`DissolveAmount`) × opacity | `[VERIFIED: MaterialExpressionOneMinus.h]` |
 | `flow_maps` | Panner(`FlowSpeed`) × `FlowMap` sample → emissive | `[VERIFIED: MaterialExpressionPanner.h]`, `[VERIFIED: MaterialExpressionTextureSampleParameter2D.h]` |
+| `distortion` | `BumpOffset`(`NoiseTexture`, `DistortionStrength`) UV parallax → `MainTexture` | `[VERIFIED: MaterialExpressionBumpOffset.h:13-35]` — not true refraction |
+| `flipbook_subuv` | `MainTexture` via `TextureSampleParameterSubUV` | `[VERIFIED: MaterialExpressionTextureSampleParameterSubUV.h:14-34]` |
 
 Masters are named `{M_Ueremcp_ProjCore|ProjTrail}_{FeatureSignature}` so graph variants do not collide.
 Purpose defaults live in `element_presets.v1.json` → `purpose_default_features` (loaded at runtime with C++ fallback).
 
-Not yet wired: `distortion`, `flipbook_subuv`, engine MaterialFunctions.
+Not yet wired: engine MaterialFunctions.
 
 `textures.generate` slots (`noise`, `gradient`, `voronoi`, `ring_mask`, `flow_map`) execute via `create_procedural_texture` and bind to MI texture parameters (`MainTexture`, `NoiseTexture`, `FlowMap`, `MaskTexture`).
 
@@ -109,6 +111,7 @@ Runtime probes and created assets: **`/Game/__UeremcpTests/Materials/**` only.
 python tools/validate_schemas.py
 python schemas/domains/materials/test_specifications.py
 python schemas/domains/materials/test_element_presets.py
+python schemas/domains/materials/test_element_presets_loader.py
 python schemas/domains/materials/test_features.py
 python schemas/domains/materials/test_procedural_texture.py
 python schemas/domains/materials/test_niagara_export.py

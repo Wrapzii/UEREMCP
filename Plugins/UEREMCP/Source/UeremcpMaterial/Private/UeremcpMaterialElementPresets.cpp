@@ -183,4 +183,8 @@ void UeremcpMaterialElementPresets::MergeParameterOverrides(
 	{
 		InOutPreset.DissolveAmount = static_cast<float>(Number);
 	}
+	if (Overrides->TryGetNumberField(TEXT("DistortionStrength"), Number))
+	{
+		InOutPreset.DistortionStrength = static_cast<float>(Number);
+	}
 }

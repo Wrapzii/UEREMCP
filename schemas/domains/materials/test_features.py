@@ -79,6 +79,8 @@ class MaterialFeaturesTests(unittest.TestCase):
             "fresnel",
             "panning_textures",
             "flow_maps",
+            "distortion",
+            "flipbook_subuv",
             "depth_fade",
             "erosion",
         ):

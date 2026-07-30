@@ -14,6 +14,8 @@
 #include "Materials/MaterialExpressionPanner.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionSphereMask.h"
+#include "Materials/MaterialExpressionBumpOffset.h"
+#include "Materials/MaterialExpressionTextureSampleParameterSubUV.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionTime.h"
@@ -157,6 +159,14 @@ namespace
 				DissolveAmount->DefaultValue = 0.0f;
 			}
 
+			UMaterialExpressionScalarParameter* DistortionStrength =
+				AddExpression<UMaterialExpressionScalarParameter>(-800, 960);
+			if (DistortionStrength)
+			{
+				DistortionStrength->ParameterName = FName(TEXT("DistortionStrength"));
+				DistortionStrength->DefaultValue = 0.05f;
+			}
+
 			UMaterialExpression* ColorChain = ParticleColor;
 			if (Has(TEXT("dynamic_color")))
 			{
@@ -272,25 +282,73 @@ namespace
 				Result.WiredFeatures.Add(TEXT("fresnel"));
 			}
 
-			UMaterialExpressionTextureSampleParameter2D* MainTextureSample =
-				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 640);
+			UMaterialExpressionTextureSampleParameter2D* MainTextureSample = nullptr;
+			if (Has(TEXT("flipbook_subuv")))
+			{
+				UMaterialExpressionTextureSampleParameterSubUV* SubUvSample =
+					AddExpression<UMaterialExpressionTextureSampleParameterSubUV>(-550, 640);
+				if (!SubUvSample)
+				{
+					Result.Error = TEXT("Failed to create MainTexture SubUV sample.");
+					return false;
+				}
+				SubUvSample->ParameterName = FName(TEXT("MainTexture"));
+				SubUvSample->bBlend = true;
+				MainTextureSample = SubUvSample;
+				Result.WiredFeatures.Add(TEXT("flipbook_subuv"));
+			}
+			else
+			{
+				MainTextureSample = AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 640);
+				if (!MainTextureSample)
+				{
+					Result.Error = TEXT("Failed to create MainTexture sample.");
+					return false;
+				}
+				MainTextureSample->ParameterName = FName(TEXT("MainTexture"));
+			}
+
 			UMaterialExpressionTextureSampleParameter2D* NoiseTextureSample =
 				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 760);
 			UMaterialExpressionTextureSampleParameter2D* FlowMapSample =
 				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 880);
 			UMaterialExpressionTextureSampleParameter2D* MaskTextureSample =
 				AddExpression<UMaterialExpressionTextureSampleParameter2D>(-550, 1000);
-			if (!MainTextureSample || !NoiseTextureSample || !FlowMapSample || !MaskTextureSample)
+			if (!NoiseTextureSample || !FlowMapSample || !MaskTextureSample)
 			{
 				Result.Error = TEXT("Failed to create MI texture parameter samples.");
 				return false;
 			}
-			MainTextureSample->ParameterName = FName(TEXT("MainTexture"));
 			NoiseTextureSample->ParameterName = FName(TEXT("NoiseTexture"));
 			FlowMapSample->ParameterName = FName(TEXT("FlowMap"));
 			MaskTextureSample->ParameterName = FName(TEXT("MaskTexture"));
 
-			if (Has(TEXT("panning_textures")) && TexCoord && FlowSpeed && MainTextureSample)
+			UMaterialExpression* UvChain = TexCoord;
+			if (Has(TEXT("distortion")) && DistortionStrength && NoiseTextureSample && UvChain)
+			{
+				UMaterialExpressionBumpOffset* BumpOffsetExpr =
+					AddExpression<UMaterialExpressionBumpOffset>(-350, 900);
+				if (!BumpOffsetExpr)
+				{
+					Result.Error = TEXT("Failed to create distortion BumpOffset node.");
+					return false;
+				}
+				BumpOffsetExpr->ReferencePlane = 0.5f;
+				if (!Connect(UvChain, TEXT(""), BumpOffsetExpr, TEXT("Coordinate")) ||
+					!Connect(NoiseTextureSample, TEXT("R"), BumpOffsetExpr, TEXT("Height")) ||
+					!Connect(DistortionStrength, TEXT(""), BumpOffsetExpr, TEXT("HeightRatioInput")))
+				{
+					Result.Error = TEXT("Failed to wire distortion (BumpOffset approximation).");
+					return false;
+				}
+				UvChain = BumpOffsetExpr;
+				Result.WiredFeatures.Add(TEXT("distortion"));
+			}
+
+			const bool bUsesMainTextureChain =
+				Has(TEXT("panning_textures")) || Has(TEXT("flipbook_subuv")) || Has(TEXT("distortion"));
+
+			if (Has(TEXT("panning_textures")) && UvChain && FlowSpeed && MainTextureSample)
 			{
 				UMaterialExpressionPanner* PannerExpr = AddExpression<UMaterialExpressionPanner>(-350, 660);
 				if (!PannerExpr)
@@ -300,22 +358,31 @@ namespace
 				}
 				PannerExpr->SpeedX = 0.5f;
 				PannerExpr->SpeedY = 0.0f;
-				if (!Connect(TexCoord, TEXT(""), PannerExpr, TEXT("Coordinate")) ||
-					!Connect(FlowSpeed, TEXT(""), PannerExpr, TEXT("Speed")) ||
-					!Connect(PannerExpr, TEXT(""), MainTextureSample, TEXT("Coordinates")))
+				if (!Connect(UvChain, TEXT(""), PannerExpr, TEXT("Coordinate")) ||
+					!Connect(FlowSpeed, TEXT(""), PannerExpr, TEXT("Speed")))
 				{
 					Result.Error = TEXT("Failed to wire panning_textures.");
 					return false;
 				}
-				UMaterialExpressionMultiply* PanMod =
+				UvChain = PannerExpr;
+				Result.WiredFeatures.Add(TEXT("panning_textures"));
+			}
+
+			if (bUsesMainTextureChain && MainTextureSample && UvChain)
+			{
+				if (!Connect(UvChain, TEXT(""), MainTextureSample, TEXT("Coordinates")))
+				{
+					Result.Error = TEXT("Failed to connect UV chain to MainTexture.");
+					return false;
+				}
+				UMaterialExpressionMultiply* MainTexMod =
 					Multiply(EmissiveChain, TEXT(""), MainTextureSample, TEXT("RGB"), -120, 440);
-				if (!PanMod)
+				if (!MainTexMod)
 				{
 					Result.Error = TEXT("Failed to multiply emissive by MainTexture.");
 					return false;
 				}
-				EmissiveChain = PanMod;
-				Result.WiredFeatures.Add(TEXT("panning_textures"));
+				EmissiveChain = MainTexMod;
 			}
 
 			if (Has(TEXT("flow_maps")) && TexCoord && FlowSpeed && FlowMapSample)

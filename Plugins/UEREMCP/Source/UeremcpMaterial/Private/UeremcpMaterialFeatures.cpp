@@ -7,7 +7,8 @@
 #include "Materials/MaterialExpressionDepthFade.h"
 #include "Materials/MaterialExpressionFresnel.h"
 #include "Materials/MaterialExpressionNoise.h"
-#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
+#include "Materials/MaterialExpressionBumpOffset.h"
+#include "Materials/MaterialExpressionTextureSampleParameterSubUV.h"
 #include "Materials/MaterialExpressionOneMinus.h"
 #include "Materials/MaterialExpressionPanner.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
@@ -135,6 +136,8 @@ bool UeremcpMaterialFeatures::IsImplementedFeature(const FString& Feature)
 		TEXT("dynamic_intensity"),
 		TEXT("panning_textures"),
 		TEXT("flow_maps"),
+		TEXT("distortion"),
+		TEXT("flipbook_subuv"),
 		TEXT("erosion"),
 		TEXT("depth_fade"),
 	};
@@ -184,6 +187,10 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 
 	TArray<const UMaterialExpressionTextureSampleParameter2D*> TextureSamples;
 	Material->GetAllExpressionsOfType(TextureSamples);
+	TArray<const UMaterialExpressionTextureSampleParameterSubUV*> SubUvSamples;
+	Material->GetAllExpressionsOfType(SubUvSamples);
+	TArray<const UMaterialExpressionBumpOffset*> BumpOffsets;
+	Material->GetAllExpressionsOfType(BumpOffsets);
 
 	const TSet<FString> FeatureSet(Features);
 	OutResult.FeatureWired.Add(TEXT("radial_falloff"), FeatureSetContains(FeatureSet, TEXT("radial_falloff")) ? SphereMasks.Num() > 0 : true);
@@ -191,6 +198,8 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 	OutResult.FeatureWired.Add(TEXT("fresnel"), FeatureSetContains(FeatureSet, TEXT("fresnel")) ? Fresnels.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("panning_textures"), FeatureSetContains(FeatureSet, TEXT("panning_textures")) ? Panners.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("flow_maps"), FeatureSetContains(FeatureSet, TEXT("flow_maps")) ? TextureSamples.Num() > 0 : true);
+	OutResult.FeatureWired.Add(TEXT("distortion"), FeatureSetContains(FeatureSet, TEXT("distortion")) ? BumpOffsets.Num() > 0 : true);
+	OutResult.FeatureWired.Add(TEXT("flipbook_subuv"), FeatureSetContains(FeatureSet, TEXT("flipbook_subuv")) ? SubUvSamples.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("depth_fade"), FeatureSetContains(FeatureSet, TEXT("depth_fade")) ? DepthFades.Num() > 0 && OutResult.bOpacityConnected : true);
 	OutResult.FeatureWired.Add(TEXT("erosion"), FeatureSetContains(FeatureSet, TEXT("erosion")) ? OneMinusNodes.Num() > 0 : true);
 	OutResult.FeatureWired.Add(TEXT("dynamic_color"), true);

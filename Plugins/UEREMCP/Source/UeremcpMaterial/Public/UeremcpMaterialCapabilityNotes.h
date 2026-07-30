@@ -16,10 +16,10 @@ namespace UeremcpMaterialCapability
 	inline TArray<FString> DefaultPostWireCapabilityNotes()
 	{
 		return {
-			TEXT("feature_graph_v1: simplified expression wiring — no engine MaterialFunction composition; distortion/flipbook_subuv tokens are not implemented."),
+			TEXT("feature_graph_v1: simplified expression wiring — no engine MaterialFunction composition; distortion uses BumpOffset UV parallax (not true refraction)."),
 			TEXT("material_function_internals: nested MaterialFunction graphs are not composed."),
 			TEXT("editor_chrome: comment boxes, preview settings, and layout beyond x/y are not round-tripped."),
-			TEXT("procedural_texture_v1: CPU pixel fill via FImageUtils::CreateTexture2D — not Epic MaterialTools/RT draw; flipbook_subuv assembly is not implemented."),
+			TEXT("procedural_texture_v1: CPU pixel fill via FImageUtils::CreateTexture2D — not Epic MaterialTools/RT draw; flipbook texture sheet assembly is not implemented."),
 			TEXT("Substrate interaction with Unlit/Additive masters not runtime-verified on RE project."),
 		};
 	}

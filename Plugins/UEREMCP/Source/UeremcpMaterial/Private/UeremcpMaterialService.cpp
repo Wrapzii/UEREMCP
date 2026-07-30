@@ -78,7 +78,9 @@ namespace
 			Instance, FName(TEXT("DepthFade")), Params.DepthFade);
 		UMaterialEditingLibrary::SetMaterialInstanceScalarParameterValue(
 			Instance, FName(TEXT("DissolveAmount")), Params.DissolveAmount);
-		InOutOps += 8;
+		UMaterialEditingLibrary::SetMaterialInstanceScalarParameterValue(
+			Instance, FName(TEXT("DistortionStrength")), Params.DistortionStrength);
+		InOutOps += 9;
 		return true;
 	}
 
