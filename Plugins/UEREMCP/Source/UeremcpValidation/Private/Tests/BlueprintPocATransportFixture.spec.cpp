@@ -1,6 +1,7 @@
 // WS-11 out-of-band fixture lifecycle for the transport-level POC A proof.
 #include "EdGraph/EdGraph.h"
 #include "EdGraphSchema_K2.h"
+#include "EdGraphSchema_K2_Actions.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
