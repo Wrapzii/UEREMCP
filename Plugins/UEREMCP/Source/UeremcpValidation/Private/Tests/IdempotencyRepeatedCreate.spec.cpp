@@ -49,7 +49,11 @@ namespace UeremcpValidationTests
 		const TSharedPtr<FJsonObject>* Metrics = nullptr;
 		if (Root->TryGetObjectField(TEXT("metrics"), Metrics) && Metrics && Metrics->IsValid())
 		{
-			OutReplayed = (*Metrics)->GetBoolField(TEXT("replayed"));
+			bool bReplayedField = false;
+			if ((*Metrics)->TryGetBoolField(TEXT("replayed"), bReplayedField))
+			{
+				OutReplayed = bReplayedField;
+			}
 		}
 		return true;
 	}
@@ -72,12 +76,12 @@ namespace UeremcpValidationTests
 
 		if (!Request.IdempotencyKey.IsEmpty())
 		{
-			FString Stored;
-			if (FUeremcpIdempotencyStore::Get().TryGet(Request.IdempotencyKey, Stored))
+			FString ReplayJson;
+			if (FUeremcpIdempotencyStore::Get().TryGetReplay(
+					Request.IdempotencyKey, Request.RequestId, ReplayJson))
 			{
-				Outcome.ResponseJson = Stored;
-				ParseResponseStatus(Stored, Outcome.Status, Outcome.bReplayed);
-				Outcome.bReplayed = true;
+				Outcome.ResponseJson = ReplayJson;
+				ParseResponseStatus(ReplayJson, Outcome.Status, Outcome.bReplayed);
 				return Outcome;
 			}
 		}
