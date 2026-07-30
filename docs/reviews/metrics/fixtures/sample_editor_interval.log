@@ -1,0 +1,3 @@
+[2026.07.30-11.14.53:492][ 42]LogUeremcpNiagara: CreateNiagaraEffect dispatch begin request_id=ws11-poc-b-mcp-fireball
+[2026.07.30-11.14.54:100][ 42]LogUeremcpNiagara: CreateNiagaraEffect materials resolved
+[2026.07.30-11.14.55:811][ 42]LogUeremcpNiagara: CreateNiagaraEffect content-validation record complete B1_single_request_complete=true

@@ -1,0 +1,28 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ws11-poc-b-mcp-fireball",
+  "status": "partially_completed",
+  "summary": "fixture: successful B1/B6 MCP fireball slice (synthetic for harness tests)",
+  "metrics": {
+    "mcp_round_trips": 1,
+    "internal_operations": 46,
+    "timing_ms": {
+      "server_total": 2319
+    }
+  },
+  "extra": {
+    "poc_b_gates": {
+      "B1_single_request_complete": true,
+      "B6_compile_awaited": true
+    },
+    "reused_assets": [
+      "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_core",
+      "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_flame_shell",
+      "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_sparks",
+      "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_smoke",
+      "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_ribbon_trail",
+      "/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_impact_burst"
+    ]
+  },
+  "$comment": "Synthetic envelope mirroring measured values from docs/proposals/ws-11-pocb-b1-b10-metrics-handoff.md on orch d07f8f1. Not a live capture."
+}
