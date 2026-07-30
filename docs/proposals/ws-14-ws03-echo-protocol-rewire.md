@@ -3,7 +3,7 @@
 - **From:** WS-14
 - **To:** WS-03 (+ WS-05 for version constant)
 - **Date:** 2026-07-30
-- **Status:** Open
+- **Status:** Closed (WS-01, 2026-07-30; WS-03 `ab94b85` on `ws-01-orch`)
 
 ## Problem
 
@@ -41,3 +41,15 @@ duplicate envelope parsers in shipping Core.
 
 **Date:** 2026-07-30  
 **Decision:** Routed to **WS-03** (owner: `UeremcpCore` / ReferenceToolset). WS-01 will not rewire Core Echo in this integration; track under Wave 2 host hardening (M-1).
+
+## Closure (WS-01)
+
+**Closed.** WS-03 commit `ab94b85` (`[WS-03] Rewire Echo to Protocol envelope`) is an ancestor of `ws-01-orch` (`git merge-base --is-ancestor ab94b85 HEAD` → true). Orchestration already carried the Core rewire (via prior WS-03 integration, including merge `1245fa4` lineage).
+
+**Evidence on `ws-01-orch` (2026-07-30):**
+
+- `Plugins/UEREMCP/Source/UeremcpCore/Private/UeremcpMinimalEnvelope.h` — **absent** (deleted in `ab94b85`).
+- `UeremcpReferenceToolset.cpp` — Ping/Echo use `FUeremcpEnvelope::ParseRequest`, `SerializeResponse`, `MakeRejection`, `IsProtocolCompatible`, `ProtocolVersion` (no `MinimalEnvelope` references).
+- `UeremcpCore.Build.cs` — private `UeremcpProtocol` dependency per `ab94b85`.
+
+No further merge/cherry-pick required for Echo protocol rewire on orch.

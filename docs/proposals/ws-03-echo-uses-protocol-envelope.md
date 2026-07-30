@@ -3,7 +3,7 @@
 - **From:** WS-03
 - **To:** WS-14 (closes `ws-14-ws03-echo-protocol-rewire.md`)
 - **Date:** 2026-07-30
-- **Status:** Implemented
+- **Status:** Closed (WS-01, 2026-07-30; integrated on `ws-01-orch`)
 
 ## What changed
 
@@ -28,3 +28,7 @@ Agents or fixtures still sending `"1.0.0"` will be **rejected** by
 
 Production MCP Ping/Echo and `UEREMCP.Protocol.Golden.Envelope` now share one envelope
 implementation. No duplicate parsers remain in shipping `UeremcpCore`.
+
+## Closure (WS-01)
+
+**Closed.** Implementation landed in WS-03 `ab94b85`; present on orchestration branch `ws-01-orch` (ancestor check passes). Cross-reference: `docs/proposals/ws-14-ws03-echo-protocol-rewire.md` (Closed).
