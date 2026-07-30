@@ -2,7 +2,7 @@
 
 - **Owner:** WS-07
 - **Date:** 2026-07-30
-- **Status:** blocked
+- **Status:** resolved live on `ws-01-poc-cde-integration`
 - **Criterion:** POC C C5 — “Networking and damage behaviour from the source are
   preserved and verified unchanged.”
 - **Decision:** Keep C5 **FAIL**. Do not infer a gameplay contract from Niagara
@@ -96,6 +96,42 @@ adding more assertions to the current Niagara-only test:
 Until those contracts exist, `preserve_networking` should be treated as requested
 intent only. It must not produce a C5 success claim.
 
+## Resolution (2026-07-30)
+
+The implemented relationship is **clone to a scratch target row**, not mutation of
+`fire_s` and not a presentation-only side binding to the production row:
+
+1. `instantiate_template` now requires
+   `ability_table + source_row + target_ability_table + target_row + vfx_phase`.
+2. The terminal `create_spell_variation` operation reads the source
+   `FREAbilityDef`, clones it, changes only `AbilityId` plus the selected
+   `ProjectileNS` / `ImpactNS` presentation paths, and writes under
+   `/Game/__UeremcpPoc/Abilities/DT_POCC_Variations`.
+3. The operation re-reads the target row and compares `CastType`, projectile
+   physics, `ImpactDamage`, `ImpactStatus`, `StatusDuration`, `AoeRadius`,
+   `EscalateTo`, `SpawnEntity`, and entity dimensions. A mismatch returns
+   `failed_validation`; the template test requires
+   `validation.protected_fields_equal=true`.
+4. The actor Blueprint is not the selected gameplay owner, so actor replication
+   flags are out of scope. RE Pattern B remains in the unchanged
+   `CastAbility` → `Server_RequestCastAbility` / authority resolution path
+   `[VERIFIED:
+   $UEREMCP_LEGACY_PROJECT/Source/RE/Private/REPlayerVisualCombatComponent.cpp:3963-3984,5172-5185]`.
+
+Live NullRHI evidence:
+
+- `UEREMCP.Templates.POCC.ThirdGeneration` passed in
+  `editor_UEREMCP_Templates_POCC_20260730_131046.log`
+  `[VERIFIED-RUNTIME: ice and wind target rows re-read with
+  protected_fields_equal=true; fire_s source and ice target both reported
+  ImpactDamage=16, ImpactStatus=Burn, StatusDuration=3, AoeRadius=0]`.
+- `UEREMCP.Niagara.Create.PocCVariationRuntime` passed in
+  `editor_UEREMCP_Niagara_Create_PocCVariationRuntime_20260730_131150.log`
+  `[VERIFIED-RUNTIME: 2026-07-30 NullRHI automation]`.
+
+C5 is therefore **MET live** for the explicit `FREAbilityDef` composite binding.
+This is preservation proof, not multi-client observation.
+
 ## D5 note
 
 The current D5 wording is already satisfied by the static RE Pattern B checklist:
@@ -114,7 +150,7 @@ $UEREMCP_LEGACY_PROJECT/Content/Python/_pie_smoke_listen_d18.py:1-10,269-277]`.
 
 ## Acceptance impact
 
-C1-C4 and C6-C7 remain supported by the existing live evidence. C5 remains
-**FAIL**, so overall POC C remains **NOT MET**. This proposal does not redefine
-C5 and does not upgrade the current `preserve_networking` template modifier into
-verified behaviour.
+C1-C4 and C6-C7 remain supported by the existing live evidence. C5 is now
+**MET live**, so all C1-C7 are MET and overall POC C is claimable. The
+`preserve_networking` name is no longer evidence by itself; the passing claim
+depends on the returned source/target snapshots and equality check.

@@ -12,6 +12,11 @@
         "element": "ice",
         "target_path": "/Game/__UeremcpPoc/NS_POCC_IceVariation",
         "source_system": "/Game/__UeremcpPoc/NS_POCB_Fireball",
+        "ability_table": "/Game/RE/Data/DT_Abilities",
+        "source_row": "fire_s",
+        "target_ability_table": "/Game/__UeremcpPoc/Abilities/DT_POCC_Variations",
+        "target_row": "poc_c_ice_fire_s",
+        "vfx_phase": "projectile_and_impact",
         "scale": 1.0,
         "intensity": 6.0
       },
@@ -48,6 +53,11 @@
         "element": "wind",
         "target_path": "/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration",
         "source_system": "/Game/__UeremcpPoc/NS_POCC_IceVariation",
+        "ability_table": "/Game/__UeremcpPoc/Abilities/DT_POCC_Variations",
+        "source_row": "poc_c_ice_fire_s",
+        "target_ability_table": "/Game/__UeremcpPoc/Abilities/DT_POCC_Variations",
+        "target_row": "poc_c_wind_fire_s",
+        "vfx_phase": "projectile_and_impact",
         "scale": 1.15,
         "intensity": 5.0
       },
@@ -76,7 +86,8 @@
     "C2": "ice_response.understood.interpretation_notes contains inherited:* and overridden:*",
     "C3": "ice plan uses element.ice.v1 material and Niagara parameters",
     "C4": "ice plan adds component role crystalline",
-    "C5_impact": "ice plan adds component role ice_impact",
+    "C5": "ice gameplay_binding clones fire_s to a scratch target row, points projectile/impact presentation at the ice result, and requires protected FREAbilityDef fields to compare equal after re-read",
+    "C5_fields": ["CastType", "Speed", "Range", "ProjRadius", "GravityScale", "Homing", "ImpactDamage", "ImpactStatus", "StatusDuration", "AoeRadius", "EscalateTo", "SpawnEntity"],
     "C6_shared_behavior": "ice result reuses source_system as variation_source and preserves inherited emitter names",
     "C7": "third request uses the same template_id with a different element, source, and target"
   }
