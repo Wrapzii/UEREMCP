@@ -3,9 +3,11 @@
 #include "UeremcpNiagaraToolset.h"
 
 #include "UeremcpEnvelope.h"
+#include "UeremcpMutatingDispatch.h"
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraChangeManifest.h"
 #include "UeremcpNiagaraCreate.h"
+#include "UeremcpNiagaraCreateIdempotency.h"
 #include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraMaterialBindingDiagnostics.h"
@@ -13,6 +15,7 @@
 #include "UeremcpNiagaraPocBGates.h"
 #include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraRoundTrip.h"
+#include "UeremcpSecurityDomainAdoption.h"
 
 #include "NiagaraSystem.h"
 #include "HAL/PlatformTime.h"
@@ -248,14 +251,142 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 			FString::Printf(TEXT("Invalid create_niagara_effect specification: %s"), *SpecError));
 	}
 
+	const FString CreatedPath =
+		UeremcpNiagaraCreateIdempotency::CreatedAssetPathFromRequest(Request.TargetAssetPath, Spec.Name);
+	const bool bAssetExists = UeremcpNiagaraProbeAssets::AssetExistsAtPath(CreatedPath);
+	const bool bReplaceMode = UeremcpNiagaraProbeAssets::IsReplaceMode(Request.Mode);
+
+	FString CurrentRevision;
+	FString RevisionError;
+	if (bAssetExists
+		&& !UeremcpNiagaraCreateIdempotency::TryComputeAssetRevision(
+			CreatedPath, CurrentRevision, RevisionError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			RevisionError.IsEmpty()
+				? TEXT("Failed to compute revision for existing Niagara system.")
+				: RevisionError);
+	}
+
+	// ADR-0006 E4: stale expected_revision rejects before mutation.
+	if (Request.bHasExpectedRevision
+		&& bAssetExists
+		&& !Request.ExpectedRevision.Equals(CurrentRevision, ESearchCase::CaseSensitive)
+		&& !UeremcpNiagaraCreateIdempotency::ShouldBypassRevisionConflict(Request.OnRevisionConflict))
+	{
+		FUeremcpResponse ConflictResponse;
+		ConflictResponse.RequestId = Request.RequestId;
+		ConflictResponse.Status = TEXT("rejected");
+		ConflictResponse.Summary = FString::Printf(
+			TEXT("expected_revision '%s' does not match current revision '%s'; no mutation was performed."),
+			*Request.ExpectedRevision,
+			*CurrentRevision);
+		ConflictResponse.UnderstoodAction = Request.Action;
+		ConflictResponse.UnderstoodTarget = Request.TargetAssetPath;
+		ConflictResponse.PrimaryAsset = CreatedPath;
+		ConflictResponse.Revision = CurrentRevision;
+		ConflictResponse.CapabilityNotes.Add(TEXT("revision_conflict.no_mutation"));
+		ConflictResponse.CapabilityNotes.Append(UeremcpNiagaraCapability::DefaultCreateCapabilityNotes());
+		ConflictResponse.Metrics.McpRoundTrips = 1;
+		ConflictResponse.Metrics.InternalOperations = 1;
+
+		TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> ChecksPerformed = {
+			MakeShared<FJsonValueString>(TEXT("niagara.current_revision_read")),
+			MakeShared<FJsonValueString>(TEXT("niagara.expected_revision_compare")),
+		};
+		Validation->SetArrayField(TEXT("checks_performed"), ChecksPerformed);
+		TArray<TSharedPtr<FJsonValue>> ChecksSkipped = {
+			MakeShared<FJsonValueString>(TEXT("niagara.create_or_replace")),
+			MakeShared<FJsonValueString>(TEXT("niagara.compile")),
+			MakeShared<FJsonValueString>(TEXT("niagara.reread_after_write")),
+		};
+		Validation->SetArrayField(TEXT("checks_skipped"), ChecksSkipped);
+		Extra->SetObjectField(TEXT("validation"), Validation);
+		ConflictResponse.ExtraFields = Extra;
+		return FUeremcpEnvelope::SerializeResponse(ConflictResponse);
+	}
+
+	// ADR-0006 E3: identical repeated create/replace is a no-op when emitters satisfy Spec.
+	if (bAssetExists
+		&& (bReplaceMode || Request.Mode.IsEmpty())
+		&& UeremcpNiagaraCreateIdempotency::ExistingSatisfiesSpec(CreatedPath, Spec))
+	{
+		FUeremcpResponse NoChangeResponse;
+		NoChangeResponse.RequestId = Request.RequestId;
+		NoChangeResponse.Status = TEXT("no_change_required");
+		NoChangeResponse.Summary = FString::Printf(
+			TEXT("Niagara effect '%s' already satisfies the requested component roles at revision %s; no mutation was performed."),
+			*CreatedPath,
+			*CurrentRevision);
+		NoChangeResponse.UnderstoodAction = Request.Action;
+		NoChangeResponse.UnderstoodTarget = Request.TargetAssetPath;
+		NoChangeResponse.PrimaryAsset = CreatedPath;
+		NoChangeResponse.Revision = CurrentRevision;
+		NoChangeResponse.CapabilityNotes = UeremcpNiagaraCapability::DefaultCreateCapabilityNotes();
+		NoChangeResponse.CapabilityNotes.Add(TEXT("idempotency.repeated_create_no_change"));
+		NoChangeResponse.Metrics.McpRoundTrips = 1;
+		NoChangeResponse.Metrics.InternalOperations = 1;
+
+		TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> ChecksPerformed = {
+			MakeShared<FJsonValueString>(TEXT("niagara.current_revision_read")),
+			MakeShared<FJsonValueString>(TEXT("niagara.expected_revision_compare")),
+			MakeShared<FJsonValueString>(TEXT("niagara.existing_satisfies_spec")),
+		};
+		Validation->SetArrayField(TEXT("checks_performed"), ChecksPerformed);
+		TArray<TSharedPtr<FJsonValue>> ChecksSkipped = {
+			MakeShared<FJsonValueString>(TEXT("niagara.create_or_replace")),
+			MakeShared<FJsonValueString>(TEXT("niagara.compile")),
+			MakeShared<FJsonValueString>(TEXT("niagara.reread_after_write")),
+		};
+		Validation->SetArrayField(TEXT("checks_skipped"), ChecksSkipped);
+		Extra->SetObjectField(TEXT("validation"), Validation);
+		NoChangeResponse.ExtraFields = Extra;
+		return FUeremcpEnvelope::SerializeResponse(NoChangeResponse);
+	}
+
 	const double HandlerStartSeconds = FPlatformTime::Seconds();
+
+	const int32 PredictedDeleted = FUeremcpSecurityDomainAdoption::PredictedDeletedForDestructiveReplace(
+		bAssetExists,
+		bReplaceMode);
+	FUeremcpMutatingDispatch MutatingDispatch;
+	const bool bDispatchStarted = !Request.bDryRun;
+	if (bDispatchStarted)
+	{
+		FString BlockingResponse;
+		if (!MutatingDispatch.TryBegin(
+			RequestJson,
+			bAssetExists,
+			PredictedDeleted,
+			false,
+			BlockingResponse))
+		{
+			return BlockingResponse;
+		}
+		Request.bDryRun = MutatingDispatch.IsEffectiveDryRun();
+	}
 
 	FUeremcpNiagaraCreateResult CreateResult;
 	if (!FUeremcpNiagaraCreate::Run(Request, Spec, CreateResult))
 	{
-		return FUeremcpEnvelope::MakeRejection(
-			Request.RequestId,
-			CreateResult.Error.IsEmpty() ? TEXT("create_niagara_effect failed.") : CreateResult.Error);
+		FUeremcpResponse FailResponse;
+		FailResponse.RequestId = Request.RequestId;
+		FailResponse.Status = TEXT("failed_validation");
+		FailResponse.Summary = CreateResult.Error.IsEmpty()
+			? TEXT("create_niagara_effect failed.")
+			: CreateResult.Error;
+		FailResponse.UnderstoodAction = Request.Action;
+		FailResponse.UnderstoodTarget = Request.TargetAssetPath;
+		FailResponse.CapabilityNotes = UeremcpNiagaraCapability::DefaultCreateCapabilityNotes();
+		FailResponse.Metrics.McpRoundTrips = 1;
+		return bDispatchStarted
+			? MutatingDispatch.Complete(FailResponse)
+			: FUeremcpEnvelope::SerializeResponse(FailResponse);
 	}
 
 	FUeremcpNiagaraRoundTripResult RoundTripResult;
@@ -535,5 +666,27 @@ FString UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString& RequestJson)
 	}
 
 	Response.ExtraFields = Extra;
-	return FUeremcpEnvelope::SerializeResponse(Response);
+
+	if (!Request.bDryRun && !CreateResult.CreatedAssetPath.IsEmpty())
+	{
+		FString PostRevision;
+		FString PostRevisionError;
+		if (UeremcpNiagaraCreateIdempotency::TryComputeAssetRevision(
+			CreateResult.CreatedAssetPath, PostRevision, PostRevisionError))
+		{
+			Response.Revision = PostRevision;
+		}
+		else if (!CurrentRevision.IsEmpty())
+		{
+			Response.Revision = CurrentRevision;
+		}
+	}
+	else if (!CurrentRevision.IsEmpty())
+	{
+		Response.Revision = CurrentRevision;
+	}
+
+	return bDispatchStarted
+		? MutatingDispatch.Complete(Response)
+		: FUeremcpEnvelope::SerializeResponse(Response);
 }

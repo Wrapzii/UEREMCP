@@ -28,6 +28,7 @@ public class UeremcpNiagara : ModuleRules
 			"Projects",
 
 			"UeremcpCore",
+			"UeremcpSecurity",
 			// Epic's tool-declaration layer (UToolsetDefinition / AICallable). ADR-0002.
 			"ToolsetRegistry",
 
