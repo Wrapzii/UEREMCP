@@ -5,6 +5,10 @@
 The registry of every agent-facing `action`. An action that is not listed here does not
 exist as far as agents are concerned.
 
+**Freshness:** 2026-07-30 — statuses refreshed from registered `AICallable` toolsets and
+the acceptance-gap audit (`docs/proposals/ws-01-acceptance-gap-audit-2026-07-30.md`).
+**No overall POC-B claim.** Do not invent `available` without tests + verification.
+
 ## How to register an action
 
 1. Define its `specification` schema under `schemas/domains/<your-domain>/`.
@@ -35,46 +39,52 @@ grouping on top of it rather than replacing it (ADR-0002).
 | `get_schema` | project | planned | |
 | `get_examples` | project | planned | |
 | `get_project_capabilities` | project | planned | |
-| `get_job_result` | project | planned | Long-running job polling (ADR-0009, RB-04) |
+| `get_job_result` | project | partial | Registered on `UeremcpReferenceToolset`; ADR-0009 poll path. Transport timeout/cancel SKIP residuals remain (audit P1). |
+| `cancel_job` | project | partial | Registered on `UeremcpReferenceToolset`; cooperative cancel. Same ADR-0009 residuals. |
 
 ## Actions
 
-Nothing is `available` yet — Phase 0. Statuses below reflect the design, and the briefs
-that must land first.
+Statuses below reflect **registered code + runtime/editor evidence**, not Phase 0 design
+intent. Many surfaces remain `partial` because POC-B visibility, metrics, or domain-wide
+ADR-0005/0006/0010 proofs are incomplete.
 
 ### Graph operations — the core thesis
 
+MCP tools: `ReadGraph` / `SubmitGraph` (`action=read_graph` / `submit_graph`). Catalog
+names below are the semantic actions; notes map to the live tool surface.
+
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `get_asset_graph` | blueprints | WS-06 | research | RB-05 |
-| `replace_blueprint_graph` | blueprints | WS-06 | research | RB-05 |
-| `modify_blueprint_graph` | blueprints | WS-06 | research | RB-05 |
+| `get_asset_graph` / `read_graph` | blueprints | WS-06 | partial | RB-05 — scoped CRT A1–A11 PASS on `3756244`; not arbitrary complex graphs; `tokens_total=0` on recorded runs |
+| `replace_blueprint_graph` / `submit_graph` (`mode: replace`) | blueprints | WS-06 | partial | RB-05 — scoped replace validated in CRT; unchanged replace → `no_change_required` |
+| `modify_blueprint_graph` (`mode: patch`) | blueprints | WS-06 | planned | Patch mode unimplemented (A8 escape hatch) |
 | `analyze_blueprint` | blueprints | WS-06 | planned | RB-05 |
-| `repair_blueprint` | blueprints | WS-06 | planned | RB-05 |
+| `repair_blueprint` | blueprints | WS-06 | planned | RB-05 — out of POC A/B critical path |
 | `create_blueprint` | blueprints | WS-06 | planned | |
 
 ### Batch and validation
 
-| Action | Domain | WS | Status |
-|---|---|---|---|
-| `execute_plan` | project | WS-05 | planned |
-| `validate_asset` | validation | WS-11 | planned |
-| `validate_system` | validation | WS-11 | planned |
+| Action | Domain | WS | Status | Notes |
+|---|---|---|---|---|
+| `execute_plan` | project | WS-05 | partial | Internal plan executor + domain handlers; templates delegate to it. **Not** a direct agent-facing `AICallable` (audit P1). |
+| `validate_asset` | validation | WS-11 | planned | |
+| `validate_system` | validation | WS-11 | planned | |
 
 ### Niagara
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `inspect_system` | niagara | WS-07 | partial | RB-07 — Wave-2 `/Game/__UeremcpTests/` probe; topology is intentionally lossy and runtime promotion is pending |
-| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — Wave-2 `/Game/__UeremcpTests/` probe; renderer/material and runtime-smoke validation are pending |
-| `create_niagara_template` | niagara | WS-07 | research | RB-07, RB-10 |
-| `create_effect_variation` | niagara | WS-07 | research | RB-07, RB-10 |
+| `inspect_system` | niagara | WS-07 | partial | RB-07 — AICallable registered; editor Inspect filter PASS on recorded tips; topology intentionally lossy |
+| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — MCP B1/B6 structural PASS; editor B2–B9 structural PASS; B10 production FAIL (0 warm pixels); create returns `partially_completed` until B10+metrics close. **No overall POC-B.** |
+| `create_niagara_template` | niagara | WS-07 | research | RB-07, RB-10 — POC C not started |
+| `create_effect_variation` | niagara | WS-07 | research | RB-07, RB-10 — POC C not started |
 
 ### Materials and VFX assets
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_vfx_material` | materials | WS-08 | partial | RB-08 — Wave-2 Epic MaterialTools wiring; test-root only and editor runtime validation is pending |
+| `create_vfx_material` | materials | WS-08 | partial | RB-08 — AICallable; Material Toolset editor PASS 14/14 on `d691316`; POC-B material reuse is structural — visibility ownership stays with WS-07 unless materials prove invisible |
+| `create_procedural_texture` | materials | WS-08 | partial | AICallable registered; test-root `/Game/__UeremcpTests/` |
 | `create_material` | materials | WS-08 | planned | RB-08 |
 | `create_material_family` | materials | WS-08 | planned | RB-08 |
 | `import_and_configure_asset` | import_export | WS-08 | planned | RB-11 |
@@ -83,8 +93,8 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_spell` | gameplay | WS-09 | partial | RB-12 — preflight-only probe; module registration, WS-12 mutator queue, and editor runtime validation are pending |
-| `create_gameplay_ability` | gameplay_abilities | WS-09 | research | RB-12 |
+| `create_spell` | gameplay | WS-09 | partial | RB-12 — AICallable preflight only; **no asset mutation**; POC D not started. Do not read as a finished spell pipeline. |
+| `create_gameplay_ability` | gameplay_abilities | WS-09 | research | RB-12 — textbook GAS out of RE POC D scope |
 | `create_gameplay_effect` | gameplay_abilities | WS-09 | research | RB-12 |
 | `create_player_ability` | gameplay | WS-09 | planned | RB-12 |
 | `create_gameplay_system` | gameplay | WS-09 | planned | RB-12 |
@@ -96,7 +106,8 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `inspect_montage` | animation | WS-10 | partial | RB-09 — source-tested inspector; complete state is withheld pending `result.asset_state`, and editor runtime validation is pending |
+| `inspect_montage` | animation | WS-10 | partial | RB-09 — AICallable; Animation filter PASS 10/10 on `5ea9277`; complete `asset_state` withheld pending ADR-0011 |
+| `read_anim_bp` | animation | WS-10 | partial | AICallable read-only AnimBP graph retrieval; authoring unsupported |
 | `create_animation_blueprint` | animation | WS-10 | research | RB-09 |
 | `create_control_rig` | control_rig | WS-10 | research | RB-09 — **may prove read-only** |
 
@@ -104,9 +115,9 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `search_templates` | project | WS-15 | planned | RB-10 |
-| `instantiate_template` | project | WS-15 | planned | RB-10 |
-| `promote_to_template` | project | WS-15 | planned | RB-10 |
+| `search_templates` | project | WS-15 | partial | RB-10 — AICallable; Templates Toolset PASS 4/4 on `f15ea96` |
+| `instantiate_template` | project | WS-15 | partial | RB-10 — materializes via internal `execute_plan`; POC C not started |
+| `promote_to_template` | project | WS-15 | partial | RB-10 — preview-oriented until cross-domain gates bound |
 
 ### Later domains
 
@@ -120,5 +131,5 @@ does, the architecture failed (`docs/ROADMAP.md`).
 
 | Action | Status | Notes |
 |---|---|---|
-| `ping` | scaffold | Uncompiled. RB-03 makes it real. |
-| `echo` | scaffold | Uncompiled. Proves the ADR-0003 envelope contract. |
+| `ping` | available | `UeremcpReferenceToolset` + domain pings; ADR-0002 reachability |
+| `echo` | available | Envelope round-trip (ADR-0003); registered on Reference / domain toolsets |

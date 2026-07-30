@@ -516,3 +516,20 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
 **Overall POC A claimed** on CRT `3756244`. MCP B1/B6 and editor B2–B9 remain PASS as structural proofs. B10 harness can observe particles (`0049153` canary PASS). Production fireball still fails warm signature (`185` particles, `0` warm). Complete metrics/baseline remain open. No overall POC-B claim. No junction retarget.
+
+---
+
+## Pointer — acceptance-gap audit (2026-07-30)
+
+Canonical gap list: [`ws-01-acceptance-gap-audit-2026-07-30.md`](./ws-01-acceptance-gap-audit-2026-07-30.md).
+
+**Current tip reality (do not conflate worktrees):**
+
+| Fact | Value |
+|---|---|
+| B10 harness canary | **PASS** on `0049153` |
+| B10 production fireball | **FAIL** (0 warm pixels; log `081341` / `poc_b10_fireball.png`) |
+| Tip lineage on `ws-11-poc-b10-render` | this commit (audit landed on `7b654f4`+) |
+| Concurrent WS-07 Niagara WIP | may exist uncommitted on `ws-07-niagara-runtime-spawn` — do not assume tip parity |
+
+No overall POC-B claim.

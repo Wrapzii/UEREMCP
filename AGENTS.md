@@ -126,7 +126,7 @@ unless replacement was explicitly requested. Deleting and recreating a *graph* t
 determinism is fine and encouraged; deleting a user's *asset* because it was in the
 way is not.
 
-## Frozen decisions (as of 2026-07-29)
+## Frozen decisions (as of 2026-07-30)
 
 Full text in `docs/adr/`. Summary so you do not re-litigate:
 
@@ -138,10 +138,12 @@ Full text in `docs/adr/`. Summary so you do not re-litigate:
 | 0004 | Graphs are exchanged as complete structured JSON with stable IDs, content hash, and revision |
 | 0005 | Rollback builds on `FileSandbox` + editor transactions; not a bespoke mechanism |
 | 0006 | Idempotency via stable paths + idempotency keys + `expected_revision` conflict checks |
+| 0007 | C++ primary for agent-facing toolsets and domain services that touch graphs/assets/compilation; Python exploratory only |
 | 0008 | Templates are JSON + `UeremcpTemplates` + `execute_plan`; do **not** subclass `UAgentSkill`; elemental variation via inputs/modifiers |
 | 0009 | Long jobs: inline when `timeout_ms == 0`; else `partially_completed` + poll `get_job_result`; UEREMCP-owned cancel/progress |
+| 0010 | Application-layer security in `UeremcpSecurity` — permission tiers, path validator, mutator queue, audit; do not fork Epic MCP for tokens |
 
-ADRs 0007 and 0010 remain unwritten until their blocking briefs land.
+ADR-0011 (`asset_state` for non-graph assets) remains **Proposed**, not Accepted.
 
 ## Definition of done
 
