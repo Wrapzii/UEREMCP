@@ -9,6 +9,7 @@
 #include "IAssetTools.h"
 #include "Materials/Material.h"
 #include "Subsystems/EditorAssetSubsystem.h"
+#include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialFeatureGraph.h"
 #include "UeremcpMaterialPaths.h"
 
@@ -21,12 +22,7 @@ namespace
 
 	static UMaterial* LoadMaterialAtPath(const FString& PackagePath)
 	{
-		UEditorAssetSubsystem* AssetSubsystem = GetEditorAssetSubsystem();
-		if (!AssetSubsystem)
-		{
-			return nullptr;
-		}
-		return Cast<UMaterial>(AssetSubsystem->LoadAsset(PackagePath));
+		return UeremcpMaterialAssetLoad::ResolveMaterial(PackagePath);
 	}
 
 	static bool SavePackagePath(const FString& PackagePath, int32& InOutOps)

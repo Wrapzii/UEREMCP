@@ -11,6 +11,7 @@
 #include "Misc/Paths.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "Materials/Material.h"
+#include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialFeatures.h"
 #include "UeremcpMaterialNiagaraExport.h"
 #include "UeremcpMaterialPaths.h"
@@ -178,7 +179,7 @@ namespace UeremcpMaterialTests
 			return false;
 		}
 
-		UMaterial* Material = Cast<UMaterial>(Subsystem->LoadAsset(MasterPath));
+		UMaterial* Material = UeremcpMaterialAssetLoad::ResolveMaterial(MasterPath);
 		if (!Test->TestNotNull(*FString::Printf(TEXT("master material loads: %s"), *MasterPath), Material))
 		{
 			return false;
@@ -386,7 +387,7 @@ bool FUeremcpMaterialCreateProceduralTextureFlipbookAtlasTest::RunTest(const FSt
 	if (Subsystem)
 	{
 		TestTrue(TEXT("flipbook atlas texture exists"), Subsystem->DoesAssetExist(Target));
-		if (UTexture2D* Texture = Cast<UTexture2D>(Subsystem->LoadAsset(Target)))
+		if (UTexture2D* Texture = Cast<UTexture2D>(UeremcpMaterialAssetLoad::TryLoadTexture(Target)))
 		{
 			TestEqual(TEXT("atlas width"), UeremcpMaterialTests::ReadTextureDimensionX(Texture), 256);
 			TestEqual(TEXT("atlas height"), UeremcpMaterialTests::ReadTextureDimensionY(Texture), 256);

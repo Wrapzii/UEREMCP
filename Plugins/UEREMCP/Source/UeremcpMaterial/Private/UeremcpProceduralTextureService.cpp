@@ -8,6 +8,7 @@
 #include "ImageUtils.h"
 #include "Subsystems/EditorAssetSubsystem.h"
 #include "UObject/Package.h"
+#include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialPaths.h"
 #include "UeremcpProceduralTextureGenerator.h"
 
@@ -282,27 +283,24 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 		return Result;
 	}
 
-	if (AssetSubsystem->DoesAssetExist(Request.TargetAssetPath))
+	if (UTexture2D* Existing = UeremcpMaterialAssetLoad::TryLoadTexture(Request.TargetAssetPath))
 	{
-		if (UTexture2D* Existing = Cast<UTexture2D>(AssetSubsystem->LoadAsset(Request.TargetAssetPath)))
+		Result.bSuccess = true;
+		Result.bReused = true;
+		Result.Status = TEXT("no_change_required");
+		Result.PrimaryAsset = Request.TargetAssetPath;
+		if (!ReadTextureDimensions(Existing, Result.VerifiedWidth, Result.VerifiedHeight))
 		{
-			Result.bSuccess = true;
-			Result.bReused = true;
-			Result.Status = TEXT("no_change_required");
-			Result.PrimaryAsset = Request.TargetAssetPath;
-			if (!ReadTextureDimensions(Existing, Result.VerifiedWidth, Result.VerifiedHeight))
-			{
-				Result.VerifiedWidth = Request.Width;
-				Result.VerifiedHeight = Request.Height;
-			}
-			Result.Summary = FString::Printf(
-				TEXT("Reused existing texture '%s' (%dx%d)."),
-				*Request.TargetAssetPath,
-				Result.VerifiedWidth,
-				Result.VerifiedHeight);
-			Result.InterpretationNotes.Add(TEXT("Texture already existed; generation skipped (idempotent reuse)."));
-			return Result;
+			Result.VerifiedWidth = Request.Width;
+			Result.VerifiedHeight = Request.Height;
 		}
+		Result.Summary = FString::Printf(
+			TEXT("Reused existing texture '%s' (%dx%d)."),
+			*Request.TargetAssetPath,
+			Result.VerifiedWidth,
+			Result.VerifiedHeight);
+		Result.InterpretationNotes.Add(TEXT("Texture already existed; generation skipped (idempotent reuse)."));
+		return Result;
 	}
 
 	if (Request.bDryRun)
@@ -426,7 +424,7 @@ FUeremcpProceduralTextureResult UeremcpProceduralTextureService::Execute(
 		return Result;
 	}
 
-	UTexture2D* Reloaded = Cast<UTexture2D>(AssetSubsystem->LoadAsset(Request.TargetAssetPath));
+	UTexture2D* Reloaded = Cast<UTexture2D>(UeremcpMaterialAssetLoad::TryLoadTexture(Request.TargetAssetPath));
 	const UTexture2D* DimensionProbe = Reloaded ? Reloaded : Texture;
 	if (!DimensionProbe)
 	{

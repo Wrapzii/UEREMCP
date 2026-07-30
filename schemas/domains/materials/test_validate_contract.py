@@ -17,6 +17,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MATERIAL_SERVICE = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialService.cpp"
+MATERIAL_MASTER = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialMasterBuilder.cpp"
+MATERIAL_ASSET_LOAD = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialAssetLoad.cpp"
 PROCEDURAL_SERVICE = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpProceduralTextureService.cpp"
 PROCEDURAL_HEADER = REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Public/UeremcpProceduralTextureService.h"
 ENVELOPE_REQUEST = REPO_ROOT / "schemas/envelope/request.schema.json"
@@ -44,7 +46,7 @@ class MaterialValidateContractTests(unittest.TestCase):
 
     def test_create_vfx_material_caps_partial_when_proof_unavailable(self) -> None:
         self.assertIn("CapPartialWhenProofUnavailable", self.material_cpp)
-        self.assertIn("ResolveInProcessMaterial", self.material_cpp)
+        self.assertIn("UeremcpMaterialAssetLoad::ResolveMaterial", self.material_cpp)
         self.assertNotRegex(
             self.material_cpp,
             r"VerifyInstanceParameters[\s\S]{0,120}Result\.Status = TEXT\(\"failed_validation\"\)",
@@ -78,6 +80,19 @@ class MaterialValidateContractTests(unittest.TestCase):
             self.procedural_cpp,
             r"if\s*\(\s*!Request\.bValidate\s*\)[\s\S]*TEXT\(\"partially_completed\"\)",
         )
+
+    def test_asset_load_gates_editor_subsystem_with_does_asset_exist(self) -> None:
+        asset_load_cpp = MATERIAL_ASSET_LOAD.read_text(encoding="utf-8")
+        self.assertIn("DoesAssetExist", asset_load_cpp)
+        self.assertRegex(
+            asset_load_cpp,
+            r"if\s*\(\s*!AssetSubsystem->DoesAssetExist\(PackagePath\)\s*\)\s*\{\s*return nullptr;\s*\}",
+        )
+        master_cpp = MATERIAL_MASTER.read_text(encoding="utf-8")
+        self.assertIn("UeremcpMaterialAssetLoad::ResolveMaterial", master_cpp)
+        self.assertNotIn("LoadAsset(PackagePath)", master_cpp)
+        self.assertNotIn("AssetSubsystem->LoadAsset", self.material_cpp)
+        self.assertNotIn("AssetSubsystem->LoadAsset", self.procedural_cpp)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@
 #include "Materials/MaterialInstanceConstant.h"
 #include "ScopedTransaction.h"
 #include "Subsystems/EditorAssetSubsystem.h"
+#include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialCapabilityNotes.h"
 #include "UeremcpMaterialElementPresets.h"
 #include "UeremcpMaterialElementPresetsLoader.h"
@@ -108,27 +109,6 @@ namespace
 			return false;
 		}
 		return true;
-	}
-
-	static UMaterial* ResolveInProcessMaterial(const FString& PackagePath, UMaterial* Preferred)
-	{
-		if (Preferred)
-		{
-			return Preferred;
-		}
-
-		FString FolderPath;
-		FString AssetName;
-		if (UeremcpMaterialPaths::SplitPackagePath(PackagePath, FolderPath, AssetName))
-		{
-			const FString ObjectPath = FString::Printf(TEXT("%s.%s"), *PackagePath, *AssetName);
-			if (UMaterial* Found = FindObject<UMaterial>(nullptr, *ObjectPath))
-			{
-				return Found;
-			}
-		}
-
-		return Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), nullptr, *PackagePath));
 	}
 
 	static void CapPartialWhenProofUnavailable(
@@ -338,7 +318,7 @@ namespace
 
 		for (const FTextureSlotBinding& Binding : Bindings)
 		{
-			UTexture* Texture = Cast<UTexture>(AssetSubsystem->LoadAsset(Binding.AssetPath));
+			UTexture* Texture = UeremcpMaterialAssetLoad::TryLoadTexture(Binding.AssetPath);
 			if (!Texture)
 			{
 				OutError = FString::Printf(
@@ -668,7 +648,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
-	UMaterial* MasterMaterial = ResolveInProcessMaterial(MasterPath, MasterResult.MasterMaterial);
+	UMaterial* MasterMaterial = UeremcpMaterialAssetLoad::ResolveMaterial(MasterPath, MasterResult.MasterMaterial);
 	if (!MasterMaterial)
 	{
 		CapPartialWhenProofUnavailable(
@@ -685,7 +665,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	if (bExisted)
 	{
-		Instance = Cast<UMaterialInstanceConstant>(AssetSubsystem->LoadAsset(Request.TargetAssetPath));
+		Instance = UeremcpMaterialAssetLoad::TryLoadMaterialInstance(Request.TargetAssetPath);
 		if (!Instance)
 		{
 			CapPartialWhenProofUnavailable(

@@ -5,6 +5,7 @@
 #include "Editor.h"
 #include "Materials/MaterialInterface.h"
 #include "Subsystems/EditorAssetSubsystem.h"
+#include "UeremcpMaterialAssetLoad.h"
 #include "UeremcpMaterialPaths.h"
 
 namespace
@@ -128,7 +129,7 @@ bool UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(
 		return false;
 	}
 
-	UObject* Loaded = AssetSubsystem->LoadAsset(PackagePath);
+	UObject* Loaded = UeremcpMaterialAssetLoad::TryLoadRegisteredAsset(PackagePath);
 	UMaterialInterface* Material = Cast<UMaterialInterface>(Loaded);
 	if (!Material)
 	{
