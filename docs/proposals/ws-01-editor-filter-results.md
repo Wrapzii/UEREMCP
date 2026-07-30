@@ -1,15 +1,15 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `c7b33cc` (A6 code + `__UeremcpPoc` allowlists; runtime proofs pending)
-- **Latest Blueprint re-run tip:** `35b4cab`
+- **Current orchestration tip:** `674c439` (WS-11 fireball proof parsing fix)
+- **Latest Blueprint acceptance re-run tip:** `d691316` (**FAIL**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
-- **Latest Material re-run tip:** `7535e6c`
+- **Latest Material re-run tip:** `d691316` (**PASS 14/14**)
 - **Latest Templates re-run tip:** `f15ea96`
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Wave 2 listed editor filters are green on current-tip or unchanged-source proofs. Material is **PASS 11/11** on `7535e6c`, including ValidateFalse disk persistence; Templates is **PASS 4/4** on `f15ea96`; Niagara Create/Inspect/B7 are green. Optional live VisualTest MCP `BENCHMARK_PROTOCOL` T1a freshness is **PASS** after editor restart. No A6 / overall POC-B completion claim.
+- **Status:** Material is **PASS 14/14** on `d691316`; prior Wave 2 Niagara Create/Inspect/B7 and Templates proofs remain green. Acceptance follow-ups are **not green**: Fireball POC FAIL and Blueprint PocA6Reread FAIL on `d691316`. No A6 / POC A / B1 / B2 / B4 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -27,14 +27,24 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Filter / gate | Recorded result | Proof tip | Freshness / residual |
 |---|---:|---|---|
 | `UeremcpBlueprint.Toolset` | **PASS, 4/4** | `35b4cab` | Blueprint sources unchanged since proof. |
-| `UeremcpMaterial.Toolset` | **PASS, 11/11** | `7535e6c` | ValidateFalse and MI/master disk persistence are green; live VisualTest MCP T1a freshness also PASS. |
+| `UeremcpMaterial.Toolset` | **PASS, 14/14** | `d691316` | Current WS-11 runtime proof; log below. |
 | `UEREMCP.Animation` | **PASS, 10/10** | `5ea9277` | Animation sources unchanged since proof. |
 | `UEREMCP.Niagara.Create` | **PASS, 10/10** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: A6 **code** landed (`13bf529` / `2a0b2cd`) — **runtime-unproven**; no A6/POC-A claim. Fireball harness on tip (`fcff5cc`); prior SKIP path rejection addressed by WS-07 `76a5f5a` + WS-08 `c7b33cc` `__UeremcpPoc` allowlists — **fireball re-run still required**; no B1/B2/B4 / overall POC-B claim. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`.
+Residuals: A6 code landed but runtime **FAIL** on `d691316`: missing BeginPlay→Branch link; A8/A11 no-op failed. Fireball runtime **FAIL**: system under POC root, MIs under test root, B4 false, B2 harness manifest-path issue. WS-11 parsing fix `656ffe0` landed as `674c439`; domain co-location remains WS-07/WS-08. Material **PASS 14/14**. No A6/POC-A/B1/B2/B4/overall POC-B claim. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`.
+
+## Acceptance runtime follow-up on tip `d691316` (WS-11)
+
+| Proof | Result | Evidence / owner |
+|---|---:|---|
+| Fireball POC | **FAIL** | `editor_UEREMCP_Niagara_POCB_FireballInlineMaterials_20260730_050816.log`: Niagara system under POC root; MIs under test root; B4 false; B2 harness manifest-path issue. WS-07/WS-08 own MI co-location. |
+| Blueprint `PocA6Reread` | **FAIL** | `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_050942.log`: `failed_validation`; BeginPlay→Branch link missing; A8/A11 no-op failed. WS-06 owns fix. |
+| Material Toolset | **PASS, 14/14** | `editor_UeremcpMaterial_Toolset_20260730_051149.log`. |
+
+WS-11 `656ffe0` (integrated as `674c439`) fixes fireball proof result/log parsing only; it does not fix B2/B4 or prove POC-B.
 
 ## Templates editor result and handoff
 
@@ -242,11 +252,11 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | POC A / A6: deliver programmatic modify→re-read proof; Wave 2 Blueprint 4/4 is not A6. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`. |
-| WS-06 | A6 reread-after-write **code** on `13bf529` — awaiting WS-11 editor proof; no A6 claim. |
-| WS-07 | `__UeremcpPoc` Niagara allowlist on `76a5f5a`. Fireball still needs WS-11 re-run. |
-| WS-08 | `__UeremcpPoc` Material allowlist on `c7b33cc`. Fireball still needs WS-11 re-run. |
+| WS-06 | Fix missing BeginPlay→Branch link and A8/A11 no-op after PocA6Reread **FAIL** on `d691316`. |
+| WS-07 | Fireball **FAIL**: co-locate generated MIs under POC root with the Niagara system; coordinate B2/B4 with WS-08. |
+| WS-08 | Material **PASS 14/14**; fireball still needs MI co-location under POC root with WS-07. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run A6 Blueprint proof + fireball filter after allowlists; keep A6/POC-A/POC-B unclaimed until PASS. |
+| WS-11 | Parsing fix landed as `674c439`; re-run after WS-06 and WS-07/WS-08 domain fixes. Keep A6/POC-A/POC-B unclaimed until PASS. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-Wave 2 listed editor filters are green on recorded tips. A6 code and `__UeremcpPoc` allowlists are on orch; **runtime A6 and fireball proofs remain open**. No A6 / POC-A / overall POC-B claims. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`. No junction retarget.
+Material is green at 14/14, but A6 and Fireball acceptance follow-ups fail on `d691316`. No A6 / POC-A / B1 / B2 / B4 / overall POC-B claims. See `docs/proposals/ws-01-a6-pocb-residual-plan.md`. No junction retarget.
