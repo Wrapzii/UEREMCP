@@ -3,6 +3,7 @@
 #include "UeremcpTemplateService.h"
 
 #include "Dom/JsonObject.h"
+#include "Misc/Paths.h"
 #include "Serialization/JsonSerializer.h"
 
 namespace
@@ -232,11 +233,61 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 		return Result;
 	}
 
+	FString Element;
+	if (EffectiveInputs->TryGetStringField(TEXT("element"), Element))
+	{
+		const FUeremcpElementPreset* Preset = Store.FindElementPreset(Element);
+		if (!Preset)
+		{
+			Result.Summary = FString::Printf(TEXT("No element preset is loaded for '%s'."), *Element);
+			return Result;
+		}
+
+		EffectiveInputs->SetObjectField(
+			TEXT("preset_material_parameters"),
+			CloneJsonObject(Preset->MaterialParameterOverrides));
+		TSharedPtr<FJsonObject> NiagaraParameters = CloneJsonObject(Preset->NiagaraParameters);
+		if (NiagaraParameters.IsValid())
+		{
+			const TSharedPtr<FJsonValue> ScaleOverride = EffectiveInputs->TryGetField(TEXT("scale"));
+			if (ScaleOverride.IsValid())
+			{
+				NiagaraParameters->SetField(TEXT("scale"), CloneJsonValue(ScaleOverride));
+			}
+			const TSharedPtr<FJsonValue> IntensityOverride = EffectiveInputs->TryGetField(TEXT("intensity"));
+			if (IntensityOverride.IsValid())
+			{
+				NiagaraParameters->SetField(TEXT("intensity"), CloneJsonValue(IntensityOverride));
+			}
+			EffectiveInputs->SetObjectField(TEXT("preset_niagara_parameters"), NiagaraParameters);
+		}
+	}
+
+	FString EffectiveTargetPath;
+	EffectiveInputs->TryGetStringField(TEXT("target_path"), EffectiveTargetPath);
+	if (!EffectiveTargetPath.IsEmpty())
+	{
+		const FString TargetFolder = FPaths::GetPath(EffectiveTargetPath);
+		const FString TargetName = FPaths::GetBaseFilename(EffectiveTargetPath);
+		if (!EffectiveInputs->HasField(TEXT("core_material_path")))
+		{
+			EffectiveInputs->SetStringField(
+				TEXT("core_material_path"),
+				FPaths::Combine(TargetFolder, FString::Printf(TEXT("MI_%s_Core"), *TargetName)));
+		}
+		if (!EffectiveInputs->HasField(TEXT("trail_material_path")))
+		{
+			EffectiveInputs->SetStringField(
+				TEXT("trail_material_path"),
+				FPaths::Combine(TargetFolder, FString::Printf(TEXT("MI_%s_Trail"), *TargetName)));
+		}
+	}
+
 	FString MaterializeError;
 	const TSharedPtr<FJsonObject> Plan = MaterializePlan(
 		*Record,
 		EffectiveInputs,
-		Request.TargetAssetPath,
+		EffectiveTargetPath,
 		Request.Mode,
 		MaterializeError);
 	if (!Plan.IsValid())
@@ -554,6 +605,24 @@ TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 	}
 
 	TArray<TSharedPtr<FJsonValue>> Operations = *MaterializedSteps;
+	for (const TSharedPtr<FJsonValue>& OperationValue : Operations)
+	{
+		if (!OperationValue.IsValid() || OperationValue->Type != EJson::Object || !Inputs.IsValid())
+		{
+			continue;
+		}
+		const TSharedPtr<FJsonObject> Operation = OperationValue->AsObject();
+		FString OperationId;
+		FString OperationTargetPath;
+		if (Operation->TryGetStringField(TEXT("id"), OperationId)
+			&& Inputs->TryGetStringField(OperationId + TEXT("_path"), OperationTargetPath)
+			&& !OperationTargetPath.IsEmpty())
+		{
+			const TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
+			Target->SetStringField(TEXT("asset_path"), OperationTargetPath);
+			Operation->SetObjectField(TEXT("target"), Target);
+		}
+	}
 	if (Operations.Num() > 0 && Operations.Last().IsValid() && Operations.Last()->Type == EJson::Object)
 	{
 		const TSharedPtr<FJsonObject> TerminalOperation = Operations.Last()->AsObject();

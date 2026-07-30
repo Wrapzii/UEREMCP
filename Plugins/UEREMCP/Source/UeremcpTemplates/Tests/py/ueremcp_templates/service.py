@@ -124,6 +124,7 @@ class TemplateService:
         effective_inputs = copy.deepcopy(request.inputs or {})
         if request.target_asset_path and "target_path" not in effective_inputs:
             effective_inputs["target_path"] = request.target_asset_path
+
         input_error = _validate_inputs(record.document.get("inputs"), effective_inputs)
         if input_error:
             return InstantiateResult(
@@ -132,11 +133,46 @@ class TemplateService:
                 summary=input_error,
             )
 
+        element = effective_inputs.get("element")
+        if isinstance(element, str):
+            preset = self._store.find_element_preset(element)
+            if preset is None:
+                return InstantiateResult(
+                    success=False,
+                    status="failed_validation",
+                    summary=f"No element preset is loaded for '{element}'.",
+                )
+            effective_inputs["preset_material_parameters"] = copy.deepcopy(
+                preset.material_parameter_overrides
+            )
+            niagara_parameters = copy.deepcopy(preset.niagara_parameters)
+            for override in ("scale", "intensity"):
+                if override in effective_inputs:
+                    niagara_parameters[override] = copy.deepcopy(
+                        effective_inputs[override]
+                    )
+            effective_inputs["preset_niagara_parameters"] = niagara_parameters
+
+        effective_target_path = effective_inputs.get("target_path", "")
+        if isinstance(effective_target_path, str) and effective_target_path:
+            target_folder, _, target_name = effective_target_path.rpartition("/")
+            effective_inputs.setdefault(
+                "core_material_path", f"{target_folder}/MI_{target_name}_Core"
+            )
+            effective_inputs.setdefault(
+                "trail_material_path", f"{target_folder}/MI_{target_name}_Trail"
+            )
+
         materialized = _apply_inputs(plan_steps, effective_inputs)
+        for operation in materialized:
+            operation_id = operation.get("id")
+            operation_target = effective_inputs.get(f"{operation_id}_path")
+            if isinstance(operation_target, str) and operation_target:
+                operation["target"] = {"asset_path": operation_target}
         if materialized:
             terminal = materialized[-1]
-            if request.target_asset_path:
-                terminal["target"] = {"asset_path": request.target_asset_path}
+            if effective_target_path:
+                terminal["target"] = {"asset_path": effective_target_path}
             if request.mode:
                 terminal["mode"] = request.mode
         plan = {

@@ -15,27 +15,22 @@ The test of whether you built a template library or a duplicates folder is POC C
 criterion C7: **can a template instantiated from a promoted asset produce a third,
 different variation?** If not, it is a copy.
 
-## Storage substrate — undecided
+## Storage substrate
 
-The substrate is **not yet chosen**. ADR-0008 is pending RB-10, because Epic already
-ships something adjacent and it would be foolish to build past it without looking.
+ADR-0008 is accepted: canonical templates are JSON documents in this directory,
+loaded by `UeremcpTemplates`, and instantiated through the shared `execute_plan`
+interpreter. Epic `UAgentSkill` remains prompt-shaped and is not the execution
+substrate `[VERIFIED: AgentSkill.h:34-104; ADR-0008]`.
 
-`UAgentSkillToolset` exposes `ListSkills`, `GetSkills`, `CreateSkill`, `UpdateSkill` as
-`AICallable` statics over `UAgentSkill` UObject assets — **agent-authored, listable,
-updatable at runtime** `[VERIFIED: $TR/.../Public/ToolsetRegistry/AgentSkill.h]`. That is
-most of the lifecycle §10 asks for.
-
-The difference: `UAgentSkill` is **prompt-shaped** (`GeneratePrompt`), ours is
-**execution-shaped** (`construction_plan`). Whether we subclass it, sit beside it, or
-ignore it is RB-10's call. Do not commit files to a layout here until it lands.
-
-So this directory currently holds **JSON templates conforming to the frozen schema**, as
-the format-independent representation. Whatever substrate wins, these convert.
+Domain templates conform to `template.schema.json`. Element value documents conform
+to `schemas/domains/templates/element_preset.schema.json`; the template service loads
+them as data and injects the selected preset while materializing a plan.
 
 ## Layout
 
 ```
 templates/
+  elements/      element.fire.v1.json, ... (data for one parameterized family)
   niagara/       niagara.projectile.fireball.v1.json, ...
   materials/
   blueprints/
@@ -44,6 +39,7 @@ templates/
 ```
 
 `template_id` follows `<domain>.<category>.<name>.v<n>` and must match the filename.
+Element preset ids follow `element.<name>.v<n>` and also match the filename.
 
 ## Authoring rules
 

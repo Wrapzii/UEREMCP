@@ -24,12 +24,24 @@ class TemplateRecord:
     source_path: str = ""
 
 
+@dataclass
+class ElementPreset:
+    preset_id: str
+    element: str
+    version: int
+    material_parameter_overrides: dict[str, Any]
+    niagara_parameters: dict[str, Any]
+    source_path: str = ""
+
+
 class TemplateStore:
     def __init__(self) -> None:
         self._records: dict[str, TemplateRecord] = {}
+        self._element_presets: dict[str, ElementPreset] = {}
 
     def reset(self) -> None:
         self._records.clear()
+        self._element_presets.clear()
 
     def load_from_directory(self, root: Path) -> tuple[int, list[str]]:
         self.reset()
@@ -39,6 +51,19 @@ class TemplateStore:
 
         loaded = 0
         for path in sorted(root.rglob("*.json")):
+            if path.parent.name.lower() == "elements":
+                try:
+                    preset = self._parse_element_preset(path)
+                except ValueError as exc:
+                    errors.append(f"{path}: {exc}")
+                    continue
+                key = preset.element.lower()
+                if key in self._element_presets:
+                    errors.append(f"{path}: duplicate element preset '{preset.element}'")
+                    continue
+                self._element_presets[key] = preset
+                continue
+
             try:
                 record = self._parse_file(path)
             except ValueError as exc:
@@ -60,8 +85,14 @@ class TemplateStore:
     def all_ids(self) -> list[str]:
         return sorted(self._records)
 
+    def find_element_preset(self, element: str) -> ElementPreset | None:
+        return self._element_presets.get(element.lower())
+
     def count(self) -> int:
         return len(self._records)
+
+    def element_preset_count(self) -> int:
+        return len(self._element_presets)
 
     def _parse_file(self, path: Path) -> TemplateRecord:
         document = json.loads(path.read_text(encoding="utf-8"))
@@ -84,6 +115,21 @@ class TemplateStore:
         )
         self._index_element(record)
         return record
+
+    @staticmethod
+    def _parse_element_preset(path: Path) -> ElementPreset:
+        document = json.loads(path.read_text(encoding="utf-8"))
+        try:
+            return ElementPreset(
+                preset_id=document["preset_id"],
+                element=document["element"],
+                version=int(document["version"]),
+                material_parameter_overrides=document["material"]["parameter_overrides"],
+                niagara_parameters=document["niagara"]["parameters"],
+                source_path=str(path),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("invalid element preset") from exc
 
     @staticmethod
     def _index_element(record: TemplateRecord) -> None:

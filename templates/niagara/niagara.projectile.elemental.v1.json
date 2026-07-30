@@ -27,9 +27,14 @@
       },
       "target_path": { "type": "string" },
       "scale": { "type": "number", "minimum": 0.1 },
-      "intensity": { "type": "number", "minimum": 0.1 }
+      "intensity": { "type": "number", "minimum": 0.1 },
+      "preset_material_parameters": { "type": "object" },
+      "preset_niagara_parameters": { "type": "object" }
     },
-    "required": ["element"]
+    "required": [
+      "element",
+      "target_path"
+    ]
   },
   "outputs": {
     "primary_asset": { "type": "string", "description": "Created Niagara system asset path." }
@@ -51,44 +56,51 @@
     {
       "id": "core_material",
       "action": "create_vfx_material",
+      "mode": "create_or_update",
       "specification": {
         "purpose": "elemental_projectile_core",
         "element": "{{inputs.element}}",
-        "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"]
+        "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"],
+        "parameter_overrides": "{{inputs.preset_material_parameters}}"
       }
     },
     {
       "id": "trail_material",
       "action": "create_vfx_material",
       "optional": true,
+      "mode": "create_or_update",
       "specification": {
         "purpose": "elemental_projectile_trail",
         "element": "{{inputs.element}}",
-        "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"]
+        "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"],
+        "parameter_overrides": "{{inputs.preset_material_parameters}}"
       }
     },
     {
       "id": "projectile_fx",
       "action": "create_niagara_effect",
       "depends_on": ["core_material", "trail_material"],
+      "mode": "create_or_update",
       "specification": {
         "name": "ElementalProjectile",
         "effect_type": "projectile",
         "element": "{{inputs.element}}",
-        "prior_art_system": "/Game/VFX/Spells/Firebolt/Systems/NS_FB_Projectile",
-        "target_path": "{{inputs.target_path}}",
-        "scale": "{{inputs.scale}}",
-        "intensity": "{{inputs.intensity}}",
+        "base_system": {
+          "asset_path": "/Game/VFX/Spells/Firebolt/Systems/NS_FB_Projectile"
+        },
+        "parameters": "{{inputs.preset_niagara_parameters}}",
         "components": [
-          { "archetype": "niagara.emitter.core.v1", "emitter_role": "REF" },
-          { "archetype": "niagara.emitter.shell.v1", "emitter_role": "Spiral1" },
-          { "archetype": "niagara.emitter.sparks.v1", "emitter_role": "Sparks1" },
-          { "archetype": "niagara.emitter.smoke.v1", "emitter_role": "Smoke" },
-          { "archetype": "niagara.emitter.ribbon_trail.v1", "emitter_role": "Trail" },
-          { "archetype": "niagara.emitter.impact_burst.v1", "emitter_role": "Flash" }
+          { "archetype": "niagara.emitter.core.v1", "role": "REF" },
+          { "archetype": "niagara.emitter.shell.v1", "role": "Spiral1" },
+          { "archetype": "niagara.emitter.sparks.v1", "role": "Sparks1" },
+          { "archetype": "niagara.emitter.smoke.v1", "role": "Smoke" },
+          { "archetype": "niagara.emitter.ribbon_trail.v1", "role": "Trail" },
+          { "archetype": "niagara.emitter.impact_burst.v1", "role": "Flash" }
         ],
-        "core_material": { "$ref": "core_material.result.primary_asset" },
-        "trail_material": { "$ref": "trail_material.result.primary_asset" }
+        "materials": {
+          "core": { "$ref": "core_material.result.primary_asset" },
+          "trail": { "$ref": "trail_material.result.primary_asset" }
+        }
       }
     }
   ],

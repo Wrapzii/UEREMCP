@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import sys
 import unittest
@@ -33,12 +34,40 @@ class TemplateStoreTests(unittest.TestCase):
         self.assertEqual(errors, [], msg="\n".join(errors))
         self.assertEqual(loaded, 7)
         self.assertEqual(self.store.count(), 7)
+        self.assertEqual(self.store.element_preset_count(), 5)
 
     def test_template_ids_match_filenames(self) -> None:
         self.store.load_from_directory(self.templates_dir)
         for path in sorted((self.templates_dir / "niagara").glob("*.json")):
             document = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(path.stem, document["template_id"])
+
+    def test_element_presets_match_ws08_reference_values(self) -> None:
+        self.store.load_from_directory(self.templates_dir)
+        reference = json.loads(
+            (
+                ROOT
+                / "schemas"
+                / "domains"
+                / "materials"
+                / "element_presets.v1.json"
+            ).read_text(encoding="utf-8")
+        )
+        for element, expected in reference["elements"].items():
+            preset = self.store.find_element_preset(element)
+            self.assertIsNotNone(preset)
+            assert preset is not None
+            actual = preset.material_parameter_overrides
+            self.assertEqual(actual["ParticleColor"], expected["particle_color"])
+            self.assertEqual(actual["ColorSecondary"], expected["color_secondary"])
+            for json_name, reference_name in {
+                "EmissiveScale": "emissive_scale",
+                "FlowSpeed": "flow_speed",
+                "Turbulence": "turbulence",
+                "SoftEdge": "soft_edge",
+                "DepthFade": "depth_fade",
+            }.items():
+                self.assertEqual(actual[json_name], expected[reference_name])
 
 
 class TemplateSearchTests(unittest.TestCase):
@@ -84,17 +113,35 @@ class TemplateInstantiateTests(unittest.TestCase):
             response_schema,
             registry=load_registry(ROOT / "schemas"),
         )
+        self.action_validators = {}
+        for action, schema_path in {
+            "create_vfx_material": ROOT
+            / "schemas/domains/materials/create_vfx_material.schema.json",
+            "create_niagara_effect": ROOT
+            / "schemas/domains/niagara/create_niagara_effect.schema.json",
+        }.items():
+            self.action_validators[action] = Draft202012Validator(
+                json.loads(schema_path.read_text(encoding="utf-8")),
+                registry=load_registry(ROOT / "schemas"),
+            )
+
+    @staticmethod
+    def projectile_inputs(element: str) -> dict[str, object]:
+        title = element.title()
+        return {
+            "element": element,
+            "core_material_path": f"/Game/VFX/Materials/MI_{title}_ProjectileCore",
+            "trail_material_path": f"/Game/VFX/Materials/MI_{title}_ProjectileTrail",
+            "target_path": f"/Game/VFX/Spells/NS_{title}Projectile",
+            "scale": 1.25,
+            "intensity": 6.0,
+        }
 
     def test_instantiate_elemental_substitutes_inputs(self) -> None:
         result = self.service.instantiate(
             InstantiateRequest(
                 template_id="niagara.projectile.elemental.v1",
-                inputs={
-                    "element": "water",
-                    "target_path": "/Game/VFX/Spells/NS_WaterProjectile",
-                    "scale": 1.25,
-                    "intensity": 6.0,
-                },
+                inputs=self.projectile_inputs("water"),
             )
         )
         self.assertTrue(result.success)
@@ -112,15 +159,83 @@ class TemplateInstantiateTests(unittest.TestCase):
         )
         self.assertEqual(projectile_step["specification"]["element"], "water")
         self.assertEqual(
-            projectile_step["specification"]["target_path"],
+            projectile_step["target"]["asset_path"],
             "/Game/VFX/Spells/NS_WaterProjectile",
         )
+        self.assertEqual(projectile_step["specification"]["parameters"]["scale"], 1.25)
+        self.assertEqual(projectile_step["specification"]["parameters"]["intensity"], 6.0)
+        self.assertEqual(
+            projectile_step["specification"]["parameters"]["primary_color"],
+            [0.1, 0.4, 0.8, 1.0],
+        )
+        core_material = next(
+            op for op in result.plan["operations"] if op["id"] == "core_material"
+        )
+        self.assertEqual(
+            core_material["specification"]["parameter_overrides"]["EmissiveScale"],
+            4.0,
+        )
+
+    def test_material_paths_and_defaults_derive_from_target_and_preset(self) -> None:
+        result = self.service.instantiate(
+            InstantiateRequest(
+                template_id="niagara.projectile.elemental.v1",
+                inputs={
+                    "element": "ice",
+                    "target_path": "/Game/VFX/Spells/NS_IceProjectile",
+                },
+            )
+        )
+        self.assertTrue(result.success)
+        assert result.plan is not None
+        operations = {operation["id"]: operation for operation in result.plan["operations"]}
+        self.assertEqual(
+            operations["core_material"]["target"]["asset_path"],
+            "/Game/VFX/Spells/MI_NS_IceProjectile_Core",
+        )
+        self.assertEqual(
+            operations["trail_material"]["target"]["asset_path"],
+            "/Game/VFX/Spells/MI_NS_IceProjectile_Trail",
+        )
+        self.assertEqual(
+            operations["projectile_fx"]["specification"]["parameters"]["intensity"],
+            6.0,
+        )
+
+    def test_materialized_operations_match_domain_schemas(self) -> None:
+        result = self.service.instantiate(
+            InstantiateRequest(
+                template_id="niagara.projectile.elemental.v1",
+                inputs=self.projectile_inputs("ice"),
+            )
+        )
+        self.assertTrue(result.success)
+        assert result.plan is not None
+        operations = {operation["id"]: operation for operation in result.plan["operations"]}
+        for operation_id in ("core_material", "trail_material"):
+            operation = operations[operation_id]
+            errors = list(
+                self.action_validators[operation["action"]].iter_errors(
+                    operation["specification"]
+                )
+            )
+            self.assertEqual(errors, [], msg=f"{operation_id}: {errors}")
+
+        niagara_spec = copy.deepcopy(operations["projectile_fx"]["specification"])
+        niagara_spec["materials"] = {
+            "core": "/Game/VFX/Materials/MI_Ice_ProjectileCore",
+            "trail": "/Game/VFX/Materials/MI_Ice_ProjectileTrail",
+        }
+        errors = list(
+            self.action_validators["create_niagara_effect"].iter_errors(niagara_spec)
+        )
+        self.assertEqual(errors, [], msg=str(errors))
 
     def test_target_is_forwarded_to_terminal_operation(self) -> None:
         result = self.service.instantiate(
             InstantiateRequest(
                 template_id="niagara.projectile.elemental.v1",
-                inputs={"element": "fire"},
+                inputs=self.projectile_inputs("fire"),
                 target_asset_path="/Game/VFX/Spells/NS_FireProjectile",
                 mode="create_or_update",
             )
@@ -133,10 +248,7 @@ class TemplateInstantiateTests(unittest.TestCase):
             "/Game/VFX/Spells/NS_FireProjectile",
         )
         self.assertEqual(terminal["mode"], "create_or_update")
-        self.assertEqual(
-            terminal["specification"]["target_path"],
-            "/Game/VFX/Spells/NS_FireProjectile",
-        )
+        self.assertEqual(terminal["specification"]["element"], "fire")
 
     def test_missing_required_input_fails_before_delegation(self) -> None:
         result = self.service.instantiate(
@@ -149,7 +261,10 @@ class TemplateInstantiateTests(unittest.TestCase):
         result = self.service.instantiate(
             InstantiateRequest(
                 template_id="niagara.projectile.elemental.v1",
-                inputs={"element": "lightning"},
+                inputs={
+                    **self.projectile_inputs("fire"),
+                    "element": "lightning",
+                },
             )
         )
         self.assertFalse(result.success)
@@ -180,7 +295,7 @@ class TemplateInstantiateTests(unittest.TestCase):
     def test_delegate_returns_complete_execute_plan_result(self) -> None:
         request = InstantiateRequest(
             template_id="niagara.projectile.elemental.v1",
-            inputs={"element": "water"},
+            inputs=self.projectile_inputs("water"),
             target_asset_path="/Game/VFX/Spells/NS_WaterProjectile",
         )
         materialized = self.service.instantiate(request)
@@ -254,7 +369,7 @@ class TemplateInstantiateTests(unittest.TestCase):
     def test_template_validation_gap_does_not_mask_executor_failure(self) -> None:
         request = InstantiateRequest(
             template_id="niagara.projectile.elemental.v1",
-            inputs={"element": "earth"},
+            inputs=self.projectile_inputs("earth"),
         )
         materialized = self.service.instantiate(request)
         response = delegate_execute_plan(

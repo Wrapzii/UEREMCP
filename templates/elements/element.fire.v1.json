@@ -1,0 +1,25 @@
+{
+  "preset_id": "element.fire.v1",
+  "element": "fire",
+  "version": 1,
+  "description": "Warm high-emissive projectile defaults shared by material and Niagara construction.",
+  "material": {
+    "parameter_overrides": {
+      "ParticleColor": [1.0, 0.35, 0.05, 1.0],
+      "ColorSecondary": [1.0, 0.8, 0.2, 1.0],
+      "EmissiveScale": 8.0,
+      "FlowSpeed": 0.3,
+      "Turbulence": 0.8,
+      "SoftEdge": 0.85,
+      "DepthFade": 120.0
+    }
+  },
+  "niagara": {
+    "parameters": {
+      "primary_color": [1.0, 0.35, 0.05, 1.0],
+      "secondary_color": [1.0, 0.8, 0.2, 1.0],
+      "scale": 1.0,
+      "intensity": 8.0
+    }
+  }
+}

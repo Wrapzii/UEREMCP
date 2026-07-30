@@ -25,6 +25,17 @@ struct UEREMCPTEMPLATES_API FUeremcpTemplateRecord
 	FString SourcePath;
 };
 
+/** Cross-domain values loaded from templates/elements/*.json. */
+struct UEREMCPTEMPLATES_API FUeremcpElementPreset
+{
+	FString PresetId;
+	FString Element;
+	int32 Version = 0;
+	TSharedPtr<FJsonObject> MaterialParameterOverrides;
+	TSharedPtr<FJsonObject> NiagaraParameters;
+	FString SourcePath;
+};
+
 /** search_templates specification (schemas/domains/templates/search_templates.schema.json). */
 struct UEREMCPTEMPLATES_API FUeremcpTemplateSearchQuery
 {

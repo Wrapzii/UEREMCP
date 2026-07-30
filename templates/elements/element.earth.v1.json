@@ -1,0 +1,25 @@
+{
+  "preset_id": "element.earth.v1",
+  "element": "earth",
+  "version": 1,
+  "description": "Dense low-emissive projectile defaults shared by material and Niagara construction.",
+  "material": {
+    "parameter_overrides": {
+      "ParticleColor": [0.3, 0.25, 0.2, 1.0],
+      "ColorSecondary": [0.5, 0.45, 0.35, 1.0],
+      "EmissiveScale": 2.0,
+      "FlowSpeed": 0.1,
+      "Turbulence": 0.3,
+      "SoftEdge": 0.9,
+      "DepthFade": 80.0
+    }
+  },
+  "niagara": {
+    "parameters": {
+      "primary_color": [0.3, 0.25, 0.2, 1.0],
+      "secondary_color": [0.5, 0.45, 0.35, 1.0],
+      "scale": 1.0,
+      "intensity": 2.0
+    }
+  }
+}

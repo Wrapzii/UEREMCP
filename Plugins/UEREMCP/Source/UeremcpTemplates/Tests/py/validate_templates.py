@@ -37,14 +37,18 @@ def main() -> int:
     templates_dir = root / "templates"
     template_schema_path = schemas_dir / "template-library" / "template.schema.json"
     template_schema = json.loads(template_schema_path.read_text(encoding="utf-8"))
+    element_schema_path = schemas_dir / "domains" / "templates" / "element_preset.schema.json"
+    element_schema = json.loads(element_schema_path.read_text(encoding="utf-8"))
     registry = load_registry(schemas_dir)
-    validator = Draft202012Validator(template_schema, registry=registry)
+    template_validator = Draft202012Validator(template_schema, registry=registry)
+    element_validator = Draft202012Validator(element_schema, registry=registry)
 
     errors: list[str] = []
     count = 0
     for path in sorted(templates_dir.rglob("*.json")):
         count += 1
         instance = json.loads(path.read_text(encoding="utf-8"))
+        validator = element_validator if path.parent.name == "elements" else template_validator
         for err in sorted(validator.iter_errors(instance), key=lambda e: list(e.path)):
             loc = "/".join(str(p) for p in err.path) or "<root>"
             errors.append(f"{path.relative_to(root)} at {loc}: {err.message}")
@@ -55,7 +59,7 @@ def main() -> int:
         sys.stderr.write(f"\n{len(errors)} template validation problem(s)\n")
         return 1
 
-    print(f"OK  {count} template(s) validate against template.schema.json")
+    print(f"OK  {count} template and element preset document(s) validate")
     return 0
 
 

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/templates/element_preset.schema.json",
+  "title": "UEREMCP elemental construction preset",
+  "description": "WS-15-owned data consumed while materializing cross-domain material and Niagara construction plans.",
+  "type": "object",
+  "required": ["preset_id", "element", "version", "material", "niagara"],
+  "additionalProperties": false,
+  "properties": {
+    "preset_id": {
+      "type": "string",
+      "pattern": "^element\\.[a-z][a-z0-9_]*\\.v[0-9]+$"
+    },
+    "element": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "material": {
+      "type": "object",
+      "required": ["parameter_overrides"],
+      "additionalProperties": false,
+      "properties": {
+        "parameter_overrides": {
+          "type": "object",
+          "required": [
+            "ParticleColor",
+            "ColorSecondary",
+            "EmissiveScale",
+            "FlowSpeed",
+            "Turbulence",
+            "SoftEdge",
+            "DepthFade"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "ParticleColor": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+            "ColorSecondary": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+            "EmissiveScale": { "type": "number", "minimum": 0 },
+            "FlowSpeed": { "type": "number" },
+            "Turbulence": { "type": "number", "minimum": 0 },
+            "SoftEdge": { "type": "number", "minimum": 0 },
+            "DepthFade": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "niagara": {
+      "type": "object",
+      "required": ["parameters"],
+      "additionalProperties": false,
+      "properties": {
+        "parameters": {
+          "type": "object",
+          "required": ["primary_color", "secondary_color", "scale", "intensity"],
+          "additionalProperties": false,
+          "properties": {
+            "primary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+            "secondary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+            "scale": { "type": "number", "exclusiveMinimum": 0 },
+            "intensity": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}
