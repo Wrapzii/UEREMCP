@@ -9,6 +9,12 @@
 
 namespace
 {
+	bool LexLessCaseSensitive(const FString& A, const FString& B)
+	{
+		return A.Compare(B, ESearchCase::CaseSensitive) < 0;
+	}
+
+
 	bool IsGuidLikeKey(const FString& Key)
 	{
 		const FString Lower = Key.ToLower();
@@ -69,7 +75,10 @@ namespace
 		{
 			Keys.Add(FString(Pair.Key));
 		}
-		Keys.Sort();
+		Keys.Sort([](const FString& A, const FString& B)
+		{
+			return LexLessCaseSensitive(A, B);
+		});
 		for (const FString& Key : Keys)
 		{
 			if (IsIgnoredGraphField(Key))
@@ -98,7 +107,10 @@ namespace
 		{
 			Keys.Add(FString(Pair.Key));
 		}
-		Keys.Sort();
+		Keys.Sort([](const FString& A, const FString& B)
+		{
+			return LexLessCaseSensitive(A, B);
+		});
 		for (const FString& Key : Keys)
 		{
 			if (IsIgnoredGraphField(Key) || Key.Equals(TEXT("semantic_id")))
@@ -127,7 +139,7 @@ namespace
 						+ TEXT("|") + A->AsObject()->GetStringField(TEXT("name"));
 					const FString KB = B->AsObject()->GetStringField(TEXT("direction"))
 						+ TEXT("|") + B->AsObject()->GetStringField(TEXT("name"));
-					return KA < KB;
+					return LexLessCaseSensitive(KA, KB);
 				});
 				Out->SetArrayField(Key, CanonPins);
 				continue;
@@ -195,7 +207,10 @@ namespace
 		{
 			Keys.Add(FString(Pair.Key));
 		}
-		Keys.Sort();
+		Keys.Sort([](const FString& A, const FString& B)
+		{
+			return LexLessCaseSensitive(A, B);
+		});
 
 		for (const FString& Key : Keys)
 		{
@@ -216,8 +231,9 @@ namespace
 				}
 				CanonNodes.Sort([](const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B)
 				{
-					return A->AsObject()->GetStringField(TEXT("_stable_key"))
-						< B->AsObject()->GetStringField(TEXT("_stable_key"));
+					return LexLessCaseSensitive(
+						A->AsObject()->GetStringField(TEXT("_stable_key")),
+						B->AsObject()->GetStringField(TEXT("_stable_key")));
 				});
 				Out->SetArrayField(TEXT("nodes"), CanonNodes);
 				continue;
@@ -286,7 +302,7 @@ namespace
 							+ O->GetStringField(TEXT("to_pin")) + TEXT(">")
 							+ O->GetStringField(TEXT("kind"));
 					};
-					return KeyOf(A) < KeyOf(B);
+					return LexLessCaseSensitive(KeyOf(A), KeyOf(B));
 				});
 				Out->SetArrayField(TEXT("links"), CanonLinks);
 				continue;
@@ -335,7 +351,10 @@ namespace
 			{
 				Keys.Add(FString(Pair.Key));
 			}
-			Keys.Sort();
+			Keys.Sort([](const FString& A, const FString& B)
+			{
+				return LexLessCaseSensitive(A, B);
+			});
 			for (const FString& Key : Keys)
 			{
 				if (IsIgnoredGraphField(Key))
@@ -378,7 +397,10 @@ namespace
 			{
 				Keys.Add(FString(Pair.Key));
 			}
-			Keys.Sort();
+			Keys.Sort([](const FString& A, const FString& B)
+			{
+				return LexLessCaseSensitive(A, B);
+			});
 			TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
 			for (const FString& Key : Keys)
 			{
@@ -391,14 +413,121 @@ namespace
 		}
 	}
 
+	bool AppendCanonicalJsonScalar(const TSharedPtr<FJsonValue>& Value, FString& Out)
+	{
+		if (!Value.IsValid() || Value->IsNull())
+		{
+			Out += TEXT("null");
+			return true;
+		}
+		if (Value->Type == EJson::Object || Value->Type == EJson::Array)
+		{
+			return false;
+		}
+		FString Frag;
+		TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
+			TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Frag);
+		bool bOk = true;
+		switch (Value->Type)
+		{
+		case EJson::Boolean:
+			Writer->WriteValue(Value->AsBool());
+			break;
+		case EJson::Number:
+			Writer->WriteValue(Value->AsNumber());
+			break;
+		case EJson::String:
+			Writer->WriteValue(Value->AsString());
+			break;
+		default:
+			bOk = false;
+			break;
+		}
+		Writer->Close();
+		if (!bOk)
+		{
+			return false;
+		}
+		Out += Frag;
+		return true;
+	}
+
+	bool AppendCanonicalJson(const TSharedPtr<FJsonValue>& Value, FString& Out)
+	{
+		if (!Value.IsValid() || Value->IsNull())
+		{
+			Out += TEXT("null");
+			return true;
+		}
+		switch (Value->Type)
+		{
+		case EJson::Object:
+		{
+			const TSharedPtr<FJsonObject> Obj = Value->AsObject();
+			TArray<FString> Keys;
+			Keys.Reserve(Obj->Values.Num());
+			for (const auto& Pair : Obj->Values)
+			{
+				Keys.Add(FString(Pair.Key));
+			}
+			Keys.Sort([](const FString& A, const FString& B)
+			{
+				return LexLessCaseSensitive(A, B);
+			});
+			Out += TEXT("{");
+			bool bFirst = true;
+			for (const FString& Key : Keys)
+			{
+				if (!bFirst)
+				{
+					Out += TEXT(",");
+				}
+				bFirst = false;
+				FString KeyJson;
+				if (!AppendCanonicalJsonScalar(MakeShared<FJsonValueString>(Key), KeyJson))
+				{
+					return false;
+				}
+				Out += KeyJson;
+				Out += TEXT(":");
+				if (!AppendCanonicalJson(Obj->TryGetField(Key), Out))
+				{
+					return false;
+				}
+			}
+			Out += TEXT("}");
+			return true;
+		}
+		case EJson::Array:
+		{
+			Out += TEXT("[");
+			bool bFirst = true;
+			for (const TSharedPtr<FJsonValue>& Item : Value->AsArray())
+			{
+				if (!bFirst)
+				{
+					Out += TEXT(",");
+				}
+				bFirst = false;
+				if (!AppendCanonicalJson(Item, Out))
+				{
+					return false;
+				}
+			}
+			Out += TEXT("]");
+			return true;
+		}
+		default:
+			return AppendCanonicalJsonScalar(Value, Out);
+		}
+	}
+
 	bool WriteCanonical(const TSharedPtr<FJsonValue>& Value, FString& Out)
 	{
-		// Condensed JSON with sorted object keys already applied by canonicalise.
-		TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
-			TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Out);
-		const bool bOk = FJsonSerializer::Serialize(Value, TEXT(""), Writer);
-		Writer->Close();
-		return bOk;
+		Out.Reset();
+		// Emit object keys in lexicographic order (Python json.dumps sort_keys=True).
+		// FJsonSerializer::Serialize iterates FJsonObject::Values (TMap) - not ordered.
+		return AppendCanonicalJson(Value, Out);
 	}
 }
 
