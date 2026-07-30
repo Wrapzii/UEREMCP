@@ -214,9 +214,8 @@ namespace
 		TArray<FString>& OutChecks,
 		FString& OutError)
 	{
-		// The complete-state generator adds emitter state/spawn modules after cloning the
-		// system template. Force Niagara to compile and execute those scripts instead of
-		// retaining a template-derived constant system-state fast path.
+		// The generated emitters are stateful, so the fast-path resolver cannot produce
+		// runtime state for this system. Execute the normalized SystemState script below.
 		// [VERIFIED: NiagaraSystem.cpp:4218-4230]
 		FNiagaraExt_SystemData RuntimeSystemData;
 		RuntimeSystemData.PropertyValues = TEXT("{\"bAllowSystemStateFastPath\":false}");
@@ -228,6 +227,102 @@ namespace
 			return false;
 		}
 		OutChecks.Add(TEXT("niagara.disable_system_state_fast_path"));
+
+		// A freshly cloned template can retain SystemState configured as Once with a
+		// zero-second duration. Disabling the resolved fast path only makes Niagara execute
+		// this graph; it does not rewrite the graph inputs, so the system still completes at
+		// age zero before any emitter spawn script runs.
+		// [VERIFIED: NiagaraSystemInstance.cpp:3156-3217]
+		const FNiagaraExt_StackItemReference SystemStateModuleRef(
+			System,
+			NAME_None,
+			TEXT("SystemUpdateScript"),
+			TEXT("SystemState"));
+
+		FNiagaraExt_StackItemReference LoopDurationRef = SystemStateModuleRef;
+		LoopDurationRef.InputNameStack.Add(TEXT("Loop Duration"));
+		FNiagaraExt_StackInputValue LoopDurationValue;
+		FNiagaraFloat& LoopDuration = LoopDurationValue.InitializeAs<FNiagaraFloat>();
+		LoopDuration.Value = 5.0f;
+		UNiagaraExternalEditUtilities::SetStackInputData(
+			LoopDurationRef,
+			LoopDurationValue,
+			Context);
+		++InOutOps;
+		if (Context.HasErrors())
+		{
+			OutError = ContextErrorsToString(Context);
+			return false;
+		}
+
+		FNiagaraExt_StackItemReference LoopBehaviorRef = SystemStateModuleRef;
+		LoopBehaviorRef.InputNameStack.Add(TEXT("Loop Behavior"));
+		FNiagaraExt_StackInputValue LoopBehaviorValue;
+		TArray<FNiagaraExt_ModuleInputValues> SystemUpdateInputValues;
+		UNiagaraExternalEditUtilities::GetScriptStackInputValues(
+			FNiagaraExt_StackItemReference(System, NAME_None, TEXT("SystemUpdateScript")),
+			SystemUpdateInputValues,
+			Context);
+		if (Context.HasErrors())
+		{
+			OutError = ContextErrorsToString(Context);
+			return false;
+		}
+		for (const FNiagaraExt_ModuleInputValues& ModuleValues : SystemUpdateInputValues)
+		{
+			if (ModuleValues.ModuleName != TEXT("SystemState"))
+			{
+				continue;
+			}
+			for (const FNiagaraExt_StackInputValueEntry& Input : ModuleValues.Inputs)
+			{
+				if (Input.Name == TEXT("Loop Behavior"))
+				{
+					LoopBehaviorValue = Input.Value;
+					break;
+				}
+			}
+		}
+
+		FNiagaraExt_StackInputData_Enum* LoopBehavior =
+			LoopBehaviorValue.GetMutablePtr<FNiagaraExt_StackInputData_Enum>();
+		if (!LoopBehavior || !LoopBehavior->Enum)
+		{
+			OutError = TEXT("SystemState Loop Behavior is not an enum input.");
+			return false;
+		}
+
+		bool bFoundInfinite = false;
+		for (int32 EnumIndex = 0; EnumIndex < LoopBehavior->Enum->NumEnums(); ++EnumIndex)
+		{
+			if (LoopBehavior->Enum->GetDisplayNameTextByIndex(EnumIndex).ToString().Equals(
+					TEXT("Infinite"),
+					ESearchCase::IgnoreCase))
+			{
+				LoopBehavior->EnumName = LoopBehavior->Enum->GetNameByIndex(EnumIndex);
+				LoopBehavior->DisplayName =
+					LoopBehavior->Enum->GetDisplayNameTextByIndex(EnumIndex);
+				bFoundInfinite = true;
+				break;
+			}
+		}
+		if (!bFoundInfinite)
+		{
+			OutError = TEXT("SystemState Loop Behavior enum has no Infinite value.");
+			return false;
+		}
+
+		UNiagaraExternalEditUtilities::SetStackInputData(
+			LoopBehaviorRef,
+			LoopBehaviorValue,
+			Context);
+		++InOutOps;
+		if (Context.HasErrors())
+		{
+			OutError = ContextErrorsToString(Context);
+			return false;
+		}
+		OutChecks.Add(TEXT("niagara.normalize_system_lifecycle_infinite"));
 
 		FNiagaraExt_SystemSummary InitialSummary;
 		UNiagaraExternalEditUtilities::GetSystemSummary(System, InitialSummary, Context);

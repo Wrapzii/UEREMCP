@@ -69,14 +69,20 @@ FUeremcpNiagaraCompileAwaitResult FUeremcpNiagaraCompileAwait::AwaitCompile(
 		return Result;
 	}
 
-	System->RequestCompile(false);
+	// Stack input edits can leave the cached runtime SystemStateData unchanged when
+	// Niagara considers the scripts otherwise up to date. A forced compile runs the
+	// post-compile cache refresh before the generated package is saved.
+	// [VERIFIED: NiagaraSystem.cpp:3608-3621]
+	System->RequestCompile(true);
 
 	const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
 	while (FPlatformTime::Seconds() < Deadline)
 	{
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
 
-		if (IsScriptDerivedCompileComplete(OutState))
+		const bool bScriptStateComplete = IsScriptDerivedCompileComplete(OutState);
+		if (bScriptStateComplete
+			&& (IsLiveToolDispatchContext() || !OutState.bIsCompiling))
 		{
 			Result.bAwaited = true;
 			if (IsLiveToolDispatchContext())
@@ -110,7 +116,8 @@ FUeremcpNiagaraCompileAwaitResult FUeremcpNiagaraCompileAwait::AwaitCompile(
 
 	UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
 
-	if (IsScriptDerivedCompileComplete(OutState))
+	if (IsScriptDerivedCompileComplete(OutState)
+		&& (IsLiveToolDispatchContext() || !OutState.bIsCompiling))
 	{
 		Result.bAwaited = true;
 		if (IsLiveToolDispatchContext())

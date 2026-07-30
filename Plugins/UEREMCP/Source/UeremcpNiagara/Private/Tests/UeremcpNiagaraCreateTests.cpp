@@ -7,6 +7,7 @@
 #include "Dom/JsonObject.h"
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
+#include "NiagaraEmitter.h"
 #include "NiagaraEmitterInstance.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraSystem.h"
@@ -140,6 +141,7 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 	// A saved system can enqueue on-demand work during load. Runtime proof must observe
 	// the compiled system, not an activation deferred on compilation.
 	// [VERIFIED: NiagaraSystem.h:448-455]
+	System->RequestCompile(/*bForce=*/true);
 	System->WaitForCompilationComplete(
 		/*bIncludingGPUShaders=*/false,
 		/*bShowProgress=*/false);
@@ -152,7 +154,7 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 	UNiagaraExternalEditUtilities::GetSystemData(System, SystemData, EditContext);
 	AddInfo(FString::Printf(TEXT("UEREMCP_NIAGARA_SYSTEM_DATA=%s"), *SystemData.PropertyValues));
 	TestTrue(
-		TEXT("system state fast path is disabled"),
+		TEXT("system state fast path is disabled for stateful emitters"),
 		SystemData.PropertyValues.Contains(TEXT("\"bAllowSystemStateFastPath\":false")));
 	if (UScriptStruct* StateStruct = FindObject<UScriptStruct>(
 		nullptr,
@@ -171,6 +173,37 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 	int32 SpawnModuleCount = 0;
 	int32 InitializeModuleCount = 0;
 	int32 EnabledEmitterCount = 0;
+	bool bSystemLifecycleInfinite = false;
+	TArray<FNiagaraExt_ModuleInputValues> SystemUpdateInputValues;
+	UNiagaraExternalEditUtilities::GetScriptStackInputValues(
+		FNiagaraExt_StackItemReference(System, NAME_None, TEXT("SystemUpdateScript")),
+		SystemUpdateInputValues,
+		EditContext);
+	for (const FNiagaraExt_ModuleInputValues& ModuleValues : SystemUpdateInputValues)
+	{
+		if (ModuleValues.ModuleName != TEXT("SystemState"))
+		{
+			continue;
+		}
+		for (const FNiagaraExt_StackInputValueEntry& Input : ModuleValues.Inputs)
+		{
+			if (Input.Name != TEXT("Loop Behavior"))
+			{
+				continue;
+			}
+			if (const FNiagaraExt_StackInputData_Enum* EnumValue =
+				Input.Value.GetPtr<FNiagaraExt_StackInputData_Enum>())
+			{
+				const FString DisplayName = EnumValue->DisplayName.ToString();
+				AddInfo(FString::Printf(
+					TEXT("UEREMCP_NIAGARA_SYSTEM_INPUT module=SystemState input=Loop Behavior value=%s display=%s"),
+					*EnumValue->EnumName.ToString(),
+					*DisplayName));
+				bSystemLifecycleInfinite =
+					DisplayName.Equals(TEXT("Infinite"), ESearchCase::IgnoreCase);
+			}
+		}
+	}
 	for (const FNiagaraExt_EmitterSummary& Emitter : Summary.Emitters)
 	{
 		FNiagaraExt_EmitterTopology Topology;
@@ -306,6 +339,7 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 	int32 LiveParticles = 0;
 	int32 InitialSpawnedParticles = INDEX_NONE;
 	int32 TotalSpawnedParticles = 0;
+	int32 RuntimeEmitterInstances = 0;
 	for (int32 TickIndex = 0; TickIndex < 180; ++TickIndex)
 	{
 		if (TickIndex == 0)
@@ -327,6 +361,9 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 			Controller->WaitForConcurrentTickAndFinalize();
 			if (FNiagaraSystemInstance* Instance = Controller->GetSoloSystemInstance())
 			{
+				RuntimeEmitterInstances = FMath::Max(
+					RuntimeEmitterInstances,
+					Instance->GetEmitters().Num());
 				int32 TickLiveParticles = 0;
 				int32 TickTotalSpawnedParticles = 0;
 				for (const FNiagaraEmitterInstanceRef& EmitterInstance : Instance->GetEmitters())
@@ -353,21 +390,35 @@ bool FUeremcpNiagaraPocBParticleRuntimeTest::RunTest(const FString& Parameters)
 		Component->GetSystemInstanceController();
 	const bool bComponentComplete =
 		!FinalController.IsValid() || FinalController->IsComplete();
+	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+	{
+		const FVersionedNiagaraEmitterData* EmitterData = Handle.GetEmitterData();
+		AddInfo(FString::Printf(
+			TEXT("UEREMCP_NIAGARA_EMITTER_READY name=%s ready=%s"),
+			*Handle.GetName().ToString(),
+			EmitterData && EmitterData->IsReadyToRun() ? TEXT("true") : TEXT("false")));
+	}
 
 	AddInfo(FString::Printf(
 		TEXT("UEREMCP_NIAGARA_RUNTIME_EVIDENCE={\"emitters\":%d,\"enabled_emitters\":%d,\"spawn_modules\":%d,")
 		TEXT("\"initialize_modules\":%d,\"live_particles\":%d,\"total_spawned_particles\":%d,")
-		TEXT("\"component_complete\":%s}"),
+		TEXT("\"runtime_emitter_instances\":%d,\"compiled_emitter_data\":%d,\"system_valid\":%s,")
+		TEXT("\"system_ready_to_run\":%s,\"component_complete\":%s}"),
 		Summary.Emitters.Num(),
 		EnabledEmitterCount,
 		SpawnModuleCount,
 		InitializeModuleCount,
 		LiveParticles,
 		TotalSpawnedParticles,
+		RuntimeEmitterInstances,
+		System->GetEmitterCompiledData().Num(),
+		System->IsValid() ? TEXT("true") : TEXT("false"),
+		System->IsReadyToRun() ? TEXT("true") : TEXT("false"),
 		bComponentComplete ? TEXT("true") : TEXT("false")));
 
 	Actor->Destroy();
 
+	TestTrue(TEXT("system lifecycle is explicitly infinite"), bSystemLifecycleInfinite);
 	TestTrue(TEXT("at least one emitter has a spawn module"), SpawnModuleCount > 0);
 	TestTrue(TEXT("at least one emitter initializes particles"), InitializeModuleCount > 0);
 	TestTrue(TEXT("system spawned particles"), TotalSpawnedParticles > 0);
