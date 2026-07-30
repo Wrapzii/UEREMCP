@@ -4,6 +4,7 @@
 **Worktree:** `UEREMCP-integration`  
 **Branch:** `ws-01-poc-cde-integration`  
 **Base tip before this closeout:** `109119b`  
+**Final tip / local main SHA:** `d14a1c8177a0d774d7d9d9fc1489dd1ec44fa492`  
 **Push:** not performed.
 
 ## Verdict
