@@ -101,6 +101,33 @@ stable job id and claims the slot by retrying after the prior owner releases it
 `[VERIFIED: Plugins/UEREMCP/Source/UeremcpSecurity/Private/UeremcpMutatorQueue.cpp]`.
 Core maps that id into ADR-0009 `partially_completed` via `FUeremcpMutatingDispatch`.
 
+### Job cancellation
+
+UEREMCP supports cooperative cancellation through the AICallable
+`cancel_job(job_id)` action for jobs that advertise `cancellable: true`. The production
+scheduler path is editor-verified: the worker observed its cancellation token, ran one
+domain rollback checkpoint, stopped before validated completion, and remained pollable
+as terminal `job.state: cancelled`
+`[VERIFIED-RUNTIME: UEREMCP.Transport.JobRegistry.Cancel,
+editor_UEREMCP_Transport_20260730_143347.log, 8/8 Success;
+docs/proposals/ws-04-cancellation-hardening-closeout.md:51-68]`.
+
+Cancellation is not a kill primitive. Operators and agents must:
+
+- call `cancel_job` with the UEREMCP `job_id`;
+- treat a cancelled job as terminal without validated completion; and
+- let each domain stop at a cooperative checkpoint and execute its owned
+  FileSandbox/transaction rollback boundary under ADR-0005.
+
+Epic MCP `notifications/cancelled` cannot reach ToolsetRegistry/AICallable work in UE
+5.8. Epic's private ToolsetRegistry adapter and tool-search `FCallTool` override
+`RunAsync` but not `CancelAsync`
+`[VERIFIED: $UE_ROOT/Engine/Plugins/Experimental/ModelContextProtocol/Source/ModelContextProtocolEditor/Private/ModelContextProtocolToolsetRegistryAdapter.h:13-26;
+$UE_ROOT/Engine/Plugins/Experimental/ModelContextProtocol/Source/ModelContextProtocolEditor/Private/ModelContextProtocolToolSearch.h:61-80]`.
+This is an immutable UE 5.8 adapter limitation, not an open UEREMCP residual. HTTP 202
+for that notification proves only that Epic accepted the notification; it does not
+prove the UEREMCP job stopped. Use `cancel_job(job_id)` and poll the retained envelope.
+
 ### Forbidden patterns
 
 - Agent-facing `UndoTransaction` — use sandbox `Discard()` (ADR-0005).
