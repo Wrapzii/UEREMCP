@@ -136,9 +136,12 @@ the risk in a single-agent session.
 | `> 0` | If still running at timeout → `status: partially_completed` + `job` handle; work continues in-process |
 
 Poll with Reference toolset `GetJobResult` (`action: get_job_result`,
-`specification.job_id`). Cancel cooperatively via `CancelJob`
-(`action: cancel_job`) — **not** the same as MCP `notifications/cancelled`
-(see [`limitations.md`](limitations.md)).
+`specification.job_id`). For jobs that advertise `cancellable: true`, cancel
+cooperatively via `CancelJob` (`action: cancel_job`) and poll until terminal
+`job.state: cancelled`. This scheduler path is editor-verified. It is **not** the
+same as MCP `notifications/cancelled`, which cannot reach ToolsetRegistry/AICallable
+work through UE 5.8's private adapter (see
+[`limitations.md`](limitations.md)).
 
 `metrics.mcp_round_trips` counts poll calls. Do not pretend a polled job was one trip.
 

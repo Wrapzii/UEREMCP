@@ -1,8 +1,9 @@
 # Guides
 
-**Owner:** WS-13. Tip baseline for this handoff: `ws-11-poc-b10-render`
-(`dae0e5c`). Statuses mirror [`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md)
-— **no overall POC-B claim.**
+**Owner:** WS-13. Tip baseline for this handoff: hardening consolidation
+`164a300`. Statuses mirror
+[`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) — **no overall POC-B
+claim.**
 
 These guides are the agent usage / limitations handoff for currently implemented
 capabilities. Prefer this tree over guessing from ADRs alone when you are about to
@@ -14,7 +15,7 @@ call a tool.
 |---|---|---|
 | [`agent-usage.md`](agent-usage.md) | AI agents | Discovery, request envelope, one semantic operation, `dry_run`, `idempotency_key`, `expected_revision`, timeout / poll |
 | [`capability-reference.md`](capability-reference.md) | agents + humans | Worked examples for live tools on this tip; links to canonical fixtures (no giant payloads) |
-| [`limitations.md`](limitations.md) | both | Honest ceilings — Blueprint scope, B10, metrics, security adoption, cancel adapter |
+| [`limitations.md`](limitations.md) | both | Honest ceilings — Blueprint scope, B10, metrics, security adoption, cooperative cancel and immutable Epic adapter limit |
 | [`troubleshooting.md`](troubleshooting.md) | both | Status vocabulary, manifests, `validation` / diagnostics |
 | [`developer-setup.md`](developer-setup.md) | humans + agents | Local checks that do **not** require a running editor |
 | [`template-authoring.md`](template-authoring.md) | humans + agents | Thin pointer into `templates/` + WS-15 authoring rules |

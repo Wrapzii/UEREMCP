@@ -1,8 +1,8 @@
 # Limitations
 
-**Owner:** WS-13. Aggregated from catalog, SECURITY, reviews, and tip
-`ws-11-poc-b10-render` (`dae0e5c`). An undocumented limitation is a defect
-(`AGENTS.md` rule 6).
+**Owner:** WS-13. Aggregated from catalog, SECURITY, reviews, and hardening
+consolidation tip `164a300`. An undocumented limitation is a defect (`AGENTS.md`
+rule 6).
 
 **Do not claim overall POC-B.** Structural B1–B9 progress does not equal B10 or E7.
 
@@ -44,18 +44,24 @@ From [`docs/SECURITY.md`](../SECURITY.md) domain adoption table (2026-07-30):
 
 **R-07 closed** for Niagara and Material live mutators on the POC closeout tip.
 
-## Transport cancel adapter
+## Cooperative cancellation and the Epic adapter limit
 
-ADR-0009 + RB-04: Epic MCP `notifications/cancelled` calls
-`IModelContextProtocolTool::CancelAsync`, but ToolsetRegistry adapter does **not**
-override CancelAsync — cancel is not wired through to registry tools
-`[VERIFIED: UeremcpJobConstraints.cpp comments; ADR-0009; transport automation SKIP residual]`.
+UEREMCP `cancel_job(job_id)` is available for jobs that advertise
+`cancellable: true`. The production scheduler path is editor-verified: the worker
+observed its cooperative token, ran its domain rollback checkpoint, stopped before
+validated completion, and remained pollable as terminal `job.state: cancelled`
+`[VERIFIED-RUNTIME: UEREMCP.Transport.JobRegistry.Cancel,
+editor_UEREMCP_Transport_20260730_143347.log, 8/8 Success;
+docs/proposals/ws-04-cancellation-hardening-closeout.md:51-68]`.
 
-Use UEREMCP `cancel_job` for cooperative cancel when the domain honors it. Do not
-advertise MCP notification cancel as proven.
-
-`get_job_result` / `cancel_job` are registered but catalog-marked **partial** (timeout /
-cancel SKIP residuals tracked in transport tests).
+Separately, Epic MCP `notifications/cancelled` cannot reach
+ToolsetRegistry/AICallable work in UE 5.8. Epic's private ToolsetRegistry adapter and
+tool-search `FCallTool` do not override `CancelAsync`
+`[VERIFIED: $UE_ROOT/Engine/Plugins/Experimental/ModelContextProtocol/Source/ModelContextProtocolEditor/Private/ModelContextProtocolToolsetRegistryAdapter.h:13-26;
+$UE_ROOT/Engine/Plugins/Experimental/ModelContextProtocol/Source/ModelContextProtocolEditor/Private/ModelContextProtocolToolSearch.h:61-80]`.
+This is an immutable adapter limitation, not an open transport SKIP residual. HTTP
+202 for the MCP notification proves only notification acceptance. Operators and
+agents must use UEREMCP `cancel_job(job_id)` and poll `get_job_result`.
 
 ## `execute_plan`
 

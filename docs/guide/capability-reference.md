@@ -218,7 +218,7 @@ Agents should **not** invent an `ExecutePlan` MCP tool. Use `InstantiateTemplate
 
 | | |
 |---|---|
-| Status | **partial** |
+| Status | **available** — process-local polling and cooperative cancellation |
 | Toolset / tools | `UUeremcpReferenceToolset` → `GetJobResult`, `CancelJob` |
 
 ```json
@@ -229,7 +229,15 @@ Agents should **not** invent an `ExecutePlan` MCP tool. Use `InstantiateTemplate
 }
 ```
 
-Transport cancel-adapter residuals remain — [`limitations.md`](limitations.md).
+For a job that advertises `cancellable: true`, send the same envelope with
+`"action": "cancel_job"` and its `job_id`. Cancellation is cooperative and
+editor-verified; poll the retained job envelope until terminal
+`job.state: cancelled`. A cancelled job must not claim validated completion.
+
+Do not substitute Epic MCP `notifications/cancelled`: UE 5.8's private
+ToolsetRegistry adapter has no `CancelAsync` override, so that notification cannot
+reach AICallable work. This is an immutable adapter limitation, not an open
+`cancel_job` residual — [`limitations.md`](limitations.md).
 
 ---
 
