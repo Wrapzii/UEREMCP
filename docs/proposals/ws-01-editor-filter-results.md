@@ -1,6 +1,6 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `eccc282` (WS-11 CRT selector correction)
+- **Current orchestration tip:** `163b272` (WS-07 B8 Restart.Create/Verify filters)
 - **Latest Blueprint acceptance re-run tip:** `c87b1db` (**PASS**, PocA6Reread)
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** CompleteRoundTrip **FAIL** on `600c383` lineage: A1/A2/A10 PASS; A5 fails because Epic `BlueprintTools` is unavailable; A9 fails with 2/3 MCP calls. Selector correction `eccc282` (`69654dd`) landed. B8 restart filters are missing. No overall POC-A/POC-B claim.
+- **Status:** B8 `Restart.Create/Verify` filters landed as `163b272` (`5c6422f`) and Niagara is green. WS-11 must run the Create → restart → Verify scenario; no B8/POC-B claim. CRT remains A1/A2/A10 PASS, A5/A9 FAIL; no overall POC-A claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: CRT has A1/A2/A10 PASS and A5/A9 FAIL; overall POC A unclaimed. B2/B4 editor gate is green; WS-11 still must assert B3/B5/B6/B9 and add B8 restart Create/Verify filters. Overall POC-B unclaimed.
+Residuals: CRT has A1/A2/A10 PASS and A5/A9 FAIL; overall POC A unclaimed. B2/B4 editor gate is green. B8 filters are ready but restart proof is unrun; WS-11 also must assert B3/B5/B6/B9. Overall POC-B unclaimed.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -102,7 +102,7 @@ Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`. 
 
 ## B8 restart current result
 
-**OPEN:** `UEREMCP.Niagara.POCB.Restart.Create` and `.Verify` filters are missing. The save half is surfaced by `0e79641`, but restart survival is unproven.
+**FILTERS LANDED, PROOF OPEN:** `UEREMCP.Niagara.POCB.Restart.Create` and `.Verify` are on orch as `163b272` (`5c6422f`). WS-11 must run `run_poc_acceptance.ps1 -Scenario B8` across Create → editor restart → Verify. No B8 claim until PASS.
 
 ## Templates editor result and handoff
 
@@ -310,10 +310,10 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-06 | Resolve Epic `BlueprintTools` discovery for changed submit; CRT A5/A9 fail while A1/A2/A10 pass. |
-| WS-07 | B1/B8-save/B9/`emitter_added` gates landed as `0e79641`; B2/B4 editor PASS. Overall POC-B unclaimed. |
+| WS-07 | B8 Restart.Create/Verify landed as `163b272`; B1/B8-save/B9 gates at `0e79641`; B2/B4 editor PASS. |
 | WS-08 | Trail graph + honest MI-absent fixes are proven by the B2/B4 editor gate PASS. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run CRT after BlueprintTools fix; add B8 Restart.Create/Verify filters; assert B3/B5/B6/B9. Keep overall POC-A/POC-B unclaimed. |
+| WS-11 | Run `-Scenario B8` Create → restart → Verify; re-run CRT after BlueprintTools fix; assert B3/B5/B6/B9. Keep overall POC-A/POC-B unclaimed. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-POC A remains partial: A1/A2/A10 pass, A5/A9 fail. B2/B4 editor gate passes; B1/B3/B5/B6/B8-restart/B9 remain open. No overall POC-A / overall POC-B claim. No junction retarget.
+POC A remains partial: A1/A2/A10 pass, A5/A9 fail. B2/B4 editor gate passes; B8 filters are ready but unrun; B1/B3/B5/B6/B8/B9 remain open. No overall POC-A / overall POC-B claim. No junction retarget.
