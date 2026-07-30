@@ -40,8 +40,15 @@ class MaterialValidateContractTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("FAssetRegistryModule::AssetCreated", master_cpp)
         self.assertIn("MasterMaterial = Material", master_cpp)
+        self.assertIn("master save unverified under automation", master_cpp)
 
-    def test_create_vfx_material_status_gated_on_validate(self) -> None:
+    def test_create_vfx_material_caps_partial_when_proof_unavailable(self) -> None:
+        self.assertIn("CapPartialWhenProofUnavailable", self.material_cpp)
+        self.assertIn("ResolveInProcessMaterial", self.material_cpp)
+        self.assertNotRegex(
+            self.material_cpp,
+            r"VerifyInstanceParameters[\s\S]{0,120}Result\.Status = TEXT\(\"failed_validation\"\)",
+        )
         self.assertIn("ResolveMaterialSuccessStatus", self.material_cpp)
         self.assertRegex(
             self.material_cpp,

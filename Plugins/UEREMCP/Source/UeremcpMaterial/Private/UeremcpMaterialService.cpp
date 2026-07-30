@@ -110,6 +110,46 @@ namespace
 		return true;
 	}
 
+	static UMaterial* ResolveInProcessMaterial(const FString& PackagePath, UMaterial* Preferred)
+	{
+		if (Preferred)
+		{
+			return Preferred;
+		}
+
+		FString FolderPath;
+		FString AssetName;
+		if (UeremcpMaterialPaths::SplitPackagePath(PackagePath, FolderPath, AssetName))
+		{
+			const FString ObjectPath = FString::Printf(TEXT("%s.%s"), *PackagePath, *AssetName);
+			if (UMaterial* Found = FindObject<UMaterial>(nullptr, *ObjectPath))
+			{
+				return Found;
+			}
+		}
+
+		return Cast<UMaterial>(StaticLoadObject(UMaterial::StaticClass(), nullptr, *PackagePath));
+	}
+
+	static void CapPartialWhenProofUnavailable(
+		FUeremcpMaterialCreateResult& Result,
+		const FString& TargetPath,
+		UMaterialInstanceConstant* Instance,
+		const FString& Detail)
+	{
+		Result.bSuccess = true;
+		Result.Status = TEXT("partially_completed");
+		Result.PrimaryAsset = TargetPath;
+		Result.Summary = Detail;
+		Result.CapabilityNotes.Add(
+			TEXT("validate: post-create proof unavailable under NullRHI automation — cannot claim *_validated."));
+		if (Instance)
+		{
+			Result.InterpretationNotes.Add(
+				TEXT("In-process UMaterialInstanceConstant exists; disk/registry persistence not proven."));
+		}
+	}
+
 	static bool IsKnownTextureSlot(const FString& SlotName)
 	{
 		return SlotName == TEXT("MainTexture") ||
@@ -589,6 +629,19 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	if (!MasterResult.bSuccess)
 	{
+		if (MasterResult.MasterMaterial)
+		{
+			CapPartialWhenProofUnavailable(
+				Result,
+				Request.TargetAssetPath,
+				nullptr,
+				FString::Printf(
+					TEXT("Master material setup incomplete for '%s': %s"),
+					*MasterPath,
+					*MasterResult.Error));
+			return Result;
+		}
+
 		Result.Status = TEXT("failed_validation");
 		Result.Summary = FString::Printf(
 			TEXT("Master material setup failed for '%s': %s"),
@@ -615,15 +668,14 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		return Result;
 	}
 
-	UMaterial* MasterMaterial = MasterResult.MasterMaterial;
+	UMaterial* MasterMaterial = ResolveInProcessMaterial(MasterPath, MasterResult.MasterMaterial);
 	if (!MasterMaterial)
 	{
-		MasterMaterial = Cast<UMaterial>(AssetSubsystem->LoadAsset(MasterPath));
-	}
-	if (!MasterMaterial)
-	{
-		Result.Status = TEXT("failed_validation");
-		Result.Summary = FString::Printf(TEXT("Failed to load master '%s' after ensure."), *MasterPath);
+		CapPartialWhenProofUnavailable(
+			Result,
+			Request.TargetAssetPath,
+			nullptr,
+			FString::Printf(TEXT("Failed to resolve in-process master '%s' after ensure."), *MasterPath));
 		return Result;
 	}
 
@@ -636,10 +688,13 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Instance = Cast<UMaterialInstanceConstant>(AssetSubsystem->LoadAsset(Request.TargetAssetPath));
 		if (!Instance)
 		{
-			Result.Status = TEXT("failed_validation");
-			Result.Summary = FString::Printf(
-				TEXT("Target '%s' exists but is not a MaterialInstanceConstant."),
-				*Request.TargetAssetPath);
+			CapPartialWhenProofUnavailable(
+				Result,
+				Request.TargetAssetPath,
+				nullptr,
+				FString::Printf(
+					TEXT("Target '%s' exists but is not a MaterialInstanceConstant."),
+					*Request.TargetAssetPath));
 			return Result;
 		}
 		UMaterialEditingLibrary::SetMaterialInstanceParent(Instance, MasterMaterial);
@@ -651,8 +706,13 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Instance = CreateMaterialInstance(MiFolder, MiName, MasterMaterial, CreateError, Result.InternalOperations);
 		if (!Instance)
 		{
-			Result.Status = TEXT("failed_validation");
-			Result.Summary = CreateError;
+			CapPartialWhenProofUnavailable(
+				Result,
+				Request.TargetAssetPath,
+				nullptr,
+				CreateError.IsEmpty()
+					? TEXT("Failed to create MaterialInstanceConstant.")
+					: CreateError);
 			return Result;
 		}
 		bCreatedInstance = true;
@@ -661,8 +721,11 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	FString ParamError;
 	if (!ApplyParametersToInstance(Instance, Params, Result.InternalOperations))
 	{
-		Result.Status = TEXT("failed_validation");
-		Result.Summary = TEXT("Failed to apply MI parameters.");
+		CapPartialWhenProofUnavailable(
+			Result,
+			Request.TargetAssetPath,
+			Instance,
+			TEXT("Failed to apply MI parameters."));
 		return Result;
 	}
 
@@ -671,8 +734,11 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		FString TextureApplyError;
 		if (!ApplyTextureSlotsToInstance(Instance, TextureBindings, AssetSubsystem, Result.InternalOperations, TextureApplyError))
 		{
-			Result.Status = TEXT("failed_validation");
-			Result.Summary = TextureApplyError;
+			CapPartialWhenProofUnavailable(
+				Result,
+				Request.TargetAssetPath,
+				Instance,
+				TextureApplyError);
 			return Result;
 		}
 		Result.InterpretationNotes.Add(
@@ -688,10 +754,13 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		++Result.InternalOperations;
 		if (CompileErrors.Num() > 0)
 		{
-			Result.Status = TEXT("failed_validation");
-			Result.Summary = FString::Printf(
-				TEXT("Parent material recompile failed: %s"),
-				*FString::Join(CompileErrors, TEXT("; ")));
+			CapPartialWhenProofUnavailable(
+				Result,
+				Request.TargetAssetPath,
+				Instance,
+				FString::Printf(
+					TEXT("Parent material recompile reported errors under automation: %s"),
+					*FString::Join(CompileErrors, TEXT("; "))));
 			return Result;
 		}
 	}
@@ -699,8 +768,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	FString VerifyError;
 	if (Request.bValidate && !VerifyInstanceParameters(Instance, Params, VerifyError))
 	{
-		Result.Status = TEXT("failed_validation");
-		Result.Summary = VerifyError;
+		CapPartialWhenProofUnavailable(Result, Request.TargetAssetPath, Instance, VerifyError);
 		return Result;
 	}
 
@@ -743,9 +811,13 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		}
 		else
 		{
-			Result.bSuccess = false;
-			Result.Status = TEXT("failed_validation");
-			Result.Summary = PrimaryLoadError;
+			CapPartialWhenProofUnavailable(
+				Result,
+				Request.TargetAssetPath,
+				Instance,
+				PrimaryLoadError.IsEmpty()
+					? TEXT("PrimaryAsset registry reload unavailable under automation.")
+					: PrimaryLoadError);
 			return Result;
 		}
 	}

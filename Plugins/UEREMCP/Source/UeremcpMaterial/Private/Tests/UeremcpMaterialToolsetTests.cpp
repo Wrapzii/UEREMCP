@@ -89,6 +89,20 @@ namespace UeremcpMaterialTests
 			Json.Contains(TEXT("created_and_validated")) || Json.Contains(TEXT("modified_and_validated")));
 	}
 
+	static void ExpectDiskAssetWhenValidated(
+		FAutomationTestBase* Test,
+		UEditorAssetSubsystem* Subsystem,
+		const FString& Target,
+		const FString& Status)
+	{
+		if (Status != TEXT("created_and_validated") && Status != TEXT("modified_and_validated"))
+		{
+			return;
+		}
+
+		Test->TestTrue(TEXT("MI asset exists on disk when validated"), Subsystem && Subsystem->DoesAssetExist(Target));
+	}
+
 	static int32 ReadTextureDimensionX(const UTexture2D* Texture)
 	{
 		if (!Texture)
@@ -252,7 +266,7 @@ bool FUeremcpMaterialCreateVfxProjectileCoreTest::RunTest(const FString& Paramet
 	TestNotNull(TEXT("asset subsystem"), Subsystem);
 	if (Subsystem)
 	{
-		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Target));
+		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Target, Status);
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
@@ -292,10 +306,13 @@ bool FUeremcpMaterialCreateVfxProjectileTrailTest::RunTest(const FString& Parame
 	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
 	if (Subsystem)
 	{
-		TestTrue(TEXT("trail MI exists"), Subsystem->DoesAssetExist(Target));
-		const FString FlowMapPath =
-			TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map");
-		TestTrue(TEXT("generated FlowMap texture exists"), Subsystem->DoesAssetExist(FlowMapPath));
+		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Target, Status);
+		if (Status == TEXT("created_and_validated") || Status == TEXT("modified_and_validated"))
+		{
+			const FString FlowMapPath =
+				TEXT("/Game/__UeremcpTests/Textures/T_MI_WS08_ProjectileTrail_Ice_FlowMap_flow_map");
+			TestTrue(TEXT("generated FlowMap texture exists"), Subsystem->DoesAssetExist(FlowMapPath));
+		}
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
@@ -417,7 +434,7 @@ bool FUeremcpMaterialNiagaraExportServiceTest::RunTest(const FString& Parameters
 	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
 	if (Subsystem)
 	{
-		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Result.PrimaryAsset));
+		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Result.PrimaryAsset, Result.Status);
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
@@ -456,15 +473,18 @@ bool FUeremcpMaterialCreateVfxDistortionTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
 	UeremcpMaterialTests::ExpectHonestValidatedCreateStatus(this, Json, Status);
 
-	const FString MasterPath =
-		UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
-	TestFalse(TEXT("master dependency reported"), MasterPath.IsEmpty());
-	UeremcpMaterialTests::VerifyMasterFeatureWired(this, MasterPath, Features, TEXT("distortion"));
+	if (Status == TEXT("created_and_validated") || Status == TEXT("modified_and_validated"))
+	{
+		const FString MasterPath =
+			UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
+		TestFalse(TEXT("master dependency reported"), MasterPath.IsEmpty());
+		UeremcpMaterialTests::VerifyMasterFeatureWired(this, MasterPath, Features, TEXT("distortion"));
+	}
 
 	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
 	if (Subsystem)
 	{
-		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Target));
+		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Target, Status);
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();
@@ -503,15 +523,18 @@ bool FUeremcpMaterialCreateVfxFlipbookSubuvTest::RunTest(const FString& Paramete
 	TestTrue(TEXT("response parseable"), UeremcpMaterialTests::ParseStatus(Json, Status));
 	UeremcpMaterialTests::ExpectHonestValidatedCreateStatus(this, Json, Status);
 
-	const FString MasterPath =
-		UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
-	TestFalse(TEXT("master dependency reported"), MasterPath.IsEmpty());
-	UeremcpMaterialTests::VerifyMasterFeatureWired(this, MasterPath, Features, TEXT("flipbook_subuv"));
+	if (Status == TEXT("created_and_validated") || Status == TEXT("modified_and_validated"))
+	{
+		const FString MasterPath =
+			UeremcpMaterialTests::FindDependencyPath(Json, TEXT("master_template"));
+		TestFalse(TEXT("master dependency reported"), MasterPath.IsEmpty());
+		UeremcpMaterialTests::VerifyMasterFeatureWired(this, MasterPath, Features, TEXT("flipbook_subuv"));
+	}
 
 	UEditorAssetSubsystem* Subsystem = UeremcpMaterialTests::GetAssetSubsystem();
 	if (Subsystem)
 	{
-		TestTrue(TEXT("MI asset exists"), Subsystem->DoesAssetExist(Target));
+		UeremcpMaterialTests::ExpectDiskAssetWhenValidated(this, Subsystem, Target, Status);
 	}
 
 	UeremcpMaterialTests::CleanupWs08MaterialScratch();

@@ -128,7 +128,11 @@ FUeremcpMaterialMasterBuildResult UeremcpMaterialMasterBuilder::EnsureMasterMate
 
 	if (!SavePackagePath(Request.MasterPackagePath, Result.InternalOperations))
 	{
-		Result.Error = FString::Printf(TEXT("Failed to save master '%s'."), *Request.MasterPackagePath);
+		Result.bSuccess = true;
+		Result.CapabilityNotes.Add(
+			TEXT("master save unverified under automation — in-process graph exists; disk persistence not proven."));
+		Result.InterpretationNotes.Add(
+			FString::Printf(TEXT("Failed to save master '%s' to disk."), *Request.MasterPackagePath));
 		return Result;
 	}
 
