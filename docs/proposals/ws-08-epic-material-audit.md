@@ -79,3 +79,9 @@ tools).
 WS-02: fold these rows into `docs/audit/epic-toolsets.md` / reagenttools matrix.
 WS-08 implementation stays gated on Phase 1 host + harness. Coordinate master
 material set with WS-07/WS-15 for elemental Niagara+material templates.
+
+### Update 2026-07-29 (resolved)
+
+WS-02 `18e913e`: MaterialTools (22, internalise) + MaterialInstanceTools (13,
+preserve/improve) + REMaterialWorkflowTools per-tool rows folded; status remains
+`source_complete`.
