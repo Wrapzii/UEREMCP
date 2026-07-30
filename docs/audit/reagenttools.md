@@ -124,12 +124,12 @@ from source read + `$RAT/Docs/CAPABILITY_MATRIX.md` cross-check where noted.
 | Toolset | Class | Tools (n) | Purpose | Limitations | Altitude | Disposition | Superseded by | Tag |
 |---|---|---|---|---|---|---|---|---|
 | `actor_workflow` | `REActorWorkflowTools` | 8 | Spawn/configure/verify actors, batch transforms, delete, organize | Wraps editor subsystems; no graph authoring | composite | supersede | `gameplay.*` actor goal ops | [VERIFIED: actor_workflow_tools.py] |
-| `anim_workflow` | `REAnimWorkflowTools` | 6 | Control Rig pose → AnimSequence → Montage pipeline | RE-specific presets/pipeline; heavy sequencer/rig deps | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED: anim_workflow_tools.py] |
+| nim_workflow | REAnimWorkflowTools | 6 | Control Rig pose → AnimSequence → Montage pipeline | **Notify plan is metadata-only** — not validated success; heavy sequencer/rig deps | goal (RE) | **become internal primitive** / replace with goal op | nimation.* compose (WS-10); bake pattern preserved | [VERIFIED: anim_workflow_tools.py; WS-10 proposal] |
 | `asset_workflow` | `REAssetWorkflowTools` | 3 | Compact find, bulk property edit, save | Overlaps Epic `AssetTools`; SEARCH/MUTATE limits | composite | internalise / supersede | Epic AssetTools + envelope batch | [VERIFIED: asset_workflow_tools.py] |
 | `batch_workflow` | `REBatchWorkflowTools` | 1 | Allowlisted ops + `$ref` chaining | 8 actions; BATCH_LIMIT 20; resolve_actor ignores dry_run | composite | supersede surface; preserve grammar | `execute_plan` | [VERIFIED: batch_workflow_tools.py] |
 | `blueprint_workflow` | `REBlueprintWorkflowTools` | 5 | Inspect, create BP, class defaults, compile | **No graph authoring** — defaults/compile only; defers graphs to Epic `BlueprintTools` | composite | supersede | `blueprints.*` (WS-06) | [VERIFIED: blueprint_workflow_tools.py] |
 | `capture_workflow` | `RECaptureWorkflowTools` | 7 | Viewport/material/PIE capture to disk; compact logs; GIF | Disk paths not base64; some log APIs build-dependent | composite | preserve ideas → WS-11 | test harness + validation capture | [VERIFIED: capture_workflow_tools.py] |
-| `character_workflow` | `RECharacterWorkflowTools` | 4 | Character mesh, combat montages, socket inspect | RE game character conventions | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED: character_workflow_tools.py] |
+| `character_workflow` | `RECharacterWorkflowTools` | 4 | Character mesh, combat montages, socket inspect | Montage wiring composes with ability rows (WS-09) | goal (RE) | project-layer or compose | ability contract with WS-09 | [VERIFIED: character_workflow_tools.py; WS-10 proposal] |
 | `context` | `REContextTools` | 4 | Capabilities, editor context, target resolution | Pre-envelope discovery pattern | composite | supersede | envelope context + capability_notes (WS-05) | [VERIFIED: context_tools.py] |
 | `dress_workflow` | `REDressWorkflowTools` | 4 | Place/scatter static meshes, snap to floor | Cave/hub dressing for RE levels | goal (RE) | defer — project extension | RE project plugin layer | [VERIFIED: dress_workflow_tools.py] |
 | `level_workflow` | `RELevelWorkflowTools` | 3 | Open/create level, place actors, map check | `run_map_check` may fail on some builds `[UNVERIFIED: CAPABILITY_MATRIX.md]` | composite | partial supersede | level goal ops + WS-11 validation | [VERIFIED: level_workflow_tools.py] |
@@ -152,14 +152,38 @@ Accepted from `docs/proposals/ws-08-epic-material-audit.md` (WS-01, 2026-07-29).
 | `create_assign_material_instance` | Create MI + assign in one call | improve | Valid composite for quick assign; envelope wrapper | [VERIFIED: material_workflow_tools.py] |
 | Master material graph edit | — | absent (Epic) | Epic `MaterialTools` fills gap — internalise, compose in `create_vfx_material` | [VERIFIED: WS-08 proposal + epic-toolsets.md] |
 
+
+
+### Animation (WS-10 accepted)
+
+Accepted from `docs/proposals/ws-10-animation-audit-rows.md` (WS-10 → WS-02, 2026-07-29).
+Evidence: [RB-09](../research/RB-09-animation-controlrig.md); Epic disposition in `epic-toolsets.md`.
+
+| Toolset / item | Disposition | Notes | Tag |
+|---|---|---|---|
+| `REAnimWorkflowTools` | **internalise** primitive / replace with goal op | Pose timeline → bake → montage path works; **notify plan is metadata-only** — do not treat as successful AnimNotify authoring | [VERIFIED: anim_workflow_tools.py; WS-10 proposal] |
+| `RECharacterWorkflowTools` montage wiring | project-layer or compose | Ability/montage contract with WS-09 | [VERIFIED: character_workflow_tools.py; WS-10 proposal] |
+
+### Gameplay validation (WS-09 accepted)
+
+Accepted from `docs/proposals/ws-09-audit-gas-toolsets.md` (WS-09, 2026-07-29).
+`[VERIFIED: capture_workflow_tools.py:835+, project_workflow_tools.py:61-76]`.
+
+| Item | Purpose | Disposition | Notes | Tag |
+|---|---|---|---|---|
+| `pie_cast_and_capture` | PIE smoke: cast ability + capture frames | **preserve / reuse** | Validation smoke for RE `CastAbility`; not Epic GAS authoring | [VERIFIED: capture_workflow_tools.py:835] |
+| `get_plugin_project_notes` GAS line | Architecture gap notes for agents | **improve** (docs accuracy) | States no GAS/ability tools; `pie_cast_and_capture` exists for cast validation | [VERIFIED: project_workflow_tools.py:76] |
+| GAS graph authoring | — | **N/A (correct)** | RE is not GAS-based; Epic GAS toolsets are inspect-only for this project | [VERIFIED: WS-09 proposal + epic-toolsets.md] |
+
 ### Disposition summary
 
 | Disposition | Toolsets |
 |---|---|
 | **supersede** (core UEREMCP replaces agent surface) | actor, asset, batch, blueprint, context, niagara, level (partial) |
 | **improve** (envelope wrapper, keep semantics) | material |
-| **defer — project extension** | anim, character, dress, lighting |
-| **preserve ideas** (patterns, not tools) | capture, validation, batch `$ref` grammar |
+| **defer — project extension** | dress, lighting |
+| **internalise / goal compose** | anim (internalise bake path), character (montage compose) |
+| **preserve ideas** (patterns, not tools) | capture (`pie_cast_and_capture`), validation, batch `$ref` grammar |
 | **retire** | project |
 | **internalise** | asset (overlap with Epic AssetTools during migration) |
 
@@ -177,7 +201,7 @@ From `$RAT/Docs/CAPABILITY_MATRIX.md` `[UNVERIFIED — the authors' own assessme
 
 | Area | Self-reported state |
 |---|---|
-| Blueprint graph / node authoring | absent — defers to Epic `BlueprintTools` / `BlueprintNodeTools` |
+| Blueprint graph / node authoring | absent — defers to Epic `BlueprintTools` only (`BlueprintNodeTools` does not exist in UE 5.8) |
 | `create_or_update_blueprint` | class defaults only, no graph authoring |
 | Niagara system / emitter / renderer authoring | absent — defers to Epic, batched via one `execute_tool_script` |
 | Master material graph editing | absent — defers to Epic `MaterialTools` |
