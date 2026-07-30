@@ -43,6 +43,7 @@ public class UeremcpValidation : ModuleRules
 			// Blueprint dispatch regression consumes FUeremcpMutatingDispatch via
 			// UeremcpBlueprintMutatingGate's public header.
 			"UeremcpCore",
+			"UeremcpSecurity",
 
 			// WS-07 POC B editor gate calls the goal-level create tool directly.
 			"UeremcpNiagara",
