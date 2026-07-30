@@ -23,6 +23,21 @@ contains all nine source-module directories: `UeremcpBlueprint`, `UeremcpCore`,
 `[VERIFIED-RUNTIME: git merge-base --is-ancestor and PowerShell directory enumeration
 in UEREMCP-ws01 at e9bc110]`
 
+## Second WS-06 retarget incident
+
+A second incident was reported during WS-06 `blueprints.read_graph` work associated
+with commit `30e477b`: the shared RE junction was again pointed at
+`UEREMCP-ws06\Plugins\UEREMCP`. At the 2026-07-30 01:15 EDT orch follow-up, the
+junction had already been returned to `UEREMCP-ws01\Plugins\UEREMCP`, so no swap
+was required in that follow-up run.
+
+`[VERIFIED-RUNTIME: git show resolved 30e477b to the WS-06 read_graph implementation;
+PowerShell Get-Item -Force reported LinkType=Junction and Target=UEREMCP-ws01 during
+the follow-up inspection]`
+
+This recurrence strengthens the process-defect finding below: read/test work in a
+domain lane does not authorize retargeting shared RE integration infrastructure.
+
 ## Compile attempt
 
 With the editor and Live Coding closed, an REEditor Development build was queued
