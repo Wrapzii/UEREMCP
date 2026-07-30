@@ -123,10 +123,10 @@ namespace
 				}
 				CanonPins.Sort([](const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B)
 				{
-					const FString KA = A->AsObject()->GetStringField(TEXT("name"))
-						+ TEXT("|") + A->AsObject()->GetStringField(TEXT("direction"));
-					const FString KB = B->AsObject()->GetStringField(TEXT("name"))
-						+ TEXT("|") + B->AsObject()->GetStringField(TEXT("direction"));
+					const FString KA = A->AsObject()->GetStringField(TEXT("direction"))
+						+ TEXT("|") + A->AsObject()->GetStringField(TEXT("name"));
+					const FString KB = B->AsObject()->GetStringField(TEXT("direction"))
+						+ TEXT("|") + B->AsObject()->GetStringField(TEXT("name"));
 					return KA < KB;
 				});
 				Out->SetArrayField(Key, CanonPins);
@@ -351,6 +351,46 @@ namespace
 		}
 	}
 
+
+	TSharedPtr<FJsonValue> SortJsonKeys(const TSharedPtr<FJsonValue>& Value)
+	{
+		if (!Value.IsValid() || Value->IsNull())
+		{
+			return Value;
+		}
+		switch (Value->Type)
+		{
+		case EJson::Array:
+		{
+			TArray<TSharedPtr<FJsonValue>> Out;
+			for (const TSharedPtr<FJsonValue>& Item : Value->AsArray())
+			{
+				Out.Add(SortJsonKeys(Item));
+			}
+			return MakeShared<FJsonValueArray>(Out);
+		}
+		case EJson::Object:
+		{
+			const TSharedPtr<FJsonObject> Obj = Value->AsObject();
+			TArray<FString> Keys;
+			Keys.Reserve(Obj->Values.Num());
+			for (const auto& Pair : Obj->Values)
+			{
+				Keys.Add(FString(Pair.Key));
+			}
+			Keys.Sort();
+			TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
+			for (const FString& Key : Keys)
+			{
+				Out->SetField(Key, SortJsonKeys(Obj->TryGetField(Key)));
+			}
+			return MakeShared<FJsonValueObject>(Out);
+		}
+		default:
+			return Value;
+		}
+	}
+
 	bool WriteCanonical(const TSharedPtr<FJsonValue>& Value, FString& Out)
 	{
 		// Condensed JSON with sorted object keys already applied by canonicalise.
@@ -364,7 +404,7 @@ namespace
 
 TSharedPtr<FJsonValue> FUeremcpContentHash::CanonicaliseForHash(const TSharedPtr<FJsonValue>& Value)
 {
-	return CanonicaliseValue(Value);
+	return SortJsonKeys(CanonicaliseValue(Value));
 }
 
 FString FUeremcpContentHash::Sha256Prefixed(const TArray<uint8>& Bytes)
@@ -392,7 +432,7 @@ FString FUeremcpContentHash::HashJsonValue(const TSharedPtr<FJsonValue>& Value, 
 		}
 		return FString();
 	}
-	const TSharedPtr<FJsonValue> Canon = CanonicaliseValue(Value);
+	const TSharedPtr<FJsonValue> Canon = CanonicaliseForHash(Value);
 	FString CanonicalJson;
 	if (!WriteCanonical(Canon, CanonicalJson))
 	{
