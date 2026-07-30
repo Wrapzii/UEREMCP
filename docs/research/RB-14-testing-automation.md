@@ -1,10 +1,10 @@
 # RB-14: Testing and automation infrastructure
 
 - **Owner:** WS-11
-- **Status:** Wave 1 harness green (unit + editor Smoke + Rollback gate)
+- **Status:** Wave 1 harness green for unit + interim editor; shipping UEREMCP gate blocked (C-3)
 - **Blocks:** every verification claim in the project
 - **Priority:** high
-- **Updated:** 2026-07-29 (editor Cmd green)
+- **Updated:** 2026-07-29 (C-3: probe collapsed; shipping blocker documented)
 
 ## Framing
 
@@ -21,7 +21,7 @@ credibility of every other workstream**, so it runs in Wave 1.
 | `python tests/run_unit_tests.py` | Fast out-of-editor unittest discovery under `tests/unit/` | **Green** (9 tests) |
 | `pwsh tests/run_editor_tests.ps1 -Filter ...` | UnrealEditor-Cmd + Automation RunTests + Quit | **Green** (~26s cycle for Validation filter) |
 | `Plugins/UEREMCP/Source/UeremcpValidation/**` | Editor module: scratch helpers + automation tests | Scaffold; needs WS-03 uplugin registration |
-| `tests/integration/editor_plugin/UeremcpValidationProbe/` | Standalone interim plugin (junction into `$PROJ/Plugins/`) | **Built + green** via Cmd |
+| `tests/integration/editor_plugin/UeremcpValidationProbe/` | Interim **launch-smoke only** (no Rollback body; C-3) | Launch-smoke; junction optional |
 | Scratch root `/Game/__UeremcpTests/` + `FUeremcpScratchGuard` | Guaranteed cleanup | Documented + unit-tested + runtime-proven |
 
 ### Scratch-path conventions (publish to all workstreams)

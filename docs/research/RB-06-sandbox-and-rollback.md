@@ -1,10 +1,10 @@
 # RB-06: `FileSandbox` semantics, transactions, and rollback
 
 - **Owner:** WS-11
-- **Status:** q1/q3 answered — source + **runtime green** for Content/ CurveFloat adds
+- **Status:** q1/q3 answered for **engine** FileSandbox; **shipping UEREMCP gate unproven** (C-3)
 - **Blocks:** ADR-0005 confidence, WS-05's batch executor, every atomic-batch claim
 - **Priority:** highest — start immediately
-- **Updated:** 2026-07-29 (runtime gate observed)
+- **Updated:** 2026-07-29 (C-3 nuance accepted by WS-01)
 
 ## Why this is urgent
 
@@ -29,19 +29,23 @@ and `rollback.available` reports `false` in every response (ADR-0005 verificatio
 | **q3** AR / UObject after Discard | **POSITIVE** for full `Discard()`→`RevertAll()` on added Content packages | same | green |
 | ADR-0005 | **Do not replace.** Supplement hazards (`DiscardFiles`, Saved/Config, BP). Proposal: `docs/proposals/ws-11-adr-0005-sandbox-semantics.md` | — | — |
 
-**Gate test observed green** (`UEREMCP.Validation.Harness.Smoke` +
-`UEREMCP.Validation.Rollback.MultiAssetDiscard`, exit 0). Scope of the proof:
-**N× `UCurveFloat` creates under `/Game/__UeremcpTests/` inside `FGlobalSandbox`,
-then Discard+Leave.** Does **not** prove Blueprint compile/CDO discard, asset
-deletions, or `Saved/`/`Config/` coverage.
+### C-3 nuance (WS-14 → WS-01 accepted)
 
-WS-05 may treat `rollback.available` as true **only** for the proven Content/
-package-save + full-`Discard` path. Prefer `Discard()` over `DiscardFiles`
-(hazard below). Keep false / degraded if the batch touches BP compile artifacts
-or non-mount paths until those are gated separately.
+| Layer | Status |
+|---|---|
+| **Engine FileSandbox semantics** (q1/q3 Content/ adds) | **POSITIVE** — observed green 2026-07-29. Probe path used `-DisablePlugins=UEREMCP`. Evidence stays valid as *engine* behaviour. |
+| **Shipping UEREMCP plugin gate** | **NOT PROVEN** — test body SoT is `Plugins/.../UeremcpValidation/.../RollbackMultiAssetDiscard.spec.cpp`; requires `UeremcpValidation` in `UEREMCP.uplugin` + loadable `UeremcpCore`, re-run with `-KeepUeremcp -NoProbe`. |
 
-Interim harness: `tests/run_editor_tests.ps1` defaults to `-DisablePlugins=UEREMCP`
-(broken `UeremcpCore`) and `-EnablePlugins=UeremcpValidationProbe`.
+Scope of the engine proof: **N× `UCurveFloat` creates under `/Game/__UeremcpTests/`
+inside `FGlobalSandbox`, then Discard+Leave.** Does **not** prove Blueprint
+compile/CDO discard, asset deletions, or `Saved/`/`Config/` coverage.
+
+Until the **shipping** gate is green, WS-05 should keep `rollback.available: false`
+(or clearly scoped / degraded) for product responses — engine evidence alone is
+insufficient per C-3. Prefer `Discard()` over `DiscardFiles` (hazard below).
+
+Interim probe is **launch-smoke only** (no Rollback body). Defaults:
+`-DisablePlugins=UEREMCP` + `-EnablePlugins=UeremcpValidationProbe`.
 
 ### q1 — Does `FileSandbox` intercept `UPackage::Save`?
 
@@ -129,9 +133,11 @@ Record exact code and output for every `[VERIFIED-RUNTIME]` claim.
 
 ## Deliverables
 
-- [x] Answers to 1 and 3 — source + **runtime** for Content/ CurveFloat adds
-- [x] `tests/integration/Rollback.MultiAssetDiscard` **implemented and observed green**
-      (2026-07-29 Cmd; probe path). Limitations: not BP/deletes/Config.
+- [x] Answers to 1 and 3 — source + **engine runtime** for Content/ CurveFloat adds
+- [x] Test body SoT in `Plugins/.../UeremcpValidation`; probe collapsed (C-3)
+- [~] Engine path observed green (probe, UEREMCP disabled); **shipping** Cmd with
+      UEREMCP enabled **blocked** (`UeremcpProtocol` DLL missing — see
+      `tests/integration/_logs/shipping-gate-blocker.redacted.md`)
 - [x] `FSandboxedFileChangeInfo` → `changeEntry` mapping draft (unit tests)
-- [x] ADR-0005 recommendation as proposal (supplement, do not replace)
+- [x] ADR-0005 recommendation as proposal (supplement, do not replace; C-3 nuance)
 - [x] Known hazards list for WS-12 (in proposal + §C notes above)

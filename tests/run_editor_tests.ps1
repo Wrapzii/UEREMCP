@@ -4,23 +4,21 @@
 # filter, then quits. Does NOT destroy user content: tests must use
 # /Game/__UeremcpTests/ only.
 #
-# Prerequisites:
-#   - Preferred: UeremcpValidation registered in UEREMCP.uplugin (see
-#     docs/proposals/ws-11-register-validation-module.md) and compiled into RE.
-#   - Interim: standalone probe plugin junctioned at
-#     $PROJ/Plugins/UeremcpValidationProbe -> tests/integration/editor_plugin/...
-#     (EnabledByDefault: false; this script enables it via -EnablePlugins).
+# Prerequisites (shipping path — C-3):
+#   - UeremcpValidation registered in UEREMCP.uplugin (WS-03 proposal) AND
+#     UeremcpCore loadable, then: -KeepUeremcp -NoProbe
+#     Filter: UEREMCP.Validation.Rollback.MultiAssetDiscard
+#     Source of truth: Plugins/UEREMCP/Source/UeremcpValidation/...
 #
-# Known blocker (2026-07-29): if UEREMCP is Enabled in RE.uproject but
-# UeremcpCore is not built, the editor aborts before any automation runs.
-# Default -DisablePlugins UEREMCP avoids that until WS-03 ships a loadable plugin.
-# Pass -KeepUeremcp to leave it enabled.
+# Interim probe (engine-only / launch):
+#   - UeremcpValidationProbe is launch-smoke only (no Rollback body).
+#   - Default -DisablePlugins UEREMCP when Core is missing.
+#   - Probe green ≠ shipping UEREMCP plugin gate (WS-14 C-3 / WS-01).
 #
 # Usage:
-#   pwsh tests/run_editor_tests.ps1
-#   pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Harness.Smoke"
-#   pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.Validation.Rollback.MultiAssetDiscard"
-#   pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library"
+#   pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Validation"
+#   pwsh tests/run_editor_tests.ps1 -Filter "UEREMCP.ValidationProbe.Launch.Smoke"
+#   pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library" -NoProbe
 #
 param(
     [string]$Project = "$UEREMCP_LEGACY_PROJECT\RE.uproject",
