@@ -186,3 +186,27 @@ pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Protocol.
 ```
 
 2026-07-30: Protocol goldens **pass** (`UEREMCP.Protocol.Golden`). Not a C-3 gate; WS-05 owns parity.
+
+### D5 genuine multi-client Pattern B proof
+
+```powershell
+python -m unittest tests.unit.test_d5_multiclient_harness -v
+pwsh tests/run_d5_multiclient.ps1
+```
+
+Filter: `UEREMCP.Validation.Gameplay.PatternB.MultiClientPIE`. Proves listen-server +
+two remote clients, client `CastAbility("fire_s")` accepted on authority (stamina),
+second-client Multicast cosmetics (Niagara and/or cast montage), server projectile
+damage, and second-client replicated health. Machine JSON:
+`tests/integration/_artifacts/d5_pattern_b_multiclient.json`. No screenshot proof.
+Live PASS `[VERIFIED-RUNTIME: editor_UEREMCP_Validation_Gameplay_PatternB_MultiClientPIE_20260730_150518.log]`.
+
+### B10 visible-render / warm-pixel gate
+
+```powershell
+pwsh tests/run_poc_b10_visible_render.ps1
+```
+
+Filter: `UEREMCP.Niagara.POCB.VisibleRender` with `-WithRendering` (not NullRHI).
+Programmatic warm-pixel + particle gate is the PASS; PNG is supplementary.
+Live PASS `warm_changed_pixels=36921` `[VERIFIED-RUNTIME: editor_UEREMCP_Niagara_POCB_VisibleRender_20260730_150551.log]`.
