@@ -1,9 +1,9 @@
 # WS-01 compile blocker ownership map
 
 - **From:** WS-01 orchestration
-- **To:** WS-06 Blueprint, WS-09 Gameplay, WS-15 Templates
+- **To:** WS-06 Blueprint, WS-09 Gameplay, WS-15 Templates, WS-11 Validation
 - **Date:** 2026-07-30
-- **Status:** open
+- **Status:** original WS-06/09/15 blockers closed; WS-11 full-target blocker open
 - **Evidence:** `tests/integration/Editor.Handoff.Gates.md`; targeted UBT module
   rebuilds on orch `8eebca0`
 
@@ -35,14 +35,42 @@ No active UBT or Live Coding process held the build. Each targeted module exited
 All entries above are `[VERIFIED-RUNTIME: compiler diagnostics from targeted
 module builds and WS-11 commit acaad61]`.
 
+## Resolution verification
+
+WS-01 integrated WS-06 `9182699` as `95fdb67`, WS-09 `8d75716` as
+`731a8d7`, and WS-15 `7ae7e0d` as `9ff0443`. On that tip, all six targeted
+module builds returned `Result: Succeeded` and exit `0`:
+
+- `UeremcpBlueprint`
+- `UeremcpGameplay`
+- `UeremcpTemplates`
+- `UeremcpMaterial`
+- `UeremcpNiagara`
+- `UeremcpCore`
+
+`[VERIFIED-RUNTIME: six targeted UBT module builds on 2026-07-30]`.
+
+## Remaining full-target blocker
+
+The subsequent full `REEditor Win64 Development` build reached the WS-11
+validation tests and failed with C1083:
+
+`BlueprintMutatingDispatchGate.spec.cpp` includes
+`UeremcpBlueprintMutatingGate.h`, whose public include of
+`UeremcpMutatingDispatch.h` is not visible while compiling
+`UeremcpValidation` `[VERIFIED-RUNTIME: full REEditor UBT build on 2026-07-30]`.
+
+Owner: **WS-11**, because the failing consumer and its module rules are under
+`Plugins/UEREMCP/Source/UeremcpValidation/**`. Requested fix: declare the
+required `UeremcpCore` dependency/include visibility in
+`UeremcpValidation.Build.cs`, then rebuild `UeremcpValidation` and the full
+target. WS-01 does not edit that foreign-owned build rule.
+
 ## Integration consequence
 
 The stale `UnrealEditor.modules` omission of `UeremcpMaterial` cannot be corrected
-by a module-only link while the full target still fails. Blueprint, Material,
-Niagara, and B7 editor filters remain blocked before Automation discovery. No A6,
-B7, Material, Niagara, or POC B runtime pass is claimed.
+until the full target succeeds. Editor filters remain blocked before Automation
+discovery. No A6, B7, Material, Niagara, or POC B runtime pass is claimed.
 
-WS-01 owns none of the failing source/build-rule paths, so this proposal records
-the blocker without modifying foreign workstreams. After WS-06, WS-09, and WS-15
-land fixes, rerun the three module builds, then the full `REEditor` build, then
-`pwsh tests/run_editor_handoff_gates.ps1 -Gate All`.
+After WS-11 lands its fix, rerun `UeremcpValidation`, the full `REEditor` build,
+then `pwsh tests/run_editor_handoff_gates.ps1 -Gate All`.
