@@ -14,9 +14,12 @@ public:
 	/** Goal-level action registered with FUeremcpPlanExecutor (WS-15 drift guard). */
 	static const TCHAR* RegisteredActionName();
 
-	/** Register create_spell. Fails closed if already registered. */
+	/** Composite source-to-variation action registered for POC C5. */
+	static const TCHAR* RegisteredVariationActionName();
+
+	/** Register create_spell and create_spell_variation. Fails closed on collision. */
 	static bool Register(FString& OutError);
 
-	/** Unregister only create_spell (module shutdown). */
+	/** Unregister both gameplay semantic actions (module shutdown). */
 	static void Unregister();
 };

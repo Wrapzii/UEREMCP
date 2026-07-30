@@ -29,4 +29,13 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Gameplay")
 	static FString CreateSpell(const FString& RequestJson);
+
+	/**
+	 * Clone one RE ability row into a scratch target row, changing only selected
+	 * presentation soft paths, then re-read and compare protected gameplay fields.
+	 *
+	 * @param RequestJson Request envelope with action=create_spell_variation.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Gameplay")
+	static FString CreateSpellVariation(const FString& RequestJson);
 };

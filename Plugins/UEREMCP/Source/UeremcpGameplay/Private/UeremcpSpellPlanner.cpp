@@ -534,9 +534,10 @@ bool FUeremcpSpellPlanner::BuildTableWritePlan(
 		OutError = TEXT("target.asset_path must be a valid long package name");
 		return false;
 	}
-	if (!TargetPackagePath.StartsWith(TEXT("/Game/__UeremcpTests/")))
+	if (!TargetPackagePath.StartsWith(TEXT("/Game/__UeremcpTests/"))
+		&& !TargetPackagePath.StartsWith(TEXT("/Game/__UeremcpPoc/")))
 	{
-		OutError = TEXT("ability DataTable writes are restricted to /Game/__UeremcpTests/");
+		OutError = TEXT("ability DataTable writes are restricted to /Game/__UeremcpTests/ or /Game/__UeremcpPoc/");
 		return false;
 	}
 	if (Options.RequestId.IsEmpty())

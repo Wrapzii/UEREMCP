@@ -4,8 +4,7 @@
 - **Date:** 2026-07-30
 - **Branch:** `ws-09-poc-d-create-spell` @ worktree `UEREMCP-poc-d`
 - **Base tip:** `5235698ad76f2d7fd4e69c4abddf9842151ae4ea` (`ws-01-poc-cde-integration`)
-- **Status:** live Gameplay path proven; overall POC D remains partial because D5 has
-  static contract coverage only, not multi-client runtime proof
+- **Status:** overall POC D **MET** under the accepted D5 static-checklist wording
 - **Does not claim:** project-complete, POC A/B/C/E, multi-client net proof, production
   `DT_Abilities` mutation, or a green full material→Niagara→spell live batch against RE
 
@@ -29,7 +28,7 @@
 | D2 | Ops execute in `depends_on` order | **MET live** | `UEREMCP.Gameplay.PocD.DependsOnAndRef` passed material → Niagara → spell ordering |
 | D3 | `$ref` substitution into later ops | **MET live** | Same passing test asserted resolved `projectile_effect` in the nested request |
 | D4 | RE identity fields (`Element` / `ImpactStatus` / Pattern B); no tag INI mutation | **MET live** | Passing Gameplay automation asserted the planner and response contract |
-| D5 | Pattern B static checklist; multi-client = WS-11 | **MET (static only)** | Schema `networking` consts; capability note defers pie/net to RB-14 |
+| D5 | Pattern B static checklist; multi-client = WS-11 | **MET (static)** | Schema `networking` consts; capability note defers pie/net to RB-14. This is exactly the accepted criterion `[VERIFIED: docs/POC_ACCEPTANCE.md:123-130]` |
 | D6 | Compiles/saves; row re-readable | **MET live** | `LiveUpsertViaPlan` passed the mutator save→re-read validation |
 | D7 | Failed op → rollback; no partial assets | **MET live** | `UEREMCP.Gameplay.PocD.RollbackOnFailure` passed with aggregate `rolled_back` |
 | D8 | One consolidated response with per-op results | **MET live** | Passing POC D tests asserted one response with `result.operations[]` |
@@ -67,3 +66,9 @@ invent token numbers or upgrade D5 without a multi-client run.
 - `validate_system` from the shared example is **not** implemented (out of WS-09
   scope / needs WS-11).
 - Project-complete / headline scenario: **not claimed**.
+- Multi-client net behavior remains explicitly deferred to RB-14 / WS-11. No
+  listen-server or remote-client observation is claimed.
+
+Because D1-D4 and D6-D8 are MET live and D5 is MET by its accepted static
+checklist wording, overall POC D is **MET**. Optional PIE and multi-client proof
+would strengthen the evidence but are not hidden prerequisites.

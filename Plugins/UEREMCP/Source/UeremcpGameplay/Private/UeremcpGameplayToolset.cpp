@@ -1,6 +1,7 @@
 #include "UeremcpGameplayToolset.h"
 
 #include "Dom/JsonValue.h"
+#include "UeremcpAbilityVariation.h"
 #include "UeremcpAbilityTableMutator.h"
 #include "UeremcpEnvelope.h"
 #include "UeremcpIdempotency.h"
@@ -485,5 +486,281 @@ FString UUeremcpGameplayToolset::CreateSpell(const FString& RequestJson)
 	{
 		FUeremcpIdempotencyStore::Get().Put(Request.IdempotencyKey, TerminalJson);
 	}
+	return TerminalJson;
+}
+
+FString UUeremcpGameplayToolset::CreateSpellVariation(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("Unsupported protocol_version for create_spell_variation."));
+	}
+	if (Request.Action != TEXT("create_spell_variation"))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("CreateSpellVariation requires action=create_spell_variation."));
+	}
+	if (Request.Mode != TEXT("create") && Request.Mode != TEXT("create_or_update"))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("create_spell_variation supports create or create_or_update only."));
+	}
+	if (Request.TargetAssetPath.IsEmpty()
+		|| (!Request.TargetAssetPath.StartsWith(TEXT("/Game/__UeremcpPoc/"))
+			&& !Request.TargetAssetPath.StartsWith(TEXT("/Game/__UeremcpTests/"))))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("target ability table must be under /Game/__UeremcpPoc/ or /Game/__UeremcpTests/."));
+	}
+
+	const FUeremcpPathValidationResult TargetPathResult =
+		FUeremcpPathPolicy::ValidateSoftPath(Request.TargetAssetPath, true);
+	if (!TargetPathResult.bAllowed)
+	{
+		return FUeremcpEnvelope::MakeRejection(Request.RequestId, TargetPathResult.Reason);
+	}
+
+	FUeremcpAbilityVariationPlan VariationPlan;
+	FString VariationError;
+	if (!FUeremcpAbilityVariation::BuildPlan(
+		Request.Specification,
+		VariationPlan,
+		VariationError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(TEXT("Invalid composite variation: %s"), *VariationError));
+	}
+	const FUeremcpPathValidationResult SourcePathResult =
+		FUeremcpPathPolicy::ValidateSoftPath(VariationPlan.SourceTablePath, false);
+	const FUeremcpPathValidationResult PresentationPathResult =
+		FUeremcpPathPolicy::ValidateSoftPath(VariationPlan.PresentationAsset, false);
+	if (!SourcePathResult.bAllowed || !PresentationPathResult.bAllowed)
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			!SourcePathResult.bAllowed ? SourcePathResult.Reason : PresentationPathResult.Reason);
+	}
+
+	UObject* PresentationObject = StaticLoadObject(
+		UObject::StaticClass(),
+		nullptr,
+		*VariationPlan.PresentationAsset,
+		nullptr,
+		LOAD_NoWarn);
+	const bool bPresentationResolved = PresentationObject != nullptr;
+
+	FUeremcpAbilityTableWriteOptions WriteOptions;
+	WriteOptions.RequestId = Request.RequestId;
+	WriteOptions.Mode = Request.Mode;
+	WriteOptions.bDryRun = Request.bDryRun;
+	WriteOptions.bAtomic = Request.bAtomic;
+	WriteOptions.bSave = Request.bSave;
+	WriteOptions.bValidate = Request.bValidate;
+	WriteOptions.bRollbackOnFailure = Request.bRollbackOnFailure;
+	WriteOptions.TimeoutMs = Request.TimeoutMs;
+	WriteOptions.OnRevisionConflict = Request.OnRevisionConflict;
+	WriteOptions.ExpectedRevision = Request.ExpectedRevision;
+	WriteOptions.bHasExpectedRevision = Request.bHasExpectedRevision;
+	WriteOptions.IdempotencyKey = Request.IdempotencyKey;
+
+	FUeremcpAbilityTableWritePlan WritePlan;
+	if (!FUeremcpSpellPlanner::BuildTableWritePlan(
+		Request.TargetAssetPath,
+		WriteOptions,
+		VariationPlan.SpellPlan,
+		WritePlan,
+		VariationError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(TEXT("Invalid variation write plan: %s"), *VariationError));
+	}
+
+	FUeremcpMutatingDispatch MutatingDispatch;
+	if (!Request.bDryRun)
+	{
+		FString BlockingResponse;
+		if (!MutatingDispatch.TryBegin(RequestJson, false, 0, false, BlockingResponse))
+		{
+			return BlockingResponse;
+		}
+	}
+
+	FUeremcpAbilityTableMutationResult MutationResult;
+	FString MutationError;
+	const bool bMutationSucceeded =
+		Request.bDryRun
+		|| (bPresentationResolved
+			&& FUeremcpAbilityTableMutator::Execute(
+				WritePlan,
+				VariationPlan.SpellPlan,
+				MutationResult,
+				MutationError));
+	if (!Request.bDryRun && !bPresentationResolved)
+	{
+		MutationError = TEXT("variation presentation_asset could not be loaded");
+	}
+
+	TSharedPtr<FJsonObject> TargetProtectedFields;
+	bool bProtectedFieldsEqual = false;
+	if (!Request.bDryRun && bMutationSucceeded)
+	{
+		bProtectedFieldsEqual = FUeremcpAbilityVariation::VerifyTarget(
+			Request.TargetAssetPath,
+			VariationPlan,
+			TargetProtectedFields,
+			MutationError);
+	}
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = Request.TargetAssetPath;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = Request.bDryRun ? 3 : 10;
+	Response.Metrics.AssetsAffected = MutationResult.bPersisted ? 1 : 0;
+	Response.InterpretationNotes = {
+		FString::Printf(
+			TEXT("source_binding=ability_table:%s source_row:%s vfx_phase:%s"),
+			*VariationPlan.SourceTablePath,
+			*VariationPlan.SourceRow,
+			*VariationPlan.VfxPhase),
+		FString::Printf(
+			TEXT("target_row=%s; relationship=clone_source_row_and_override_presentation_only"),
+			*VariationPlan.TargetRow),
+	};
+	Response.CapabilityNotes = {
+		TEXT("FREAbilityDef is the gameplay owner; the production source row is read-only."),
+		TEXT("RE Pattern B remains owned by the unchanged CastAbility/AuthorityCastAbility path."),
+		TEXT("Multi-client replication observation remains RB-14/WS-11 and is not claimed here."),
+	};
+
+	if (Request.bDryRun)
+	{
+		Response.Status = TEXT("partially_completed");
+		Response.Summary = TEXT("Validated the composite source binding; dry_run did not create a target row.");
+	}
+	else if (!bMutationSucceeded)
+	{
+		Response.Status = MutationResult.bRolledBack ? TEXT("rolled_back") : TEXT("failed_validation");
+		Response.Summary = FString::Printf(TEXT("Composite variation mutation failed: %s"), *MutationError);
+	}
+	else if (!bProtectedFieldsEqual)
+	{
+		Response.Status = TEXT("failed_validation");
+		Response.Summary = FString::Printf(
+			TEXT("Target row was written but C5 protected-field verification failed: %s"),
+			*MutationError);
+	}
+	else if (MutationResult.bNoChange)
+	{
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = TEXT("Target variation row already matched and protected gameplay fields re-verified.");
+	}
+	else
+	{
+		Response.Status = MutationResult.bCreatedTable
+			? TEXT("created_and_validated")
+			: TEXT("modified_and_validated");
+		Response.Summary = TEXT("Created the presentation variation and verified networking/damage fields unchanged.");
+	}
+
+	FUeremcpAssetRef PresentationDependency;
+	PresentationDependency.AssetPath = VariationPlan.PresentationAsset;
+	PresentationDependency.Role = TEXT("variation_presentation");
+	if (PresentationObject)
+	{
+		PresentationDependency.AssetClass = PresentationObject->GetClass()->GetPathName();
+		Response.Dependencies.Add(PresentationDependency);
+	}
+	else
+	{
+		Response.UnresolvedDependencies.Add(PresentationDependency);
+	}
+
+	if (!Request.bDryRun)
+	{
+		FUeremcpAssetRef TableAsset;
+		TableAsset.AssetPath = Request.TargetAssetPath;
+		TableAsset.AssetClass = TEXT("/Script/Engine.DataTable");
+		TableAsset.Revision = MutationResult.RevisionAfter;
+		TableAsset.Role = TEXT("target_ability_table");
+		if (MutationResult.bNoChange)
+		{
+			Response.ReusedAssets.Add(TableAsset);
+		}
+		else if (MutationResult.bPersisted && MutationResult.bCreatedTable)
+		{
+			Response.CreatedAssets.Add(TableAsset);
+		}
+		else if (MutationResult.bPersisted)
+		{
+			Response.ModifiedAssets.Add(TableAsset);
+		}
+		Response.Revision = MutationResult.RevisionAfter;
+	}
+
+	const TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+	SetJsonNull(Validation, TEXT("compiled"));
+	Validation->SetBoolField(TEXT("structurally_valid"), true);
+	Validation->SetBoolField(TEXT("dependencies_resolved"), bPresentationResolved);
+	if (Request.bDryRun)
+	{
+		SetJsonNull(Validation, TEXT("saved"));
+		SetJsonNull(Validation, TEXT("reread_after_write"));
+	}
+	else
+	{
+		Validation->SetBoolField(TEXT("saved"), MutationResult.bSaved);
+		Validation->SetBoolField(TEXT("reread_after_write"), MutationResult.bRereadAfterWrite);
+	}
+	Validation->SetBoolField(TEXT("protected_fields_equal"), bProtectedFieldsEqual);
+	Validation->SetObjectField(
+		TEXT("source_protected_fields"),
+		VariationPlan.SourceProtectedFields);
+	if (TargetProtectedFields.IsValid())
+	{
+		Validation->SetObjectField(TEXT("target_protected_fields"), TargetProtectedFields);
+	}
+	TArray<FString> Checks = VariationPlan.SpellPlan.StaticChecks;
+	if (bProtectedFieldsEqual)
+	{
+		Checks.Add(TEXT("gameplay_protected_fields_equal"));
+		Checks.Add(TEXT("impact_damage_status_duration_aoe_equal"));
+		Checks.Add(TEXT("projectile_physics_and_spawn_entity_equal"));
+	}
+	Validation->SetArrayField(TEXT("checks_performed"), StringValues(Checks));
+
+	const TSharedPtr<FJsonObject> Binding = MakeShared<FJsonObject>();
+	Binding->SetStringField(TEXT("ability_table"), VariationPlan.SourceTablePath);
+	Binding->SetStringField(TEXT("source_row"), VariationPlan.SourceRow);
+	Binding->SetStringField(TEXT("vfx_phase"), VariationPlan.VfxPhase);
+	Binding->SetStringField(TEXT("target_ability_table"), Request.TargetAssetPath);
+	Binding->SetStringField(TEXT("target_row"), VariationPlan.TargetRow);
+	Binding->SetStringField(TEXT("presentation_asset"), VariationPlan.PresentationAsset);
+	Binding->SetStringField(TEXT("relationship"), TEXT("cloned_row_presentation_override"));
+
+	Response.ExtraFields = MakeShared<FJsonObject>();
+	Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
+	Response.ExtraFields->SetObjectField(TEXT("gameplay_binding"), Binding);
+
+	const FString TerminalJson = Request.bDryRun
+		? FUeremcpEnvelope::SerializeResponse(Response)
+		: MutatingDispatch.Complete(Response);
 	return TerminalJson;
 }

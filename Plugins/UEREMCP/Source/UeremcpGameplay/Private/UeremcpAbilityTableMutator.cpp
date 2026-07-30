@@ -70,7 +70,10 @@ bool FUeremcpAbilityTableMutator::Execute(
 		OutError = TEXT("spell row payload is missing");
 		return false;
 	}
-	if (FGlobalSandbox::IsActive())
+	const bool bUsingOuterPlanSandbox =
+		FGlobalSandbox::IsActive()
+		&& FGlobalSandbox::GetActiveName().StartsWith(TEXT("execute_plan_"));
+	if (FGlobalSandbox::IsActive() && !bUsingOuterPlanSandbox)
 	{
 		OutError = FString::Printf(
 			TEXT("foreign FileSandbox '%s' is already active"),
@@ -188,48 +191,49 @@ bool FUeremcpAbilityTableMutator::Execute(
 	const FString SandboxName = FString::Printf(
 		TEXT("UEREMCP_create_spell_%s"),
 		*SandboxRequestToken);
-	if (!FGlobalSandbox::Enter(
-		SandboxName,
-		TEXT("UEREMCP create_spell FREAbilityDef row mutation")))
+	if (!bUsingOuterPlanSandbox
+		&& !FGlobalSandbox::Enter(
+			SandboxName,
+			TEXT("UEREMCP create_spell FREAbilityDef row mutation")))
 	{
 		OutError = TEXT("failed to enter FileSandbox");
 		return false;
 	}
 
-	bool bSandboxEntered = true;
+	bool bSandboxEntered = !bUsingOuterPlanSandbox;
 	bool bPersisted = false;
 	bool bMutationApplied = false;
 	bool bCreatedTable = false;
 	ON_SCOPE_EXIT
 	{
+		if (!bPersisted && bMutationApplied && Table && !bCreatedTable)
+		{
+			if (ExistingRow)
+			{
+				Table->AddRow(RowName, ExistingBackup.GetStructMemory(), RowStruct);
+			}
+			else
+			{
+				Table->RemoveRow(RowName);
+			}
+			Table->GetPackage()->SetDirtyFlag(bPackageWasDirty);
+		}
 		if (bSandboxEntered)
 		{
 			if (!bPersisted)
 			{
-				if (bMutationApplied && Table && !bCreatedTable)
-				{
-					if (ExistingRow)
-					{
-						Table->AddRow(RowName, ExistingBackup.GetStructMemory(), RowStruct);
-					}
-					else
-					{
-						Table->RemoveRow(RowName);
-					}
-					Table->GetPackage()->SetDirtyFlag(bPackageWasDirty);
-				}
 				if (FGlobalSandbox::Discard())
 				{
 					OutResult.bRolledBack = true;
 				}
 			}
 			FGlobalSandbox::Leave();
-			if (!bPersisted && bCreatedTable && Table)
-			{
-				FAssetRegistryModule::AssetDeleted(Table);
-				Table->ClearFlags(RF_Public | RF_Standalone);
-				Table->MarkAsGarbage();
-			}
+		}
+		if (!bPersisted && bCreatedTable && Table)
+		{
+			FAssetRegistryModule::AssetDeleted(Table);
+			Table->ClearFlags(RF_Public | RF_Standalone);
+			Table->MarkAsGarbage();
 		}
 	};
 
@@ -322,6 +326,14 @@ bool FUeremcpAbilityTableMutator::Execute(
 	{
 		OutError = TEXT("FileSandbox did not report the saved DataTable package");
 		return false;
+	}
+	if (bUsingOuterPlanSandbox)
+	{
+		// The execute_plan coordinator owns commit/rollback and sandbox release.
+		// [VERIFIED: UeremcpPlanTransactionCoordinator.cpp transaction callbacks]
+		bPersisted = true;
+		OutResult.bPersisted = true;
+		return true;
 	}
 	if (!FGlobalSandbox::Persist(OutResult.SandboxedFiles))
 	{

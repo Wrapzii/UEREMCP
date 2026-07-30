@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/gameplay/create_spell_variation.schema.json",
+  "title": "create_spell_variation specification",
+  "description": "Composite RE gameplay-source to presentation-variation contract. Reads one FREAbilityDef source row, clones it to a scratch target row, overrides selected VFX soft paths, and requires protected gameplay fields to compare equal after re-read.",
+  "type": "object",
+  "required": [
+    "source_binding",
+    "target_row",
+    "presentation_asset",
+    "verification_mode"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "source_binding": {
+      "type": "object",
+      "required": ["ability_table", "source_row", "vfx_phase"],
+      "additionalProperties": false,
+      "properties": {
+        "ability_table": {
+          "$ref": "../../common/defs.schema.json#/$defs/assetPath",
+          "description": "Read-only FREAbilityDef DataTable that owns the source gameplay behavior."
+        },
+        "source_row": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+        },
+        "vfx_phase": {
+          "type": "string",
+          "enum": ["projectile", "impact", "projectile_and_impact"]
+        }
+      }
+    },
+    "target_row": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+      "description": "New row identity in the scratch target DataTable."
+    },
+    "presentation_asset": {
+      "$ref": "../../common/defs.schema.json#/$defs/assetPath",
+      "description": "Resolved variation asset assigned only to the selected VFX phase."
+    },
+    "verification_mode": {
+      "const": "protected_fields_equal"
+    }
+  }
+}
