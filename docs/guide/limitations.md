@@ -62,7 +62,20 @@ cancel SKIP residuals tracked in transport tests).
 ## `execute_plan`
 
 Internal interpreter exists; **not** a direct `AICallable` on this tip. Agents that
-call a fictional `ExecutePlan` tool will fail discovery.
+call a fictional `ExecutePlan` tool will fail discovery. Route via
+`InstantiateTemplate` or domain tools —
+[`tool-selection-policy.md`](tool-selection-policy.md).
+
+## Visual capture
+
+`CaptureEffectFrames` proves pixel deltas vs an empty stage only. It does not judge
+appearance, prove Niagara compile, or author assets. May be absent until WS-11
+consolidation; cold renderer can yield `failed_validation` on first tick.
+
+## Tool choice is not enforceable
+
+The tool-selection contract makes UEREMCP the documented preferred path. It
+**cannot guarantee** arbitrary agent/LLM behavior.
 
 ## Gameplay / Animation / discovery
 

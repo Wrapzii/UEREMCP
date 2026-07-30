@@ -1,0 +1,17 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-instantiate-template-min",
+  "action": "instantiate_template",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Templates/NS_FromTemplate_Min"
+  },
+  "specification": {
+    "template_id": "niagara.projectile.elemental.v1",
+    "inputs": {
+      "element": "fire"
+    }
+  },
+  "options": {
+    "validate": true
+  }
+}

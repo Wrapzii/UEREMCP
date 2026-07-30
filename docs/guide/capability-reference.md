@@ -4,8 +4,9 @@
 [`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) on tip `dae0e5c` /
 `ws-11-poc-b10-render`. **No overall POC-B.**
 
-Do not paste full graph payloads into chat. Load the linked fixture; this page names
-the tool, the `action`, the fields that matter, and the ceiling.
+**Routing:** [`tool-selection-policy.md`](tool-selection-policy.md). Prefer these
+UEREMCP tools over Epic primitives for the same goal. Do not paste full graph
+payloads into chat — load fixtures or [`examples/`](examples/).
 
 ## How to invoke
 
@@ -16,6 +17,11 @@ call_tool(toolset=<MCP toolset name>, tool=<PascalCase method>, arguments={ requ
 Exact toolset registration names come from `list_toolsets` at runtime. Headers below
 document the C++ toolset class and method
 `[VERIFIED: Plugins/UEREMCP/Source/Ueremcp*/Public/*Toolset.h]`.
+
+Published examples (valid minimal + complete shapes):
+
+- [`examples/minimal/`](examples/minimal/)
+- [`examples/complete/`](examples/complete/)
 
 ---
 
@@ -230,6 +236,33 @@ Agents should **not** invent an `ExecutePlan` MCP tool. Use `InstantiateTemplate
 ```
 
 Transport cancel-adapter residuals remain — [`limitations.md`](limitations.md).
+Minimal fixtures: [`examples/minimal/get_job_result.json`](examples/minimal/get_job_result.json),
+[`examples/minimal/cancel_job.json`](examples/minimal/cancel_job.json).
+
+---
+
+## Visual capture — `capture_effect_frames` (WS-11 handoff)
+
+| | |
+|---|---|
+| Status | **partial / pending catalog** until consolidating deploy + WS-01 row |
+| Toolset / tool | `UUeremcpVisualCaptureToolset` → `CaptureEffectFrames` |
+| Scope | Observe an **existing** Niagara system; does **not** author, compile, or save it |
+
+Builds a transient stage, steps the system, writes PNGs under
+`Saved/UEREMCP/VfxCapture/<asset>/<request-id>/`, rereads files, returns pixel
+deltas vs empty stage. Requires `options.validate: true`.
+
+Minimal dry-run: [`examples/minimal/capture_effect_frames.json`](examples/minimal/capture_effect_frames.json).
+Complete live-shaped: [`examples/complete/capture_effect_frames.json`](examples/complete/capture_effect_frames.json).
+
+Handoff source: WS-11 visual-capture branch proposal
+`ws-11-visual-capture-catalog-schema-handoff.md` (may not be on this tip yet —
+see [`docs/proposals/ws-13-tool-selection-discoverability-2026-07-30.md`](../proposals/ws-13-tool-selection-discoverability-2026-07-30.md)).
+Cold-renderer and appearance judgments are **not** proven — see limitations.
+
+**Select when:** you need numeric visual evidence after structural create/inspect.
+**Do not select instead of** `create_niagara_effect` / `inspect_system`.
 
 ---
 

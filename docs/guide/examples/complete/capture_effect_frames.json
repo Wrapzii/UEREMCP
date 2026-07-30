@@ -1,0 +1,20 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-capture-effect-frames-complete",
+  "action": "capture_effect_frames",
+  "target": {
+    "asset_path": "/Game/RE/VFX/Magecraft/Spells/NS_Spell_IceWall_Cast"
+  },
+  "specification": {
+    "frame_count": 8,
+    "duration_seconds": 1.5,
+    "camera": "three_quarter",
+    "width": 960,
+    "height": 540
+  },
+  "options": {
+    "validate": true,
+    "dry_run": false,
+    "response_detail": "summary"
+  }
+}

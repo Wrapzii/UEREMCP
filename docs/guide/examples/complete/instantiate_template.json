@@ -1,0 +1,25 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-instantiate-template-complete",
+  "action": "instantiate_template",
+  "mode": "create",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Templates/NS_FromTemplate_Complete"
+  },
+  "idempotency_key": "ex-instantiate-template-complete-attempt-1",
+  "specification": {
+    "template_id": "niagara.projectile.elemental.v1",
+    "inputs": {
+      "element": "fire",
+      "name": "NS_FromTemplate_Complete"
+    },
+    "modifiers": {
+      "preserve": ["preserve_networking"]
+    }
+  },
+  "options": {
+    "validate": true,
+    "save": true,
+    "response_detail": "summary"
+  }
+}

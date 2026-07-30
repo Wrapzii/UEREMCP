@@ -1,0 +1,11 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-inspect-system-min",
+  "action": "inspect_system",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Niagara/NS_InspectProbe"
+  },
+  "options": {
+    "response_detail": "complete"
+  }
+}

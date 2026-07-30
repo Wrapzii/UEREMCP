@@ -57,15 +57,17 @@ issuing a repair call — that is the cost-model win (`docs/WHY.md`).
 
 ## Common failure patterns
 
-| Symptom | Likely cause | Next step |
+| Symptom | Likely cause | Next tool / step |
 |---|---|---|
-| `rejected` + revision text | Stale `expected_revision` | Re-read; merge; resubmit with new revision |
+| `rejected` + revision text | Stale `expected_revision` | `ReadGraph` / `InspectSystem` again → resubmit with new revision |
 | `rejected` + dry_run / destructive | Security forced dry-run or missing `allow_destructive` | See [`SECURITY.md`](../SECURITY.md); explicit `dry_run: false` only when intentional |
-| `partially_completed` on Niagara create | Expected until B10/metrics | Read `capability_notes`; do not claim POC-B |
-| `partially_completed` + `job` | Timeout path (ADR-0009) | Poll `get_job_result` |
-| MCP cancel "worked" but work continues | CancelAsync adapter unwired | Use `cancel_job`; see [`limitations.md`](limitations.md) |
-| Tool not in `list_toolsets` | Plugin module not loaded / Live Coding | Human: rebuild/enable UEREMCP; agent: Ping Reference |
-| `execute_plan` missing as tool | Not AICallable | Use `InstantiateTemplate` or domain tools |
+| `partially_completed` on Niagara create | Expected until B10/metrics | Read `capability_notes`; optional `CaptureEffectFrames` for pixel evidence — do not claim POC-B |
+| `partially_completed` + `job` | Timeout path (ADR-0009) | `GetJobResult` (`action=get_job_result`) |
+| MCP cancel "worked" but work continues | CancelAsync adapter unwired | `CancelJob` (`action=cancel_job`); see [`limitations.md`](limitations.md) |
+| Tool not in `list_toolsets` | Plugin module not loaded / Live Coding | Human: rebuild/enable UEREMCP; agent: `Ping` on Reference |
+| `execute_plan` missing as tool | Not AICallable | `InstantiateTemplate` or domain goal tools — see [`tool-selection-policy.md`](tool-selection-policy.md) |
+| Used Epic `create_node` / Niagara primitives and got stuck | Wrong altitude for the goal | Switch to UEREMCP semantic tool from the routing table |
+| `CaptureEffectFrames` missing | Not consolidated / not registered | Fall back to structural `InspectSystem`; do not invent screenshot authoring |
 
 ## Metrics fields (do not over-interpret)
 

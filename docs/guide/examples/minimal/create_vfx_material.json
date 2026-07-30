@@ -1,0 +1,16 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-create-vfx-material-min",
+  "action": "create_vfx_material",
+  "mode": "create",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Materials/MI_AgentMinFireCore"
+  },
+  "specification": {
+    "purpose": "elemental_projectile_core",
+    "element": "fire"
+  },
+  "options": {
+    "validate": true
+  }
+}

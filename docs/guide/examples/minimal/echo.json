@@ -1,0 +1,6 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-ping-envelope-not-used",
+  "action": "echo",
+  "specification": {}
+}

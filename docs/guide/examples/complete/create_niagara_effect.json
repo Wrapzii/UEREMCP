@@ -1,0 +1,27 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "ex-create-niagara-complete",
+  "action": "create_niagara_effect",
+  "mode": "create",
+  "target": {
+    "asset_path": "/Game/__UeremcpTests/Niagara/NS_AgentCompleteFireball"
+  },
+  "idempotency_key": "ex-create-niagara-complete-attempt-1",
+  "specification": {
+    "$comment": "Prefer schemas/domains/niagara/fixtures/poc_b_mcp_fireball_request.json field request.specification for full shape",
+    "name": "NS_AgentCompleteFireball",
+    "effect_type": "projectile",
+    "element": "fire",
+    "components": ["core", "trail"],
+    "parameters": {
+      "lifetime": 2.0,
+      "speed": 1800.0
+    }
+  },
+  "options": {
+    "validate": true,
+    "save": true,
+    "response_detail": "complete",
+    "timeout_ms": 120000
+  }
+}

@@ -7,6 +7,31 @@ This page is self-contained for the call loop. Schema field definitions live in
 and [`schemas/common/defs.schema.json`](../../schemas/common/defs.schema.json). Do not
 re-derive them.
 
+## 0. Tool selection (read first)
+
+**Prefer UEREMCP** `Ueremcp*.…` toolsets for create / modify / validate workflows.
+Use Epic tools for read-only discovery or catalog gaps. Avoid primitive
+inspect→mutate→inspect loops.
+
+| Intent | Call |
+|---|---|
+| Blueprint read / replace | `ReadGraph` / `SubmitGraph` |
+| Niagara create / inspect | `CreateNiagaraEffect` / `InspectSystem` |
+| VFX material | `CreateVfxMaterial` |
+| Template pattern | `SearchTemplates` → `InstantiateTemplate` (not a fictional `ExecutePlan`) |
+| Job poll / cancel | `GetJobResult` / `CancelJob` |
+| Niagara pixel evidence | `CaptureEffectFrames` (when registered) |
+
+Full policy + machine contract (deterministic benchmark source):
+
+- [`tool-selection-policy.md`](tool-selection-policy.md)
+- [`tool-selection-contract.json`](tool-selection-contract.json)
+
+Minimal / complete request envelopes: [`examples/`](examples/).
+
+This does **not** claim agents can be forced. Accurate names and contracts are the
+prioritization mechanism.
+
 ## 1. Discovery
 
 UEREMCP rides Epic's in-editor MCP server (ADR-0002). Runtime discovery is Epic's
@@ -14,14 +39,15 @@ surface — not a UEREMCP invent:
 
 | Epic tool | Use |
 |---|---|
-| `list_toolsets` | See registered toolsets (`UeremcpBlueprint`, `UeremcpNiagara`, …) |
+| `list_toolsets` | Prefer toolsets whose names start with `Ueremcp` for §0 intents |
 | `describe_toolset` | List `AICallable` tools and parameter schemas |
 | `call_tool` | Invoke one tool with its JSON argument(s) |
 
 Semantic action names (`read_graph`, `create_niagara_effect`, …) are the
 `action` field **inside** the request envelope. MCP tool names are PascalCase
 methods on the toolset (e.g. `ReadGraph`, `CreateNiagaraEffect`). Map them via
-[`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md).
+[`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) and the tool-selection
+contract.
 
 UEREMCP discovery actions (`list_domains`, `describe_action`, …) are still
 **planned** in the catalog — do not wait for them.
