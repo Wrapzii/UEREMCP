@@ -4,7 +4,7 @@
 - **To:** WS-01 (owns ADRs)
 - **Date:** 2026-07-29
 - **Related:** ADR-0005, RB-06
-- **Status:** C-3 nuance — engine evidence green; **shipping UEREMCP gate unproven**
+- **Status:** C-3 closed for Content/ full-Discard on shipping plugin (2026-07-30)
 
 ## Verdict on ADR-0005
 
@@ -59,10 +59,9 @@ must detect `IsActive()` and refuse or serialize — agrees with ADR-0005 rule 3
 
 ## Recommended supplements (for WS-05 batch executor)
 
-1. Keep `rollback.available: false` until the **shipping** UEREMCP Validation gate
-   is green (C-3). Engine FileSandbox evidence alone is insufficient for the product
-   flag. After shipping green, still degrade for BP compile / deletions / non-mount
-   paths until those are gated.
+1. Shipping Validation gate is green — allow `rollback.available: true` **only**
+   for Content/ full-`Discard`. Still degrade for BP compile / deletions /
+   non-mount paths until those are gated.
 2. Prefer `Discard()` (full) over `DiscardFiles()` for failure rollback, **or**
    after `DiscardFiles` explicitly purge/hot-reload the returned package sets.
 3. Derive `changes` from `GetChanges()` as ADR-0005 says, but **supplement**
@@ -89,10 +88,11 @@ must detect `IsActive()` and refuse or serialize — agrees with ADR-0005 rule 3
 **Accepted — supplement, do not replace ADR-0005.**
 
 - q1 and q3 closed for the proven scope (Content/ mount `UPackage::Save` adds +
-  full `Discard()`), backed by green `Rollback.MultiAssetDiscard`
-  `[VERIFIED-RUNTIME: WS-11 0e2e78d]`.
+  full `Discard()`), backed by green `Rollback.MultiAssetDiscard` on the
+  **shipping** plugin (`bf30d8f` / orch) and earlier probe evidence.
 - `rollback.available: true` allowed **only** for that scoped path. Keep false /
   degraded for BP compile/CDO, deletions, and `Saved/`/`Config/` until gated.
 - Prefer `Discard()` over `DiscardFiles()` for failure rollback (or purge after
   DiscardFiles).
-- ADR-0005 open questions 1–3 updated in place; 4–6 remain open.
+- ADR-0005 Verification section updated; open questions 4–6 remain open.
+- R-03 marked **mitigated** (narrow residual scope).

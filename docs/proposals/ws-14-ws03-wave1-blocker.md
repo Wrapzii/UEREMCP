@@ -49,6 +49,8 @@ Still open (blocks R-04 full close):
 - MCP `call_tool` Ping/Echo against **target project RE**. Live `:8000` session
   is `visualtest` — `PluginToolset` does not discover `UEREMCP` there
   `[VERIFIED-RUNTIME: UnrealEditor.exe command line; ListDiscoveredPlugins]`.
-- Shipping `Rollback.MultiAssetDiscard` with `-KeepUeremcp` (R-03 residual).
+
+**Closed here:** Shipping `Rollback.MultiAssetDiscard` with `-KeepUeremcp`
+`[VERIFIED-RUNTIME: WS-11 bf30d8f]`. R-03 mitigated for Content/ full-Discard.
 
 Wave 2 implementation stays gated until Phase 1 exit.

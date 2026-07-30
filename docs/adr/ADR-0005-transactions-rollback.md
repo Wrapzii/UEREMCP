@@ -114,15 +114,17 @@ full-`Discard` path. See `docs/proposals/ws-11-adr-0005-sandbox-semantics.md`.
 
 ## Verification
 
-Integration test `Rollback.MultiAssetDiscard`: **PASSING on FileSandbox engine
-path** (2026-07-29) for N× Content/`UCurveFloat` creates → Discard+Leave
-`[VERIFIED-RUNTIME: UnrealEditor-Cmd via UeremcpValidationProbe with
--DisablePlugins=UEREMCP — WS-14 C-3]`.
+Integration test `Rollback.MultiAssetDiscard`:
 
-This proves FileSandbox semantics for Content/ full-`Discard`. It does **not**
-yet prove the shipping `UEREMCP` plugin graph loads and runs the same test.
-**Report `rollback.available: false` for shipping-plugin claims** until
-`-KeepUeremcp -NoProbe` greens `Rollback.MultiAssetDiscard`
-(`[VERIFIED-RUNTIME` blocker: `UeremcpProtocol` module DLL missing —
-`tests/integration/_logs/shipping-gate-blocker.redacted.md`]). Engine-path
-evidence remains valid separately.
+1. **Engine path** (2026-07-29): PASS via probe + `-DisablePlugins=UEREMCP`
+   `[VERIFIED-RUNTIME: UeremcpValidationProbe]`.
+2. **Shipping `UEREMCP` plugin graph** (2026-07-30): PASS with
+   `-KeepUeremcp -NoProbe -Filter UEREMCP.Validation` on `RE.uproject`
+   `[VERIFIED-RUNTIME: editor_UEREMCP_Validation_20260729_234458.log;
+   tests/integration/_logs/shipping-gate-blocker.redacted.md §Resolution]`.
+
+Product responses may set `rollback.available: true` **only** for the proven
+Content/ full-`Discard` path on the shipping plugin. Keep
+`rollback.available: false` (or omit) for BP-compile, deletion, and
+`Saved|Config` non-mount cases until those are gated
+(`docs/proposals/ws-11-adr-0005-sandbox-semantics.md`).
