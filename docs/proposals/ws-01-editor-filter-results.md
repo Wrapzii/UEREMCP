@@ -1,12 +1,12 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `b5b07e1` (`[WS-07] Drain Niagara compiles via WaitForCompilationComplete in AwaitCompile`)
+- **Current orchestration tip:** `4d5e304` (`[WS-01] Record Animation Toolset PASS 10/10`)
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `e7f9ae5`
+- **Latest Niagara re-run tip:** `b5b07e1`
 - **Latest Material re-run tip:** `c881742`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Material and Animation Toolsets green; Niagara Inspect/B7 still incomplete pending re-run of the deeper fix. No A6 / POC-B completion claims.
+- **Status:** Material, Animation, and Niagara Inspect green; Niagara B7 fails during edit-condition logging/cleanup. No A6 / POC-B completion claims.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -18,6 +18,15 @@ pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter
 ```
 
 The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
+
+## Update on tip `b5b07e1` (WS-11 Niagara re-run)
+
+| Filter | Result | Owner | Notes |
+|---|---:|---|---|
+| `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | WS-07 | Deeper `WaitForCompilationComplete` AwaitCompile fix resolved the compile stall. |
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **FAIL, assertion_failure** | WS-07 | `bOverrideMaterials` edit-condition `LogError`, followed by a cleanup ensure on `NS_POCB_FireballProbe`. Not a B7 / POC-B completion claim. |
+
+Standing by for the WS-07 B7 fix on the `e4ea58d` lineage.
 
 ## Update on tip `5ea9277` (WS-10 Animation re-run)
 
@@ -96,9 +105,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-07 | Revise AwaitCompile post-compile stall; re-run Niagara Inspect + B7 after orch land + Niagara green. |
+| WS-07 | Fix B7 `bOverrideMaterials` edit-condition error and `NS_POCB_FireballProbe` cleanup ensure; Inspect is PASS 4/4. |
 | WS-08 | Material Toolset PASS on `c881742` — no further Material filter work from this triage. |
-| WS-10 | Fix NotifyOrdering empty-track degrade and StructuredState Movie Scene / notify duration asserts (if still open after later Animation commits). |
-| WS-11 | Re-run Inspect/B7 after WS-07 stall fix; keep A6 / POC-B claims gated to their own criteria. |
+| WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
+| WS-11 | Re-run B7 after WS-07 fix; keep POC-B claims gated to their own criteria. |
 
-Standing by on orch for WS-07 stall revise. No junction retarget.
+Standing by on orch for the WS-07 B7 fix. No junction retarget.
