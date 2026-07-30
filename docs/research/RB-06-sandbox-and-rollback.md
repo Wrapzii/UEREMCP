@@ -82,10 +82,10 @@ Interim probe is **launch-smoke only** (no Rollback body). Defaults:
 ### A. Coverage — does the sandbox see what we do?
 
 1. **Does `FileSandbox` intercept Unreal package saves** — see Verdicts / q1.
-2. Does it cover asset *deletion*, or only creation and modification? — **open**
+2. Does it cover asset *deletion*, or only creation and modification? — **open**; probe `Rollback.DeletedAssetDiscard` implemented (WS-11), runtime blocked on uplugin parity (2026-07-30)
 3. What happens to the **asset registry** and to in-memory `UObject`s after `Discard`?
    — see Verdicts / q3.
-4. How does Blueprint compilation interact? — **open** (not covered by DataAsset gate)
+4. How does Blueprint compilation interact? — **open**; probe `Rollback.BlueprintCompileDiscard` implemented (WS-11), runtime blocked on uplugin parity (2026-07-30)
 5. Does it cover files outside `Content/` — **NO for Saved/Config** (source above)
 
 ### B. Lifecycle
@@ -145,5 +145,24 @@ Record exact code and output for every `[VERIFIED-RUNTIME]` claim.
 ## Shipping UEREMCP gate (C-3) � 2026-07-30
 
 `UEREMCP.Validation.Rollback.MultiAssetDiscard` under enabled UEREMCP on `RE.uproject`:
-`Result={Success}` `[VERIFIED-RUNTIME: tests/integration/_logs/editor_UEREMCP_Validation_shipping.redacted.md]`.
+`Result={Success}` `[VERIFIED-RUNTIME: tests/integration/_logs/editor_UEREMCP_Validation_20260729_234458.log]`.
 Does not extend coverage beyond CurveFloat Content/ adds documented in the test body.
+
+### Extended rollback + ADR-0006 gates (2026-07-30, WS-11)
+
+| Test | ADR open Q | Implementation | Runtime (2026-07-30) |
+|---|---|---|---|
+| `Rollback.DeletedAssetDiscard` | q5 deletion | `RollbackDeletedAssetDiscard.spec.cpp` | **BLOCKED** — uplugin¹ |
+| `Rollback.BlueprintCompileDiscard` | q4 BP compile/CDO | `RollbackBlueprintCompileDiscard.spec.cpp` | **BLOCKED** — uplugin¹ |
+| `Idempotency.RepeatedCreate` | ADR-0006 verification | `IdempotencyRepeatedCreate.spec.cpp` | **BLOCKED** — uplugin¹ |
+| `Revision.StaleRejected` | ADR-0006 verification | `RevisionStaleRejected.spec.cpp` | **BLOCKED** — uplugin¹ |
+
+¹ `RE/Plugins/UEREMCP` junction → `UEREMCP-ws03`; `UEREMCP.uplugin` references
+`UeremcpBlueprint` with no `Source/` tree — Editor-Cmd and UBT fail before Automation.
+`docs/proposals/ws-11-ws03-uplugin-build-blocker.md`. Attempted run:
+`tests/integration/_logs/editor_UEREMCP_20260730_004055.log`.
+
+**Honest scope:** q1/q3 remain **POSITIVE** for Content/ full-`Discard()` (CurveFloat adds).
+q4/q5 require the new tests green before claims extend to BP compile or deletion rollback.
+Idempotency/revision tests use `FUeremcpIdempotencyStore` + `FUeremcpContentHash` at
+protocol+scratch level — not the full domain asset pipeline (documented in test bodies).

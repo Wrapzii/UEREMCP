@@ -36,6 +36,14 @@ public class UeremcpValidation : ModuleRules
 			// FileSandboxCore types (FSandboxedFileChangeInfo, ESandboxFileChange).
 			// [VERIFIED: $FS/.../Public/Types/SandboxedFileChangeInfo.h]
 			"FileSandboxCore",
+
+			// ADR-0006 protocol primitives (idempotency store, content_hash, envelope).
+			"UeremcpProtocol",
+
+			// Blueprint compile probe (ADR-0005 open q4).
+			"BlueprintGraph",
+			"Kismet",
+			"KismetCompiler",
 		});
 	}
 }
