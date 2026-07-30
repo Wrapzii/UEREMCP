@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `01b9320` (stacked ribbon defenses + residual)
+- **Orch tip at writing:** `d7fe3b2` (WS-06 Python-free SubmitGraph; residual commit follows)
 - **Date:** 2026-07-30
-- **Status:** WS-11 results on `70cc348` (pre-`ee905ed`) recorded below — fireball B1/B4 FAIL (`ribbon_trail`); B3/B5/B6/B8_save/B9 PASS; CRT A1–A4/A10 PASS, A5/A9 FAIL (Python/MCP conflict); B8 Create FAIL (same MI). Tip now stacks `7a417bb` (`dbb3638`) + `886d09d` (`ee905ed`). **Next:** re-run fireball/B8 on `01b9320` after WS-08 confirms `FireballRibbonTrailPoc`; WS-06 making SubmitGraph Python-free for A5. No POC claims.
+- **Status:** Python-free SubmitGraph landed as `d7fe3b2` (`e58466f`) and Blueprint rebuilt successfully. Fresh Material/Niagara DLLs remain ready for WS-11 fireball/B8 re-runs; CRT A5 must be re-run after this land. Prior `70cc348` failures remain historical evidence only. No POC claims.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -84,7 +84,7 @@ Result: `tests/integration/_logs/poc_a_complete_round_trip_600c383_retry.json`. 
 | A9 | **FAIL** | Blocked by A5 |
 | A10 | **PASS** | |
 
-BlueprintTools bootstrap `809f863` did not clear A5. **WS-06 next:** SubmitGraph Python-free path. **No overall POC-A claim.**
+BlueprintTools bootstrap `809f863` did not clear A5. Python-free SubmitGraph landed as `d7fe3b2` (`e58466f`); CRT re-run required. **No overall POC-A claim.**
 
 ### Missing A6 / POC A evidence (owners)
 
@@ -95,13 +95,13 @@ BlueprintTools bootstrap `809f863` did not clear A5. **WS-06 next:** SubmitGraph
 | Editor/runtime A6 filter PASS | WS-11 (+ WS-06) | **PASS on `c87b1db`** — `editor_UeremcpBlueprint_Toolset_PocA6Reread_20260730_052810.log`; test Success, exit 0 |
 | Complete submit evidence scaffolding | WS-06 | Landed `7cd6c93` (`eded4f8`): complete payloads + expanded A1/A2/A5/A8/A10 assertions; proposal `ws-06-a1-a2-a5-ws11-complete-round-trip.md`. **Not a POC-A claim.** |
 | A1 / A2 complete read payload | WS-11 | **PASS** in CRT transport run |
-| A5 changed submit | WS-06 + WS-11 | **FAIL on `70cc348`** — Python/MCP conflict after bootstrap `809f863`; WS-06 making SubmitGraph Python-free |
+| A5 changed submit | WS-06 + WS-11 | Prior **FAIL on `70cc348`**; Python-free fix `d7fe3b2` landed and awaits CRT re-run |
 | A9 MCP round-trip metrics | WS-11 | **FAIL on `70cc348`** — blocked by A5 |
 | A10 `fidelity.lossy_areas` | WS-11 | **PASS** on `70cc348` and prior CRT |
 | Aggregate `POCA.CompleteRoundTrip` | WS-11 | **FAIL overall on `70cc348`** (A5/A9); A1–A4/A10 PASS |
 | Metrics file for POC A | WS-11 / WS-14 | `docs/reviews/poc-metrics.md` (POC E7) |
 
-**WS-01 next step:** wait for WS-06 Python-free SubmitGraph, then re-run CRT; refuse A5/A9 and overall POC-A until runtime proof.
+**WS-01 next step:** WS-11 re-runs CRT after Python-free SubmitGraph `d7fe3b2`; refuse A5/A9 and overall POC-A until runtime proof.
 
 ---
 
@@ -174,7 +174,7 @@ Global POC rules still apply: real RE project; scratch under `/Game/__UeremcpPoc
 
 | Priority | Follow-up | Owner | WS-01 action |
 |---|---|---|---|
-| P0 | WS-06 SubmitGraph Python-free for A5; then CRT re-run | WS-06 + WS-11 | A1–A4/A10 PASS on `70cc348`; A5/A9 FAIL; refuse overall POC-A |
+| P0 | Re-run CRT after Python-free SubmitGraph `d7fe3b2` | WS-11 | Prior A1–A4/A10 PASS; A5/A9 need fresh proof; refuse overall POC-A |
 | P0 | Re-run fireball on `01b9320` after WS-08 confirms `FireballRibbonTrailPoc` | WS-08 + WS-11 | `70cc348` B1/B4 FAIL; stacked defenses ready; refuse overall POC-B |
 | P0 | Re-run B8 Create→restart→Verify on `01b9320` after ribbon MI green | WS-11 | Create FAIL on `70cc348` (same MI); refuse B8/POC-B until PASS |
 | P0 | Full POC B fireball (MCP) covering B1–B9 after filter green | WS-07 (+ WS-08) + WS-11 | Track; refuse overall POC-B |
