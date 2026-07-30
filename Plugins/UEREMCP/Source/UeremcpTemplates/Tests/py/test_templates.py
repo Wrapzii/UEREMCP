@@ -111,6 +111,30 @@ class TemplateStoreTests(unittest.TestCase):
             self.assertEqual(path.stem, document["preset_id"])
             self.assertTrue(path.stem.startswith(f"element.{document['element']}."))
 
+    def test_runtime_seed_bundle_matches_canonical_templates(self) -> None:
+        runtime_dir = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpTemplates"
+            / "Resources"
+            / "Templates"
+        )
+        canonical = {
+            path.relative_to(self.templates_dir): json.loads(
+                path.read_text(encoding="utf-8")
+            )
+            for path in sorted(self.templates_dir.rglob("*.json"))
+        }
+        runtime = {
+            path.relative_to(runtime_dir): json.loads(
+                path.read_text(encoding="utf-8")
+            )
+            for path in sorted(runtime_dir.rglob("*.json"))
+        }
+        self.assertEqual(runtime, canonical)
+
 
 class TemplateSearchTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -902,6 +926,10 @@ class TemplateExecutorBindingTests(unittest.TestCase):
         self.assertIn(clear, module_source)
         self.assertIn("static bool ExecuteRequest(", executor_header)
         self.assertIn('"UeremcpProtocol"', build_rules)
+        self.assertIn(
+            'TEXT("Source/UeremcpTemplates/Resources/Templates")',
+            module_source,
+        )
 
         self.assertLess(module_source.index("GTemplatesModule = this;"), module_source.index(bind))
         self.assertLess(module_source.index(bind), module_source.index("Store->LoadFromDirectory"))

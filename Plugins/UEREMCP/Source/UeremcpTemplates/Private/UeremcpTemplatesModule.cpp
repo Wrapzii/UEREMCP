@@ -109,19 +109,20 @@ namespace UeremcpTemplates
 		const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("UEREMCP"));
 		if (Plugin.IsValid())
 		{
-			const FString RepoTemplates = FPaths::Combine(
-				Plugin->GetBaseDir(),
-				TEXT("../../../templates"));
-			const FString Normalized = FPaths::ConvertRelativePathToFull(RepoTemplates);
-			if (FPaths::DirectoryExists(Normalized))
+			const TArray<FString> Candidates = {
+				FPaths::Combine(
+					Plugin->GetBaseDir(),
+					TEXT("Source/UeremcpTemplates/Resources/Templates")),
+				FPaths::Combine(Plugin->GetBaseDir(), TEXT("Resources/Templates")),
+				FPaths::Combine(Plugin->GetBaseDir(), TEXT("../../templates")),
+			};
+			for (const FString& Candidate : Candidates)
 			{
-				return Normalized;
-			}
-
-			const FString Bundled = FPaths::Combine(Plugin->GetBaseDir(), TEXT("Resources/Templates"));
-			if (FPaths::DirectoryExists(Bundled))
-			{
-				return Bundled;
+				const FString Normalized = FPaths::ConvertRelativePathToFull(Candidate);
+				if (FPaths::DirectoryExists(Normalized))
+				{
+					return Normalized;
+				}
 			}
 		}
 
