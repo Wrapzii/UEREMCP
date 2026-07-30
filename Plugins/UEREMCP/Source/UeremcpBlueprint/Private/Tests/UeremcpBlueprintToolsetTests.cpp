@@ -538,6 +538,58 @@ bool FUeremcpBlueprintPocA6RereadTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
+	const TSharedPtr<FJsonObject>* ReadMetrics = nullptr;
+	double ReadRoundTrips = 0.0;
+	TestTrue(
+		TEXT("A1 read reports one MCP round trip"),
+		BeforeRoot->TryGetObjectField(TEXT("metrics"), ReadMetrics)
+			&& ReadMetrics
+			&& (*ReadMetrics)->TryGetNumberField(TEXT("mcp_round_trips"), ReadRoundTrips)
+			&& ReadRoundTrips == 1.0);
+	const TArray<TSharedPtr<FJsonValue>>* BeforeNodes = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* BeforeLinks = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* BeforeVariables = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* BeforeEntryPoints = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* BeforeDependencies = nullptr;
+	TestTrue(TEXT("A2 nodes included"), BeforeGraph->TryGetArrayField(TEXT("nodes"), BeforeNodes) && BeforeNodes);
+	TestTrue(TEXT("A2 links included"), BeforeGraph->TryGetArrayField(TEXT("links"), BeforeLinks) && BeforeLinks);
+	TestTrue(
+		TEXT("A2 variables included even when empty"),
+		BeforeGraph->TryGetArrayField(TEXT("variables"), BeforeVariables) && BeforeVariables);
+	TestTrue(
+		TEXT("A2 entry points included"),
+		BeforeGraph->TryGetArrayField(TEXT("entry_points"), BeforeEntryPoints) && BeforeEntryPoints);
+	TestTrue(
+		TEXT("A2 dependencies included even when empty"),
+		BeforeGraph->TryGetArrayField(TEXT("dependencies"), BeforeDependencies) && BeforeDependencies);
+	bool bSawPinType = false;
+	bool bSawPinDefault = false;
+	if (BeforeNodes)
+	{
+		for (const TSharedPtr<FJsonValue>& NodeValue : *BeforeNodes)
+		{
+			const TSharedPtr<FJsonObject> Node = NodeValue->AsObject();
+			if (!Node.IsValid())
+			{
+				continue;
+			}
+			bSawPinDefault |= Node->HasTypedField<EJson::Object>(TEXT("defaults"));
+			for (const TCHAR* PinField : {TEXT("input_pins"), TEXT("output_pins")})
+			{
+				const TArray<TSharedPtr<FJsonValue>>* Pins = nullptr;
+				if (Node->TryGetArrayField(PinField, Pins) && Pins)
+				{
+					for (const TSharedPtr<FJsonValue>& PinValue : *Pins)
+					{
+						const TSharedPtr<FJsonObject> Pin = PinValue->AsObject();
+						bSawPinType |= Pin.IsValid() && Pin->HasTypedField<EJson::Object>(TEXT("pin_type"));
+					}
+				}
+			}
+		}
+	}
+	TestTrue(TEXT("A2 pin types included"), bSawPinType);
+	TestTrue(TEXT("A2 pin defaults included"), bSawPinDefault);
 
 	// A4: externally modify the complete JSON's write intent to insert Branch -> PrintString.
 	TSharedPtr<FJsonObject> ChangedGraph = MakeShared<FJsonObject>();
@@ -573,11 +625,56 @@ bool FUeremcpBlueprintPocA6RereadTest::RunTest(const FString& Parameters)
 		SubmitRoot->TryGetObjectField(TEXT("validation"), Validation) && Validation && Validation->IsValid());
 	if (Validation && Validation->IsValid())
 	{
+		bool bCompiled = false;
+		bool bSaved = false;
 		TestTrue(
 			TEXT("A7 reread_after_write true"),
 			(*Validation)->TryGetBoolField(TEXT("reread_after_write"), bRereadAfterWrite)
 				&& bRereadAfterWrite);
+		TestTrue(
+			TEXT("A5 compile succeeded"),
+			(*Validation)->TryGetBoolField(TEXT("compiled"), bCompiled) && bCompiled);
+		TestTrue(
+			TEXT("A5 save succeeded"),
+			(*Validation)->TryGetBoolField(TEXT("saved"), bSaved) && bSaved);
 	}
+	const TSharedPtr<FJsonObject>* SubmitMetrics = nullptr;
+	double SubmitRoundTrips = 0.0;
+	TestTrue(
+		TEXT("A5 submit reports one MCP round trip"),
+		SubmitRoot->TryGetObjectField(TEXT("metrics"), SubmitMetrics)
+			&& SubmitMetrics
+			&& (*SubmitMetrics)->TryGetNumberField(TEXT("mcp_round_trips"), SubmitRoundTrips)
+			&& SubmitRoundTrips == 1.0);
+	const TSharedPtr<FJsonObject> SubmitRereadGraph = ExtractSingleGraph(SubmitRoot, *this);
+	if (!SubmitRereadGraph.IsValid())
+	{
+		return false;
+	}
+	const TArray<TSharedPtr<FJsonValue>>* SubmitNodes = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* SubmitLinks = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* SubmitVariables = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* SubmitDependencies = nullptr;
+	TestTrue(
+		TEXT("A5 submit returns complete reread nodes"),
+		SubmitRereadGraph->TryGetArrayField(TEXT("nodes"), SubmitNodes) && SubmitNodes);
+	TestTrue(
+		TEXT("A5 submit returns complete reread links"),
+		SubmitRereadGraph->TryGetArrayField(TEXT("links"), SubmitLinks) && SubmitLinks);
+	TestTrue(
+		TEXT("A5 submit returns variables"),
+		SubmitRereadGraph->TryGetArrayField(TEXT("variables"), SubmitVariables) && SubmitVariables);
+	TestTrue(
+		TEXT("A5 submit returns dependencies"),
+		SubmitRereadGraph->TryGetArrayField(TEXT("dependencies"), SubmitDependencies) && SubmitDependencies);
+	const TSharedPtr<FJsonObject>* SubmitFidelity = nullptr;
+	const TArray<TSharedPtr<FJsonValue>>* LossyAreas = nullptr;
+	TestTrue(
+		TEXT("A10 submit returns fidelity"),
+		SubmitRereadGraph->TryGetObjectField(TEXT("fidelity"), SubmitFidelity)
+			&& SubmitFidelity
+			&& (*SubmitFidelity)->TryGetArrayField(TEXT("lossy_areas"), LossyAreas)
+			&& LossyAreas);
 
 	const FString AfterReadRequest = FString::Printf(
 		TEXT(R"({"protocol_version":"1.0","request_id":"poc-a6-read-after","action":"read_graph","target":{"asset_path":"%s","graph_id":"EventGraph"},"options":{"response_detail":"complete"}})"),
@@ -669,6 +766,20 @@ bool FUeremcpBlueprintPocA6RereadTest::RunTest(const FString& Parameters)
 	}
 	NoOpRoot->TryGetStringField(TEXT("status"), Status);
 	TestEqual(TEXT("A8 unchanged replace is no-op"), Status, FString(TEXT("no_change_required")));
+	const TSharedPtr<FJsonObject> NoOpGraph = ExtractSingleGraph(NoOpRoot, *this);
+	if (!NoOpGraph.IsValid())
+	{
+		return false;
+	}
+	FString NoOpHash;
+	TestTrue(TEXT("A8 no-op response includes content hash"), NoOpGraph->TryGetStringField(TEXT("content_hash"), NoOpHash));
+	TestEqual(TEXT("A8 no-op response hash identity"), NoOpHash, AfterHash);
+	const TSharedPtr<FJsonObject>* NoOpFidelity = nullptr;
+	TestTrue(
+		TEXT("A10 no-op response includes fidelity"),
+		NoOpGraph->TryGetObjectField(TEXT("fidelity"), NoOpFidelity)
+			&& NoOpFidelity
+			&& NoOpFidelity->IsValid());
 
 	TSharedPtr<FJsonObject> IdentityRoot;
 	if (ParseResponse(UUeremcpBlueprintToolset::ReadGraph(AfterReadRequest), IdentityRoot, *this))

@@ -138,6 +138,39 @@ namespace UeremcpBlueprintToolset
 		Validation->SetArrayField(TEXT("checks_skipped"), SkippedChecks);
 		Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
 	}
+
+	static void AttachSubmitWriteEvidence(
+		FUeremcpResponse& Response,
+		const FUeremcpBlueprintReplaceGraphResult& WriteResult,
+		bool bCompileRequested,
+		bool bSaveRequested)
+	{
+		const TSharedPtr<FJsonObject>* Validation = nullptr;
+		if (Response.ExtraFields.IsValid()
+			&& Response.ExtraFields->TryGetObjectField(TEXT("validation"), Validation)
+			&& Validation
+			&& Validation->IsValid())
+		{
+			if (bCompileRequested)
+			{
+				(*Validation)->SetBoolField(TEXT("compiled"), WriteResult.bCompiled);
+			}
+			else
+			{
+				(*Validation)->SetField(TEXT("compiled"), MakeShared<FJsonValueNull>());
+			}
+			if (bSaveRequested)
+			{
+				(*Validation)->SetBoolField(TEXT("saved"), WriteResult.bSaved);
+			}
+			else
+			{
+				(*Validation)->SetField(TEXT("saved"), MakeShared<FJsonValueNull>());
+			}
+		}
+
+		AttachGraphDiagnostics(Response, WriteResult.RereadGraph);
+	}
 }
 
 using namespace UeremcpBlueprintToolset;
@@ -456,6 +489,7 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 				TEXT("blueprint.submitted_graph_hash_compare"),
 			},
 			{TEXT("blueprint.graph_write"), TEXT("blueprint.compile"), TEXT("blueprint.reread_after_write")});
+		AttachGraphDiagnostics(Response, Current.Graph);
 		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
 
@@ -677,5 +711,10 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 		PerformedChecks,
 		SkippedChecks,
 		WriteResult.bRereadAfterWrite);
+	AttachSubmitWriteEvidence(
+		Response,
+		WriteResult,
+		Request.bCompile,
+		Request.bSave);
 	return FinishSubmitResponse(Response);
 }

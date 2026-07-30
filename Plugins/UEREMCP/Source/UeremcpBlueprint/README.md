@@ -36,8 +36,8 @@ implements graph read/submit.
 
 | Tool / action | Purpose |
 |---|---|
-| `ReadGraph` / `read_graph` | One call → `graph.schema.json` + diagnostics + `content_hash` |
-| `SubmitGraph` / `submit_graph` | Scratch-only changed/unchanged `replace` via `write_graph_dsl`; optional `expected_after_write` selectors assert re-read nodes and links before `modified_and_validated`; dry_run-first; stale revisions rejected |
+| `ReadGraph` / `read_graph` | One call → complete `graph.schema.json` + diagnostics + `content_hash`; empty variables/dependencies remain explicit arrays |
+| `SubmitGraph` / `submit_graph` | Scratch-only changed/unchanged `replace` via `write_graph_dsl`; changed responses include compile/save evidence and the complete re-read graph, unchanged responses include the complete current graph; optional `expected_after_write` selectors assert re-read nodes and links before `modified_and_validated`; dry_run-first; stale revisions rejected |
 
 ## Planned (P2+)
 

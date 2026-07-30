@@ -813,24 +813,18 @@ bool FUeremcpBlueprintGraphReader::ReadGraph(
 	TSharedPtr<FJsonObject> GraphDiagnostics = *GraphDiagnosticsPtr;
 
 	const TArray<TSharedPtr<FJsonValue>> Variables = SerializeVariables(Blueprint);
-	if (Variables.Num() > 0)
-	{
-		GraphObj->SetArrayField(TEXT("variables"), Variables);
-	}
+	GraphObj->SetArrayField(TEXT("variables"), Variables);
 
-	if (EdResult.DependencyPaths.Num() > 0)
+	TArray<FString> SortedDeps = EdResult.DependencyPaths.Array();
+	SortedDeps.Sort();
+	TArray<TSharedPtr<FJsonValue>> DepJson;
+	for (const FString& Dep : SortedDeps)
 	{
-		TArray<FString> SortedDeps = EdResult.DependencyPaths.Array();
-		SortedDeps.Sort();
-		TArray<TSharedPtr<FJsonValue>> DepJson;
-		for (const FString& Dep : SortedDeps)
-		{
-			TSharedPtr<FJsonObject> Ref = MakeShared<FJsonObject>();
-			Ref->SetStringField(TEXT("asset_path"), Dep);
-			DepJson.Add(MakeShared<FJsonValueObject>(Ref));
-		}
-		GraphObj->SetArrayField(TEXT("dependencies"), DepJson);
+		TSharedPtr<FJsonObject> Ref = MakeShared<FJsonObject>();
+		Ref->SetStringField(TEXT("asset_path"), Dep);
+		DepJson.Add(MakeShared<FJsonValueObject>(Ref));
 	}
+	GraphObj->SetArrayField(TEXT("dependencies"), DepJson);
 
 	TSharedPtr<FJsonObject> Extensions = MakeShared<FJsonObject>();
 	TArray<FString> DslWarnings;
