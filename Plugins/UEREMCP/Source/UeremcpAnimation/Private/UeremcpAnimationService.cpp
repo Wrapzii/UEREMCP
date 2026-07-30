@@ -8,11 +8,18 @@
 #include "Animation/AnimSequenceBase.h"
 #include "Animation/AnimTypes.h"
 #include "Animation/Skeleton.h"
+#include "AnimGraphNode_Base.h"
+#include "AnimGraphNode_StateMachineBase.h"
+#include "AnimStateEntryNode.h"
+#include "AnimStateNode.h"
+#include "AnimStateTransitionNode.h"
 #include "AnimationGraph.h"
 #include "AnimationStateMachineGraph.h"
 #include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
 #include "Engine/Blueprint.h"
 #include "UeremcpContentHash.h"
+#include "UeremcpEdGraphReader.h"
 
 namespace
 {
@@ -43,15 +50,212 @@ namespace
 		{
 			return TEXT("AnimStateMachine");
 		}
-		if (Cast<UAnimationGraph>(Graph))
+		return TEXT("AnimBlueprintGraph");
+	}
+
+	FString GraphId(const UEdGraph* Graph)
+	{
+		return Graph ? Graph->GetName() : FString();
+	}
+
+	FString AnimSemanticType(const UEdGraphNode* Node)
+	{
+		if (Cast<UAnimStateEntryNode>(Node))
 		{
-			return TEXT("AnimBlueprintGraph");
+			return TEXT("anim_state_entry");
 		}
-		if (Graph && Graph->GetFName() == TEXT("EventGraph"))
+		if (Cast<UAnimStateTransitionNode>(Node))
 		{
-			return TEXT("EventGraph");
+			return TEXT("anim_state_transition");
 		}
-		return TEXT("EdGraph");
+		if (Cast<UAnimStateNode>(Node))
+		{
+			return TEXT("anim_state");
+		}
+		if (Cast<UAnimGraphNode_StateMachineBase>(Node))
+		{
+			return TEXT("anim_state_machine");
+		}
+		if (Cast<UAnimGraphNode_Base>(Node))
+		{
+			return TEXT("anim_graph_node");
+		}
+		return Node ? Node->GetClass()->GetName() : TEXT("unknown");
+	}
+
+	FString AnimSemanticId(const UEdGraphNode* Node)
+	{
+		if (const UAnimStateNode* State = Cast<UAnimStateNode>(Node))
+		{
+			// [VERIFIED: AnimStateNode.h:67-71]
+			return FString::Printf(TEXT("state:%s"), *State->GetStateName());
+		}
+		if (const UAnimStateTransitionNode* Transition = Cast<UAnimStateTransitionNode>(Node))
+		{
+			// [VERIFIED: AnimStateTransitionNode.h:172-177]
+			const UAnimStateNodeBase* Previous = Transition->GetPreviousState();
+			const UAnimStateNodeBase* Next = Transition->GetNextState();
+			return FString::Printf(
+				TEXT("transition:%s->%s"),
+				Previous ? *Previous->GetStateName() : TEXT("?"),
+				Next ? *Next->GetStateName() : TEXT("?"));
+		}
+		if (Cast<UAnimStateEntryNode>(Node))
+		{
+			return TEXT("entry");
+		}
+		if (UAnimGraphNode_StateMachineBase* StateMachine =
+			Cast<UAnimGraphNode_StateMachineBase>(const_cast<UEdGraphNode*>(Node)))
+		{
+			// [VERIFIED: AnimGraphNode_StateMachineBase.h:47-51]
+			return FString::Printf(TEXT("state_machine:%s"), *StateMachine->GetStateMachineName());
+		}
+		return FString();
+	}
+
+	TSharedPtr<FJsonObject> AnimNodeProperties(const UEdGraphNode* Node)
+	{
+		TSharedPtr<FJsonObject> Properties = MakeShared<FJsonObject>();
+		Properties->SetStringField(TEXT("type_id"), Node->GetClass()->GetPathName());
+
+		if (const UAnimStateNode* State = Cast<UAnimStateNode>(Node))
+		{
+			// [VERIFIED: AnimStateNode.h:29-48,67-81]
+			Properties->SetStringField(TEXT("state_name"), State->GetStateName());
+			Properties->SetStringField(TEXT("bound_graph_id"), GraphId(State->GetBoundGraph()));
+			Properties->SetBoolField(TEXT("always_reset_on_entry"), State->bAlwaysResetOnEntry);
+		}
+		else if (const UAnimStateTransitionNode* Transition = Cast<UAnimStateTransitionNode>(Node))
+		{
+			// [VERIFIED: AnimStateTransitionNode.h:24-82,165-177]
+			const UAnimStateNodeBase* Previous = Transition->GetPreviousState();
+			const UAnimStateNodeBase* Next = Transition->GetNextState();
+			Properties->SetStringField(
+				TEXT("from_state"), Previous ? Previous->GetStateName() : FString());
+			Properties->SetStringField(
+				TEXT("to_state"), Next ? Next->GetStateName() : FString());
+			Properties->SetStringField(TEXT("rule_graph_id"), GraphId(Transition->GetBoundGraph()));
+			Properties->SetNumberField(TEXT("priority_order"), Transition->PriorityOrder);
+			Properties->SetNumberField(TEXT("crossfade_duration"), Transition->CrossfadeDuration);
+			Properties->SetBoolField(
+				TEXT("automatic_rule"),
+				Transition->bAutomaticRuleBasedOnSequencePlayerInState);
+		}
+		else if (const UAnimStateEntryNode* Entry = Cast<UAnimStateEntryNode>(Node))
+		{
+			// [VERIFIED: AnimStateEntryNode.h:29-30]
+			const UEdGraphNode* Output = Entry->GetOutputNode();
+			Properties->SetStringField(
+				TEXT("entry_state"),
+				Output ? Output->GetNodeTitle(ENodeTitleType::FullTitle).ToString() : FString());
+		}
+		else if (UAnimGraphNode_StateMachineBase* StateMachine =
+			Cast<UAnimGraphNode_StateMachineBase>(const_cast<UEdGraphNode*>(Node)))
+		{
+			// [VERIFIED: AnimGraphNode_StateMachineBase.h:21-23,47-51]
+			Properties->SetStringField(TEXT("state_machine_name"), StateMachine->GetStateMachineName());
+			Properties->SetStringField(
+				TEXT("state_machine_graph_id"),
+				GraphId(StateMachine->EditorStateMachineGraph));
+		}
+
+		return Properties;
+	}
+
+	TSharedPtr<FJsonObject> BuildAnimationExtension(
+		const UAnimBlueprint* AnimBlueprint,
+		const TArray<UEdGraph*>& AllGraphs)
+	{
+		TSharedPtr<FJsonObject> Animation = MakeShared<FJsonObject>();
+		const FString SkeletonPath = ObjectPath(AnimBlueprint->TargetSkeleton.Get());
+		if (!SkeletonPath.IsEmpty())
+		{
+			Animation->SetStringField(TEXT("skeleton"), SkeletonPath);
+		}
+
+		// [VERIFIED: AnimBlueprint.h:202-205]
+		const FString PreviewMeshPath = ObjectPath(AnimBlueprint->GetPreviewMesh());
+		if (!PreviewMeshPath.IsEmpty())
+		{
+			Animation->SetStringField(TEXT("preview_mesh"), PreviewMeshPath);
+		}
+
+		TArray<TSharedPtr<FJsonValue>> StateMachines;
+		for (UEdGraph* Candidate : AllGraphs)
+		{
+			const UAnimationStateMachineGraph* StateMachine =
+				Cast<UAnimationStateMachineGraph>(Candidate);
+			if (!StateMachine)
+			{
+				continue;
+			}
+
+			TSharedPtr<FJsonObject> StateMachineJson = MakeShared<FJsonObject>();
+			StateMachineJson->SetStringField(TEXT("name"), StateMachine->GetName());
+
+			// [VERIFIED: AnimationStateMachineGraph.h:20-26]
+			if (StateMachine->EntryNode)
+			{
+				if (const UAnimStateNodeBase* EntryState =
+					Cast<UAnimStateNodeBase>(StateMachine->EntryNode->GetOutputNode()))
+				{
+					StateMachineJson->SetStringField(TEXT("entry_state"), EntryState->GetStateName());
+				}
+			}
+
+			TArray<TSharedPtr<FJsonValue>> States;
+			TArray<TSharedPtr<FJsonValue>> Transitions;
+			for (UEdGraphNode* Node : StateMachine->Nodes)
+			{
+				if (const UAnimStateNode* State = Cast<UAnimStateNode>(Node))
+				{
+					TSharedPtr<FJsonObject> StateJson = MakeShared<FJsonObject>();
+					StateJson->SetStringField(TEXT("name"), State->GetStateName());
+					StateJson->SetStringField(TEXT("bound_graph_id"), GraphId(State->GetBoundGraph()));
+					States.Add(JsonObjectValue(StateJson));
+				}
+				else if (const UAnimStateTransitionNode* Transition =
+					Cast<UAnimStateTransitionNode>(Node))
+				{
+					const UAnimStateNodeBase* Previous = Transition->GetPreviousState();
+					const UAnimStateNodeBase* Next = Transition->GetNextState();
+					TSharedPtr<FJsonObject> TransitionJson = MakeShared<FJsonObject>();
+					TransitionJson->SetStringField(
+						TEXT("from"), Previous ? Previous->GetStateName() : FString());
+					TransitionJson->SetStringField(
+						TEXT("to"), Next ? Next->GetStateName() : FString());
+					TransitionJson->SetStringField(
+						TEXT("rule_graph_id"), GraphId(Transition->GetBoundGraph()));
+					Transitions.Add(JsonObjectValue(TransitionJson));
+				}
+			}
+
+			States.Sort([](const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B)
+			{
+				return A->AsObject()->GetStringField(TEXT("name"))
+					< B->AsObject()->GetStringField(TEXT("name"));
+			});
+			Transitions.Sort([](const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B)
+			{
+				const TSharedPtr<FJsonObject> AObject = A->AsObject();
+				const TSharedPtr<FJsonObject> BObject = B->AsObject();
+				const FString AKey = AObject->GetStringField(TEXT("from"))
+					+ TEXT("->") + AObject->GetStringField(TEXT("to"));
+				const FString BKey = BObject->GetStringField(TEXT("from"))
+					+ TEXT("->") + BObject->GetStringField(TEXT("to"));
+				return AKey < BKey;
+			});
+			StateMachineJson->SetArrayField(TEXT("states"), States);
+			StateMachineJson->SetArrayField(TEXT("transitions"), Transitions);
+			StateMachines.Add(JsonObjectValue(StateMachineJson));
+		}
+		StateMachines.Sort([](const TSharedPtr<FJsonValue>& A, const TSharedPtr<FJsonValue>& B)
+		{
+			return A->AsObject()->GetStringField(TEXT("name"))
+				< B->AsObject()->GetStringField(TEXT("name"));
+		});
+		Animation->SetArrayField(TEXT("state_machines"), StateMachines);
+		return Animation;
 	}
 }
 
@@ -215,16 +419,10 @@ bool FUeremcpAnimationService::InspectAnimBlueprint(
 		OutInspection.DependencyPaths.AddUnique(ObjectPath(AnimBlueprint->TargetSkeleton.Get()));
 	}
 
-	TArray<UAnimationGraph*> AnimationGraphs;
-	UAnimationBlueprintLibrary::GetAnimationGraphs(AnimBlueprint, AnimationGraphs);
-	TSet<const UEdGraph*> AnimationGraphSet;
-	for (const UAnimationGraph* AnimationGraph : AnimationGraphs)
-	{
-		AnimationGraphSet.Add(AnimationGraph);
-	}
-
 	TArray<UEdGraph*> AllGraphs;
 	AnimBlueprint->GetAllGraphs(AllGraphs);
+	const TSharedPtr<FJsonObject> AnimationExtension =
+		BuildAnimationExtension(AnimBlueprint, AllGraphs);
 
 	struct FGraphSortKey
 	{
@@ -275,26 +473,88 @@ bool FUeremcpAnimationService::InspectAnimBlueprint(
 	{
 		UEdGraph* Graph = Entry.Graph;
 		const FString& GraphType = Entry.Type;
-		const bool bIsAnimationGraph = AnimationGraphSet.Contains(Graph);
 		const int32 NodeCount = Entry.NodeCount;
 
-		// Deliberately omit GraphGuid: ADR-0004 says engine-internal GUIDs are not
-		// contract identity. Inventory order and revision use emitted semantics only.
-		TSharedPtr<FJsonObject> GraphObject = MakeShared<FJsonObject>();
-		GraphObject->SetStringField(TEXT("name"), Entry.Name);
-		GraphObject->SetStringField(TEXT("graph_class"), Entry.Class);
-		GraphObject->SetStringField(TEXT("graph_type"), GraphType);
-		GraphObject->SetNumberField(TEXT("node_count"), NodeCount);
-		GraphObject->SetBoolField(TEXT("is_animation_graph"), bIsAnimationGraph);
+		FUeremcpEdGraphSemanticHooks Hooks;
+		Hooks.ResolveSemanticType = AnimSemanticType;
+		Hooks.ResolveSemanticId = AnimSemanticId;
+		Hooks.ResolveProperties = AnimNodeProperties;
+		Hooks.IsEntryNode = [](const UEdGraphNode* Node)
+		{
+			return Cast<UAnimStateEntryNode>(Node) != nullptr;
+		};
+		Hooks.GatherEntryNodes = [](const UEdGraph* Candidate)
+		{
+			TArray<const UEdGraphNode*> EntryNodes;
+			if (const UAnimationStateMachineGraph* StateMachine =
+				Cast<UAnimationStateMachineGraph>(Candidate))
+			{
+				if (StateMachine->EntryNode)
+				{
+					EntryNodes.Add(StateMachine->EntryNode);
+				}
+			}
+			return EntryNodes;
+		};
+		Hooks.IsExecPin = [](const UEdGraphPin*)
+		{
+			// Anim pose/state-machine edges are dataflow, not Blueprint execution pins.
+			return false;
+		};
 
-		TSharedPtr<FJsonObject> Fidelity = MakeShared<FJsonObject>();
-		Fidelity->SetBoolField(TEXT("inventory_complete"), true);
-		Fidelity->SetBoolField(TEXT("nodes_emitted"), false);
-		Fidelity->SetBoolField(TEXT("links_emitted"), false);
-		Fidelity->SetBoolField(TEXT("round_trip_supported"), false);
-		GraphObject->SetObjectField(TEXT("fidelity"), Fidelity);
+		FUeremcpEdGraphReadOptions Options;
+		Options.AssetPath = AssetPath;
+		Options.GraphName = Entry.Name;
+		Options.GraphType = GraphType;
+		Options.bRoundTripSupported = false;
+		Options.LossyAreas = {
+			TEXT("anim_graph_authoring_unsupported"),
+			TEXT("anim_node_internal_state_partial"),
+		};
+		if (GraphType == TEXT("AnimStateMachine"))
+		{
+			Options.LossyAreas.Add(TEXT("anim_state_machine_authoring_unsupported"));
+		}
+		Options.PurposeSummaryPrefix = TEXT("AnimBlueprint graph");
 
-		GraphsJson.Add(JsonObjectValue(GraphObject));
+		FUeremcpEdGraphReadResult ReadResult;
+		if (!FUeremcpEdGraphReader::ReadGraph(Graph, Options, Hooks, ReadResult))
+		{
+			OutError = FString::Printf(
+				TEXT("Failed to read AnimBlueprint graph '%s': %s"),
+				*Entry.Name,
+				*ReadResult.Error);
+			return false;
+		}
+
+		TSharedPtr<FJsonObject> Extensions = MakeShared<FJsonObject>();
+		Extensions->SetObjectField(TEXT("animation"), AnimationExtension);
+		ReadResult.Graph->SetObjectField(TEXT("extensions"), Extensions);
+
+		TArray<FString> SubgraphIds;
+		for (UEdGraph* Subgraph : Graph->SubGraphs)
+		{
+			if (Subgraph)
+			{
+				SubgraphIds.AddUnique(Subgraph->GetName());
+			}
+		}
+		SubgraphIds.Sort();
+		if (SubgraphIds.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> SubgraphsJson;
+			for (const FString& SubgraphId : SubgraphIds)
+			{
+				SubgraphsJson.Add(MakeShared<FJsonValueString>(SubgraphId));
+			}
+			ReadResult.Graph->SetArrayField(TEXT("subgraphs"), SubgraphsJson);
+		}
+
+		for (const FString& DependencyPath : ReadResult.DependencyPaths)
+		{
+			OutInspection.DependencyPaths.AddUnique(DependencyPath);
+		}
+		GraphsJson.Add(JsonObjectValue(ReadResult.Graph));
 		OutInspection.NodeCount += NodeCount;
 		if (GraphType == TEXT("AnimBlueprintGraph"))
 		{

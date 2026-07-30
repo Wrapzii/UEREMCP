@@ -49,11 +49,12 @@ public:
 		FString& OutError);
 
 	/**
-	 * Read-only AnimBP graph inventory (Phase 4b scaffold).
+	 * Read-only AnimBP graph retrieval.
 	 *
-	 * Enumerates animation graphs and Blueprint graphs with names, graph_type,
-	 * node counts, and fidelity flags. Does not yet emit full ADR-0004 node/link
-	 * payloads — that awaits shared EdGraph serialization with WS-06.
+	 * Enumerates all contained UEdGraphs and delegates node/pin/link serialization
+	 * to FUeremcpEdGraphReader. AnimGraph and state-machine semantics are added by
+	 * WS-10 hooks plus an extensions.animation post-pass. Authoring remains
+	 * unsupported and every emitted graph reports round_trip_supported=false.
 	 *
 	 * [VERIFIED: AnimationBlueprintLibrary.h:681]
 	 * [VERIFIED: Engine/Classes/Engine/Blueprint.h:1107]

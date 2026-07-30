@@ -21,6 +21,7 @@ public class UeremcpAnimation : ModuleRules
 			"AnimGraph",
 			"AnimationBlueprintLibrary",
 			"ToolsetRegistry",
+			"UeremcpBlueprint",
 			"UeremcpProtocol",
 		});
 	}

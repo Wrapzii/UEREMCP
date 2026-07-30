@@ -508,7 +508,7 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("inventory returned"), Inspection.Inventory.IsValid());
 	TestTrue(TEXT("content hash returned"), Inspection.ContentHash.StartsWith(TEXT("sha256:")));
 	TestEqual(TEXT("graph count"), Inspection.GraphCount, 3);
-	TestEqual(TEXT("anim graph count"), Inspection.AnimGraphCount, 1);
+	TestEqual(TEXT("anim graph count"), Inspection.AnimGraphCount, 2);
 	TestEqual(TEXT("state machine count"), Inspection.StateMachineCount, 1);
 	TestEqual(TEXT("node count includes nested graph inventory"), Inspection.NodeCount, 1);
 
@@ -521,6 +521,8 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 		TArray<FString> GraphNames;
 		TSet<FString> GraphTypes;
 		int32 FidelityCount = 0;
+		int32 NodesAndLinksCount = 0;
+		int32 AnimationExtensionCount = 0;
 		if (Graphs)
 		{
 			for (const TSharedPtr<FJsonValue>& GraphValue : *Graphs)
@@ -530,24 +532,35 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 				{
 					continue;
 				}
-				GraphNames.Add(GraphObject->GetStringField(TEXT("name")));
+				GraphNames.Add(GraphObject->GetStringField(TEXT("graph_name")));
 				GraphTypes.Add(GraphObject->GetStringField(TEXT("graph_type")));
 				const TSharedPtr<FJsonObject>* Fidelity = nullptr;
 				if (GraphObject->TryGetObjectField(TEXT("fidelity"), Fidelity) && Fidelity && (*Fidelity).IsValid())
 				{
 					++FidelityCount;
-					TestTrue(
-						TEXT("inventory flagged complete"),
-						(*Fidelity)->GetBoolField(TEXT("inventory_complete")));
-					TestFalse(
-						TEXT("nodes not claimed emitted"),
-						(*Fidelity)->GetBoolField(TEXT("nodes_emitted")));
-					TestFalse(
-						TEXT("links not claimed emitted"),
-						(*Fidelity)->GetBoolField(TEXT("links_emitted")));
 					TestFalse(
 						TEXT("round-trip unsupported"),
 						(*Fidelity)->GetBoolField(TEXT("round_trip_supported")));
+				}
+				const TArray<TSharedPtr<FJsonValue>>* Nodes = nullptr;
+				const TArray<TSharedPtr<FJsonValue>>* Links = nullptr;
+				if (GraphObject->TryGetArrayField(TEXT("nodes"), Nodes)
+					&& GraphObject->TryGetArrayField(TEXT("links"), Links))
+				{
+					++NodesAndLinksCount;
+				}
+				const TSharedPtr<FJsonObject>* Extensions = nullptr;
+				const TSharedPtr<FJsonObject>* Animation = nullptr;
+				if (GraphObject->TryGetObjectField(TEXT("extensions"), Extensions)
+					&& Extensions
+					&& (*Extensions)->TryGetObjectField(TEXT("animation"), Animation)
+					&& Animation
+					&& (*Animation).IsValid())
+				{
+					++AnimationExtensionCount;
+					TestTrue(
+						TEXT("animation extension carries state machines"),
+						(*Animation)->HasTypedField<EJson::Array>(TEXT("state_machines")));
 				}
 			}
 		}
@@ -559,9 +572,10 @@ bool FUeremcpAnimationReadAnimBpServiceTest::RunTest(const FString& Parameters)
 			TestEqual(TEXT("Locomotion sorts third"), GraphNames[2], FString(TEXT("Locomotion")));
 		}
 		TestTrue(TEXT("AnimGraph classified"), GraphTypes.Contains(TEXT("AnimBlueprintGraph")));
-		TestTrue(TEXT("EventGraph classified"), GraphTypes.Contains(TEXT("EventGraph")));
 		TestTrue(TEXT("nested state machine classified"), GraphTypes.Contains(TEXT("AnimStateMachine")));
-		TestEqual(TEXT("every graph carries fidelity flags"), FidelityCount, 3);
+		TestEqual(TEXT("every graph carries round-trip fidelity"), FidelityCount, 3);
+		TestEqual(TEXT("every graph emits nodes and links"), NodesAndLinksCount, 3);
+		TestEqual(TEXT("every graph carries extensions.animation"), AnimationExtensionCount, 3);
 	}
 
 	FUeremcpAnimBlueprintInspection Reread;
@@ -719,9 +733,9 @@ bool FUeremcpAnimationReadAnimBpEditorScratchTest::RunTest(const FString& Parame
 	const FString ResponseJson = UUeremcpAnimationToolset::ReadAnimBp(Request);
 
 	TestTrue(TEXT("scratch AnimBP inspect is partial"), ResponseJson.Contains(TEXT("\"status\":\"partially_completed\"")));
-	TestTrue(TEXT("summary names inventory"), ResponseJson.Contains(TEXT("Inventoried AnimBlueprint")));
+	TestTrue(TEXT("summary names structured read"), ResponseJson.Contains(TEXT("Read AnimBlueprint")));
 	TestFalse(TEXT("response remains honest before asset_state amendment"), ResponseJson.Contains(TEXT("\"asset_state\"")));
-	TestTrue(TEXT("nodes-not-emitted check recorded"), ResponseJson.Contains(TEXT("animation.anim_bp.nodes_not_emitted")));
+	TestTrue(TEXT("nodes-and-links check recorded"), ResponseJson.Contains(TEXT("animation.anim_bp.nodes_and_links_read")));
 
 	const FString ObjectPath = FString::Printf(
 		TEXT("%s.%s"), *PackageName, *FPackageName::GetLongPackageAssetName(PackageName));

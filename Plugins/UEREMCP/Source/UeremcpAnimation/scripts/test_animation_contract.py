@@ -328,27 +328,27 @@ class AnimationContractTests(unittest.TestCase):
         self.assertFalse(schema["additionalProperties"])
         self.assertEqual(schema["properties"], {})
         self.assertIn("read-only", schema["description"])
-        self.assertIn("deferred", schema["description"].lower())
+        self.assertIn("shared UEdGraph reader", schema["description"])
+        self.assertIn("does not use blueprint dsl", schema["description"].lower())
 
-    def test_read_anim_bp_service_inventories_graphs_without_nodes(self) -> None:
+    def test_read_anim_bp_service_uses_shared_graph_reader(self) -> None:
         source = (
             MODULE / "Private/UeremcpAnimationService.cpp"
         ).read_text(encoding="utf-8")
         for expected in (
-            "GetAnimationGraphs",
             "GetAllGraphs",
             "UAnimationStateMachineGraph",
-            "UAnimationGraph",
-            '"graph_type"',
-            '"node_count"',
-            '"fidelity"',
-            '"nodes_emitted"',
-            '"round_trip_supported"',
+            "FUeremcpEdGraphReader::ReadGraph",
+            "FUeremcpEdGraphSemanticHooks",
+            'TEXT("animation")',
+            "Options.GraphType = GraphType",
+            "Options.bRoundTripSupported = false",
             "InspectAnimBlueprint",
         ):
             self.assertIn(expected, source)
         self.assertNotIn('TEXT("graph_guid")', source)
         self.assertNotIn("Graph->GraphGuid", source)
+        self.assertNotIn("read_graph_dsl", source.lower())
 
     def test_read_anim_bp_tool_stays_partial_and_withholds_asset_state(self) -> None:
         source = (
@@ -357,9 +357,12 @@ class AnimationContractTests(unittest.TestCase):
         self.assertIn("ReadAnimBp", source)
         self.assertIn('TEXT("read_anim_bp")', source)
         self.assertIn('Response.Status = TEXT("partially_completed")', source)
-        self.assertIn("animation.anim_bp.nodes_not_emitted", source)
+        self.assertIn("animation.anim_bp.nodes_and_links_read", source)
+        self.assertIn("animation.anim_bp.extensions_animation_added", source)
         self.assertNotIn('SetObjectField(TEXT("asset_state")', source)
-        self.assertIn("AnimGraph", MODULE.joinpath("UeremcpAnimation.Build.cs").read_text(encoding="utf-8"))
+        build = MODULE.joinpath("UeremcpAnimation.Build.cs").read_text(encoding="utf-8")
+        self.assertIn("AnimGraph", build)
+        self.assertIn("UeremcpBlueprint", build)
 
     def test_read_anim_bp_cpp_coverage_and_editor_scratch(self) -> None:
         source = (
@@ -373,10 +376,11 @@ class AnimationContractTests(unittest.TestCase):
             "engine graph GUID churn does not change semantic revision",
             "node-count semantic change updates revision",
             "nested state machine classified",
-            "every graph carries fidelity flags",
-            "nodes not claimed emitted",
+            "every graph carries round-trip fidelity",
+            "every graph emits nodes and links",
+            "every graph carries extensions.animation",
             "response remains honest before asset_state amendment",
-            "animation.anim_bp.nodes_not_emitted",
+            "animation.anim_bp.nodes_and_links_read",
             "UEREMCP.Animation.CrossAsset.MontageAndAnimBpIsolation",
             "cross-fixtures report the same skeleton dependency",
             "different asset shapes retain independent revisions",

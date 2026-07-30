@@ -30,11 +30,11 @@ public:
 	static FString InspectMontage(const FString& RequestJson);
 
 	/**
-	 * Read-only AnimBlueprint graph inventory in one call: skeleton, graph names,
-	 * graph_type discriminators, node counts, and fidelity flags.
+	 * Read-only AnimBlueprint graph retrieval in one call: skeleton, graph identity,
+	 * ADR-0004 nodes/pins/links, diagnostics, extensions.animation and revision.
 	 *
-	 * Full ADR-0004 node/link emission is deferred (shared EdGraph walk with WS-06).
-	 * AnimBP state-machine authoring remains unsupported.
+	 * Uses the shared UEdGraph reader; Blueprint DSL and AnimGraph/state-machine
+	 * authoring remain unsupported.
 	 *
 	 * @param RequestJson Request envelope with action read_anim_bp and target.asset_path.
 	 */

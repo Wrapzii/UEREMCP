@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/animation/graph-ext.schema.json",
+  "title": "Animation graph extension",
+  "description": "Shape of graph.extensions.animation for read-only AnimBlueprintGraph and AnimStateMachine retrieval.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "skeleton": {
+      "$ref": "../../common/defs.schema.json#/$defs/assetPath"
+    },
+    "preview_mesh": {
+      "$ref": "../../common/defs.schema.json#/$defs/assetPath"
+    },
+    "state_machines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stateMachine"
+      }
+    }
+  },
+  "required": [
+    "state_machines"
+  ],
+  "$defs": {
+    "stateMachine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "states",
+        "transitions"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_state": {
+          "type": "string",
+          "minLength": 1
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/state"
+          }
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/transition"
+          }
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "bound_graph_id"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bound_graph_id": {
+          "type": "string"
+        }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to",
+        "rule_graph_id"
+      ],
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "rule_graph_id": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

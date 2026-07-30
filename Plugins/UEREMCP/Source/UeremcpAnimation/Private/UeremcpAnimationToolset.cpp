@@ -28,7 +28,7 @@ namespace
 	{
 		static const TArray<FString> Notes = {
 			TEXT("Montage inspection reads slots, segments, sections and real AnimNotify objects in one operation."),
-			TEXT("AnimBlueprint read returns a graph inventory only; full ADR-0004 node/link payloads are deferred."),
+			TEXT("AnimBlueprint read walks nodes, pins and links into ADR-0004 graphs with extensions.animation; Blueprint DSL is not used."),
 			TEXT("AnimBlueprint state-machine authoring is unsupported; animation state machines remain read-only."),
 			TEXT("Control Rig primitives are provided by Epic AnimationAssistant and must be composed, not re-exposed."),
 			TEXT("Structured non-graph asset state is withheld until the frozen response envelope gains an approved field; counts and revision are returned now.")
@@ -207,9 +207,9 @@ FString UUeremcpAnimationToolset::ReadAnimBp(const FString& RequestJson)
 	Response.RequestId = Request.RequestId;
 	Response.Status = TEXT("partially_completed");
 	Response.Summary = FString::Printf(
-		TEXT("Inventoried AnimBlueprint '%s': %d graphs (%d AnimGraph, %d state machine), %d nodes. ")
-		TEXT("Graph inventory and revision are returned; full ADR-0004 node/link state and ")
-		TEXT("envelope asset_state are withheld."),
+		TEXT("Read AnimBlueprint '%s': %d structured graphs (%d AnimGraph, %d state machine), %d nodes. ")
+		TEXT("ADR-0004 node/link state was collected without Blueprint DSL; envelope asset_state ")
+		TEXT("remains withheld until ADR-0011 is accepted."),
 		*Request.TargetAssetPath,
 		Inspection.GraphCount,
 		Inspection.AnimGraphCount,
@@ -240,7 +240,8 @@ FString UUeremcpAnimationToolset::ReadAnimBp(const FString& RequestJson)
 	Checks.Add(MakeShared<FJsonValueString>(TEXT("animation.anim_bp.loaded")));
 	Checks.Add(MakeShared<FJsonValueString>(TEXT("animation.anim_bp.graphs_enumerated")));
 	Checks.Add(MakeShared<FJsonValueString>(TEXT("animation.anim_bp.content_hash_computed")));
-	Checks.Add(MakeShared<FJsonValueString>(TEXT("animation.anim_bp.nodes_not_emitted")));
+	Checks.Add(MakeShared<FJsonValueString>(TEXT("animation.anim_bp.nodes_and_links_read")));
+	Checks.Add(MakeShared<FJsonValueString>(TEXT("animation.anim_bp.extensions_animation_added")));
 	Validation->SetArrayField(TEXT("checks_performed"), Checks);
 	Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
 
