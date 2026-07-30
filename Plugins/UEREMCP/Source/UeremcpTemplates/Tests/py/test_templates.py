@@ -773,6 +773,7 @@ class TemplateDomainHandlerContractTests(unittest.TestCase):
             / "proposals"
             / "ws-15-plan-handler-registration.md"
         ).read_text(encoding="utf-8")
+        self.assertIn("handlers and transaction callbacks landed on orch", handoff)
         expected_owners = {
             "create_vfx_material": "WS-08",
             "create_niagara_effect": "WS-07",
@@ -786,42 +787,112 @@ class TemplateDomainHandlerContractTests(unittest.TestCase):
                     handoff,
                 )
 
-    def test_handler_handoff_matches_existing_toolset_entry_points(self) -> None:
-        material_header = (
+    def test_landed_handlers_and_transaction_coordinator_match_plans(self) -> None:
+        material_handler = (
             ROOT
             / "Plugins"
             / "UEREMCP"
             / "Source"
             / "UeremcpMaterial"
-            / "Public"
-            / "UeremcpMaterialToolset.h"
+            / "Private"
+            / "UeremcpMaterialPlanHandlers.cpp"
         ).read_text(encoding="utf-8")
-        niagara_header = (
+        material_module = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpMaterial"
+            / "Private"
+            / "UeremcpMaterialModule.cpp"
+        ).read_text(encoding="utf-8")
+        niagara_handler = (
             ROOT
             / "Plugins"
             / "UEREMCP"
             / "Source"
             / "UeremcpNiagara"
-            / "Public"
-            / "UeremcpNiagaraToolset.h"
+            / "Private"
+            / "UeremcpNiagaraPlanHandlers.cpp"
         ).read_text(encoding="utf-8")
-        executor_source = (
+        niagara_module = (
             ROOT
             / "Plugins"
             / "UEREMCP"
             / "Source"
-            / "UeremcpProtocol"
+            / "UeremcpNiagara"
             / "Private"
-            / "UeremcpPlanExecutor.cpp"
+            / "UeremcpNiagaraModule.cpp"
+        ).read_text(encoding="utf-8")
+        transaction_coordinator = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpCore"
+            / "Private"
+            / "UeremcpPlanTransactionCoordinator.cpp"
+        ).read_text(encoding="utf-8")
+        core_module = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpCore"
+            / "Private"
+            / "UeremcpCoreModule.cpp"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("static FString CreateVfxMaterial(", material_header)
-        self.assertIn("static FString CreateNiagaraEffect(", niagara_header)
-        self.assertIn("no handler registered for '%s'", executor_source)
+        self.assertIn('return TEXT("create_vfx_material");', material_handler)
+        self.assertIn("FUeremcpPlanExecutor::RegisterAction(", material_handler)
+        self.assertIn("UUeremcpMaterialToolset::CreateVfxMaterial(", material_handler)
+        self.assertIn("FUeremcpMaterialPlanHandlers::Register(", material_module)
+        self.assertIn("FUeremcpMaterialPlanHandlers::Unregister();", material_module)
+
+        self.assertIn('return TEXT("create_niagara_effect");', niagara_handler)
+        self.assertIn("FUeremcpPlanExecutor::RegisterAction(", niagara_handler)
+        self.assertIn("UUeremcpNiagaraToolset::CreateNiagaraEffect(", niagara_handler)
+        self.assertIn("FUeremcpNiagaraPlanHandlers::Register(", niagara_module)
+        self.assertIn("FUeremcpNiagaraPlanHandlers::Unregister();", niagara_module)
+
+        for callback in ("Callbacks.Begin", "Callbacks.Commit", "Callbacks.Rollback"):
+            self.assertIn(callback, transaction_coordinator)
         self.assertIn(
-            "atomic execute_plan requires transaction callbacks",
-            executor_source,
+            "FUeremcpPlanExecutor::SetTransactionCallbacks(",
+            transaction_coordinator,
         )
+        self.assertIn(
+            "FUeremcpPlanTransactionCoordinator::RegisterWithExecutor(",
+            core_module,
+        )
+        self.assertIn(
+            "FUeremcpPlanTransactionCoordinator::UnregisterFromExecutor();",
+            core_module,
+        )
+
+    def test_validation_post_steps_remain_explicitly_partial(self) -> None:
+        contract = (
+            ROOT
+            / "docs"
+            / "proposals"
+            / "ws-15-execute-plan-template-contract.md"
+        ).read_text(encoding="utf-8")
+        service_mirror = (
+            ROOT
+            / "Plugins"
+            / "UEREMCP"
+            / "Source"
+            / "UeremcpTemplates"
+            / "Tests"
+            / "py"
+            / "ueremcp_templates"
+            / "service.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("WS-05 commit `1ef125d`", contract)
+        self.assertIn("does not expand or pre-implement the frozen", contract)
+        self.assertIn('response["status"] = "partially_completed"', service_mirror)
+        self.assertIn("template.validation_rules", service_mirror)
 
 
 def main() -> int:

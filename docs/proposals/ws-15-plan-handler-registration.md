@@ -2,10 +2,10 @@
 
 - **From:** WS-15 Templates
 - **To:** WS-07 Niagara, WS-08 Material, WS-03 Core
-- **Status:** registration required
-- **Blocks:** runtime execution of `niagara.projectile.elemental.v1`
+- **Status:** handlers and transaction callbacks landed on orch
+- **Residual:** executable template validation rules and modifiers
 
-## Why this is now the blocking edge
+## Landed execution edge
 
 Templates binds `FUeremcpPlanExecutor::ExecuteRequest` during module startup and
 clears it during shutdown. The executor snapshots registered handlers, confirms
@@ -15,14 +15,17 @@ atomic plan before beginning mutation
 
 The shipped elemental construction plan currently requires exactly:
 
-| Action | Owner | Existing goal-level entry point |
+| Action | Owner | Registered adapter |
 |---|---|---|
-| `create_vfx_material` | WS-08 | `UUeremcpMaterialToolset::CreateVfxMaterial(const FString&)` `[VERIFIED: UeremcpMaterialToolset.h:46-47]` |
-| `create_niagara_effect` | WS-07 | `UUeremcpNiagaraToolset::CreateNiagaraEffect(const FString&)` `[VERIFIED: UeremcpNiagaraToolset.h:61-62]` |
+| `create_vfx_material` | WS-08 | `FUeremcpMaterialPlanHandlers::Register` delegates to `UUeremcpMaterialToolset::CreateVfxMaterial` `[VERIFIED: UeremcpMaterialPlanHandlers.cpp:10-22,31-41]` |
+| `create_niagara_effect` | WS-07 | `FUeremcpNiagaraPlanHandlers::Register` delegates to `UUeremcpNiagaraToolset::CreateNiagaraEffect` `[VERIFIED: UeremcpNiagaraPlanHandlers.cpp:10-22,31-41]` |
 
-## WS-07 / WS-08 registration contract
+Both owning modules invoke registration during startup
+`[VERIFIED: UeremcpMaterialModule.cpp:56-64; UeremcpNiagaraModule.cpp:56-64]`.
 
-Each owning module registers its semantic action during startup:
+## WS-07 / WS-08 registration contract (landed)
+
+The landed adapters follow this semantic shape:
 
 ```cpp
 FString Error;
@@ -46,7 +49,7 @@ action names `[VERIFIED: UeremcpPlanExecutor.cpp:383-402]`. Registration failure
 must be logged and surfaced during integration; do not silently continue as if the
 action were executable.
 
-During module shutdown, unregister only the action owned by that module:
+During module shutdown, each owner unregisters only its own action:
 
 ```cpp
 FUeremcpPlanExecutor::UnregisterAction(TEXT("create_vfx_material"));
@@ -63,38 +66,42 @@ validation, and its normal response envelope. The executor validates that nested
 responses contain a status and metrics before consolidation
 `[VERIFIED: UeremcpPlanExecutor.cpp:603-620]`.
 
-## WS-03 transaction callback contract
+## WS-03 transaction callback contract (landed)
 
-The elemental plan is atomic. WS-03 (or the settled integration owner) must call
-`FUeremcpPlanExecutor::SetTransactionCallbacks` with all three callbacks:
+The elemental plan is atomic. WS-03 now registers all three callbacks:
 
 - `Begin`
 - `Commit`
 - `Rollback`
 
 Incomplete callback sets are rejected
-`[VERIFIED: UeremcpPlanExecutor.cpp:417-430]`. The callbacks must coordinate the
-accepted ADR-0005 transaction/sandbox boundary across the whole plan, not create
-one independent transaction per nested operation.
+`[VERIFIED: UeremcpPlanExecutor.cpp:417-430]`. Core wires `Begin`, `Commit`, and
+`Rollback` to one plan transaction coordinator
+`[VERIFIED: UeremcpPlanTransactionCoordinator.cpp:35-42]`; module startup and
+shutdown register/clear it
+`[VERIFIED: UeremcpCoreModule.cpp:38,70-78]`.
 
 Shutdown calls `FUeremcpPlanExecutor::ClearTransactionCallbacks`
 `[VERIFIED: UeremcpPlanExecutor.cpp:433-436]`.
 
-## Honest behavior until registration lands
+## Honest residual behavior
 
-- Missing `create_vfx_material` or `create_niagara_effect` rejects before mutation
-  with `no handler registered for '<action>'`
+- Registration is present, but the executor still rejects before mutation if a
+  module failed to load or register (`no handler registered for '<action>'`)
   `[VERIFIED: UeremcpPlanExecutor.cpp:509-518]`.
-- Missing atomic callbacks rejects before mutation with
-  `atomic execute_plan requires transaction callbacks`
+- It likewise rejects if atomic callbacks are unavailable
   `[VERIFIED: UeremcpPlanExecutor.cpp:520-526]`.
-- Once handlers execute successfully, Templates still downgrades a validated
-  domain result to `partially_completed` while template `validation_rules` have no
-  executable post-step contract.
+- After successful domain execution, Templates still downgrades a validated result
+  to `partially_completed` while template `validation_rules` have no executable
+  post-step contract.
+- WS-05 commit `1ef125d` proposes deterministic `modifier_definitions` and
+  validation operations. WS-15 will not implement that shape until WS-01 amends
+  the frozen template schema.
 
 ## Offline drift guard
 
-WS-15 tests derive the unique action set from every shipped
-`construction_plan` and require this handoff to name each action and owner. Adding
-a new plan action without a registration handoff is therefore an offline test
-failure rather than a runtime surprise.
+WS-15 tests derive the unique action set from every shipped `construction_plan`,
+require this handoff to name each action and owner, and verify the corresponding
+registration sources plus Core transaction coordinator exist. Adding a new plan
+action without a landed registration is therefore an offline test failure rather
+than a runtime surprise.

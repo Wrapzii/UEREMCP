@@ -23,6 +23,11 @@ As of the current Templates tree:
   parameters while materializing `niagara.projectile.elemental.v1`.
 - Materialized operations validate against `create_vfx_material` /
   `create_niagara_effect` schemas offline.
+- WS-08 and WS-07 register those two semantic handlers, and WS-03 registers the
+  atomic begin/commit/rollback callbacks
+  `[VERIFIED: UeremcpMaterialPlanHandlers.cpp:31-41;
+  UeremcpNiagaraPlanHandlers.cpp:31-41;
+  UeremcpPlanTransactionCoordinator.cpp:35-42]`.
 - When the delegate is unbound, Instantiate returns an honest
   `partially_completed` / unverified response and states that no asset operation ran.
 - When the delegate returns a domain `*_validated` result but template
@@ -41,6 +46,13 @@ Two frozen-schema gaps prevent an honest validated status:
    WS-15 cannot append those rules without producing a plan that fails the accepted
    batch schema.
 
+WS-05 commit `1ef125d` now proposes an executable residual contract:
+`modifier_definitions` materialize deterministic operation replacements/merges/
+appends, while validation rules gain normal semantic `operation` steps and evidence
+IDs. This is a proposal only. WS-15 does not expand or pre-implement the frozen
+schema; the current fail-closed behavior remains authoritative until WS-01 accepts
+a schema shape.
+
 `promote_to_template` additionally requires a domain-neutral complete-state retrieval
 and a schema-valid way to express the resulting construction plan. No such dispatcher
 contract exists in WS-15-owned paths.
@@ -56,17 +68,15 @@ contract exists in WS-15-owned paths.
 
 ### WS-03 / domain workstreams
 
-Register `create_vfx_material` and `create_niagara_effect` semantic handlers plus
-complete begin/commit/rollback transaction callbacks. Until those capabilities are
-registered, the bound executor rejects before mutation; binding alone does not make
-elemental instantiation complete. Exact lifecycle, adapter, and ownership handoff:
-`ws-15-plan-handler-registration.md`.
+**Landed:** `create_vfx_material`, `create_niagara_effect`, and complete
+begin/commit/rollback callbacks are registered on orch. Exact lifecycle, adapter,
+evidence, and fail-closed behavior: `ws-15-plan-handler-registration.md`.
 
 ### WS-01
 
-Extend the frozen template schema with executable named modifier definitions. A
-minimal shape should map each supported modifier name to a schema-valid plan delta or
-additional operation list; names alone are not executable.
+Decide the executable modifier and validation operation shapes proposed by WS-05
+`1ef125d`; then amend the frozen template schema if accepted. Names and descriptive
+`check` strings alone remain non-executable.
 
 ## Required behavior after integration
 
