@@ -172,8 +172,9 @@ namespace
 
 		System->RequestCompile(false);
 
-		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Private/NiagaraSystem.cpp:3227-3233]
-		// Sleeping alone never drains ActiveCompilations; QueryCompileComplete must run each tick.
+		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Classes/NiagaraSystem.h:449]
+		// PollForCompilationComplete is public; it drives compile completion per tick
+		// (QueryCompileComplete is private — NiagaraSystem.h:918).
 		const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
 		while (FPlatformTime::Seconds() < Deadline)
 		{
@@ -183,7 +184,7 @@ namespace
 				break;
 			}
 
-			System->QueryCompileComplete(/*bWait=*/true);
+			System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
 			FPlatformProcess::Sleep(0.01f);
 		}
 
