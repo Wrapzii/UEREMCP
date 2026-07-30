@@ -41,6 +41,9 @@ In `ShutdownModule`, call `ClearExecutePlanDelegate()` before destroying the ser
 This is the only required Template-owned binding. No schema change is needed for the
 delegate itself.
 
+**Status:** implemented and present on the synced orchestration history. Protocol
+does not re-implement the bind.
+
 ## Required Core/domain registration
 
 Each executable goal-level action must register one

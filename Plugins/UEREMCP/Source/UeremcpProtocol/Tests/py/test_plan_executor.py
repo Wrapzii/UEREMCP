@@ -372,6 +372,344 @@ class PlanExecutorTests(unittest.TestCase):
         self.assertEqual(json.loads(response_json)["status"], "rejected")
         self.assertIn("cycle", json.loads(response_json)["summary"].lower())
 
+    def test_on_failure_stop_skips_remaining(self) -> None:
+        ran: list[str] = []
+
+        def fail(_req: str):
+            ran.append("fail")
+            return True, _ok("failed_validation", "boom", internal=1), ""
+
+        def later(_req: str):
+            ran.append("later")
+            return True, _ok("no_change_required", "should not run", internal=1), ""
+
+        self.exe.register_action("fail_op", fail)
+        self.exe.register_action("later_op", later)
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False, "rollback_on_failure": False},
+                        "operations": [
+                            {"id": "fail", "action": "fail_op"},
+                            {"id": "later", "action": "later_op"},
+                        ],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertEqual(ran, ["fail"])
+        response = json.loads(response_json)
+        self.assertEqual(response["status"], "partially_completed")
+        by_id = {op["id"]: op for op in response["result"]["operations"]}
+        self.assertEqual(by_id["later"]["status"], "partially_completed")
+        self.assertIn("stopped", by_id["later"]["skipped_reason"])
+
+    def test_optional_failure_skips_dependents(self) -> None:
+        ran: list[str] = []
+
+        def optional_fail(_req: str):
+            ran.append("optional")
+            return True, _ok("failed_validation", "optional boom", internal=1), ""
+
+        def dependent(_req: str):
+            ran.append("dependent")
+            return True, _ok("no_change_required", "should not run", internal=1), ""
+
+        self.exe.register_action("optional_fail", optional_fail)
+        self.exe.register_action("dependent_op", dependent)
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False, "rollback_on_failure": False},
+                        "operations": [
+                            {
+                                "id": "opt",
+                                "action": "optional_fail",
+                                "optional": True,
+                            },
+                            {
+                                "id": "dep",
+                                "action": "dependent_op",
+                                "depends_on": ["opt"],
+                            },
+                        ],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertEqual(ran, ["optional"])
+        response = json.loads(response_json)
+        self.assertEqual(response["status"], "partially_completed")
+        by_id = {op["id"]: op for op in response["result"]["operations"]}
+        self.assertEqual(by_id["dep"]["status"], "partially_completed")
+        self.assertIn("dependency", by_id["dep"]["skipped_reason"])
+
+    def test_created_with_warnings_allows_ref(self) -> None:
+        def produce(_req: str):
+            return (
+                True,
+                _ok(
+                    "created_with_warnings",
+                    "producer warned",
+                    internal=1,
+                    result={"primary_asset": "/Game/Test/Warned"},
+                ),
+                "",
+            )
+
+        def consume(req: str):
+            nested = json.loads(req)
+            self.assertEqual(
+                nested["specification"]["input_asset"], "/Game/Test/Warned"
+            )
+            return True, _ok("modified_and_validated", "consumer ok", internal=1), ""
+
+        self.exe.register_action("produce_asset", produce)
+        self.exe.register_action("consume_asset", consume)
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False, "rollback_on_failure": False},
+                        "operations": [
+                            {"id": "producer", "action": "produce_asset"},
+                            {
+                                "id": "consumer",
+                                "action": "consume_asset",
+                                "depends_on": ["producer"],
+                                "specification": {
+                                    "input_asset": {
+                                        "$ref": "producer.result.primary_asset"
+                                    }
+                                },
+                            },
+                        ],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertEqual(json.loads(response_json)["status"], "modified_and_validated")
+
+    def test_operation_status_condition_skip(self) -> None:
+        ran: list[str] = []
+
+        def first(_req: str):
+            ran.append("first")
+            return True, _ok("created_with_warnings", "warned", internal=1), ""
+
+        def gated(_req: str):
+            ran.append("gated")
+            return True, _ok("no_change_required", "should not run", internal=1), ""
+
+        self.exe.register_action("first_op", first)
+        self.exe.register_action("gated_op", gated)
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False, "rollback_on_failure": False},
+                        "operations": [
+                            {"id": "first", "action": "first_op"},
+                            {
+                                "id": "gated",
+                                "action": "gated_op",
+                                "depends_on": ["first"],
+                                "condition": {
+                                    "operation_status": {
+                                        "id": "first",
+                                        "is": ["created_and_validated"],
+                                    }
+                                },
+                            },
+                        ],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertEqual(ran, ["first"])
+        response = json.loads(response_json)
+        by_id = {op["id"]: op for op in response["result"]["operations"]}
+        self.assertEqual(by_id["gated"]["status"], "no_change_required")
+        self.assertIn("condition not met", by_id["gated"]["skipped_reason"])
+
+    def test_non_atomic_without_txn_callbacks(self) -> None:
+        self.exe.register_action(
+            "noop",
+            lambda _req: (True, _ok("no_change_required", "ok", internal=1), ""),
+        )
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False, "rollback_on_failure": False},
+                        "operations": [{"id": "a", "action": "noop"}],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertEqual(json.loads(response_json)["status"], "no_change_required")
+
+    def test_atomic_stop_without_rollback_flag_commits(self) -> None:
+        rolled = committed = False
+
+        def commit():
+            nonlocal committed
+            committed = True
+            return True, ""
+
+        def rollback():
+            nonlocal rolled
+            rolled = True
+            return True, ""
+
+        self.exe.set_transaction_callbacks(
+            lambda: (True, ""), commit, rollback
+        )
+        self.exe.register_action(
+            "fail_action",
+            lambda _req: (
+                True,
+                _ok("failed_validation", "expected failure", internal=1),
+                "",
+            ),
+        )
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {
+                            "atomic": True,
+                            "rollback_on_failure": False,
+                        },
+                        "operations": [{"id": "failure", "action": "fail_action"}],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertTrue(committed and not rolled)
+        response = json.loads(response_json)
+        self.assertEqual(response["status"], "partially_completed")
+        self.assertNotIn("rollback", response)
+
+    def test_handler_bool_false_is_failure(self) -> None:
+        self.exe.register_action(
+            "crash_op", lambda _req: (False, "", "handler unavailable")
+        )
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False, "rollback_on_failure": False},
+                        "operations": [{"id": "crash", "action": "crash_op"}],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        response = json.loads(response_json)
+        self.assertEqual(response["status"], "partially_completed")
+        by_id = {op["id"]: op for op in response["result"]["operations"]}
+        self.assertEqual(by_id["crash"]["status"], "error")
+        self.assertIn("unavailable", by_id["crash"]["summary"])
+
+    def test_dollar_string_ref_resolves(self) -> None:
+        def produce(_req: str):
+            return (
+                True,
+                _ok(
+                    "created_and_validated",
+                    "producer ok",
+                    internal=1,
+                    result={
+                        "primary_asset": "/Game/Test/A",
+                        "created_assets": [{"asset_path": "/Game/Test/A"}],
+                    },
+                ),
+                "",
+            )
+
+        def consume(req: str):
+            nested = json.loads(req)
+            self.assertEqual(nested["specification"]["trail_material"], "/Game/Test/A")
+            return True, _ok("modified_and_validated", "consumer ok", internal=1), ""
+
+        self.exe.register_action("produce_asset", produce)
+        self.exe.register_action("consume_asset", consume)
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False, "rollback_on_failure": False},
+                        "operations": [
+                            {"id": "producer", "action": "produce_asset"},
+                            {
+                                "id": "consumer",
+                                "action": "consume_asset",
+                                "depends_on": ["producer"],
+                                "specification": {"trail_material": "$producer"},
+                            },
+                        ],
+                        "on_failure": "stop",
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertEqual(json.loads(response_json)["status"], "modified_and_validated")
+
+    def test_unregister_removes_handler(self) -> None:
+        self.exe.register_action(
+            "temp_op",
+            lambda _req: (True, _ok("no_change_required", "ok", internal=1), ""),
+        )
+        self.exe.unregister_action("temp_op")
+        ok, response_json = self.exe.execute_request(
+            json.dumps(
+                {
+                    "protocol_version": "1.0",
+                    "action": "execute_plan",
+                    "specification": {
+                        "transaction": {"atomic": False},
+                        "operations": [{"id": "a", "action": "temp_op"}],
+                    },
+                }
+            )
+        )
+        self.assertTrue(ok)
+        self.assertEqual(json.loads(response_json)["status"], "rejected")
+        self.assertIn("temp_op", json.loads(response_json)["summary"])
+
 
 if __name__ == "__main__":
     unittest.main()
