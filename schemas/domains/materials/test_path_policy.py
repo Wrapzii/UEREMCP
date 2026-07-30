@@ -57,6 +57,7 @@ class MaterialPathPolicyTests(unittest.TestCase):
 
     def test_niagara_export_supports_poc_system_paths(self) -> None:
         self.assertIn("ResolveMaterialInstancePathForNiagaraSystem", self.niagara_cpp)
+        self.assertIn("ExecuteCreateVfxMaterialForNiagaraSystem", self.niagara_cpp)
         self.assertIn("MaterialsFolderForContentRoot(ScratchContentRoot)", self.niagara_cpp)
 
     def test_editor_tests_cover_allow_and_deny(self) -> None:

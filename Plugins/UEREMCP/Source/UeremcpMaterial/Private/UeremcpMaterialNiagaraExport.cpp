@@ -117,7 +117,8 @@ FUeremcpRequest UeremcpMaterialNiagaraExport::BuildCreateVfxMaterialRequest(
 	const TSharedPtr<FJsonObject>& CreateSpec,
 	bool bCompile,
 	bool bValidate,
-	bool bSave)
+	bool bSave,
+	bool bDryRun)
 {
 	FUeremcpRequest Request;
 	Request.Action = TEXT("create_vfx_material");
@@ -126,6 +127,7 @@ FUeremcpRequest UeremcpMaterialNiagaraExport::BuildCreateVfxMaterialRequest(
 	Request.bCompile = bCompile;
 	Request.bValidate = bValidate;
 	Request.bSave = bSave;
+	Request.bDryRun = bDryRun;
 	return Request;
 }
 
@@ -166,17 +168,46 @@ bool UeremcpMaterialNiagaraExport::VerifyPrimaryAssetIsMaterialInterface(
 	return true;
 }
 
+FUeremcpMaterialCreateResult UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraSystem(
+	const FString& NiagaraSystemPackagePath,
+	const FString& Role,
+	const TSharedPtr<FJsonObject>& CreateSpec,
+	bool bCompile,
+	bool bValidate,
+	bool bSave,
+	bool bDryRun)
+{
+	const FString TargetPath =
+		ResolveMaterialInstancePathForNiagaraSystem(NiagaraSystemPackagePath, Role);
+	if (TargetPath.IsEmpty())
+	{
+		FUeremcpMaterialCreateResult Result;
+		Result.Status = TEXT("rejected");
+		Result.Summary = FString::Printf(
+			TEXT("Cannot resolve inline MI path for Niagara system '%s' role '%s' — system path must be under /Game/__UeremcpTests/ or /Game/__UeremcpPoc/."),
+			*NiagaraSystemPackagePath,
+			*Role);
+		return Result;
+	}
+
+	const TSharedPtr<FJsonObject> EffectiveSpec = CloneSpecWithDefaultPurpose(CreateSpec, Role);
+	const FUeremcpRequest Request =
+		BuildCreateVfxMaterialRequest(TargetPath, EffectiveSpec, bCompile, bValidate, bSave, bDryRun);
+	return UeremcpMaterialService::ExecuteCreateVfxMaterial(Request);
+}
+
 FUeremcpMaterialCreateResult UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraRole(
 	const FString& NiagaraAssetName,
 	const FString& Role,
 	const TSharedPtr<FJsonObject>& CreateSpec,
 	bool bCompile,
 	bool bValidate,
-	bool bSave)
+	bool bSave,
+	bool bDryRun)
 {
 	const FString TargetPath = ResolveMaterialInstancePath(NiagaraAssetName, Role);
 	const TSharedPtr<FJsonObject> EffectiveSpec = CloneSpecWithDefaultPurpose(CreateSpec, Role);
 	const FUeremcpRequest Request =
-		BuildCreateVfxMaterialRequest(TargetPath, EffectiveSpec, bCompile, bValidate, bSave);
+		BuildCreateVfxMaterialRequest(TargetPath, EffectiveSpec, bCompile, bValidate, bSave, bDryRun);
 	return UeremcpMaterialService::ExecuteCreateVfxMaterial(Request);
 }

@@ -41,7 +41,8 @@ namespace UeremcpMaterialNiagaraExport
 		const TSharedPtr<class FJsonObject>& CreateSpec,
 		bool bCompile = true,
 		bool bValidate = true,
-		bool bSave = true);
+		bool bSave = true,
+		bool bDryRun = false);
 
 	/**
 	 * WS-07 acceptance gate: load PrimaryAsset and confirm UMaterialInterface.
@@ -52,8 +53,8 @@ namespace UeremcpMaterialNiagaraExport
 		FString& OutError);
 
 	/**
-	 * Convenience: resolve path from Niagara name + role, merge default purpose when missing,
-	 * execute create_vfx_material. Does not mutate Niagara assets.
+	 * Convenience: resolve path from Niagara name + role under TestsContentRoot (automation only).
+	 * POC/fireball inline creates must use ExecuteCreateVfxMaterialForNiagaraSystem.
 	 */
 	UEREMCPMATERIAL_API FUeremcpMaterialCreateResult ExecuteCreateVfxMaterialForNiagaraRole(
 		const FString& NiagaraAssetName,
@@ -61,5 +62,19 @@ namespace UeremcpMaterialNiagaraExport
 		const TSharedPtr<class FJsonObject>& CreateSpec,
 		bool bCompile = true,
 		bool bValidate = true,
-		bool bSave = true);
+		bool bSave = true,
+		bool bDryRun = false);
+
+	/**
+	 * Inline create for a Niagara system package path; MIs co-locate under the system's scratch root.
+	 * Example: /Game/__UeremcpPoc/NS_POCB_Fireball → /Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_<role>
+	 */
+	UEREMCPMATERIAL_API FUeremcpMaterialCreateResult ExecuteCreateVfxMaterialForNiagaraSystem(
+		const FString& NiagaraSystemPackagePath,
+		const FString& Role,
+		const TSharedPtr<class FJsonObject>& CreateSpec,
+		bool bCompile = true,
+		bool bValidate = true,
+		bool bSave = true,
+		bool bDryRun = false);
 }

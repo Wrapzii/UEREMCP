@@ -587,6 +587,65 @@ bool FUeremcpMaterialCreateProceduralTextureFlipbookAtlasTest::RunTest(const FSt
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialNiagaraExportPocSystemPathTest,
+	"UeremcpMaterial.Service.NiagaraExport.PocSystemPath",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialNiagaraExportPocSystemPathTest::RunTest(const FString& Parameters)
+{
+	const FString SystemPath = TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball");
+	const FString ExpectedMi =
+		TEXT("/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_core");
+
+	TestEqual(
+		TEXT("ResolveMaterialInstancePathForNiagaraSystem"),
+		UeremcpMaterialNiagaraExport::ResolveMaterialInstancePathForNiagaraSystem(SystemPath, TEXT("core")),
+		ExpectedMi);
+
+	const TSharedPtr<FJsonObject> CreateSpec = MakeShared<FJsonObject>();
+	CreateSpec->SetStringField(TEXT("element"), TEXT("fire"));
+	CreateSpec->SetStringField(TEXT("purpose"), TEXT("elemental_projectile_core"));
+
+	const FUeremcpMaterialCreateResult DryResult =
+		UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraSystem(
+			SystemPath,
+			TEXT("core"),
+			CreateSpec,
+			true,
+			false,
+			false,
+			true);
+	TestTrue(TEXT("poc system dry_run bSuccess"), DryResult.bSuccess);
+	TestEqual(TEXT("poc system dry_run status"), DryResult.Status, FString(TEXT("no_change_required")));
+	TestEqual(TEXT("poc system dry_run PrimaryAsset"), DryResult.PrimaryAsset, ExpectedMi);
+	TestTrue(
+		TEXT("poc system dry_run mentions poc masters"),
+		DryResult.Summary.Contains(TEXT("/Game/__UeremcpPoc/Materials/Masters/"))
+		|| DryResult.InterpretationNotes.ContainsByPredicate([](const FString& Note)
+		{
+			return Note.Contains(TEXT("/Game/__UeremcpPoc/Materials/Masters/"));
+		}));
+
+	const FUeremcpMaterialCreateResult LegacyResult =
+		UeremcpMaterialNiagaraExport::ExecuteCreateVfxMaterialForNiagaraRole(
+			TEXT("NS_POCB_Fireball"),
+			TEXT("core"),
+			CreateSpec,
+			true,
+			false,
+			false,
+			true);
+	TestTrue(TEXT("legacy role path uses tests root"), LegacyResult.bSuccess);
+	TestTrue(TEXT("legacy dry_run"), LegacyResult.Status == TEXT("no_change_required"));
+	TestEqual(
+		TEXT("legacy PrimaryAsset under __UeremcpTests"),
+		LegacyResult.PrimaryAsset,
+		FString(TEXT("/Game/__UeremcpTests/Materials/MI_NS_POCB_Fireball_core")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpMaterialNiagaraExportServiceTest,
 	"UeremcpMaterial.Service.NiagaraExport.CoreMaterial",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
