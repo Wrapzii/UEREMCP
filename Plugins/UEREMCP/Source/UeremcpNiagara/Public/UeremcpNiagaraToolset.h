@@ -24,7 +24,7 @@ class UEREMCPNIAGARA_API UUeremcpNiagaraToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.1.0-wave2-scaffold"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.2.0-inspect-topology"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.
@@ -35,11 +35,12 @@ public:
 	static FString Echo(const FString& RequestJson);
 
 	/**
-	 * Inspect a Niagara system into graph.schema.json shapes (stub).
+	 * Inspect a Niagara system into graph.schema.json + extensions.niagara.
 	 *
-	 * Wave 2 first slice: validates the envelope, echoes understood fields, and returns
-	 * honest capability_notes / fidelity lossy areas. Does not yet call Epic
-	 * NiagaraToolsets GetSystemSummary / GetEmitterTopology.
+	 * One MCP-facing call composes UNiagaraExternalEditUtilities GetSystemSummary /
+	 * GetEmitterTopology (same surface as Epic NiagaraToolsets) and maps module stacks
+	 * to NiagaraModuleStack / NiagaraEmitterGraph / NiagaraSystemGraph shapes.
+	 * Probes only /Game/__UeremcpTests/. Event handler stacks remain lossy.
 	 *
 	 * @param RequestJson  Request with action inspect_system and target.asset_path set.
 	 */

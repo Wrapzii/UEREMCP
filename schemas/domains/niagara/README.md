@@ -6,7 +6,7 @@
 
 | Action | Specification schema | Status |
 |---|---|---|
-| `inspect_system` | `inspect_system.schema.json` | Wave 2 scaffold (stub) |
+| `inspect_system` | `inspect_system.schema.json` | topology read via UNiagaraExternalEditUtilities |
 | `create_niagara_effect` | `create_niagara_effect.schema.json` | specification only |
 
 Register `inspect_system` in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 when the

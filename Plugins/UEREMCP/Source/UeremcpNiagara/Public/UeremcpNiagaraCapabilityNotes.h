@@ -18,8 +18,8 @@ namespace UeremcpNiagaraCapability
 	inline TArray<FString> DefaultInspectCapabilityNotes()
 	{
 		return {
-			TEXT("inspect_system is a Wave 2 scaffold: Epic NiagaraToolsets topology mapping is not yet wired."),
-			TEXT("event_handler_stacks: GetEmitterTopology omits ParticleEventScript stacks; use extensions.niagara.event_handlers when implemented."),
+			TEXT("inspect_system reads topology via UNiagaraExternalEditUtilities (Epic NiagaraToolsets composition surface)."),
+			TEXT("event_handler_stacks: GetEmitterTopology omits ParticleEventScript stacks; extensions.niagara.event_handlers is not populated."),
 			TEXT("module_reorder_without_readd: no ReorderModule AICallable on NiagaraToolsets; reorder requires remove+re-add or internal MoveModule."),
 			TEXT("script_graph_internals: NiagaraScriptGraph (module/dynamic-input EdGraphs) is out of POC B/C scope."),
 			TEXT("fidelity.round_trip_supported remains false until retrieve -> replace -> retrieve hash stability is proven."),

@@ -1,7 +1,7 @@
 // UEREMCP — Niagara domain module (WS-07).
 //
-// Wave 2 scaffold: thin toolset over Epic NiagaraToolsets + execute_tool_script
-// batching. Primitives stay internal (ADR-0002 rule 5).
+// Inspect/create orchestrator over UNiagaraExternalEditUtilities (Epic NiagaraToolsets
+// composition surface). Primitives stay internal (ADR-0002 rule 5).
 
 using UnrealBuildTool;
 
