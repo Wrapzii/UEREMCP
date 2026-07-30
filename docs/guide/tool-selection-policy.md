@@ -14,14 +14,19 @@ Grounded in [`docs/WHY.md`](../WHY.md) (cost model) and accepted ADRs 0002–000
 
 ## 1. Prefer UEREMCP for create / modify / validate
 
+**START HERE:** `UeremcpCore.UeremcpReferenceToolset.GetStarted` then
+`ResolveIntent` with your plain-text goal. Prefer the returned Ueremcp* tools over
+Epic primitives. Do not begin with a 77-toolset browse unless ResolveIntent abstains.
+
 | Intent class | Prefer | Avoid |
 |---|---|---|
+| Unknown / first call | `GetStarted` → `ResolveIntent` | Blind `list_toolsets` loops |
 | Blueprint complete graph read | `UeremcpBlueprint…ReadGraph` (`action=read_graph`) | Epic `BlueprintTools` pin/node inspect loops |
 | Blueprint graph replace | `…SubmitGraph` (`action=submit_graph`, `mode=replace`) | `create_node` / `connect_pins` / `write_graph_dsl` chains |
 | Niagara create | `UeremcpNiagara…CreateNiagaraEffect` | NiagaraToolsets module primitives |
 | Niagara inspect | `…InspectSystem` | Primitive topology scrapes alone when UEREMCP inspect exists |
 | VFX material | `UeremcpMaterial…CreateVfxMaterial` | MaterialTools expression graphs |
-| Known pattern / multi-asset from library | `UeremcpTemplates…InstantiateTemplate` | Inventing `ExecutePlan` MCP tool |
+| Known pattern / multi-asset from library | `UeremcpTemplates…InstantiateTemplate` | Inventing `ExecutePlan` as first choice |
 | Long job poll / cancel | `UeremcpReference…GetJobResult` / `CancelJob` | Assuming MCP `notifications/cancelled` alone |
 | Niagara pixel evidence | `UeremcpValidation…CaptureEffectFrames` | Screenshot-driven authoring loops |
 
@@ -46,11 +51,17 @@ application is a WS-03 proposal, not a silent global filter.
 ## 3. How to call UEREMCP
 
 ```text
-list_toolsets → describe_toolset(Ueremcp…) → call_tool(
-  toolset_name = "Ueremcp<Domain>.Ueremcp<Domain>Toolset",
-  tool_name    = "PascalCaseMethod",
-  arguments    = { "requestJson": "<envelope JSON string>" }
+GetStarted / ResolveIntent  →  call_tool(
+  toolset_name = <plan[].toolset>,
+  tool_name    = <plan[].tool>,
+  arguments    = { "requestJson": <plan[].request_json as JSON string> }
 )
+```
+
+Fallback discovery (when ResolveIntent abstains):
+
+```text
+list_toolsets → describe_toolset(Ueremcp…) → call_tool(...)
 ```
 
 `Ping` has no arguments. Semantic verb lives in envelope `action`, not only in the

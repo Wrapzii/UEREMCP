@@ -43,14 +43,16 @@
     }
   ],
   "discovery": {
-    "runtime": ["list_toolsets", "describe_toolset", "call_tool"],
+    "runtime": ["GetStarted", "ResolveIntent", "DescribeOperation", "list_toolsets", "describe_toolset", "call_tool"],
+    "start_here": ["UeremcpCore.UeremcpReferenceToolset.GetStarted", "UeremcpCore.UeremcpReferenceToolset.ResolveIntent"],
     "static": [
       "docs/guide/tool-selection-policy.md",
       "docs/guide/tool-selection-contract.json",
       "docs/guide/capability-reference.md",
-      "docs/CAPABILITY_CATALOG.md"
+      "docs/CAPABILITY_CATALOG.md",
+      "docs/TOOL_ROUTER.md"
     ],
-    "invocation_shape": "call_tool(toolset_name, tool_name, arguments={ requestJson: <ADR-0003 envelope string> }) except Ping (no args)"
+    "invocation_shape": "Prefer ResolveIntent first. Then call_tool(toolset_name, tool_name, arguments={ requestJson: <ADR-0003 envelope string> }) except Ping (no args)"
   },
   "required_description_cues": [
     "UEREMCP",
@@ -133,6 +135,45 @@
           "output_status": ["partially_completed", "rolled_back", "rejected", "error"],
           "prefer_for": ["cancel_long_job"],
           "description_cues": ["action=cancel_job", "cooperative"]
+        },
+        {
+          "mcp_tool": "GetStarted",
+          "action": "get_started",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": ["protocol_version", "action"],
+          "validation": "none — bootstrap briefing only",
+          "idempotency": "n/a",
+          "output_status": ["no_change_required", "rejected"],
+          "prefer_for": ["first_call_bootstrap"],
+          "description_cues": ["START HERE", "ResolveIntent"]
+        },
+        {
+          "mcp_tool": "ResolveIntent",
+          "action": "resolve_intent",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": ["protocol_version", "action", "specification.intent"],
+          "validation": "plan names verified against live registry; abstains on hash mismatch",
+          "idempotency": "read-only recommend",
+          "output_status": ["no_change_required", "rejected"],
+          "prefer_for": ["intent_routing", "first_call_plan"],
+          "description_cues": ["plain-text", "ordered plan", "live registry", "abstain"]
+        },
+        {
+          "mcp_tool": "DescribeOperation",
+          "action": "describe_operation",
+          "mutates": false,
+          "destructive": false,
+          "status": "available",
+          "required_fields": ["protocol_version", "action", "specification.tool"],
+          "validation": "rejects names absent from live registry",
+          "idempotency": "read-only",
+          "output_status": ["no_change_required", "rejected"],
+          "prefer_for": ["one_tool_schema"],
+          "description_cues": ["describe_operation", "request_json", "input_schema"]
         }
       ]
     },
