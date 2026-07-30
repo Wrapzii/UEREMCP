@@ -150,7 +150,13 @@ No automatic `CancelAsync` on disconnect.
 | MCP clients (Cursor, etc.) | **Not measured** — editor was not running this session. |
 | Envelope `options.timeout_ms` | UEREMCP-owned; schema describes poll on exceed `[VERIFIED: schemas/envelope/request.schema.json:89]` |
 
-`[VERIFIED-RUNTIME]` **Partial (2026-07-30):** Transport automation + `ProbeEpicTransport` in Cmd sandbox (`TransportAutomation.uproject` + sidecar plugin). Epic MCP module loads; negotiated protocol version non-empty; client endpoint uses `127.0.0.1`. Measured max safe SSE hold time against Cursor still deferred. RE `run_editor_tests.ps1 -KeepUeremcp` blocked by phantom uplugin modules — see `docs/proposals/ws-04-editor-test-harness.md`.
+`[VERIFIED-RUNTIME: 2026-07-30]` Transport automation on **RE shipping harness**
+(`pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Transport"`;
+junction → `UEREMCP-ws01\Plugins\UEREMCP`): **8/8 Success** (5 PASS + 3 SKIP for
+unimplemented JobRegistry). `Probe.EpicMcp` PASS — Epic MCP module loads; negotiated
+protocol version non-empty; client endpoint uses `127.0.0.1`. Log:
+`tests/integration/_logs/editor_UEREMCP_Transport_20260730_010212.log`. Measured max
+safe SSE hold time against Cursor still deferred.
 
 ### B9. Existing async infrastructure
 
@@ -339,10 +345,9 @@ No accepted ADR is contradicted by evidence. ADR-0009 (pending) should adopt the
 - `python Plugins/UEREMCP/Source/UeremcpTransport/scripts/test_transport_constraints.py` — **PASS** `[VERIFIED-RUNTIME: 2026-07-30]`
 - `python tools/validate_schemas.py`
 - `python tools/check_ownership.py --ws WS-04`
-- **C++ automation** (`UEREMCP.Transport.*`) — **8/8 Success** (3 documented SKIP for unimplemented registry APIs) `[VERIFIED-RUNTIME: editor_UEREMCP_Transport_final_20260730.log]`
+- **C++ automation on RE shipping harness** (`UEREMCP.Transport.*`) — **8/8 Success**
+  (5 PASS + 3 SKIP) `[VERIFIED-RUNTIME: editor_UEREMCP_Transport_20260730_010212.log]`
   - PASS: `Handoff.DriftGuard`, `DispatchModel`, `JobState.Invariants`, `JobState.Negative`, `Probe.EpicMcp`
   - SKIP (Success + `SKIP:` info): `JobRegistry.Poll`, `JobRegistry.Cancel`, `Timeout.PartiallyCompleted`
-- `RunUAT BuildPlugin` (Transport-only sandbox) — **Succeeded** `[VERIFIED-RUNTIME: 2026-07-30]`
-- `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Transport"` on RE — **blocked** (see blockers below; used minimal sandbox uproject instead)
-
-C++ module compile via RE junction: **blocked** when `UEREMCP.uplugin` lists modules without sources/DLLs (`UeremcpSecurity`, `UeremcpNiagara`, …). See `docs/proposals/ws-04-editor-test-harness.md`.
+- `RunUAT BuildPlugin` (Transport-only sandbox, pre-orch) — **Succeeded** `[VERIFIED-RUNTIME: 2026-07-30]`
+- `pwsh tests/run_editor_tests.ps1 -KeepUeremcp -NoProbe -Filter "UEREMCP.Transport"` on RE — **PASS** (exit 0; orch junction unblocks prior phantom-module failure)
