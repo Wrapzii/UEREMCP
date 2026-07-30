@@ -88,7 +88,7 @@ namespace
 				Instance, FName(TEXT("ParticleColor")));
 		const float ReadEmissive =
 			UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
-				Instance, FName(TEXT("EmissiveScale"));
+				Instance, FName(TEXT("EmissiveScale")));
 
 		if (!ColorsApproximatelyEqual(ReadColor, Expected.ParticleColor))
 		{
