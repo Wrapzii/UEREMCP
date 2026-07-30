@@ -81,6 +81,22 @@ bool FUeremcpNiagaraInlineMaterialPathCoLocationTest::RunTest(const FString& Par
 			TEXT("/Game/__UeremcpPoc/Materials/MI_Foo.MI_Foo"),
 			TEXT("/Game/__UeremcpPoc/Materials/MI_Foo")));
 
+	TSharedPtr<FJsonObject> TrailCreateSpec = MakeShared<FJsonObject>();
+	TrailCreateSpec->SetStringField(TEXT("purpose"), TEXT("elemental_projectile_trail"));
+	TrailCreateSpec->SetStringField(TEXT("element"), TEXT("fire"));
+	TArray<TSharedPtr<FJsonValue>> TrailFeatures;
+	TrailFeatures.Add(MakeShared<FJsonValueString>(TEXT("panning_textures")));
+	TrailCreateSpec->SetArrayField(TEXT("features"), TrailFeatures);
+	const TSharedPtr<FJsonObject> PreparedTrailSpec =
+		FUeremcpNiagaraMaterialBinding::PrepareInlineCreateSpec(TEXT("ribbon_trail"), TrailCreateSpec);
+	const TSharedPtr<FJsonObject>* TexturesObj = nullptr;
+	TestTrue(
+		TEXT("trail panning merge injects textures"),
+		PreparedTrailSpec.IsValid()
+			&& PreparedTrailSpec->TryGetObjectField(TEXT("textures"), TexturesObj)
+			&& TexturesObj
+			&& (*TexturesObj)->HasField(TEXT("FlowMap")));
+
 	TestTrue(
 		TEXT("json reread accepts package path when expected is object path"),
 		FUeremcpNiagaraMaterialBinding::MaterialMatchesExpectedAfterReread(

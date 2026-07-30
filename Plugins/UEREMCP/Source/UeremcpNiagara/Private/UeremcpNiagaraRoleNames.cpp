@@ -91,6 +91,16 @@ TSharedPtr<FJsonObject> UeremcpNiagaraRoles::BuildDefaultFireballMaterialCreateS
 		Features.Add(MakeShared<FJsonValueString>(TEXT("depth_fade")));
 		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_color")));
 		CreateSpec->SetArrayField(TEXT("features"), Features);
+
+		TSharedPtr<FJsonObject> Textures = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> FlowMap = MakeShared<FJsonObject>();
+		FlowMap->SetStringField(TEXT("generate"), TEXT("flow_map"));
+		TArray<TSharedPtr<FJsonValue>> Dimensions;
+		Dimensions.Add(MakeShared<FJsonValueNumber>(256));
+		Dimensions.Add(MakeShared<FJsonValueNumber>(256));
+		FlowMap->SetArrayField(TEXT("dimensions"), Dimensions);
+		Textures->SetObjectField(TEXT("FlowMap"), FlowMap);
+		CreateSpec->SetObjectField(TEXT("textures"), Textures);
 	}
 	else
 	{

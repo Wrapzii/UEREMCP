@@ -143,6 +143,11 @@ public:
 		EUeremcpNiagaraRendererMaterialKind Kind,
 		const FString& ExpectedCanonicalPath);
 
+	/** Merge role purpose defaults and WS-08-required texture specs into inline create_spec. */
+	static TSharedPtr<FJsonObject> PrepareInlineCreateSpec(
+		const FString& Role,
+		const TSharedPtr<FJsonObject>& CreateSpec);
+
 	static bool ApplyRoleMaterialBindings(
 		UNiagaraSystem* System,
 		const TArray<FString>& EmittersAdded,

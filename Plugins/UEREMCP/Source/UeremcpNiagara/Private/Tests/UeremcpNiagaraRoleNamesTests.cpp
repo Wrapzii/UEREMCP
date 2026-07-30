@@ -78,6 +78,16 @@ bool FUeremcpNiagaraPocBEmitterPlanOfflineTest::RunTest(const FString& Parameter
 	TestTrue(TEXT("core purpose field"), CoreSpec->TryGetStringField(TEXT("purpose"), Purpose));
 	TestEqual(TEXT("core purpose value"), Purpose, FString(TEXT("elemental_projectile_core")));
 
+	const TSharedPtr<FJsonObject> TrailSpec =
+		UeremcpNiagaraRoles::BuildDefaultFireballMaterialCreateSpec(TEXT("ribbon_trail"));
+	TestTrue(TEXT("ribbon_trail create_spec"), TrailSpec.IsValid());
+	const TSharedPtr<FJsonObject>* TrailTextures = nullptr;
+	TestTrue(
+		TEXT("ribbon_trail default FlowMap textures"),
+		TrailSpec->TryGetObjectField(TEXT("textures"), TrailTextures)
+			&& TrailTextures
+			&& (*TrailTextures)->HasField(TEXT("FlowMap")));
+
 	return true;
 }
 

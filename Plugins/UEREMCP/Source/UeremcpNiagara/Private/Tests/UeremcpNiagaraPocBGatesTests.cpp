@@ -75,6 +75,21 @@ bool FUeremcpNiagaraPocBGatesOfflineTest::RunTest(const FString& Parameters)
 		TEXT("hash round trip still skipped"),
 		Gates.ChecksSkipped.Contains(TEXT("niagara.content_hash_round_trip_stability")));
 
+	FUeremcpNiagaraCreateResult PartialMaterials = CreateResult;
+	PartialMaterials.MaterialBindings.bAllRequestedVerified = false;
+	const FUeremcpNiagaraPocBGateResult PartialGates =
+		FUeremcpNiagaraPocBGates::Evaluate(PartialMaterials, &RoundTrip, &Manifest);
+	TestFalse(TEXT("B4 false when one role unverified"), PartialGates.bB4MaterialBindingsVerified);
+	TestFalse(TEXT("B7 renderers bound false when B4 false"), PartialGates.bB7RenderersBound);
+
+	const TSharedPtr<FJsonObject> PartialDiagnostics =
+		FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(PartialGates);
+	bool bPartialB4 = true;
+	TestTrue(
+		TEXT("partial B4 field"),
+		PartialDiagnostics->TryGetBoolField(TEXT("B4_material_bindings_verified"), bPartialB4));
+	TestFalse(TEXT("partial B4 false in diagnostics"), bPartialB4);
+
 	const TSharedPtr<FJsonObject> Diagnostics = FUeremcpNiagaraPocBGates::BuildDiagnosticsObject(Gates);
 	bool bRoundTripSupported = true;
 	TestTrue(TEXT("diagnostics object"), Diagnostics.IsValid());

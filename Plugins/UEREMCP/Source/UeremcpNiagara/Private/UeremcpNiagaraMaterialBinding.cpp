@@ -270,6 +270,28 @@ namespace
 		return nullptr;
 	}
 
+	bool CreateSpecRequestsPanningTextures(const TSharedPtr<FJsonObject>& CreateSpec)
+	{
+		const TArray<TSharedPtr<FJsonValue>>* Features = nullptr;
+		if (!CreateSpec.IsValid()
+			|| !CreateSpec->TryGetArrayField(TEXT("features"), Features)
+			|| !Features)
+		{
+			return false;
+		}
+
+		for (const TSharedPtr<FJsonValue>& FeatureValue : *Features)
+		{
+			FString Feature;
+			if (FeatureValue.IsValid() && FeatureValue->TryGetString(Feature)
+				&& Feature.Equals(TEXT("panning_textures"), ESearchCase::CaseSensitive))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	TSharedPtr<FJsonObject> MergeDefaultPurposeIntoCreateSpec(
 		const FString& Role,
 		const TSharedPtr<FJsonObject>& CreateSpec)
@@ -294,6 +316,38 @@ namespace
 		return Merged;
 	}
 
+	TSharedPtr<FJsonObject> MergeDefaultTrailTexturesIntoCreateSpec(
+		const TSharedPtr<FJsonObject>& CreateSpec)
+	{
+		if (!CreateSpec.IsValid() || CreateSpec->HasField(TEXT("textures")))
+		{
+			return CreateSpec;
+		}
+
+		FString Purpose;
+		if (!CreateSpec->TryGetStringField(TEXT("purpose"), Purpose)
+			|| !Purpose.Equals(TEXT("elemental_projectile_trail"), ESearchCase::CaseSensitive))
+		{
+			return CreateSpec;
+		}
+		if (!CreateSpecRequestsPanningTextures(CreateSpec))
+		{
+			return CreateSpec;
+		}
+
+		TSharedPtr<FJsonObject> Merged = MakeShared<FJsonObject>(*CreateSpec);
+		TSharedPtr<FJsonObject> Textures = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> FlowMap = MakeShared<FJsonObject>();
+		FlowMap->SetStringField(TEXT("generate"), TEXT("flow_map"));
+		TArray<TSharedPtr<FJsonValue>> Dimensions;
+		Dimensions.Add(MakeShared<FJsonValueNumber>(256));
+		Dimensions.Add(MakeShared<FJsonValueNumber>(256));
+		FlowMap->SetArrayField(TEXT("dimensions"), Dimensions);
+		Textures->SetObjectField(TEXT("FlowMap"), FlowMap);
+		Merged->SetObjectField(TEXT("textures"), Textures);
+		return Merged;
+	}
+
 	void CopyMaterialSubManifest(
 		const FUeremcpMaterialCreateResult& MatResult,
 		FUeremcpNiagaraInlineMaterialCreate& InlineRecord)
@@ -302,6 +356,15 @@ namespace
 		InlineRecord.ModifiedAssets = MatResult.ModifiedAssets;
 		InlineRecord.ReusedAssets = MatResult.ReusedAssets;
 	}
+}
+
+TSharedPtr<FJsonObject> FUeremcpNiagaraMaterialBinding::PrepareInlineCreateSpec(
+	const FString& Role,
+	const TSharedPtr<FJsonObject>& CreateSpec)
+{
+	const TSharedPtr<FJsonObject> WithPurpose =
+		MergeDefaultPurposeIntoCreateSpec(Role, CreateSpec);
+	return MergeDefaultTrailTexturesIntoCreateSpec(WithPurpose);
 }
 
 bool FUeremcpNiagaraMaterialBinding::MaterialObjectPathsMatch(
@@ -469,7 +532,7 @@ bool FUeremcpNiagaraMaterialBinding::ResolveMaterialPaths(
 			}
 
 			const TSharedPtr<FJsonObject> EffectiveCreateSpec =
-				MergeDefaultPurposeIntoCreateSpec(Request.Role, Request.CreateSpec);
+				PrepareInlineCreateSpec(Request.Role, Request.CreateSpec);
 
 			FUeremcpNiagaraInlineMaterialCreate InlineRecord;
 			InlineRecord.Role = Request.Role;
@@ -1002,7 +1065,7 @@ bool FUeremcpNiagaraMaterialBinding::ApplyRoleMaterialBindings(
 		}
 	}
 
-	const int32 RolesRequested = RoleToCanonicalMaterialPath.Num();
+	const int32 RolesRequested = Requests.Num();
 	OutResult.bAllRequestedVerified = RolesRequested > 0
 		&& VerifiedRoles.Num() == RolesRequested
 		&& !OutResult.bAnyBindingFailedReread;

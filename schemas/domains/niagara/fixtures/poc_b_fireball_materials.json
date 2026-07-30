@@ -36,7 +36,13 @@
       "create_spec": {
         "purpose": "elemental_projectile_trail",
         "element": "fire",
-        "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"]
+        "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"],
+        "textures": {
+          "FlowMap": {
+            "generate": "flow_map",
+            "dimensions": [256, 256]
+          }
+        }
       }
     },
     "impact_burst": {
