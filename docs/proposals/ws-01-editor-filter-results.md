@@ -1,13 +1,13 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `81d11dc` (`[WS-07] Stop GetSystemDependencies from serializing mesh DI inputs`)
+- **Current orchestration tip:** `825e4f4` (`[WS-07] Skip GetStackIssues on probe inspect to avoid mesh EditCondition LogError`)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
-- **Latest Niagara re-run tip:** `81d11dc`
+- **Latest Niagara re-run tip:** `825e4f4`
 - **Latest Material re-run tip:** `c881742`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Material, Animation, and Niagara Inspect green; Niagara B7 has one remaining `bOverrideMaterials` EditCondition assertion failure. No A6 / POC-B completion claims.
+- **Status:** B7 is PASS on the current tip. Blueprint, Material, Animation, Niagara Create, and Niagara Inspect all have recorded PASS results; Niagara Create/Inspect proofs predate later Niagara changes and are not current-tip re-runs. No A6 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -19,9 +19,23 @@ pwsh -NoProfile -File "tests/run_editor_tests.ps1" -KeepUeremcp -NoProbe -Filter
 ```
 
 The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -NullRHI -nosound` and `Automation RunTests <filter>; Quit`.
+
+## Wave 2 editor evidence summary
+
+| Filter / gate | Recorded result | Proof tip | Freshness / residual |
+|---|---:|---|---|
+| `UeremcpBlueprint.Toolset` | **PASS, 4/4** | `35b4cab` | Blueprint sources unchanged since proof. |
+| `UeremcpMaterial.Toolset` | **PASS, 10/10** | `c881742` | Material sources unchanged since proof. |
+| `UEREMCP.Animation` | **PASS, 10/10** | `5ea9277` | Animation sources unchanged since proof. |
+| `UEREMCP.Niagara.Create` | **PASS, 10/10** | `c234606` | Historical PASS; Niagara sources changed afterward. Current-tip re-run not recorded. |
+| `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `b5b07e1` | Historical PASS; Niagara inspect sources changed afterward. Current-tip re-run not recorded. |
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-tip proof. B7 only; not overall POC-B. |
+
+Residuals: rerun Niagara Create and Inspect on the current lineage if fresh Wave 2 closure is required. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. Templates remain SKIP / unavailable in the recorded baseline. No A6 claim.
+
 ## Blueprint triage re-proof on tip `35b4cab`
 
-`35b4cab` contains integrated fixes `26ce2d6` (hash alignment; original `fc51ad2`) and `2d2f7ef` (SubmitGraph DSL write-intent; original `443c298`). The `UeremcpBlueprint.Toolset` filter was rebuilt and returned PASS 4/4. No Blueprint source changed between `35b4cab` and current tip `98dcfce`.
+`35b4cab` contains integrated fixes `26ce2d6` (hash alignment; original `fc51ad2`) and `2d2f7ef` (SubmitGraph DSL write-intent; original `443c298`). The `UeremcpBlueprint.Toolset` filter was rebuilt and returned PASS 4/4. No Blueprint source changed between `35b4cab` and the current lineage.
 
 | Item | Result | Exact editor evidence |
 |---|---:|---|
@@ -29,6 +43,14 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Revision-hash mismatch / hash alignment | **PASS** | `UeremcpBlueprint.Toolset.ReadGraphRoundTrip`, same log: `Test Completed. Result={Success}` at line 2999. The test asserts graph `content_hash == revision` and summary revision equals complete revision. |
 
 No additional rerun was needed because the exact proof tip remains an ancestor of the current lineage and the Blueprint module/test sources are unchanged since that proof.
+
+## Update on tip `825e4f4` (WS-11 Niagara B7 re-run)
+
+| Filter | Result | Owner | Exact evidence |
+|---|---:|---|---|
+| `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | WS-07 | `tests/integration/_logs/editor_UEREMCP_Niagara_POCB_SixEmitterGateScaffold_20260730_032748.log`: test Success at line 3005; `UEREMCP_POC_B_GATE_OUTCOME=PASS proof=editor_create_reread_honesty` at line 3007; editor exit 0 at line 3013. |
+
+This proves B7 only. It does not prove overall POC-B or A6.
 
 ## Update on tip `81d11dc` (WS-11 Niagara B7 re-run)
 
@@ -45,6 +67,7 @@ Standing by for the next WS-07 fix.
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **FAIL, assertion_failure** | WS-07 | Only remaining failure is the `bOverrideMaterials` EditCondition `LogError`. Prior cleanup ensure, inspect crash, and link failure are resolved. Not a B7 / POC-B completion claim. |
 
 Standing by for the final WS-07 EditCondition fix.
+
 ## Update on tip `eff241c` (WS-11 Niagara B7 re-run)
 
 | Filter | Result | Owner | Notes |
@@ -147,9 +170,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 
 | Owner | Next work |
 |---|---|
-| WS-07 | Fix the sole remaining B7 `bOverrideMaterials` EditCondition `LogError`; cleanup, crash, and link blockers are cleared. |
+| WS-07 | B7 PASS on `825e4f4`; no remaining B7 failure in this filter record. |
 | WS-08 | Material Toolset PASS on `c881742` — no further Material filter work from this triage. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-11 | Re-run B7 after WS-07 fix; keep POC-B claims gated to their own criteria. |
+| WS-11 | If fresh Wave 2 closure is required, re-run Niagara Create and Inspect on the current lineage; keep A6 / overall POC-B claims gated separately. |
 
-Standing by on orch for the next WS-07 B7 EditCondition fix. No junction retarget.
+B7 is green. Niagara Create/Inspect current-tip re-proof remains the only freshness residual in the listed Wave 2 filters. No junction retarget.
