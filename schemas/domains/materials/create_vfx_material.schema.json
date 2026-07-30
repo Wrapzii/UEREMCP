@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/materials/create_vfx_material.schema.json",
+  "title": "create_vfx_material specification",
+  "description": "Goal-level VFX material instance creation from master templates + element presets (ADR-0008). Elemental variants are one parameterized family via element + modifiers, not per-element tools. Epic MaterialTools primitives are internalised — agents submit this specification only. Owned by WS-08.",
+  "type": "object",
+  "required": ["purpose"],
+  "additionalProperties": false,
+  "properties": {
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic role selecting master template and default parameters. Examples: fireball_core, fireball_ribbon_trail, elemental_projectile_core, elemental_projectile_trail, impact_decal, ribbon_trail."
+    },
+    "element": {
+      "type": "string",
+      "description": "Elemental palette for parameterized variation (fire, water, wind, earth, ice, lightning, arcane, custom). Aligns with WS-15 template inputs.element and niagara.create_niagara_effect.element — one family, not per-element actions."
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "VFX material features from master prompt §6. Open-ended tokens; new values extend master wiring, not schema forks. Examples: radial_falloff, animated_noise, fresnel, erosion, depth_fade, distortion, panning_textures, flow_maps, flipbook_subuv, dynamic_color, dynamic_intensity."
+    },
+    "master_template": {
+      "$ref": "../../common/defs.schema.json#/$defs/assetRef",
+      "description": "Override master material path. When omitted, resolved from purpose + element via WS-15 element templates (templates/elements/)."
+    },
+    "instance_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Material instance asset name (without path). Prefer envelope target.asset_path for the full package path."
+    },
+    "folder_path": {
+      "type": "string",
+      "pattern": "^/[A-Za-z0-9_]+/[A-Za-z0-9_./-]*$",
+      "description": "Package folder when envelope target is omitted (e.g. /Game/__UeremcpTests/Materials)."
+    },
+    "parameter_overrides": {
+      "type": "object",
+      "description": "MI scalar/vector/texture overrides applied after element defaults. Keys match master MaterialExpression parameter names.",
+      "additionalProperties": true,
+      "properties": {
+        "ParticleColor": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+        "ColorSecondary": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+        "EmissiveScale": { "type": "number", "minimum": 0 },
+        "SoftEdge": { "type": "number", "minimum": 0 },
+        "DepthFade": { "type": "number", "minimum": 0 },
+        "DistortionStrength": { "type": "number", "minimum": 0 },
+        "FlowSpeed": { "type": "number" },
+        "Turbulence": { "type": "number", "minimum": 0 },
+        "DissolveAmount": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "textures": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+          {
+            "type": "object",
+            "required": ["generate"],
+            "additionalProperties": false,
+            "properties": {
+              "generate": {
+                "type": "string",
+                "enum": ["noise", "gradient", "voronoi", "ring_mask", "flow_map"]
+              },
+              "dimensions": {
+                "type": "array",
+                "items": { "type": "integer", "minimum": 1 },
+                "minItems": 2,
+                "maxItems": 2,
+                "default": [512, 512]
+              }
+            }
+          }
+        ]
+      },
+      "description": "Texture slot bindings: MainTexture, NoiseTexture, FlowMap, MaskTexture. Path or procedural generate spec (delegates to create_procedural_texture when implemented)."
+    },
+    "modifiers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Named WS-15 element modifiers applied after element defaults (e.g. crystalline_fragments, reduce_trail_persistence, boost_impact, preserve_networking). Matches niagara.projectile.elemental.v1 supported_modifiers."
+    },
+    "validate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recompile": {
+          "type": "boolean",
+          "default": true,
+          "description": "Recompile parent material and verify empty error list before reporting created_and_validated."
+        },
+        "preview": {
+          "type": "boolean",
+          "default": false,
+          "description": "Optional lit-plane preview render (REAgentTools capture_workflow pattern)."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "purpose": "fireball_core",
+      "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"],
+      "parameter_overrides": {
+        "ParticleColor": [1.0, 0.12, 0.01, 1.0],
+        "ColorSecondary": [1.0, 0.75, 0.05, 1.0],
+        "EmissiveScale": 8.0
+      }
+    },
+    {
+      "purpose": "elemental_projectile_core",
+      "element": "fire",
+      "features": ["radial_falloff", "animated_noise", "fresnel", "dynamic_color", "dynamic_intensity"],
+      "modifiers": ["boost_impact"]
+    },
+    {
+      "purpose": "elemental_projectile_trail",
+      "element": "ice",
+      "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"],
+      "modifiers": ["crystalline_fragments", "reduce_trail_persistence"],
+      "textures": {
+        "FlowMap": { "generate": "flow_map", "dimensions": [512, 512] }
+      }
+    },
+    {
+      "purpose": "fireball_ribbon_trail",
+      "element": "wind",
+      "features": ["panning_textures", "erosion", "depth_fade", "dynamic_color"],
+      "parameter_overrides": {
+        "FlowSpeed": 1.2,
+        "Turbulence": 0.9
+      }
+    }
+  ]
+}

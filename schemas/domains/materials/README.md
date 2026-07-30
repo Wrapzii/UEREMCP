@@ -1,0 +1,89 @@
+# Materials domain schemas (WS-08)
+
+**Owner:** WS-08. **ADR:** 0004 (material expression graphs map to shared `graph.schema.json` with extensions — proposal pending WS-01).
+
+## Actions
+
+| Action | Specification schema | Status |
+|---|---|---|
+| `create_vfx_material` | `create_vfx_material.schema.json` | Wave 2 scaffold (stub) |
+
+Register `create_vfx_material` in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 when the tool leaves scaffold status.
+
+## Element-parameter model (ADR-0008)
+
+Elemental VFX materials use **one tooling surface** (`create_vfx_material`) with parameterized templates — not per-element tools.
+
+| Layer | Owner | Content |
+|---|---|---|
+| Master materials | WS-08 | Blend/domain/usage; shared MF wiring (6 masters — RB-08 §B8) |
+| Element templates | WS-15 + WS-08 | `element` → default parameter map + texture slots (`templates/elements/`) |
+| Effect instances | Agent request | `create_vfx_material` with `element` + `purpose` + overrides |
+| Niagara binding | WS-07 | Renderer material = MI path; same parameter names (`ParticleColor`, …) |
+
+### WS-15 elemental projectile alignment
+
+`templates/niagara/niagara.projectile.elemental.v1.json` construction_plan delegates to `create_vfx_material` with:
+
+| Plan step | `purpose` | `element` | Typical `features` |
+|---|---|---|---|
+| `core_material` | `elemental_projectile_core` | `{{inputs.element}}` | radial_falloff, animated_noise, fresnel, dynamic_color, dynamic_intensity |
+| `trail_material` | `elemental_projectile_trail` | `{{inputs.element}}` | panning_textures, erosion, depth_fade, dynamic_color |
+
+`modifiers` on this schema match `supported_modifiers` on that template (`crystalline_fragments`, `reduce_trail_persistence`, `boost_impact`, `preserve_networking`).
+
+### Shared semantic parameters (cross-element)
+
+| Parameter | Type | Role |
+|---|---|---|
+| `ParticleColor` | Vector | Niagara convention; primary tint |
+| `ColorSecondary` | Vector | Gradient / core-to-edge |
+| `EmissiveScale` | Scalar | HDR intensity |
+| `SoftEdge` | Scalar | Radial falloff |
+| `DepthFade` | Scalar | Camera fade distance |
+| `DistortionStrength` | Scalar | Refraction/normal offset |
+| `FlowSpeed` | Scalar | Pan / flow map speed |
+| `Turbulence` | Scalar | Noise scale/chaos |
+| `DissolveAmount` | Scalar | Erosion/dissolve |
+
+## Epic tool composition (implementation note)
+
+UEREMCP does **not** re-expose MaterialTools' 29 primitives. Internal batching via `ProgrammaticToolset.execute_tool_script`:
+
+1. `MaterialTools.create_material` / `create_function` (masters only under test paths)
+2. `add_expression`, `connect_expressions`, `connect_to_output`
+3. `MaterialInstanceTools.create`, parameter setters
+4. `recompile` — must succeed before `created_and_validated`
+5. Hide primitives with `SetNameFilters` (ADR-0002)
+
+## Fidelity (honest defaults until round-trip proven)
+
+| Lossy area key | Meaning |
+|---|---|
+| `expression_subclass_properties` | MaterialTools has no expression property setter |
+| `material_function_internals` | Nested MF graphs need separate retrieve |
+| `editor_chrome` | Comments, preview settings, layout beyond x/y |
+
+These keys match `UeremcpMaterialCapabilityNotes.h` and `create_vfx_material` `capability_notes`.
+
+## Known gaps (capability_notes)
+
+| Gap | Severity | Mitigation |
+|---|---|---|
+| MaterialTools omits blend/shading/domain | High | `set_editor_property` on `UMaterial` before recompile |
+| No procedural texture Epic tool | Medium | `create_procedural_texture` semantic op (WS-08) |
+| Element templates not loaded | Medium | WS-15 `templates/elements/` + instantiate path |
+| Substrate shading overrides | Medium | Per-material runtime check in RE project |
+| Graph round-trip unproven | Medium | WS-11 harness under `/Game/__UeremcpTests/` |
+
+Full research: `docs/research/RB-08-materials-and-textures.md`.
+
+## Tests
+
+Runtime probes and created assets: **`/Game/__UeremcpTests/Materials/**` only.
+
+```bash
+python tools/validate_schemas.py
+python schemas/domains/materials/test_specifications.py
+python tools/check_ownership.py --ws WS-08
+```
