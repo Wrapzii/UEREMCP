@@ -1,13 +1,14 @@
 # WS-01 editor automation filter results
 
-- **Current orchestration tip:** `df1cc03` (`[WS-01] Record Niagara Create/Inspect current-tip PASS`)
+- **Current orchestration tip:** `5471eb8` (WS-08 Material package save/path fixes integrated)
 - **Latest Blueprint re-run tip:** `35b4cab`
 - **Latest Animation re-run tip:** `5ea9277`
 - **Latest Niagara re-run tip:** `2384112`
 - **Latest Material re-run tip:** `c881742`
+- **Latest Templates re-run tip:** `b709b65`
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** Wave 2 listed editor filters are green on current-tip or unchanged-source proofs. Niagara Create/Inspect freshness residual is closed on `2384112`. B7 PASS remains on `825e4f4`. No A6 / overall POC-B completion claim.
+- **Status:** Blueprint, Animation, and Niagara listed filters remain green on current-tip or unchanged-source proofs. Material was PASS 10/10 on `c881742`; the later benchmark package save/path fixes are module-build green but have not received a fresh editor filter run in this record. Templates is **FAIL 2/4** on `b709b65`. No A6 / overall POC-B completion claim.
 - **Junction:** Not changed.
 
 ## Invocation
@@ -25,21 +26,21 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | Filter / gate | Recorded result | Proof tip | Freshness / residual |
 |---|---:|---|---|
 | `UeremcpBlueprint.Toolset` | **PASS, 4/4** | `35b4cab` | Blueprint sources unchanged since proof. |
-| `UeremcpMaterial.Toolset` | **PASS, 10/10** | `c881742` | Material sources unchanged since proof. |
+| `UeremcpMaterial.Toolset` | **PASS, 10/10** | `c881742` | Superseded source freshness: WS-08 benchmark package save/path fixes landed and module-build green on `5471eb8`; editor filter not re-run here. |
 | `UEREMCP.Animation` | **PASS, 10/10** | `5ea9277` | Animation sources unchanged since proof. |
 | `UEREMCP.Niagara.Create` | **PASS, 10/10** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.Inspect` | **PASS, 4/4** | `2384112` | Current-tip freshness re-run closed. |
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
-| `UeremcpTemplates.Toolset` | **SKIP / unavailable** | — | Toolset is runtime-registered; editor automation filter is absent. Owner: WS-15. |
+| `UeremcpTemplates.Toolset` | **FAIL, 2/4** | `b709b65` | PASS: Register, Instantiate.Validation. FAIL: Promote.Preview, Search. Owner: WS-15. |
 
-Residuals: the Templates toolset is present, but its editor automation filter is not registered. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
+Residuals: WS-15 is revising the two failing Templates cases. The B7 PASS log retains a non-failing AssetRegistry warning about the deleted probe package being modified on disk. No A6 / overall POC-B claim.
 
-## Templates automation blocker
+## Templates editor result and handoff
 
 - **Owner:** WS-15 owns `Plugins/UEREMCP/Source/UeremcpTemplates/**` (`docs/WORK_ALLOCATION.md`, WS-15 row). WS-11 owns the shared harness and runs domain filters.
-- **Diagnosis:** missing editor automation filter registration, not a missing Templates toolset and not docs-only. `UUeremcpTemplatesToolset` exposes `SearchTemplates`, `InstantiateTemplate`, and `PromoteToTemplate`, and registers at PostEngineInit. Runtime evidence: `editor_UEREMCP_Niagara_Create_20260730_033148.log` lines 2177-2178 show registry registration and `UUeremcpTemplatesToolset registered`.
-- **Code evidence:** no `IMPLEMENT_*_AUTOMATION_TEST` exists under `UeremcpTemplates`; current tests are Python-only under `UeremcpTemplates/Tests/py` and therefore do not create an Unreal editor filter.
-- **Required WS-15 handoff:** add a thin `UeremcpTemplates.Toolset` editor automation suite in the Templates module that verifies toolset registration/schema and exercises existing search, instantiate dry-run/delegation honesty, and promote dry-run operations. No ADR or toolset redesign is needed. WS-11 then runs the registered filter and records the editor result.
+- **Filter landed:** WS-15 commit `1480e7d` is integrated as `b709b65`, registering four `UeremcpTemplates.Toolset` editor tests.
+- **WS-11 result on `b709b65`:** **FAIL 2/4**. `Register` and `Instantiate.Validation` passed. `Promote.Preview` failed because the operation returned `failed_validation` where the test expected `partially_completed`. `Search` failed because the seeded projectile template was missing from results.
+- **Required WS-15 handoff:** revise the Search fixture/expectation and Promote.Preview status expectation or implementation, then return a new commit for module build and WS-11 editor re-proof. Templates is not green until that re-run passes.
 
 WS-01 did not edit WS-15-owned implementation paths.
 
@@ -190,8 +191,9 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | Owner | Next work |
 |---|---|
 | WS-07 | B7 PASS on `825e4f4`; no remaining B7 failure in this filter record. |
-| WS-08 | Material Toolset PASS on `c881742` — no further Material filter work from this triage. |
+| WS-08 | Material Toolset PASS on `c881742`; benchmark package save/path fixes integrated and module-build green on `5471eb8`. Fresh editor filter proof is not recorded after those source changes. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
 | WS-11 | Create/Inspect freshness closed on `2384112`; keep A6 / overall POC-B claims gated separately. |
+| WS-15 | Fix Templates `Search` and `Promote.Preview`, then return for WS-11 re-proof; current result is FAIL 2/4 on `b709b65`. |
 
-Wave 2 registered editor filters are green. Remaining handoff: WS-15 must add the missing Templates editor automation filter; A6 / overall POC-B remain separate criteria. No junction retarget.
+Templates is not green: its registered editor filter is FAIL 2/4 on `b709b65`, pending WS-15 revision. Material benchmark fixes are module-build green but do not yet have a fresh editor filter result in this record. A6 / overall POC-B remain separate criteria. No junction retarget.
