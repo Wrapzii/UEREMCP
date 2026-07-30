@@ -33,8 +33,7 @@ criteria, risk register, plugin scaffold. Frozen.
 
 **Original exit condition:** R-01, R-03, R-04, R-06 **closed**.
 
-**Actual exit (2026-07-30):** architecture de-risk complete with three gates **mitigated**
-and one **closed**. Wave 2 implementation is authorized; first kick is WS-06 P0
+**Actual exit (2026-07-30):** architecture de-risk complete with two gates **mitigated**, two **closed** (R-04, R-06 schema-matrix). Wave 2 implementation is authorized; first kick is WS-06 P0
 (`docs/proposals/ws-06-p0-authorized.md`).
 
 | Gate | Phase 1 verdict | Evidence |
@@ -42,7 +41,7 @@ and one **closed**. Wave 2 implementation is authorized; first kick is WS-06 P0
 | R-04 | **Closed** | MCP Ping/Echo on RE `[VERIFIED-RUNTIME: 127.0.0.1:8000, 2026-07-30]` |
 | R-03 | **Mitigated** | Shipping Validation Rollback Content/ full-Discard green on RE |
 | R-01 | **Mitigated** | RB-05: public-API reconstruction tractable (Epic DSL + primitives); scratch BP DSL round-trip `[VERIFIED-RUNTIME: RB-05 visualtest]`—**not** `graph.schema.json`/`content_hash`. Residual: envelope bridge = POC A (Wave 2) |
-| R-06 | **Mitigated** | Source audit complete; 73 `list_toolsets` + 12 priority `describe_toolset` dumps on RE; disposition matrix schema-complete for cited toolsets. Residual: ~61 non-priority dumps, REAgentTools 15 runtime schemas, payload calibration |
+| R-06 | **Closed** | 73/73 `describe_toolset` dumps, 938 tools on RE 2026-07-30 (`8cea492`); `epic-toolsets.md` / `reagenttools.md` `runtime_complete`. Follow-ons: payload calibration, async classification, cutover bar, RECapture GIF helpers |
 
 **Why mitigated suffices for R-01:** Phase 1 was to answer whether the central thesis
 can hold — not to ship POC A. RB-05 answers the thesis risk ("cannot reconstruct via
@@ -50,16 +49,12 @@ public API") **no**: Epic `BlueprintTools` + `write_graph_dsl` reconstruct a lar
 well-defined subset today. The UEREMCP gap is envelope + stable IDs/hashes/verification
 over that substrate, which is exactly POC A scope.
 
-**Why mitigated suffices for R-06:** Rule 2 ("audit before you build") is operational:
-`docs/audit/epic-toolsets.md` dispositions every priority domain toolset with source +
-runtime schema evidence for the 12 toolsets the matrix cites. Dumping all 73
-`describe_toolset` payloads is enrichment for payload calibration, not a duplicate-check
-gate.
+**R-06 closed (schema-matrix):** Rule 2 ("audit before you build") is operational with full runtime backing: every toolset in `list_toolsets` has a `describe_toolset` dump under `docs/audit/raw/schemas/` (73/73, 938 tools, `8cea492`). Residual payload/async/cutover items are follow-ons, not duplicate-check gates.
 
 | Deliverable | WS | Status |
 |---|---|---|
 | Compiling plugin, one `AICallable` tool reachable from an MCP client | WS-03 | **Done** — R-04 closed |
-| Epic toolset inventory — the "do not rebuild" list | WS-02 | **Done (mitigated)** — R-06 mitigated; enrichment tracked in `docs/audit/epic-toolsets.md` |
+| Epic toolset inventory — the "do not rebuild" list | WS-02 | **Done** — R-06 closed; runtime matrix in `docs/audit/raw/schemas/` |
 | `FileSandbox` semantics; `Rollback.MultiAssetDiscard` | WS-11 | **Done (mitigated)** — R-03 mitigated |
 | Blueprint graph **read** into `graph.schema.json` | WS-06 | **Research done** — RB-05; impl deferred to POC A (Wave 2) |
 | Envelope parse/serialise/validate in C++ | WS-05 | **Done** — `ws-05-protocol` |

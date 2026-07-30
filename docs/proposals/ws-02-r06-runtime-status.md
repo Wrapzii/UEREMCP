@@ -79,11 +79,9 @@ None for closing R-06 schema-matrix scope. MCP reachable via `user-unreal-mcp` /
 **Date:** 2026-07-30  
 **Decision (supersedes prior mitigate-only response):** **R-06 closed** for schema-matrix scope.
 
-Integrated 8cea492 on ws-01-orch (no-ff). Evidence: 73/73 describe_toolset dumps +
-938 tools on RE 2026-07-30 (8cea492). epic-toolsets.md / 
-eagenttools.md at
-
-untime_complete.
+Integrated `8cea492` on `ws-01-orch` (no-ff). Evidence: 73/73 `describe_toolset` dumps +
+938 tools on RE 2026-07-30 (`8cea492`). `epic-toolsets.md` / `reagenttools.md` at
+`runtime_complete`.
 
 **Residuals (follow-ons, not gate):** payload calibration, async classification,
 REAgentTools cutover bar, RECapture GIF helpers unregistered.
