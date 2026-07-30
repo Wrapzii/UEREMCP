@@ -19,7 +19,9 @@ Editor gates already PASS on `8a8c75d`:
 
 ## WS-07 fix (2026-07-30)
 
-**`AwaitCompile` MCP crash:** `ProcessThreadUntilIdle(GameThread)` during synchronous MCP/toolset dispatch re-entered the game thread and corrupted Niagara hybrid `ActiveCompilations` (null `AsyncTaskRequest` TSharedPtr → `SharedPointer.h` IsValid assert at `UeremcpNiagaraCreate.cpp:589`). Fix: poll-only compile wait (`PollForCompilationComplete` + ticker/asset-compiler pump); no `WaitForCompilationComplete` / no GT task drain.
+**`AwaitCompile` MCP crash (132bb54 insufficient):** Poll-only still called `PollForCompilationComplete` → `QueryCompileComplete`, which dereferences `ActiveCompilations[0]` on hybrid verify compilations and crashes with SharedPointer IsValid during synchronous MCP HTTP tool dispatch (RE.log 11:10:29, line 593).
+
+**Follow-up:** On live tool dispatch (`!GIsAutomationTesting`), `RequestCompile` only — no `QueryCompileComplete` poll. Compile state read via `GetSystemCompileState`; `checks_skipped` includes `niagara.compile_await_deferred_tool_dispatch`. Editor automation retains bounded poll.
 
 WS-11: rerun one-call MCP fireball after orch rebuild.
 

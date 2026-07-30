@@ -20,7 +20,6 @@
 #include "Misc/AutomationTest.h"
 #include "Containers/Ticker.h"
 #include "AssetCompilingManager.h"
-#include "HAL/PlatformProcess.h"
 #include "UObject/SavePackage.h"
 #include "UObject/SoftObjectPath.h"
 
@@ -177,6 +176,12 @@ namespace
 		// Niagara hybrid ActiveCompilations (null AsyncTaskRequest TSharedPtr -> SharedPointer IsValid assert).
 	}
 
+	bool IsLiveToolDispatchContext()
+	{
+		// Automation filters set GIsAutomationTesting; synchronous MCP HTTP tool calls do not.
+		return !GIsAutomationTesting;
+	}
+
 	bool AwaitCompile(
 		UNiagaraSystem* System,
 		FNiagaraExternalEditContext& Context,
@@ -196,34 +201,35 @@ namespace
 
 		System->RequestCompile(false);
 
-		// Bounded wait using public non-reentrant poll APIs (NiagaraDumpBytecodeCommandlet pattern).
-		// WaitForCompilationComplete -> QueryCompileComplete(true) plus ProcessThreadUntilIdle reentry
-		// crashes MCP-dispatched create_niagara_effect after inline material saves.
-		const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
-		while (FPlatformTime::Seconds() < Deadline)
+		// Live MCP/toolset dispatch must NOT call PollForCompilationComplete / QueryCompileComplete.
+		// [VERIFIED: Engine/Plugins/FX/Niagara/Source/Niagara/Private/NiagaraSystem.cpp:3532-3548]
+		// QueryCompileComplete dereferences ActiveCompilations[0]; hybrid verify compilations crash with
+		// SharedPointer IsValid when invoked synchronously inside ModelContextProtocol tool handlers
+		// (RE.log 2026-07-30 11:10:29, NS_POCB_Fireball after inline material saves).
+		// Editor automation (GIsAutomationTesting) retains a bounded poll loop.
+		if (!IsLiveToolDispatchContext())
 		{
-			if (!System->HasActiveCompilations()
-				&& !System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
+			const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
+			while (FPlatformTime::Seconds() < Deadline)
 			{
+				if (!System->HasActiveCompilations()
+					&& !System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
+				{
+					break;
+				}
+
+				PumpNiagaraCompileWait(/*bLimitExecutionTime=*/false);
+				System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
+
+				if (!System->HasActiveCompilations()
+					&& !System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
+				{
+					break;
+				}
+
+				// One poll pass — editor automation must not block on full VM compile drain.
 				break;
 			}
-
-			PumpNiagaraCompileWait(/*bLimitExecutionTime=*/false);
-			System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
-
-			if (!System->HasActiveCompilations()
-				&& !System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
-			{
-				break;
-			}
-
-			if (GIsAutomationTesting)
-			{
-				// Editor automation must not block on full VM compile drain; one poll pass matches prior behavior.
-				break;
-			}
-
-			FPlatformProcess::Sleep(0.01f);
 		}
 
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
@@ -598,6 +604,11 @@ bool FUeremcpNiagaraCreate::Run(
 			|| CompileState.AggregateStatus == ENiagaraExt_ScriptCompileStatus::UpToDateWithWarnings;
 
 		OutResult.bCompiled = bAwaited && !CompileState.bHasErrors && bUpToDate;
+
+		if (!GIsAutomationTesting)
+		{
+			OutResult.ChecksSkipped.Add(TEXT("niagara.compile_await_deferred_tool_dispatch"));
+		}
 
 		if (CompileState.bHasErrors)
 		{
