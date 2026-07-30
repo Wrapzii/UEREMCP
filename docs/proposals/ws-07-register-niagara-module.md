@@ -3,7 +3,7 @@
 - **From:** WS-07
 - **To:** WS-03
 - **Date:** 2026-07-30
-- **Status:** requested (Wave 2 scaffold landed)
+- **Status:** accepted (WS-01, 2026-07-30)
 
 ## Ask
 
@@ -54,3 +54,22 @@ Apply `SetNameFilters` to hide internal NiagaraToolsets primitives once batching
 
 Until this lands, the Niagara module **will not compile in the RE project** when copied
 into `Plugins/UEREMCP` — Unreal only builds modules listed in `.uplugin`.
+
+---
+
+## WS-01 response
+
+- **Date:** 2026-07-30
+- **Status:** **Accepted**
+
+WS-03: register `UeremcpNiagara` in `Plugins/UEREMCP/UEREMCP.uplugin` after Wave 2 module
+sources are on `ws-01-orch` (merge `c2ee78a` integrated). Module entry:
+
+- **Name:** `UeremcpNiagara`
+- **Type:** Editor (EditorOnly / `TargetAllowList`: Editor)
+- **LoadingPhase:** `Default`
+- **Depends:** `ToolsetRegistry` (via `UeremcpNiagara.Build.cs` private deps; same pattern as other domain toolsets)
+
+Do not add a duplicate `UeremcpEnvelope` / Protocol shim — `UeremcpProtocol` already ships
+`UeremcpEnvelope.cpp` on orchestration; WS-07 stale note on missing `.cpp` is not actionable.
+

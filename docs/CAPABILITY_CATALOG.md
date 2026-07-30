@@ -65,7 +65,8 @@ that must land first.
 
 | Action | Domain | WS | Status | Brief |
 |---|---|---|---|---|
-| `create_niagara_effect` | niagara | WS-07 | research | RB-07 |
+| `inspect_system` | niagara | WS-07 | partial | RB-07 — schema + `InspectSystem` stub; full read path TBD |
+| `create_niagara_effect` | niagara | WS-07 | partial | RB-07 — specification schema landed; authoring not verified |
 | `create_niagara_template` | niagara | WS-07 | research | RB-07, RB-10 |
 | `create_effect_variation` | niagara | WS-07 | research | RB-07, RB-10 |
 
