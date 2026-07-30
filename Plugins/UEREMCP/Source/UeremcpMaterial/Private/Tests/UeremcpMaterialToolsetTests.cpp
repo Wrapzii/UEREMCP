@@ -199,6 +199,36 @@ namespace UeremcpMaterialTests
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialSplitPackagePathTest,
+	"UeremcpMaterial.Toolset.Paths.SplitPackagePath",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpMaterialSplitPackagePathTest::RunTest(const FString& Parameters)
+{
+	FString Folder;
+	FString AssetName;
+	TestTrue(
+		TEXT("package path splits"),
+		UeremcpMaterialPaths::SplitPackagePath(
+			TEXT("/Game/__UeremcpTests/Materials/MI_Ice_Core_Benchmark"),
+			Folder,
+			AssetName));
+	TestEqual(
+		TEXT("folder excludes asset name"),
+		Folder,
+		FString(TEXT("/Game/__UeremcpTests/Materials")));
+	TestEqual(
+		TEXT("asset name is final segment"),
+		AssetName,
+		FString(TEXT("MI_Ice_Core_Benchmark")));
+	TestEqual(
+		TEXT("split joins to original package path"),
+		UeremcpMaterialPaths::JoinPackagePath(Folder, AssetName),
+		FString(TEXT("/Game/__UeremcpTests/Materials/MI_Ice_Core_Benchmark")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpMaterialToolsetEchoTest,
 	"UeremcpMaterial.Toolset.Echo",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)

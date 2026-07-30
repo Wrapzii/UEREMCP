@@ -16,19 +16,24 @@ bool UeremcpMaterialPaths::SplitPackagePath(const FString& SoftPackagePath, FStr
 		return false;
 	}
 
-	FString Path = SoftPackagePath;
+	FString Folder;
 	FString AssetName;
-	if (!Path.Split(TEXT("/"), nullptr, &AssetName, ESearchCase::CaseSensitive, ESearchDir::FromEnd))
+	if (!SoftPackagePath.Split(
+		TEXT("/"),
+		&Folder,
+		&AssetName,
+		ESearchCase::CaseSensitive,
+		ESearchDir::FromEnd))
 	{
 		return false;
 	}
 
-	if (AssetName.IsEmpty())
+	if (Folder.IsEmpty() || AssetName.IsEmpty())
 	{
 		return false;
 	}
 
-	OutFolder = Path;
+	OutFolder = Folder;
 	OutAssetName = AssetName;
 	return true;
 }
