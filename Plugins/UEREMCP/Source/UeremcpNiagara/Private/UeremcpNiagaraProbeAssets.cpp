@@ -69,6 +69,6 @@ bool UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath(const FString& AssetPath,
 		return false;
 	}
 
-	CollectGarbage(GARBAGE_COLLECTION_KEEP_FLAGS);
+	CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
 	return true;
 }
