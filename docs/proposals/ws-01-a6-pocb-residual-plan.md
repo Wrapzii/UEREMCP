@@ -1,8 +1,8 @@
 # WS-01 residual plan — A6 and overall POC-B
 
-- **Orch tip at writing:** `809f863` (WS-06 BlueprintTools bootstrap; residual commit follows)
+- **Orch tip at writing:** `931f41a` (WS-11 stable editor-log parsing)
 - **Date:** 2026-07-30
-- **Status:** The stale ProjTrail master verify/rebuild fix landed as `7a417bb` (`dbb3638`); the BlueprintTools / PythonScriptPlugin bootstrap landed as `809f863` (`9c51b47`). Material and Blueprint modules rebuild successfully after an orch include fix. **WS-11 next:** re-run fireball, re-run A5 CRT, and run B8 Create → restart → Verify. No B8 / overall POC-A / overall POC-B claim.
+- **Status:** Stable `UEREMCP_EDITOR_LOG=` parsing landed as `931f41a` (`ff6c69b`). The stale ProjTrail fix remains at `7a417bb`, and BlueprintTools bootstrap at `809f863`; Material and Blueprint rebuilt successfully. **WS-11 next:** re-run fireball, re-run A5 CRT, and run B8 Create → restart → Verify. No B8 / overall POC-A / overall POC-B claim.
 
 Sources: `docs/POC_ACCEPTANCE.md`, `docs/WORK_ALLOCATION.md`, `docs/proposals/ws-01-editor-filter-results.md`.
 
@@ -119,7 +119,7 @@ Recorded Wave 2 evidence that is **in scope but insufficient for overall POC-B**
 | Honest master-only partial failure | `a73bef7` (`6b1b4a0`) | Fails honestly when primary MI is absent |
 | FlowMap defaults + all-requested B4 honesty | `13412dd` (`799fc94`) | Injects trail FlowMap and requires every requested role; B2/B4 editor gate PASS on `a6ca454` |
 | B1 / B8-save / B9 / `emitter_added` gate scaffolding | `0e79641` (`501aff6`) | Surfaces gates + B8 restart handoff; **not** overall POC-B; WS-11 must assert/restart |
-| B8 Restart.Create/Verify filters | `163b272` (`5c6422f`) | Filters + handoff fixture landed; scenario orchestration/restart proof still required |
+| B8 Restart.Create/Verify filters | `163b272` (`5c6422f`) | Filters + handoff fixture landed; stable log parsing `931f41a` landed; restart proof still required |
 | Expanded fireball B-gate assertions | `3b39dd3` (`0474e4e`) | Filter asserts B1/B3/B5/B6/B9 fields; runtime proof pending; ribbon_trail regression under diagnosis |
 | Stale ProjTrail master verify/rebuild | `7a417bb` (`dbb3638`) | Ribbon-trail regression fix landed; Material rebuilt; fireball runtime re-run required |
 | `UeremcpMaterial.Toolset` PASS 11/11 + live VisualTest MCP T1a | `7535e6c` | Disk-save / validate:false honesty |
