@@ -36,8 +36,11 @@ private:
 	static TSharedPtr<FJsonObject> MaterializePlan(
 		const FUeremcpTemplateRecord& Record,
 		const TSharedPtr<FJsonObject>& Inputs,
+		const TSharedPtr<FJsonObject>& Modifiers,
 		const FString& TargetAssetPath,
 		const FString& Mode,
+		TArray<FString>& OutExpectedValidationChecks,
+		TArray<FString>& OutNonExecutableValidationChecks,
 		FString& OutError);
 
 	FUeremcpTemplateStore& Store;

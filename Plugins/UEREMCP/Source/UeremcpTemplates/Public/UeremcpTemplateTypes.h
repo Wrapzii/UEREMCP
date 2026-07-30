@@ -70,10 +70,11 @@ struct UEREMCPTEMPLATES_API FUeremcpTemplateInstantiateRequest
 struct UEREMCPTEMPLATES_API FUeremcpTemplateInstantiateResult
 {
 	bool bSuccess = false;
-	bool bHasTemplateValidationRules = false;
 	FString Summary;
 	FString Status;
 	TArray<FString> CapabilityNotes;
+	TArray<FString> ExpectedValidationChecks;
+	TArray<FString> NonExecutableValidationChecks;
 	TSharedPtr<FJsonObject> MaterializedPlan;
 };
 

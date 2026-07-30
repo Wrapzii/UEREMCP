@@ -45,7 +45,8 @@ class InstantiateResult:
     summary: str
     plan: dict[str, Any] | None = None
     capability_notes: list[str] | None = None
-    has_template_validation_rules: bool = False
+    expected_validation_checks: list[str] | None = None
+    non_executable_validation_checks: list[str] | None = None
 
 
 @dataclass
@@ -109,31 +110,6 @@ class TemplateService:
                 summary=f"Unknown template_id '{request.template_id}'.",
             )
 
-        if request.modifiers:
-            for bucket in ("replace", "adjust", "add", "preserve"):
-                for modifier in request.modifiers.get(bucket, []):
-                    if modifier not in record.supported_modifiers:
-                        return InstantiateResult(
-                            success=False,
-                            status="failed_validation",
-                            summary=(
-                                f"Unsupported modifier '{modifier}' for template "
-                                f"'{request.template_id}'."
-                            ),
-                        )
-                    return InstantiateResult(
-                        success=False,
-                        status="failed_validation",
-                        summary=(
-                            f"Modifier '{modifier}' is declared but has no executable "
-                            "delta in the frozen template schema."
-                        ),
-                        capability_notes=[
-                            "Named modifier execution is blocked until "
-                            "template.schema.json can represent modifier deltas."
-                        ],
-                    )
-
         plan_steps = record.document.get("construction_plan")
         if not isinstance(plan_steps, list):
             return InstantiateResult(
@@ -185,6 +161,19 @@ class TemplateService:
             )
 
         materialized = _apply_inputs(plan_steps, effective_inputs)
+        modifier_error, modifier_validations = _apply_modifiers(
+            materialized,
+            record,
+            request.modifiers or {},
+            effective_inputs,
+        )
+        if modifier_error:
+            return InstantiateResult(
+                success=False,
+                status="failed_validation",
+                summary=modifier_error,
+            )
+
         for operation in materialized:
             operation_id = operation.get("id")
             operation_target = effective_inputs.get(f"{operation_id}_path")
@@ -196,6 +185,26 @@ class TemplateService:
                 terminal["target"] = {"asset_path": effective_target_path}
             if request.mode:
                 terminal["mode"] = request.mode
+
+        materialized.extend(modifier_validations)
+        expected_checks: list[str] = []
+        non_executable_checks: list[str] = []
+        for rule in record.document.get("validation_rules", []):
+            check_id = f"template.{record.template_id}.{rule['rule_id']}"
+            operation = rule.get("operation")
+            if isinstance(operation, dict):
+                materialized.append(_apply_inputs(operation, effective_inputs))
+                expected_checks.append(check_id)
+            else:
+                non_executable_checks.append(check_id)
+        graph_error = _validate_operation_graph(materialized)
+        if graph_error:
+            return InstantiateResult(
+                success=False,
+                status="failed_validation",
+                summary=graph_error,
+            )
+
         plan = {
             "transaction": {
                 "atomic": True,
@@ -212,7 +221,8 @@ class TemplateService:
             status="partially_completed",
             summary=f"Materialized an execute_plan specification for '{request.template_id}'.",
             plan=plan,
-            has_template_validation_rules=bool(record.document.get("validation_rules")),
+            expected_validation_checks=expected_checks,
+            non_executable_validation_checks=non_executable_checks,
         )
 
     def plan_promotion(self, request: PromotionRequest) -> PromotionResult:
@@ -343,6 +353,119 @@ def _apply_inputs(value: Any, inputs: dict[str, Any]) -> Any:
     return value
 
 
+def _merge_patch(target: dict[str, Any], patch: dict[str, Any]) -> None:
+    for key, value in patch.items():
+        if value is None:
+            target.pop(key, None)
+        elif isinstance(value, dict):
+            child = target.get(key)
+            if not isinstance(child, dict):
+                child = {}
+            else:
+                child = copy.deepcopy(child)
+            _merge_patch(child, value)
+            target[key] = child
+        else:
+            target[key] = copy.deepcopy(value)
+
+
+def _apply_modifiers(
+    operations: list[dict[str, Any]],
+    record: TemplateRecord,
+    requested: dict[str, list[str]],
+    inputs: dict[str, Any],
+) -> tuple[str, list[dict[str, Any]]]:
+    definitions = record.document.get("modifier_definitions", {})
+    seen: set[str] = set()
+    validation_operations: list[dict[str, Any]] = []
+
+    def find_operation(operation_id: str) -> dict[str, Any] | None:
+        return next(
+            (operation for operation in operations if operation.get("id") == operation_id),
+            None,
+        )
+
+    for bucket in ("replace", "adjust", "add", "preserve"):
+        for modifier in requested.get(bucket, []):
+            if modifier in seen:
+                return f"Modifier '{modifier}' was requested more than once.", []
+            seen.add(modifier)
+            if modifier not in record.supported_modifiers:
+                return (
+                    f"Unsupported modifier '{modifier}' for template "
+                    f"'{record.template_id}'."
+                ), []
+            definition = definitions.get(modifier)
+            if not isinstance(definition, dict):
+                return f"Modifier '{modifier}' is declared but has no executable delta.", []
+            if definition.get("bucket") != bucket:
+                return (
+                    f"Modifier '{modifier}' belongs to bucket "
+                    f"'{definition.get('bucket', '')}', not '{bucket}'."
+                ), []
+
+            for operation_id, replacement in definition.get(
+                "replace_operations", {}
+            ).items():
+                existing = find_operation(operation_id)
+                if existing is None:
+                    return (
+                        f"Modifier '{modifier}' replaces unknown operation "
+                        f"'{operation_id}'."
+                    ), []
+                materialized_replacement = _apply_inputs(replacement, inputs)
+                if materialized_replacement.get("id") != operation_id:
+                    return (
+                        f"Modifier '{modifier}' replacement must preserve operation "
+                        f"id '{operation_id}'."
+                    ), []
+                operations[operations.index(existing)] = materialized_replacement
+
+            for operation_id, patch in definition.get(
+                "merge_specifications", {}
+            ).items():
+                operation = find_operation(operation_id)
+                if operation is None:
+                    return (
+                        f"Modifier '{modifier}' patches unknown operation "
+                        f"'{operation_id}'."
+                    ), []
+                specification = copy.deepcopy(operation.get("specification", {}))
+                _merge_patch(specification, _apply_inputs(patch, inputs))
+                operation["specification"] = specification
+
+            operations.extend(
+                _apply_inputs(definition.get("append_operations", []), inputs)
+            )
+            validation_operations.extend(
+                _apply_inputs(definition.get("validation_operations", []), inputs)
+            )
+
+    return "", validation_operations
+
+
+def _validate_operation_graph(operations: list[dict[str, Any]]) -> str:
+    ids: set[str] = set()
+    for operation in operations:
+        operation_id = operation.get("id")
+        action = operation.get("action")
+        if not isinstance(operation_id, str) or not operation_id or not isinstance(
+            action, str
+        ) or not action:
+            return "Materialized plan operation requires non-empty id and action."
+        if operation_id in ids:
+            return f"Duplicate materialized operation id '{operation_id}'."
+        ids.add(operation_id)
+    for operation in operations:
+        for dependency in operation.get("depends_on", []):
+            if dependency not in ids:
+                return (
+                    f"Operation '{operation['id']}' depends on unknown operation "
+                    f"'{dependency}'."
+                )
+    return ""
+
+
 def _validate_inputs(schema: Any, inputs: dict[str, Any]) -> str:
     if not isinstance(schema, dict):
         return ""
@@ -453,7 +576,15 @@ def delegate_execute_plan(
     if request.target_asset_path:
         understood["resolved_target"] = request.target_asset_path
 
-    if materialized.has_template_validation_rules:
+    validation = response.setdefault("validation", {})
+    performed = set(validation.get("checks_performed", []))
+    missing_checks = list(materialized.non_executable_validation_checks or [])
+    missing_checks.extend(
+        check
+        for check in materialized.expected_validation_checks or []
+        if check not in performed
+    )
+    if missing_checks:
         if response["status"] in {
             "created_and_validated",
             "modified_and_validated",
@@ -462,10 +593,8 @@ def delegate_execute_plan(
         }:
             response["status"] = "partially_completed"
         response.setdefault("capability_notes", []).append(
-            "Template validation_rules were not executed: execute_plan has no "
-            "registered template-rule post-step contract."
+            "One or more template validation rules lacked re-read evidence; "
+            "validated status was withheld."
         )
-        response.setdefault("validation", {}).setdefault("checks_skipped", []).append(
-            "template.validation_rules"
-        )
+        validation.setdefault("checks_skipped", []).extend(missing_checks)
     return response

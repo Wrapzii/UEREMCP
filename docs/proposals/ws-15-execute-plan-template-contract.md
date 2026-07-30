@@ -31,28 +31,17 @@ As of the current Templates tree:
   UeremcpPlanTransactionCoordinator.cpp:35-42]`.
 - When the delegate is unbound, Instantiate returns an honest
   `partially_completed` / unverified response and states that no asset operation ran.
-- When the delegate returns a domain `*_validated` result but template
-  `validation_rules` could not run, Templates downgrades to `partially_completed`
-  and lists `template.validation_rules` under `validation.checks_skipped`.
+- Executable `validation_rules[].operation` steps are appended to the same plan.
+  Templates preserves a validated domain status only when every exact
+  `template.<template_id>.<rule_id>` appears in `validation.checks_performed`;
+  missing evidence and check-only rules downgrade to `partially_completed`.
 
 Promotion contract details live in `ws-15-promotion-gate-handoffs.md`.
 
-Two frozen-schema gaps prevent an honest validated status:
-
-1. `template.schema.json` names `supported_modifiers` but has no field that defines
-   the executable delta for a named modifier. Treating a name as applied without a
-   delta silently does nothing.
-2. `template.schema.json` defines `validation_rules`, but `plan.schema.json` has no
-   post-validation rule collection or registered validation operation contract.
-   WS-15 cannot append those rules without producing a plan that fails the accepted
-   batch schema.
-
-WS-05 commit `1ef125d` now proposes an executable residual contract:
-`modifier_definitions` materialize deterministic operation replacements/merges/
-appends, while validation rules gain normal semantic `operation` steps and evidence
-IDs. This is a proposal only. WS-15 does not expand or pre-implement the frozen
-schema; the current fail-closed behavior remains authoritative until WS-01 accepts
-a schema shape.
+WS-01 accepted the WS-05 `1ef125d` residual contract in `4eedd86`. WS-15 now
+materializes deterministic operation replacements, RFC 7396 specification merges,
+appended construction/validation operations, and template validation operations.
+Declaration-only modifiers and check-only rules remain deliberately non-executable.
 
 `promote_to_template` additionally requires a domain-neutral complete-state retrieval
 and a schema-valid way to express the resulting construction plan. No such dispatcher
@@ -64,8 +53,8 @@ contract exists in WS-15-owned paths.
 
 1. **Landed:** fail-closed `FUeremcpPlanExecutor` interpreter.
 2. **Landed in WS-15:** startup delegate binding and shutdown clearing.
-3. **Residual:** define how template validation post-steps are represented and returned in
-   `validation.checks_performed`, without introducing a second interpreter.
+3. **Residual:** aggregate nested operation validation evidence in execute_plan.
+   Templates already compares the consolidated result against exact expected IDs.
 
 ### WS-03 / domain workstreams
 
@@ -97,11 +86,12 @@ shapes from WS-05 `1ef125d` are now in
 
 - Missing, mistyped, out-of-range, or invalid-enum inputs fail before delegation.
 - Unknown modifiers fail before delegation.
-- Declared modifiers without executable deltas also fail, rather than reporting a
-  no-op as applied.
+- Declared modifiers without executable definitions, duplicate names, bucket
+  mismatches, unknown operation IDs, duplicate materialized operation IDs, and
+  missing dependencies fail before delegation.
 - A delegated domain result is downgraded to `partially_completed` when template
-  validation rules could not run, with `template.validation_rules` listed under
-  `validation.checks_skipped`.
+  validation evidence is absent, with each exact rule evidence ID listed under
+  `validation.checks_skipped`. Check-only legacy rules always take this path.
 
 ## Promotion scaffold (WS-15)
 

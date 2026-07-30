@@ -45,6 +45,32 @@
     "boost_impact",
     "preserve_networking"
   ],
+  "modifier_definitions": {
+    "crystalline_fragments": {
+      "bucket": "add",
+      "merge_specifications": {
+        "core_material": {
+          "modifiers": ["crystalline_fragments"]
+        }
+      }
+    },
+    "reduce_trail_persistence": {
+      "bucket": "adjust",
+      "merge_specifications": {
+        "trail_material": {
+          "modifiers": ["reduce_trail_persistence"]
+        }
+      }
+    },
+    "boost_impact": {
+      "bucket": "adjust",
+      "merge_specifications": {
+        "core_material": {
+          "modifiers": ["boost_impact"]
+        }
+      }
+    }
+  },
   "dependencies": {
     "materials": [
       { "role": "core_material", "generate_if_missing": true },

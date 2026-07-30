@@ -454,7 +454,7 @@ class TemplateInstantiateTests(unittest.TestCase):
         result = self.service.instantiate(
             InstantiateRequest(
                 template_id="niagara.projectile.elemental.v1",
-                inputs={"element": "fire"},
+                inputs=self.projectile_inputs("fire"),
                 modifiers={"add": ["nonexistent_modifier"]},
             )
         )
@@ -465,12 +465,113 @@ class TemplateInstantiateTests(unittest.TestCase):
         result = self.service.instantiate(
             InstantiateRequest(
                 template_id="niagara.projectile.elemental.v1",
-                inputs={"element": "fire"},
-                modifiers={"adjust": ["reduce_trail_persistence"]},
+                inputs=self.projectile_inputs("fire"),
+                modifiers={"preserve": ["preserve_networking"]},
             )
         )
         self.assertFalse(result.success)
         self.assertIn("no executable delta", result.summary)
+
+    def test_executable_modifiers_merge_in_deterministic_bucket_order(self) -> None:
+        result = self.service.instantiate(
+            InstantiateRequest(
+                template_id="niagara.projectile.elemental.v1",
+                inputs=self.projectile_inputs("ice"),
+                modifiers={
+                    "adjust": ["reduce_trail_persistence", "boost_impact"],
+                    "add": ["crystalline_fragments"],
+                },
+            )
+        )
+        self.assertTrue(result.success, result.summary)
+        operations = {
+            operation["id"]: operation for operation in result.plan["operations"]
+        }
+        self.assertEqual(
+            operations["core_material"]["specification"]["modifiers"],
+            ["crystalline_fragments"],
+        )
+        self.assertEqual(
+            operations["trail_material"]["specification"]["modifiers"],
+            ["reduce_trail_persistence"],
+        )
+
+    def test_duplicate_modifier_across_buckets_fails_before_delegation(self) -> None:
+        result = self.service.instantiate(
+            InstantiateRequest(
+                template_id="niagara.projectile.elemental.v1",
+                inputs=self.projectile_inputs("fire"),
+                modifiers={
+                    "adjust": ["boost_impact"],
+                    "add": ["boost_impact"],
+                },
+            )
+        )
+        self.assertFalse(result.success)
+        self.assertIn("more than once", result.summary)
+
+    def test_all_modifier_effect_shapes_materialize_before_validation(self) -> None:
+        record = self.store.find_by_id("niagara.projectile.elemental.v1")
+        self.assertIsNotNone(record)
+        original_definitions = copy.deepcopy(
+            record.document.get("modifier_definitions", {})
+        )
+        original_core = copy.deepcopy(record.document["construction_plan"][0])
+        try:
+            replacement = copy.deepcopy(original_core)
+            replacement["specification"]["purpose"] = "replacement_core"
+            record.document["modifier_definitions"]["preserve_networking"] = {
+                "bucket": "preserve",
+                "replace_operations": {"core_material": replacement},
+                "merge_specifications": {
+                    "projectile_fx": {"base_system": None}
+                },
+                "append_operations": [
+                    {
+                        "id": "networking_manifest",
+                        "action": "record_networking_manifest",
+                        "depends_on": ["projectile_fx"],
+                        "specification": {"element": "{{inputs.element}}"},
+                    }
+                ],
+                "validation_operations": [
+                    {
+                        "id": "validate_networking_manifest",
+                        "action": "validate_networking_manifest",
+                        "depends_on": ["networking_manifest"],
+                        "specification": {},
+                    }
+                ],
+            }
+            result = self.service.instantiate(
+                InstantiateRequest(
+                    template_id=record.template_id,
+                    inputs=self.projectile_inputs("water"),
+                    modifiers={"preserve": ["preserve_networking"]},
+                )
+            )
+            self.assertTrue(result.success, result.summary)
+            operations = result.plan["operations"]
+            self.assertEqual(
+                operations[0]["specification"]["purpose"],
+                "replacement_core",
+            )
+            projectile = next(
+                operation
+                for operation in operations
+                if operation["id"] == "projectile_fx"
+            )
+            self.assertNotIn("base_system", projectile["specification"])
+            self.assertEqual(
+                [operation["id"] for operation in operations[-2:]],
+                ["networking_manifest", "validate_networking_manifest"],
+            )
+            self.assertEqual(
+                operations[-2]["specification"]["element"],
+                "water",
+            )
+        finally:
+            record.document["modifier_definitions"] = original_definitions
 
     def test_delegate_returns_complete_execute_plan_result(self) -> None:
         request = InstantiateRequest(
@@ -543,7 +644,10 @@ class TemplateInstantiateTests(unittest.TestCase):
         self.assertTrue(response["validation"]["reread_after_write"])
         self.assertEqual(response["understood"]["template_used"], request.template_id)
         self.assertEqual(response["status"], "partially_completed")
-        self.assertIn("template.validation_rules", response["validation"]["checks_skipped"])
+        self.assertIn(
+            "template.niagara.projectile.elemental.v1.six_emitters",
+            response["validation"]["checks_skipped"],
+        )
         self.assertEqual(list(self.response_validator.iter_errors(response)), [])
 
     def test_template_validation_gap_does_not_mask_executor_failure(self) -> None:
@@ -570,8 +674,60 @@ class TemplateInstantiateTests(unittest.TestCase):
             },
         )
         self.assertEqual(response["status"], "failed_validation")
-        self.assertIn("template.validation_rules", response["validation"]["checks_skipped"])
+        self.assertIn(
+            "template.niagara.projectile.elemental.v1.six_emitters",
+            response["validation"]["checks_skipped"],
+        )
         self.assertEqual(list(self.response_validator.iter_errors(response)), [])
+
+    def test_executable_validation_operations_preserve_evidenced_status(self) -> None:
+        record = self.store.find_by_id("niagara.projectile.elemental.v1")
+        self.assertIsNotNone(record)
+        original_rules = copy.deepcopy(record.document["validation_rules"])
+        try:
+            for rule in record.document["validation_rules"]:
+                rule["operation"] = {
+                    "id": f"validate_{rule['rule_id']}",
+                    "action": "validate_niagara_system",
+                    "depends_on": ["projectile_fx"],
+                    "specification": {"rule_id": rule["rule_id"]},
+                }
+            request = InstantiateRequest(
+                template_id=record.template_id,
+                inputs=self.projectile_inputs("wind"),
+            )
+            materialized = self.service.instantiate(request)
+            expected = [
+                f"template.{record.template_id}.{rule['rule_id']}"
+                for rule in record.document["validation_rules"]
+            ]
+            self.assertEqual(materialized.expected_validation_checks, expected)
+            self.assertEqual(materialized.non_executable_validation_checks, [])
+            self.assertEqual(
+                [operation["id"] for operation in materialized.plan["operations"][-2:]],
+                ["validate_six_emitters", "validate_element_user_params"],
+            )
+
+            response = delegate_execute_plan(
+                {
+                    "protocol_version": "1.0",
+                    "request_id": "instantiate-validated-rules",
+                    "action": "instantiate_template",
+                },
+                request,
+                materialized,
+                lambda _: {
+                    "protocol_version": "1.0",
+                    "status": "created_and_validated",
+                    "summary": "Created, reread, and validated.",
+                    "validation": {"checks_performed": expected},
+                    "metrics": {"mcp_round_trips": 1, "internal_operations": 5},
+                },
+            )
+            self.assertEqual(response["status"], "created_and_validated")
+            self.assertNotIn("checks_skipped", response["validation"])
+        finally:
+            record.document["validation_rules"] = original_rules
 
 
 class TemplatePromotionTests(unittest.TestCase):
@@ -889,10 +1045,10 @@ class TemplateDomainHandlerContractTests(unittest.TestCase):
             / "service.py"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("WS-05 commit `1ef125d`", contract)
-        self.assertIn("does not expand or pre-implement the frozen", contract)
+        self.assertIn("WS-05 `1ef125d` residual contract", contract)
+        self.assertIn("WS-01 accepted", contract)
         self.assertIn('response["status"] = "partially_completed"', service_mirror)
-        self.assertIn("template.validation_rules", service_mirror)
+        self.assertIn("non_executable_validation_checks", service_mirror)
 
 
 def main() -> int:

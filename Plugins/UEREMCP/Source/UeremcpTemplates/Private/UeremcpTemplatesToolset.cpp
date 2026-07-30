@@ -83,7 +83,8 @@ namespace
 		const FString& DelegatedResponseJson,
 		const FUeremcpRequest& OriginalRequest,
 		const FUeremcpTemplateInstantiateRequest& InstantiateRequest,
-		bool bHasTemplateValidationRules,
+		const TArray<FString>& ExpectedValidationChecks,
+		const TArray<FString>& NonExecutableValidationChecks,
 		FString& OutResponseJson,
 		FString& OutError)
 	{
@@ -142,7 +143,41 @@ namespace
 		}
 		ResponseObject->SetObjectField(TEXT("understood"), Understood);
 
-		if (bHasTemplateValidationRules)
+		TSharedPtr<FJsonObject> Validation;
+		const TSharedPtr<FJsonObject>* ExistingValidation = nullptr;
+		if (ResponseObject->TryGetObjectField(TEXT("validation"), ExistingValidation)
+			&& ExistingValidation
+			&& ExistingValidation->IsValid())
+		{
+			Validation = *ExistingValidation;
+		}
+		else
+		{
+			Validation = MakeShared<FJsonObject>();
+		}
+		TSet<FString> PerformedChecks;
+		const TArray<TSharedPtr<FJsonValue>>* PerformedValues = nullptr;
+		if (Validation->TryGetArrayField(TEXT("checks_performed"), PerformedValues)
+			&& PerformedValues)
+		{
+			for (const TSharedPtr<FJsonValue>& Value : *PerformedValues)
+			{
+				FString Check;
+				if (Value.IsValid() && Value->TryGetString(Check))
+				{
+					PerformedChecks.Add(Check);
+				}
+			}
+		}
+		TArray<FString> MissingChecks = NonExecutableValidationChecks;
+		for (const FString& Expected : ExpectedValidationChecks)
+		{
+			if (!PerformedChecks.Contains(Expected))
+			{
+				MissingChecks.Add(Expected);
+			}
+		}
+		if (MissingChecks.Num() > 0)
 		{
 			const bool bWouldOtherwiseClaimSuccess =
 				Status == TEXT("created_and_validated")
@@ -156,26 +191,13 @@ namespace
 			AppendStringArrayValue(
 				ResponseObject,
 				TEXT("capability_notes"),
-				TEXT("Template validation_rules were not executed: execute_plan has no registered template-rule post-step contract."));
-
-			TSharedPtr<FJsonObject> Validation;
-			const TSharedPtr<FJsonObject>* ExistingValidation = nullptr;
-			if (ResponseObject->TryGetObjectField(TEXT("validation"), ExistingValidation)
-				&& ExistingValidation
-				&& ExistingValidation->IsValid())
+				TEXT("One or more template validation rules lacked re-read evidence; validated status was withheld."));
+			for (const FString& Missing : MissingChecks)
 			{
-				Validation = *ExistingValidation;
+				AppendStringArrayValue(Validation, TEXT("checks_skipped"), Missing);
 			}
-			else
-			{
-				Validation = MakeShared<FJsonObject>();
-			}
-			AppendStringArrayValue(
-				Validation,
-				TEXT("checks_skipped"),
-				TEXT("template.validation_rules"));
-			ResponseObject->SetObjectField(TEXT("validation"), Validation);
 		}
+		ResponseObject->SetObjectField(TEXT("validation"), Validation);
 
 		return SerializeJsonObject(ResponseObject, OutResponseJson);
 	}
@@ -342,7 +364,8 @@ FString UUeremcpTemplatesToolset::InstantiateTemplate(const FString& RequestJson
 		DelegatedResponseJson,
 		Request,
 		InstantiateRequest,
-		Result.bHasTemplateValidationRules,
+		Result.ExpectedValidationChecks,
+		Result.NonExecutableValidationChecks,
 		FinalResponseJson,
 		FinalizeError))
 	{

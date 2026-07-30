@@ -3,7 +3,7 @@
 - **From:** WS-15 Templates
 - **To:** WS-07 Niagara, WS-08 Material, WS-03 Core
 - **Status:** handlers and transaction callbacks landed on orch
-- **Residual:** executable template validation rules and modifiers
+- **Residual:** domain validation handlers and execute_plan evidence aggregation
 
 ## Landed execution edge
 
@@ -91,12 +91,11 @@ Shutdown calls `FUeremcpPlanExecutor::ClearTransactionCallbacks`
   `[VERIFIED: UeremcpPlanExecutor.cpp:509-518]`.
 - It likewise rejects if atomic callbacks are unavailable
   `[VERIFIED: UeremcpPlanExecutor.cpp:520-526]`.
-- After successful domain execution, Templates still downgrades a validated result
-  to `partially_completed` while template `validation_rules` have no executable
-  post-step contract.
-- WS-05 commit `1ef125d` proposes deterministic `modifier_definitions` and
-  validation operations. WS-15 will not implement that shape until WS-01 amends
-  the frozen template schema.
+- WS-01 accepted the WS-05 `1ef125d` shapes in `4eedd86`; WS-15 now materializes
+  modifier effects and executable validation operations in the same plan.
+- A check-only rule, missing validation handler, skipped operation, or absent exact
+  `template.<template_id>.<rule_id>` evidence still downgrades an otherwise
+  validated result to `partially_completed`.
 
 ## Offline drift guard
 

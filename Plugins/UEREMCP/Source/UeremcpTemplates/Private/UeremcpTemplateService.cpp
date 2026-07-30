@@ -78,6 +78,105 @@ namespace
 		}
 	}
 
+	void ApplyMergePatch(
+		const TSharedPtr<FJsonObject>& Target,
+		const TSharedPtr<FJsonObject>& Patch)
+	{
+		for (const auto& Field : Patch->Values)
+		{
+			if (!Field.Value.IsValid() || Field.Value->Type == EJson::Null)
+			{
+				Target->RemoveField(Field.Key);
+				continue;
+			}
+			if (Field.Value->Type == EJson::Object)
+			{
+				TSharedPtr<FJsonObject> Child;
+				const TSharedPtr<FJsonObject>* Existing = nullptr;
+				if (Target->TryGetObjectField(Field.Key, Existing) && Existing && Existing->IsValid())
+				{
+					Child = CloneJsonObject(*Existing);
+				}
+				else
+				{
+					Child = MakeShared<FJsonObject>();
+				}
+				ApplyMergePatch(Child, Field.Value->AsObject());
+				Target->SetObjectField(Field.Key, Child);
+				continue;
+			}
+			Target->SetField(Field.Key, CloneJsonValue(Field.Value));
+		}
+	}
+
+	int32 FindOperation(const TArray<TSharedPtr<FJsonValue>>& Operations, const FString& Id)
+	{
+		for (int32 Index = 0; Index < Operations.Num(); ++Index)
+		{
+			FString Candidate;
+			if (Operations[Index].IsValid()
+				&& Operations[Index]->Type == EJson::Object
+				&& Operations[Index]->AsObject()->TryGetStringField(TEXT("id"), Candidate)
+				&& Candidate == Id)
+			{
+				return Index;
+			}
+		}
+		return INDEX_NONE;
+	}
+
+	bool ValidateOperationGraph(
+		const TArray<TSharedPtr<FJsonValue>>& Operations,
+		FString& OutError)
+	{
+		TSet<FString> Ids;
+		for (const TSharedPtr<FJsonValue>& Value : Operations)
+		{
+			if (!Value.IsValid() || Value->Type != EJson::Object)
+			{
+				OutError = TEXT("Materialized plan contains a non-object operation.");
+				return false;
+			}
+			FString Id;
+			FString Action;
+			if (!Value->AsObject()->TryGetStringField(TEXT("id"), Id) || Id.IsEmpty()
+				|| !Value->AsObject()->TryGetStringField(TEXT("action"), Action) || Action.IsEmpty())
+			{
+				OutError = TEXT("Materialized plan operation requires non-empty id and action.");
+				return false;
+			}
+			if (Ids.Contains(Id))
+			{
+				OutError = FString::Printf(TEXT("Duplicate materialized operation id '%s'."), *Id);
+				return false;
+			}
+			Ids.Add(Id);
+		}
+		for (const TSharedPtr<FJsonValue>& Value : Operations)
+		{
+			FString Id;
+			Value->AsObject()->TryGetStringField(TEXT("id"), Id);
+			const TArray<TSharedPtr<FJsonValue>>* Dependencies = nullptr;
+			if (!Value->AsObject()->TryGetArrayField(TEXT("depends_on"), Dependencies) || !Dependencies)
+			{
+				continue;
+			}
+			for (const TSharedPtr<FJsonValue>& Dependency : *Dependencies)
+			{
+				FString DependencyId;
+				if (!Dependency.IsValid() || !Dependency->TryGetString(DependencyId)
+					|| !Ids.Contains(DependencyId))
+				{
+					OutError = FString::Printf(
+						TEXT("Operation '%s' depends on an unknown operation."),
+						*Id);
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
 	bool JsonScalarEquals(
 		const TSharedPtr<FJsonValue>& Left,
 		const TSharedPtr<FJsonValue>& Right)
@@ -254,44 +353,6 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 		return Result;
 	}
 
-	if (Request.Modifiers.IsValid())
-	{
-		static const TCHAR* BucketNames[] = { TEXT("replace"), TEXT("adjust"), TEXT("add"), TEXT("preserve") };
-		for (int32 BucketIndex = 0; BucketIndex < UE_ARRAY_COUNT(BucketNames); ++BucketIndex)
-		{
-			const TArray<TSharedPtr<FJsonValue>>* ModifierValues = nullptr;
-			if (!Request.Modifiers->TryGetArrayField(BucketNames[BucketIndex], ModifierValues) || !ModifierValues)
-			{
-				continue;
-			}
-
-			for (const TSharedPtr<FJsonValue>& Value : *ModifierValues)
-			{
-				FString ModifierName;
-				if (!Value.IsValid() || !Value->TryGetString(ModifierName))
-				{
-					continue;
-				}
-
-				if (!Record->SupportedModifiers.Contains(ModifierName))
-				{
-					Result.Summary = FString::Printf(
-						TEXT("Unsupported modifier '%s' for template '%s'."),
-						*ModifierName,
-						*Request.TemplateId);
-					return Result;
-				}
-
-				Result.Summary = FString::Printf(
-					TEXT("Modifier '%s' is declared but has no executable delta in the frozen template schema."),
-					*ModifierName);
-				Result.CapabilityNotes.Add(
-					TEXT("Named modifier execution is blocked until template.schema.json can represent modifier deltas."));
-				return Result;
-			}
-		}
-	}
-
 	TSharedPtr<FJsonObject> EffectiveInputs = CloneJsonObject(Request.Inputs);
 	if (!EffectiveInputs.IsValid())
 	{
@@ -363,8 +424,11 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 	const TSharedPtr<FJsonObject> Plan = MaterializePlan(
 		*Record,
 		EffectiveInputs,
+		Request.Modifiers,
 		EffectiveTargetPath,
 		Request.Mode,
+		Result.ExpectedValidationChecks,
+		Result.NonExecutableValidationChecks,
 		MaterializeError);
 	if (!Plan.IsValid())
 	{
@@ -373,11 +437,6 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 	}
 
 	Result.bSuccess = true;
-	const TArray<TSharedPtr<FJsonValue>>* ValidationRules = nullptr;
-	Result.bHasTemplateValidationRules =
-		Record->Document->TryGetArrayField(TEXT("validation_rules"), ValidationRules)
-		&& ValidationRules
-		&& ValidationRules->Num() > 0;
 	Result.Status = TEXT("partially_completed");
 	Result.Summary = FString::Printf(
 		TEXT("Materialized an execute_plan specification for '%s'."),
@@ -726,8 +785,11 @@ bool FUeremcpTemplateService::ValidateInputs(
 TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 	const FUeremcpTemplateRecord& Record,
 	const TSharedPtr<FJsonObject>& Inputs,
+	const TSharedPtr<FJsonObject>& Modifiers,
 	const FString& TargetAssetPath,
 	const FString& Mode,
+	TArray<FString>& OutExpectedValidationChecks,
+	TArray<FString>& OutNonExecutableValidationChecks,
 	FString& OutError)
 {
 	if (!Record.Document.IsValid())
@@ -757,8 +819,162 @@ TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 	}
 
 	TArray<TSharedPtr<FJsonValue>> Operations = *MaterializedSteps;
-	for (const TSharedPtr<FJsonValue>& OperationValue : Operations)
+	TArray<TSharedPtr<FJsonValue>> PendingValidationOperations;
+	const TSharedPtr<FJsonObject>* ModifierDefinitions = nullptr;
+	Record.Document->TryGetObjectField(TEXT("modifier_definitions"), ModifierDefinitions);
+	TSet<FString> SeenModifiers;
+	static const TCHAR* BucketNames[] = { TEXT("replace"), TEXT("adjust"), TEXT("add"), TEXT("preserve") };
+	for (const TCHAR* BucketName : BucketNames)
 	{
+		const TArray<TSharedPtr<FJsonValue>>* Requested = nullptr;
+		if (!Modifiers.IsValid()
+			|| !Modifiers->TryGetArrayField(BucketName, Requested)
+			|| !Requested)
+		{
+			continue;
+		}
+		for (const TSharedPtr<FJsonValue>& RequestedValue : *Requested)
+		{
+			FString ModifierName;
+			if (!RequestedValue.IsValid() || !RequestedValue->TryGetString(ModifierName))
+			{
+				OutError = FString::Printf(TEXT("Modifier bucket '%s' contains a non-string value."), BucketName);
+				return nullptr;
+			}
+			if (SeenModifiers.Contains(ModifierName))
+			{
+				OutError = FString::Printf(TEXT("Modifier '%s' was requested more than once."), *ModifierName);
+				return nullptr;
+			}
+			SeenModifiers.Add(ModifierName);
+			if (!Record.SupportedModifiers.Contains(ModifierName))
+			{
+				OutError = FString::Printf(
+					TEXT("Unsupported modifier '%s' for template '%s'."),
+					*ModifierName,
+					*Record.TemplateId);
+				return nullptr;
+			}
+			const TSharedPtr<FJsonObject>* Definition = nullptr;
+			if (!ModifierDefinitions || !ModifierDefinitions->IsValid()
+				|| !(*ModifierDefinitions)->TryGetObjectField(ModifierName, Definition)
+				|| !Definition
+				|| !Definition->IsValid())
+			{
+				OutError = FString::Printf(
+					TEXT("Modifier '%s' is declared but has no executable delta."),
+					*ModifierName);
+				return nullptr;
+			}
+			FString DeclaredBucket;
+			if (!(*Definition)->TryGetStringField(TEXT("bucket"), DeclaredBucket)
+				|| DeclaredBucket != BucketName)
+			{
+				OutError = FString::Printf(
+					TEXT("Modifier '%s' belongs to bucket '%s', not '%s'."),
+					*ModifierName,
+					*DeclaredBucket,
+					BucketName);
+				return nullptr;
+			}
+
+			const TSharedPtr<FJsonObject>* Replacements = nullptr;
+			if ((*Definition)->TryGetObjectField(TEXT("replace_operations"), Replacements)
+				&& Replacements
+				&& Replacements->IsValid())
+			{
+				for (const auto& Replacement : (*Replacements)->Values)
+				{
+					const FString OperationId(Replacement.Key);
+					const int32 Index = FindOperation(Operations, OperationId);
+					if (Index == INDEX_NONE || !Replacement.Value.IsValid()
+						|| Replacement.Value->Type != EJson::Object)
+					{
+						OutError = FString::Printf(
+							TEXT("Modifier '%s' replaces unknown operation '%s'."),
+							*ModifierName,
+							*OperationId);
+						return nullptr;
+					}
+					const TSharedPtr<FJsonValue> MaterializedReplacement =
+						ApplyInputsToJsonValue(Replacement.Value, Inputs);
+					FString ReplacementId;
+					if (!MaterializedReplacement.IsValid()
+						|| MaterializedReplacement->Type != EJson::Object
+						|| !MaterializedReplacement->AsObject()->TryGetStringField(TEXT("id"), ReplacementId)
+						|| ReplacementId != OperationId)
+					{
+						OutError = FString::Printf(
+							TEXT("Modifier '%s' replacement must preserve operation id '%s'."),
+							*ModifierName,
+							*OperationId);
+						return nullptr;
+					}
+					Operations[Index] = MaterializedReplacement;
+				}
+			}
+
+			const TSharedPtr<FJsonObject>* SpecificationPatches = nullptr;
+			if ((*Definition)->TryGetObjectField(TEXT("merge_specifications"), SpecificationPatches)
+				&& SpecificationPatches
+				&& SpecificationPatches->IsValid())
+			{
+				for (const auto& Patch : (*SpecificationPatches)->Values)
+				{
+					const FString OperationId(Patch.Key);
+					const int32 Index = FindOperation(Operations, OperationId);
+					if (Index == INDEX_NONE || !Patch.Value.IsValid() || Patch.Value->Type != EJson::Object)
+					{
+						OutError = FString::Printf(
+							TEXT("Modifier '%s' patches unknown operation '%s'."),
+							*ModifierName,
+							*OperationId);
+						return nullptr;
+					}
+					const TSharedPtr<FJsonObject> Operation = Operations[Index]->AsObject();
+					TSharedPtr<FJsonObject> Specification;
+					const TSharedPtr<FJsonObject>* ExistingSpecification = nullptr;
+					if (Operation->TryGetObjectField(TEXT("specification"), ExistingSpecification)
+						&& ExistingSpecification
+						&& ExistingSpecification->IsValid())
+					{
+						Specification = CloneJsonObject(*ExistingSpecification);
+					}
+					else
+					{
+						Specification = MakeShared<FJsonObject>();
+					}
+					const TSharedPtr<FJsonValue> MaterializedPatch =
+						ApplyInputsToJsonValue(Patch.Value, Inputs);
+					ApplyMergePatch(Specification, MaterializedPatch->AsObject());
+					Operation->SetObjectField(TEXT("specification"), Specification);
+				}
+			}
+
+			const TArray<TSharedPtr<FJsonValue>>* Appends = nullptr;
+			if ((*Definition)->TryGetArrayField(TEXT("append_operations"), Appends) && Appends)
+			{
+				for (const TSharedPtr<FJsonValue>& Append : *Appends)
+				{
+					Operations.Add(ApplyInputsToJsonValue(Append, Inputs));
+				}
+			}
+			const TArray<TSharedPtr<FJsonValue>>* ModifierValidations = nullptr;
+			if ((*Definition)->TryGetArrayField(TEXT("validation_operations"), ModifierValidations)
+				&& ModifierValidations)
+			{
+				for (const TSharedPtr<FJsonValue>& Validation : *ModifierValidations)
+				{
+					PendingValidationOperations.Add(ApplyInputsToJsonValue(Validation, Inputs));
+				}
+			}
+		}
+	}
+
+	const int32 ConstructionOperationCount = Operations.Num();
+	for (int32 OperationIndex = 0; OperationIndex < ConstructionOperationCount; ++OperationIndex)
+	{
+		const TSharedPtr<FJsonValue>& OperationValue = Operations[OperationIndex];
 		if (!OperationValue.IsValid() || OperationValue->Type != EJson::Object || !Inputs.IsValid())
 		{
 			continue;
@@ -775,9 +991,12 @@ TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 			Operation->SetObjectField(TEXT("target"), Target);
 		}
 	}
-	if (Operations.Num() > 0 && Operations.Last().IsValid() && Operations.Last()->Type == EJson::Object)
+	if (ConstructionOperationCount > 0
+		&& Operations[ConstructionOperationCount - 1].IsValid()
+		&& Operations[ConstructionOperationCount - 1]->Type == EJson::Object)
 	{
-		const TSharedPtr<FJsonObject> TerminalOperation = Operations.Last()->AsObject();
+		const TSharedPtr<FJsonObject> TerminalOperation =
+			Operations[ConstructionOperationCount - 1]->AsObject();
 		if (!TargetAssetPath.IsEmpty())
 		{
 			const TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
@@ -788,6 +1007,48 @@ TSharedPtr<FJsonObject> FUeremcpTemplateService::MaterializePlan(
 		{
 			TerminalOperation->SetStringField(TEXT("mode"), Mode);
 		}
+	}
+
+	Operations.Append(PendingValidationOperations);
+	const TArray<TSharedPtr<FJsonValue>>* ValidationRules = nullptr;
+	if (Record.Document->TryGetArrayField(TEXT("validation_rules"), ValidationRules)
+		&& ValidationRules)
+	{
+		for (const TSharedPtr<FJsonValue>& RuleValue : *ValidationRules)
+		{
+			if (!RuleValue.IsValid() || RuleValue->Type != EJson::Object)
+			{
+				continue;
+			}
+			const TSharedPtr<FJsonObject> Rule = RuleValue->AsObject();
+			FString RuleId;
+			if (!Rule->TryGetStringField(TEXT("rule_id"), RuleId) || RuleId.IsEmpty())
+			{
+				continue;
+			}
+			const FString EvidenceId = FString::Printf(
+				TEXT("template.%s.%s"),
+				*Record.TemplateId,
+				*RuleId);
+			const TSharedPtr<FJsonObject>* ValidationOperation = nullptr;
+			if (Rule->TryGetObjectField(TEXT("operation"), ValidationOperation)
+				&& ValidationOperation
+				&& ValidationOperation->IsValid())
+			{
+				Operations.Add(ApplyInputsToJsonValue(
+					MakeShared<FJsonValueObject>(*ValidationOperation),
+					Inputs));
+				OutExpectedValidationChecks.Add(EvidenceId);
+			}
+			else
+			{
+				OutNonExecutableValidationChecks.Add(EvidenceId);
+			}
+		}
+	}
+	if (!ValidateOperationGraph(Operations, OutError))
+	{
+		return nullptr;
 	}
 
 	const TSharedPtr<FJsonObject> Plan = MakeShared<FJsonObject>();
