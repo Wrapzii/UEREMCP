@@ -2,8 +2,9 @@
 
 **Owner requested:** WS-05 (registry) and WS-03 (agent-facing actions).
 **Consumer:** WS-04 Transport automation.
-**Status:** registry gate landed at `de51038` and consumed by WS-04; Core
-agent-facing actions and production timeout dispatch remain blocked.
+**Status:** registry gate landed at `de51038`; Core-facing JSON adapters landed at
+`3106c1b`; AICallable wrappers landed at `2c35730`. Production timeout dispatch
+remains blocked.
 
 ## Evidence and current gate
 
@@ -17,14 +18,18 @@ agent-facing actions and production timeout dispatch remain blocked.
   cancellation, and timeout-envelope fields
   `[VERIFIED: de51038,
   Plugins/UEREMCP/Source/UeremcpProtocol/Private/Tests/UeremcpJobRegistryTests.cpp:11-132,242-267]`.
-- No agent-facing `get_job_result` or cancel action is present in Core. The
-  WS-05 integration proposal delegates those registrations to Core/WS-03
-  `[VERIFIED: de51038,
-  docs/proposals/ws-05-job-registry-integration.md:31-63]`.
+- `FUeremcpJobActions::GetJobResult` and `CancelJob` now map request envelopes to
+  the process registry and return structured response envelopes
+  `[VERIFIED: 3106c1b,
+  Plugins/UEREMCP/Source/UeremcpProtocol/Private/UeremcpJobActions.cpp:88-159]`.
+- `UUeremcpReferenceToolset::GetJobResult` and `CancelJob` expose the adapters as
+  AICallable wrappers
+  `[VERIFIED: 2c35730,
+  Plugins/UEREMCP/Source/UeremcpCore/Public/UeremcpReferenceToolset.h:54-72]`.
 
-The three Transport paths now execute registry lifecycle assertions directly.
-Each records a precise residual SKIP for the missing Core action or production
-timeout dispatcher rather than claiming end-to-end MCP coverage.
+Poll and Cancel now execute direct registry lifecycle assertions plus the AICallable
+ReferenceToolset wrappers. They have no remaining SKIP. Timeout retains the
+production dispatcher/SSE residual SKIP.
 
 ## Landed production surface
 
@@ -59,10 +64,9 @@ The callable behavior includes:
    repeat-cancel behavior; and
 8. structured not-found/error results without registry mutation.
 
-WS-03 must separately register the public `get_job_result` and cancel actions before
-UEREMCP can claim agent-facing poll/cancel support. The direct registry tests are now
-active, and `UeremcpTransport.Build.cs` already depends on `UeremcpProtocol`.
-Action-level integration remains a distinct gate.
+The AICallable wrappers, direct registry tests, and wrapper mapping tests are active.
+`UeremcpTransport.Build.cs` depends on both `UeremcpCore` and `UeremcpProtocol`.
+Live MCP tool discovery remains runtime evidence rather than an implementation gate.
 
 ## Active WS-04 assertions
 
@@ -99,11 +103,11 @@ Action-level integration remains a distinct gate.
 
 ## Ownership-safe next step
 
-WS-03 should land the public `get_job_result` and cancel action registrations plus
-the production timeout dispatcher. WS-04 can then replace the three residual
-integration SKIP notes with action/SSE assertions and run the existing
-`UEREMCP.Transport` editor filter without retargeting the RE junction.
+The remaining implementation gate is the production timeout dispatcher and SSE
+close behavior. WS-04 can replace that final residual SKIP with timeout/SSE
+assertions once the dispatcher lands, then run the existing `UEREMCP.Transport`
+editor filter without retargeting the RE junction.
 
 The last recorded runtime evidence remains **5 PASS + 3 SKIP**. Current source has
-three active registry lifecycle tests with three narrower residual integration SKIP
-notes, but that is static inspection, not a claim of a new editor run.
+fully active Poll and Cancel wrapper tests and one timeout/SSE residual SKIP, but
+that is static inspection, not a claim of a new editor run.
