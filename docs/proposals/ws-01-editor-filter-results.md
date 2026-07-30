@@ -9,7 +9,7 @@
 - **Latest live VisualTest MCP T1a tip:** `7535e6c` lineage (editor PID 38668)
 - **Prior mixed re-run tip:** `c234606`
 - **Date:** 2026-07-30
-- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. The MCP B1 rerun with poll-only fix `088bd64` still crashes on SharedPointer `IsValid` in `AwaitCompile`; B10 and metrics remain blocked — **no overall POC-B claim.**
+- **Status:** **Overall POC A CLAIMED** via CRT on `3756244` (A1–A11 PASS). Post-UV editor fireball and B8 restart survival are PASS. Live-MCP compile deferral `79d9d65` landed and rebuilt; WS-11 must rerun B1 and confirm a JSON response without crashing. B10 and metrics remain blocked — **no overall POC-B claim.**
 - **Junction:** Not changed.
 
 ## Invocation
@@ -34,7 +34,7 @@ The runner launched `UnrealEditor-Cmd.exe` with `-unattended -nop4 -nosplash -Nu
 | `UEREMCP.Niagara.POCB.SixEmitterGateScaffold` (B7) | **PASS, 1/1** | `825e4f4` | Current-lineage proof. B7 only; not overall POC-B. |
 | `UeremcpTemplates.Toolset` | **PASS, 4/4** | `f15ea96` | Plugin-local template seeds resolved the Search/Promote failures. |
 
-Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; post-`088bd64` MCP B1 still crashes in `AwaitCompile`, blocking required B10 and metrics. No overall POC-B claim.
+Residuals: **overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1 rerun is pending after live-dispatch compile deferral `79d9d65`, blocking required B10 and metrics. No overall POC-B claim.
 
 ## POC A A1–A11 slice (WS-11, tip lineage `d1eb1ea`→`279f09a`)
 
@@ -153,6 +153,12 @@ The WS-11 rerun on orch `8322ee6` with `088bd64` loaded still **FAILS**:
 `AwaitCompile` reaches a SharedPointer `IsValid` assertion at
 `UeremcpNiagaraCreate.cpp:593`. The editor fireball remains PASS. WS-07 is
 investigating further; B10 and metrics remain blocked.
+
+WS-07 then landed `9c9b9b4` as orch `79d9d65`: live MCP dispatch requests
+compilation without invoking compile-completion polling, while automation keeps
+the poll path. Niagara rebuilt successfully. WS-11 must rerun the canonical
+fixture; a crash-free JSON response is the immediate proof target. An honest
+`partially_completed` response does not by itself pass B1/B6 or overall POC B.
 
 ## CompleteRoundTrip on tip `3756244` — overall POC A
 
@@ -382,7 +388,7 @@ Evidence logs from that baseline remain under `tests/integration/_logs/editor_*_
 | WS-07 | Proposal closed `5ec7e02`; support fireball/B8 re-run after UV. |
 | WS-08 | Trail UV `cf7e6d3` landed; support fireball re-run if needed. |
 | WS-10 | Animation Toolset PASS 10/10 on `5ea9277`; no further Animation filter work from this triage. |
-| WS-07 + WS-11 | Fix the remaining MCP-only SharedPointer crash, rerun B1, then run B10 and record complete POC-B metrics/baseline. |
+| WS-11 | Rerun canonical MCP B1 on `79d9d65`, then run B10 and record complete POC-B metrics/baseline only after acceptance gates pass. |
 | WS-15 | Templates PASS 4/4 on `f15ea96`; no remaining Templates filter failure in this record. |
 
-**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; post-`088bd64` MCP B1 still crashes in `AwaitCompile`, blocking B10 and metrics. No overall POC-B claim. No junction retarget.
+**Overall POC A claimed** on CRT `3756244`. Post-UV editor fireball and B8 restart PASS; MCP B1 rerun is pending after `79d9d65`, blocking B10 and metrics. No overall POC-B claim. No junction retarget.
