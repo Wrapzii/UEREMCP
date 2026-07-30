@@ -53,6 +53,7 @@ $LogFile = Join-Path $LogDir "editor_$($Filter.Replace('.','_'))_$stamp.log"
 $exec = "Automation RunTests $Filter; Quit"
 Write-Host "Running: $Filter"
 Write-Host "Log: $LogFile"
+Write-Output "UEREMCP_EDITOR_LOG=$LogFile"
 
 $argList = [System.Collections.Generic.List[string]]::new()
 $argList.Add("`"$Project`"")

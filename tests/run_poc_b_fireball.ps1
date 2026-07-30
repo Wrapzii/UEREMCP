@@ -39,9 +39,9 @@ $editorExit = $LASTEXITCODE
 $output | ForEach-Object { Write-Host $_ }
 
 $logLine = $output |
-    Where-Object { "$_" -match "^Log:\s+(.+)$" } |
+    Where-Object { "$_" -match "^UEREMCP_EDITOR_LOG=(.+)$" } |
     Select-Object -First 1
-$logPath = if ($logLine -and "$logLine" -match "^Log:\s+(.+)$") {
+$logPath = if ($logLine -and "$logLine" -match "^UEREMCP_EDITOR_LOG=(.+)$") {
     $Matches[1].Trim()
 }
 else {

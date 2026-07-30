@@ -21,6 +21,7 @@ class FireballHarnessContractTest(unittest.TestCase):
             "-PocBScaffold",
             "-PocBMaterials",
             "UEREMCP_POC_B_FIREBALL_OUTCOME",
+            "UEREMCP_EDITOR_LOG=",
             '"skipped"',
             '"failed"',
             "not MCP transport or overall POC B proof",
@@ -42,6 +43,7 @@ class FireballHarnessContractTest(unittest.TestCase):
         for token in (
             "/Game/__UeremcpPoc/NS_POCB_Fireball",
             'TEXT("materials")',
+            'TryGetObjectField(TEXT("result")',
             'TEXT("created_assets")',
             'TEXT("reused_assets")',
             'TEXT("B2_created_assets_reported")',
@@ -61,6 +63,7 @@ class FireballHarnessContractTest(unittest.TestCase):
         self.assertIn('[string]$PocBMaterials = ""', runner)
         self.assertIn("UeremcpPocBMaterials=", runner)
         self.assertIn("UEREMCP_POC_B_FIREBALL_OUTCOME", runner)
+        self.assertIn("UEREMCP_EDITOR_LOG=", runner)
 
 
 if __name__ == "__main__":

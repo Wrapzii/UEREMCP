@@ -139,9 +139,6 @@ namespace UeremcpValidationNiagaraFireball
 			DeleteIfPresent(FString::Printf(
 				TEXT("/Game/__UeremcpPoc/Materials/MI_NS_POCB_Fireball_%s"),
 				*Role));
-			DeleteIfPresent(FString::Printf(
-				TEXT("/Game/__UeremcpTests/Materials/MI_NS_POCB_Fireball_%s"),
-				*Role));
 		}
 	}
 
@@ -276,14 +273,22 @@ bool FUeremcpNiagaraPocBFireballMaterials::RunTest(const FString& Parameters)
 	TSet<FString> MaterialRoles;
 	bool bHasCreatedMaterial = false;
 	bool bHasReusedMaterial = false;
+	const TSharedPtr<FJsonObject>* Result = nullptr;
+	if (!Response->TryGetObjectField(TEXT("result"), Result)
+		|| !Result || !Result->IsValid())
+	{
+		AddError(TEXT("Response has no result object for the merged asset manifest."));
+		AddInfo(TEXT("UEREMCP_POC_B_FIREBALL_OUTCOME=FAIL reason=missing_result_manifest"));
+		return false;
+	}
 	CollectAssetRefs(
-		Response,
+		*Result,
 		TEXT("created_assets"),
 		MaterialRoles,
 		Cleanup.ResponseAssets,
 		bHasCreatedMaterial);
 	CollectAssetRefs(
-		Response,
+		*Result,
 		TEXT("reused_assets"),
 		MaterialRoles,
 		Cleanup.ResponseAssets,
