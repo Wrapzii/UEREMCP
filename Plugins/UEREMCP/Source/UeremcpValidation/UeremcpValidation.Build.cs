@@ -49,6 +49,9 @@ public class UeremcpValidation : ModuleRules
 			"UeremcpNiagara",
 			"Niagara",
 
+			// E1 restart seed creates and validates POC C gameplay-bound variations.
+			"UeremcpTemplates",
+
 			// WS-06 MutatingDispatch adapter regression (skips until handoff header lands).
 			"UeremcpBlueprint",
 

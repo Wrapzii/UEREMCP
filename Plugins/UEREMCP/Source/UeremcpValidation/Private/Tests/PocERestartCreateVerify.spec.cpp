@@ -5,21 +5,25 @@
 //   -Scenario E1  → domain create filters, then Create/Verify restart pair
 // Create persists checkpoint under Saved/UEREMCP/; Verify re-reads in a fresh editor.
 //
-// Honest scope: proves assets that *can* be created on this tip survive restart.
-// Does NOT claim C5 (no networking/damage contract assets) or D5 multi-client proof.
+// Full scope: seeds and checkpoints the accepted POC A-D result assets, including
+// both POC C gameplay-binding rows, then re-reads assets and rows after restart.
 
 #include "UeremcpScratchPaths.h"
 #include "UeremcpValidationTestCommon.h"
 
 #include "Dom/JsonObject.h"
 #include "EditorAssetLibrary.h"
+#include "Engine/DataTable.h"
 #include "HAL/FileManager.h"
+#include "JsonObjectConverter.h"
 #include "Misc/AutomationTest.h"
 #include "Misc/FileHelper.h"
+#include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
+#include "UeremcpTemplatesToolset.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -29,6 +33,11 @@ namespace UeremcpPocERestart
 	static const FString AssetName = TEXT("PocERestartCurve");
 	static constexpr const TCHAR* CheckpointId = TEXT("poc-e1-restart");
 	static constexpr const TCHAR* DefaultRunId = TEXT("poc-e1-ad-restart");
+	static constexpr const TCHAR* PocCAbilityTable =
+		TEXT("/Game/__UeremcpPoc/Abilities/DT_POCC_Variations");
+	static constexpr const TCHAR* PocCIceRow = TEXT("poc_c_ice_fire_s");
+	static constexpr const TCHAR* PocCWindRow = TEXT("poc_c_wind_fire_s");
+	static constexpr const TCHAR* AbilityRowStructPath = TEXT("/Script/RE.REAbilityDef");
 
 	struct FPocAssetGroup
 	{
@@ -80,6 +89,153 @@ namespace UeremcpPocERestart
 		return false;
 	}
 
+	static FString ToObjectPath(const FString& PackagePath)
+	{
+		if (PackagePath.Contains(TEXT(".")))
+		{
+			return PackagePath;
+		}
+		const FString PackageAssetName = FPackageName::GetLongPackageAssetName(PackagePath);
+		return FString::Printf(TEXT("%s.%s"), *PackagePath, *PackageAssetName);
+	}
+
+	static bool ReadAbilityRowSnapshot(
+		FAutomationTestBase& Test,
+		const FString& RowName,
+		FString& OutSnapshot)
+	{
+		UDataTable* Table = Cast<UDataTable>(StaticLoadObject(
+			UDataTable::StaticClass(),
+			nullptr,
+			*ToObjectPath(PocCAbilityTable),
+			nullptr,
+			LOAD_NoWarn));
+		if (!Test.TestNotNull(TEXT("POC C variation ability table loads"), Table))
+		{
+			return false;
+		}
+		const UScriptStruct* RowStruct = Table->GetRowStruct();
+		if (!Test.TestTrue(
+				TEXT("POC C variation table uses FREAbilityDef"),
+				RowStruct && RowStruct->GetPathName() == AbilityRowStructPath))
+		{
+			return false;
+		}
+		const uint8* RowData = Table->FindRowUnchecked(FName(*RowName));
+		if (!Test.TestNotNull(
+				*FString::Printf(TEXT("POC C variation row %s exists"), *RowName),
+				RowData))
+		{
+			return false;
+		}
+		const TSharedPtr<FJsonObject> RowJson = MakeShared<FJsonObject>();
+		if (!Test.TestTrue(
+				*FString::Printf(TEXT("POC C variation row %s normalizes"), *RowName),
+				FJsonObjectConverter::UStructToJsonObject(
+					RowStruct,
+					RowData,
+					RowJson.ToSharedRef(),
+					0,
+					0)))
+		{
+			return false;
+		}
+		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutSnapshot);
+		return Test.TestTrue(
+			*FString::Printf(TEXT("POC C variation row %s serializes"), *RowName),
+			FJsonSerializer::Serialize(RowJson.ToSharedRef(), Writer));
+	}
+
+	static bool SeedPocCAbilityVariations(FAutomationTestBase& Test)
+	{
+		struct FGeneration
+		{
+			const TCHAR* RequestId;
+			const TCHAR* Element;
+			const TCHAR* SourcePath;
+			const TCHAR* TargetPath;
+			const TCHAR* AbilityTable;
+			const TCHAR* SourceRow;
+			const TCHAR* TargetRow;
+			const TCHAR* ModifiersJson;
+		};
+		const FGeneration Generations[] = {
+			{
+				TEXT("poc-e1-c5-ice"),
+				TEXT("ice"),
+				TEXT("/Game/__UeremcpPoc/NS_POCB_Fireball"),
+				TEXT("/Game/__UeremcpPoc/NS_POCC_IceVariation"),
+				TEXT("/Game/RE/Data/DT_Abilities"),
+				TEXT("fire_s"),
+				PocCIceRow,
+				TEXT("\"adjust\":[\"reduce_trail_persistence\",\"boost_impact\"],\"add\":[\"crystalline_fragments\"],\"preserve\":[\"preserve_networking\"]")
+			},
+			{
+				TEXT("poc-e1-c5-wind"),
+				TEXT("wind"),
+				TEXT("/Game/__UeremcpPoc/NS_POCC_IceVariation"),
+				TEXT("/Game/__UeremcpPoc/NS_POCC_WindThirdGeneration"),
+				PocCAbilityTable,
+				PocCIceRow,
+				PocCWindRow,
+				TEXT("\"preserve\":[\"preserve_networking\"]")
+			},
+		};
+
+		for (const FGeneration& Generation : Generations)
+		{
+			const FString Request = FString::Printf(
+				TEXT("{\"protocol_version\":\"1.0\",\"request_id\":\"%s\",\"action\":\"instantiate_template\",")
+				TEXT("\"mode\":\"create_or_update\",\"specification\":{\"template_id\":\"niagara.projectile.elemental.v1\",")
+				TEXT("\"inputs\":{\"element\":\"%s\",\"target_path\":\"%s\",\"source_system\":\"%s\",")
+				TEXT("\"ability_table\":\"%s\",\"source_row\":\"%s\",")
+				TEXT("\"target_ability_table\":\"%s\",\"target_row\":\"%s\",")
+				TEXT("\"vfx_phase\":\"projectile_and_impact\",\"scale\":1.0,\"intensity\":6.0},")
+				TEXT("\"modifiers\":{%s},\"target\":{\"asset_path\":\"%s\"},\"mode\":\"create_or_update\"},")
+				TEXT("\"options\":{\"dry_run\":false,\"atomic\":true,\"rollback_on_failure\":true,")
+				TEXT("\"compile\":true,\"validate\":true,\"save\":true,\"response_detail\":\"complete\",\"timeout_ms\":0}}"),
+				Generation.RequestId,
+				Generation.Element,
+				Generation.TargetPath,
+				Generation.SourcePath,
+				Generation.AbilityTable,
+				Generation.SourceRow,
+				PocCAbilityTable,
+				Generation.TargetRow,
+				Generation.ModifiersJson,
+				Generation.TargetPath);
+			const FString ResponseJson = UUeremcpTemplatesToolset::InstantiateTemplate(Request);
+			TSharedPtr<FJsonObject> Response;
+			const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
+			if (!Test.TestTrue(
+					*FString::Printf(TEXT("%s C5 seed response parses"), Generation.Element),
+					FJsonSerializer::Deserialize(Reader, Response) && Response.IsValid()))
+			{
+				return false;
+			}
+			FString Status;
+			bool bProtectedFieldsEqual = false;
+			const TSharedPtr<FJsonObject>* Validation = nullptr;
+			if (!Test.TestTrue(
+					*FString::Printf(TEXT("%s C5 seed validates"), Generation.Element),
+					Response->TryGetStringField(TEXT("status"), Status)
+						&& (Status == TEXT("created_and_validated")
+							|| Status == TEXT("modified_and_validated")
+							|| Status == TEXT("partially_completed")
+							|| Status == TEXT("no_change_required"))
+						&& Response->TryGetObjectField(TEXT("validation"), Validation)
+						&& Validation
+						&& (*Validation)->TryGetBoolField(
+							TEXT("protected_fields_equal"),
+							bProtectedFieldsEqual)
+						&& bProtectedFieldsEqual))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	static void CollectPresent(
 		const TArray<FString>& Candidates,
 		TArray<FString>& OutPresent,
@@ -122,8 +278,6 @@ namespace UeremcpPocERestart
 		};
 		Groups.Add(MoveTemp(B));
 
-		// Successful C results creatable on this tip (C1–C4/C6–C7). C5 has no
-		// networking/damage assets to checkpoint — residual only.
 		FPocAssetGroup C;
 		C.PocKey = TEXT("C");
 		C.Candidates = {
@@ -134,6 +288,7 @@ namespace UeremcpPocERestart
 			TEXT("/Game/__UeremcpPoc/MI_NS_POCC_IceVariation_Trail"),
 			TEXT("/Game/__UeremcpPoc/MI_NS_POCC_WindThirdGeneration_Core"),
 			TEXT("/Game/__UeremcpPoc/MI_NS_POCC_WindThirdGeneration_Trail"),
+			PocCAbilityTable,
 		};
 		Groups.Add(MoveTemp(C));
 
@@ -170,6 +325,22 @@ bool FUeremcpPocERestartCreate::RunTest(const FString& Parameters)
 	}
 	TestTrue(TEXT("created scratch asset exists"), UEditorAssetLibrary::DoesAssetExist(Soft));
 
+	if (!SeedPocCAbilityVariations(*this))
+	{
+		return false;
+	}
+
+	TSharedPtr<FJsonObject> AbilityRows = MakeShared<FJsonObject>();
+	for (const TCHAR* RowName : {PocCIceRow, PocCWindRow})
+	{
+		FString Snapshot;
+		if (!ReadAbilityRowSnapshot(*this, RowName, Snapshot))
+		{
+			return false;
+		}
+		AbilityRows->SetStringField(RowName, Snapshot);
+	}
+
 	TArray<FString> AllAssets;
 	AllAssets.Add(Soft);
 
@@ -192,10 +363,12 @@ bool FUeremcpPocERestartCreate::RunTest(const FString& Parameters)
 		PocEntry->SetArrayField(TEXT("present"), StringArrayToJson(Present));
 		PocEntry->SetArrayField(TEXT("missing"), StringArrayToJson(Missing));
 		const bool bAny = Present.Num() > 0;
+		const bool bComplete = Missing.Num() == 0 && Present.Num() == Group.Candidates.Num();
 		PocEntry->SetBoolField(TEXT("any_present"), bAny);
+		PocEntry->SetBoolField(TEXT("complete"), bComplete);
 		Presence->SetObjectField(Group.PocKey, PocEntry);
 
-		if (bAny)
+		if (bComplete)
 		{
 			PresentPocs.Add(Group.PocKey);
 			ByPoc->SetArrayField(Group.PocKey, StringArrayToJson(Present));
@@ -209,19 +382,16 @@ bool FUeremcpPocERestartCreate::RunTest(const FString& Parameters)
 		else
 		{
 			AbsentPocs.Add(Group.PocKey);
+			AddError(FString::Printf(
+				TEXT("POC %s result checkpoint is incomplete"),
+				Group.PocKey));
 		}
 	}
 
 	TSharedPtr<FJsonObject> Residuals = MakeShared<FJsonObject>();
 	Residuals->SetStringField(
-		TEXT("C5"),
-		TEXT("No networking/damage contract assets exist for Niagara sources; C5 remains FAIL and is not part of the restart checkpoint."));
-	Residuals->SetStringField(
-		TEXT("D5"),
-		TEXT("Pattern B multi-client proof is not an on-disk asset; DT_PocD_Live survival does not close D5."));
-	Residuals->SetStringField(
-		TEXT("overall_E1"),
-		TEXT("E1 overall (all POC A–D results) is not claimed while C5 fails and D5 is static-only; this run proves survival of creatable successful assets only."));
+		TEXT("E3_E4"),
+		TEXT("Named protocol and Blueprint gates pass; Niagara/Material domain pipelines remain scoped residuals."));
 
 	TSharedPtr<FJsonObject> Checkpoint = MakeShared<FJsonObject>();
 	Checkpoint->SetStringField(TEXT("id"), CheckpointId);
@@ -231,6 +401,8 @@ bool FUeremcpPocERestartCreate::RunTest(const FString& Parameters)
 	Checkpoint->SetObjectField(TEXT("presence"), Presence);
 	Checkpoint->SetArrayField(TEXT("pocs_present"), StringArrayToJson(PresentPocs));
 	Checkpoint->SetArrayField(TEXT("pocs_absent"), StringArrayToJson(AbsentPocs));
+	Checkpoint->SetStringField(TEXT("ability_table"), PocCAbilityTable);
+	Checkpoint->SetObjectField(TEXT("ability_rows"), AbilityRows);
 	Checkpoint->SetObjectField(TEXT("residuals"), Residuals);
 
 	FString CheckpointJson;
@@ -326,6 +498,36 @@ bool FUeremcpPocERestartVerify::RunTest(const FString& Parameters)
 		}
 	}
 
+	bool bAllRowsMatch = true;
+	TSharedPtr<FJsonObject> RereadRows = MakeShared<FJsonObject>();
+	const TSharedPtr<FJsonObject>* ExpectedRows = nullptr;
+	if (!Checkpoint->TryGetObjectField(TEXT("ability_rows"), ExpectedRows)
+		|| !ExpectedRows
+		|| !ExpectedRows->IsValid())
+	{
+		AddError(TEXT("E1 verify: POC C ability row snapshots missing from checkpoint"));
+		bAllRowsMatch = false;
+	}
+	else
+	{
+		for (const TCHAR* RowName : {PocCIceRow, PocCWindRow})
+		{
+			FString ExpectedSnapshot;
+			FString ActualSnapshot;
+			const bool bExpected = (*ExpectedRows)->TryGetStringField(RowName, ExpectedSnapshot);
+			const bool bRead = ReadAbilityRowSnapshot(*this, RowName, ActualSnapshot);
+			const bool bMatches = bExpected && bRead && ActualSnapshot == ExpectedSnapshot;
+			TestTrue(
+				*FString::Printf(TEXT("POC C variation row %s survived unchanged"), RowName),
+				bMatches);
+			bAllRowsMatch &= bMatches;
+			TSharedPtr<FJsonObject> RowEvidence = MakeShared<FJsonObject>();
+			RowEvidence->SetBoolField(TEXT("present"), bRead);
+			RowEvidence->SetBoolField(TEXT("matches_checkpoint"), bMatches);
+			RereadRows->SetObjectField(RowName, RowEvidence);
+		}
+	}
+
 	// Per-POC survival from by_poc when present.
 	TSharedPtr<FJsonObject> SurvivedByPoc = MakeShared<FJsonObject>();
 	const TSharedPtr<FJsonObject>* ByPoc = nullptr;
@@ -360,21 +562,11 @@ bool FUeremcpPocERestartVerify::RunTest(const FString& Parameters)
 		}
 	}
 
-	const bool bPass = bAllPresent && !HasAnyErrors();
+	const bool bAllPocsPresent = Checkpoint->GetArrayField(TEXT("pocs_absent")).Num() == 0;
+	const bool bPass = bAllPresent && bAllRowsMatch && bAllPocsPresent && !HasAnyErrors();
 
-	FString Scope = TEXT("validation_scratch_curve");
-	const TArray<TSharedPtr<FJsonValue>>* PocsPresent = nullptr;
-	if (Checkpoint->TryGetArrayField(TEXT("pocs_present"), PocsPresent) && PocsPresent && PocsPresent->Num() > 0)
-	{
-		TArray<FString> Keys;
-		for (const TSharedPtr<FJsonValue>& V : *PocsPresent)
-		{
-			Keys.Add(V->AsString());
-		}
-		Scope = FString::Printf(
-			TEXT("scratch_plus_successful_ad_assets(%s); C5/D5 residuals unchanged"),
-			*FString::Join(Keys, TEXT(",")));
-	}
+	const FString Scope =
+		TEXT("full_ad_results_including_poc_c_gameplay_binding_rows");
 
 	TSharedPtr<FJsonObject> Evidence = MakeShared<FJsonObject>();
 	Evidence->SetNumberField(TEXT("schema_version"), 1);
@@ -387,13 +579,14 @@ bool FUeremcpPocERestartVerify::RunTest(const FString& Parameters)
 	Evidence->SetArrayField(TEXT("survived_assets"), StringArrayToJson(Survived));
 	Evidence->SetArrayField(TEXT("missing_after_restart"), StringArrayToJson(MissingAfterRestart));
 	Evidence->SetObjectField(TEXT("survived_by_poc"), SurvivedByPoc);
-	Evidence->SetBoolField(TEXT("overall_e1_all_ad_claimed"), false);
+	Evidence->SetObjectField(TEXT("reread_ability_rows"), RereadRows);
+	Evidence->SetBoolField(TEXT("overall_e1_all_ad_claimed"), bPass);
 
 	TSharedPtr<FJsonObject> Criteria = MakeShared<FJsonObject>();
 	TSharedPtr<FJsonObject> E1 = MakeShared<FJsonObject>();
 	E1->SetStringField(TEXT("status"), bPass ? TEXT("pass") : TEXT("fail"));
 	E1->SetStringField(TEXT("scope"), Scope);
-	E1->SetBoolField(TEXT("full_ad_results_claimed"), false);
+	E1->SetBoolField(TEXT("full_ad_results_claimed"), bPass);
 	Criteria->SetObjectField(TEXT("E1"), E1);
 	Evidence->SetObjectField(TEXT("criteria"), Criteria);
 	EmitEvidence(*this, Evidence);
@@ -403,7 +596,7 @@ bool FUeremcpPocERestartVerify::RunTest(const FString& Parameters)
 	IFileManager::Get().Delete(*Path);
 
 	AddInfo(bPass
-		? TEXT("POC_E E1 verify PASS: checkpointed assets survived editor restart (overall A–D E1 not claimed)")
+		? TEXT("POC_E E1 verify PASS: full A-D assets and C5 gameplay rows survived editor restart")
 		: TEXT("POC_E E1 verify FAIL"));
 	return bPass;
 }

@@ -9,7 +9,6 @@ param(
     [string]$B8CreateFilter = "UEREMCP.Niagara.POCB.Restart.Create",
     [string]$B8VerifyFilter = "UEREMCP.Niagara.POCB.Restart.Verify",
     [string]$PocCFilter = "UEREMCP.Niagara.Create.PocCVariationRuntime",
-    [string]$PocCThirdGenFilter = "UEREMCP.Templates.POCC.ThirdGeneration",
     [string]$PocDFilter = "UEREMCP.Gameplay.PocD.LiveUpsertViaPlan",
     [string]$E1CreateFilter = "UEREMCP.Validation.PocE.Restart.Create",
     [string]$E1VerifyFilter = "UEREMCP.Validation.PocE.Restart.Verify",
@@ -202,7 +201,8 @@ function Invoke-E1DomainSeed {
         # loaded. E1 Create checkpoints the existing CRT Blueprint when present.
         @{ Filter = $B8CreateFilter; Role = "e1_seed_B"; Required = $true },
         @{ Filter = $PocCFilter; Role = "e1_seed_C"; Required = $true },
-        @{ Filter = $PocCThirdGenFilter; Role = "e1_seed_C_third_gen"; Required = $false },
+        # E1 Create itself seeds the ice/wind template generations and their
+        # C5 gameplay-binding rows after the direct Niagara variation exists.
         @{ Filter = $PocDFilter; Role = "e1_seed_D"; Required = $true }
     )
     foreach ($row in $rows) {
@@ -284,8 +284,8 @@ $summary = [ordered]@{
     }
     results = $results
     notes = @(
-        "Scenario E/E1 pass does not claim overall POC E or full E1 (all A–D including C5/D5).",
-        "C5 networking/damage contract and D5 multi-client remain residuals."
+        "Scenario E/E1 checkpoints full accepted A-D results, including both POC C gameplay-binding rows.",
+        "E3/E4 Niagara and Material domain coverage remains a scoped residual."
     )
 }
 
