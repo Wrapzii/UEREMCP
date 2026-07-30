@@ -1,30 +1,29 @@
-# WS-11 → WS-14: POC E metrics handoff (E7)
+# WS-11 → WS-14: POC E metrics handoff (E7) — closed
 
 **From:** WS-11  
 **To:** WS-14  
 **Date:** 2026-07-30  
+**Status:** Rows landed in `docs/reviews/poc-metrics.md` on integration tip (orch allowed WS-14 path edit for E7 closure). Evidence JSON remains under WS-11 `tests/**`.
 
-`docs/reviews/poc-metrics.md` is WS-14-owned. WS-11 does not edit it.
+## E7 state (honest)
 
-## Current E7 state (honest)
-
-| POC | Metrics in `poc-metrics.md` | WS-11 note |
+| POC | Metrics in `poc-metrics.md` | Notes |
 |---|---|---|
-| A | OPEN | CRT evidence exists under `tests/integration/_logs/poc_a_complete_round_trip_*.json`; wall/tokens/primitive cells not closed in the review file |
-| B | Closed (cells) | Already recorded; tokens precisely unavailable |
-| C | OPEN | Not started |
-| D | OPEN | Not started |
-| E | N/A as a goal scenario | Durability/honesty; no separate goal-level MCP round-trip metric required beyond locking E1–E6 filters |
+| A | closed | CRT JSON; tokens unavailable (reject prior `0`) |
+| B | closed | unchanged |
+| C | closed | `mcp_round_trips=1` measured; other cells unavailable with reasons |
+| D | closed | one `execute_plan` round trip measured; other cells unavailable with reasons |
+| E | closed (harness) | durability — not a goal MCP scenario |
+| Overall POC E | **false** | E1 full A–D unmet |
 
-## Ask of WS-14
+## Artifacts
 
-1. Keep E7 honest: do **not** mark E7 complete until A/C/D measured cells exist (or are explicitly `unavailable` with machine-checkable reasons, matching the B token rule).
-2. When recording, cite:
-   - `tests/integration/_logs/poc_e_criterion_bundle.json`
-   - `docs/proposals/ws-11-poc-e-acceptance-status.md`
-3. Do not invent wall-clock or token numbers from this handoff.
+- `tests/integration/_logs/poc_e7_metrics_20260730.json`
+- `docs/reviews/poc-metrics.md`
+- `docs/proposals/ws-11-poc-e-acceptance-status.md`
+- `docs/proposals/ws-01-poc-cde-status-after-recovery-2026-07-30.md`
 
-## Validation command
+## Validation
 
 ```powershell
 python tests/poc_evidence.py --poc-e-bundle tests/integration/_logs/poc_e_criterion_bundle.json

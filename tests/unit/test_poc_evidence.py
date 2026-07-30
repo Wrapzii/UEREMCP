@@ -317,7 +317,7 @@ class PocEEvidenceTest(unittest.TestCase):
             "reread_after_restart": True,
             "criteria": {"E1": {"status": "pass"}},
             "checkpoint": {
-                "id": "poc-e1-validation-scratch",
+                "id": "poc-e1-restart",
                 "assets": ["/Game/__UeremcpTests/PocE_Restart/PocERestartCurve.PocERestartCurve"],
             },
         }

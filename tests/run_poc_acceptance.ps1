@@ -5,21 +5,84 @@ param(
     [ValidateSet("A", "B8", "E", "E1", "E5", "E6")]
     [string]$Scenario = "A",
     [string]$PocAFilter = "UEREMCP.Blueprint.POCA.CompleteRoundTrip",
+    [string]$PocAFixtureFilter = "UEREMCP.Blueprint.POCA.TransportFixture.Setup",
     [string]$B8CreateFilter = "UEREMCP.Niagara.POCB.Restart.Create",
     [string]$B8VerifyFilter = "UEREMCP.Niagara.POCB.Restart.Verify",
+    [string]$PocCFilter = "UEREMCP.Niagara.Create.PocCVariationRuntime",
+    [string]$PocCThirdGenFilter = "UEREMCP.Templates.POCC.ThirdGeneration",
+    [string]$PocDFilter = "UEREMCP.Gameplay.PocD.LiveUpsertViaPlan",
     [string]$E1CreateFilter = "UEREMCP.Validation.PocE.Restart.Create",
     [string]$E1VerifyFilter = "UEREMCP.Validation.PocE.Restart.Verify",
     [string]$E5Filter = "UEREMCP.Validation.Honesty.ValidateFalseForbidsValidated",
     [string]$E6Filter = "UEREMCP.Validation.Honesty.BrokenRequestFailedValidation",
     [string]$Project = "$UEREMCP_LEGACY_PROJECT\RE.uproject",
     [string]$EngineCmd = "$UE_ROOT\Engine\Binaries\Win64\UnrealEditor-Cmd.exe",
-    [string]$EvidenceOutput = ""
+    [string]$EvidenceOutput = "",
+    [switch]$SkipDomainSeed
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $EditorRunner = Join-Path $PSScriptRoot "run_editor_tests.ps1"
 $EvidenceParser = Join-Path $PSScriptRoot "poc_evidence.py"
+
+function Invoke-EditorAutomationFilter {
+    param(
+        [string]$Filter,
+        [string]$Role = "seed"
+    )
+
+    $output = & $EditorRunner `
+        -Project $Project `
+        -EngineCmd $EngineCmd `
+        -KeepUeremcp `
+        -NoProbe `
+        -Filter $Filter 2>&1
+    $editorExit = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+
+    $logLine = $output |
+        Where-Object { "$_" -match "^UEREMCP_EDITOR_LOG=(.+)$" } |
+        Select-Object -First 1
+    $logPath = if ($logLine -and "$logLine" -match "^UEREMCP_EDITOR_LOG=(.+)$") {
+        $Matches[1].Trim()
+    }
+    else {
+        ""
+    }
+
+    $outcome = "failed"
+    $blocker = "editor runner produced no readable log"
+    if ($logPath -and (Test-Path $logPath)) {
+        $logText = Get-Content -Raw -Path $logPath
+        $failed = [regex]::Matches(
+            $logText,
+            "Test Completed\. Result=\{(?!Success)[^}]+\}\s+Name=\{[^}]+\}\s+Path=\{$([regex]::Escape($Filter))\}"
+        )
+        $succeeded = $logText -match "Test Completed\. Result=\{Success\}.*Path=\{$([regex]::Escape($Filter))\}"
+        if ($succeeded -and $failed.Count -eq 0) {
+            $outcome = "pass"
+            $blocker = $null
+        }
+        elseif ($logText -notmatch "Found\s+[1-9][0-9]*\s+automation tests") {
+            $outcome = "skipped"
+            $blocker = "domain filter absent from active plugin binary"
+        }
+        else {
+            $blocker = "automation filter did not report Success"
+        }
+    }
+
+    $row = [ordered]@{
+        filter = $Filter
+        role = $Role
+        outcome = $outcome
+        editor_exit = $editorExit
+        log = $logPath
+    }
+    if ($blocker) { $row.blocker = $blocker }
+    return $row
+}
 
 function Invoke-EvidenceFilter {
     param(
@@ -127,6 +190,36 @@ function Invoke-RestartPair {
     return $pair
 }
 
+function Invoke-E1DomainSeed {
+    param(
+        [switch]$BestEffort
+    )
+
+    $seed = @()
+    $rows = @(
+        # Do NOT recreate BP_CompleteRoundTripTransport here — TransportFixture.Setup
+        # asserts CreateBlueprint on a deleted package and crashes if the asset remains
+        # loaded. E1 Create checkpoints the existing CRT Blueprint when present.
+        @{ Filter = $B8CreateFilter; Role = "e1_seed_B"; Required = $true },
+        @{ Filter = $PocCFilter; Role = "e1_seed_C"; Required = $true },
+        @{ Filter = $PocCThirdGenFilter; Role = "e1_seed_C_third_gen"; Required = $false },
+        @{ Filter = $PocDFilter; Role = "e1_seed_D"; Required = $true }
+    )
+    foreach ($row in $rows) {
+        $result = Invoke-EditorAutomationFilter -Filter $row.Filter -Role $row.Role
+        if ($BestEffort -or -not $row.Required) {
+            if ($result.outcome -eq "failed") {
+                $result.outcome = "seed_failed"
+            }
+            elseif ($result.outcome -eq "skipped") {
+                $result.outcome = "seed_skipped"
+            }
+        }
+        $seed += $result
+    }
+    return $seed
+}
+
 $results = @()
 if ($Scenario -eq "A") {
     $results += Invoke-EvidenceFilter `
@@ -142,6 +235,10 @@ elseif ($Scenario -eq "B8") {
         -MismatchMessage "restart verify checkpoint does not match create phase"
 }
 elseif ($Scenario -eq "E1") {
+    # Full E1 path: seed creatable A–D results, then Validation restart pair.
+    if (-not $SkipDomainSeed) {
+        $results += Invoke-E1DomainSeed
+    }
     $results += Invoke-RestartPair `
         -CreateFilter $E1CreateFilter `
         -VerifyFilter $E1VerifyFilter `
@@ -156,9 +253,14 @@ elseif ($Scenario -eq "E6") {
     $results += Invoke-EvidenceFilter -Filter $E6Filter -EvidenceScenario "poc_e_e6"
 }
 else {
-    # Scenario E — honesty + validation-scratch restart (does not claim full A–D E1).
+    # Scenario E — honesty + restart with best-effort A–D seed (failures do not
+    # fail honesty gates). Use -Scenario E1 for required domain seed + restart.
+    # Use -SkipDomainSeed for scratch-only honesty gate.
     $results += Invoke-EvidenceFilter -Filter $E5Filter -EvidenceScenario "poc_e_e5"
     $results += Invoke-EvidenceFilter -Filter $E6Filter -EvidenceScenario "poc_e_e6"
+    if (-not $SkipDomainSeed) {
+        $results += Invoke-E1DomainSeed -BestEffort
+    }
     $results += Invoke-RestartPair `
         -CreateFilter $E1CreateFilter `
         -VerifyFilter $E1VerifyFilter `
@@ -168,6 +270,7 @@ else {
 }
 
 $outcomes = @($results | ForEach-Object { $_["outcome"] })
+# seed_failed / seed_skipped are informational for Scenario E best-effort seeding.
 $summary = [ordered]@{
     scenario = $Scenario
     outcome = if ($outcomes -contains "failed" -or $outcomes -contains "fail") {
@@ -180,6 +283,10 @@ $summary = [ordered]@{
         "pass"
     }
     results = $results
+    notes = @(
+        "Scenario E/E1 pass does not claim overall POC E or full E1 (all A–D including C5/D5).",
+        "C5 networking/damage contract and D5 multi-client remain residuals."
+    )
 }
 
 $summaryJson = $summary | ConvertTo-Json -Depth 12
