@@ -8,6 +8,7 @@
 
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimCompositeBase.h"
+#include "Animation/AnimData/IAnimationDataController.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimNotifies/AnimNotify_ResetDynamics.h"
 #include "Animation/AnimNotifies/AnimNotifyState_DisableRootMotion.h"
@@ -63,6 +64,10 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 	FSlotAnimationTrack& Slot = Montage->AddSlot(TEXT("UpperBody"));
 
 	UAnimSequence* Sequence = NewObject<UAnimSequence>(GetTransientPackage(), TEXT("A_WS10_Source"));
+	// A transient UAnimSequence has no MovieScene until its sequencer data model is
+	// initialized; FAnimSegment::SetAnimReference immediately queries that model.
+	// [VERIFIED: AnimSequencerController.cpp:2509-2524; AnimCompositeBase.cpp:753-759,785-792]
+	Sequence->GetController().InitializeModel();
 	FAnimSegment Segment;
 	Segment.SetAnimReference(Sequence);
 	Segment.StartPos = 0.25f;
@@ -94,9 +99,12 @@ bool FUeremcpAnimationInspectMontageServiceTest::RunTest(const FString& Paramete
 	FAnimNotifyEvent StateEvent;
 	StateEvent.NotifyName = TEXT("DisableRootMotion");
 	StateEvent.SetTime(0.6f);
-	StateEvent.SetDuration(0.3f);
 	StateEvent.TrackIndex = 0;
 	StateEvent.NotifyStateClass = NewObject<UAnimNotifyState_DisableRootMotion>(Montage);
+	// UE creates the state object before assigning duration; GetDuration only
+	// returns EndLink - start time when NotifyStateClass is set.
+	// [VERIFIED: AnimationBlueprintLibrary.cpp:796-826; AnimTypes.cpp:96-105]
+	StateEvent.SetDuration(0.3f);
 	Montage->Notifies.Add(StateEvent);
 
 	FUeremcpMontageInspection Inspection;
