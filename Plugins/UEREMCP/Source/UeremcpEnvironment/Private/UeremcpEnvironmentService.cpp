@@ -730,23 +730,33 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			Holder->AddInstanceComponent(Hism);
 
 			const FUeremcpSplinePath& Bank = Exclusion;
-			for (int32 Attempt = 0; Attempt < Spec.MaxFoliageInstances * 4 && FoliageCount < Spec.MaxFoliageInstances; ++Attempt)
+			const float Inner = Spec.RiverWidth * 0.55f;
+			const float Outer = Inner + Spec.ForestBankWidth;
+			// Corridor-biased samples (both banks) — random XY rarely hits plantable
+			// shoulders when valley carve creates steep near-channel slopes
+			// [VERIFIED-RUNTIME: seed=42 yielded slope_rejected=168 foliage=0 at 32°].
+			const int32 MaxAttempts = Spec.MaxFoliageInstances * 12;
+			for (int32 Attempt = 0; Attempt < MaxAttempts && FoliageCount < Spec.MaxFoliageInstances; ++Attempt)
 			{
-				const float U = UeremcpNoise::ValueNoise2D(Spec.Seed ^ 0xF01ull, Attempt, 1);
-				const float V = UeremcpNoise::ValueNoise2D(Spec.Seed ^ 0xF02ull, Attempt, 2);
-				const FVector Local(
-					FMath::Lerp(Extents.Min.X, Extents.Max.X, U),
-					FMath::Lerp(Extents.Min.Y, Extents.Max.Y, V),
-					0.f);
+				const float Along = UeremcpNoise::ValueNoise2D(Spec.Seed ^ 0xF01ull, Attempt, 1);
+				const float BandT = 0.40f + 0.50f * UeremcpNoise::ValueNoise2D(Spec.Seed ^ 0xF02ull, Attempt, 2);
+				const float Side = (Attempt % 2 == 0) ? 1.f : -1.f;
+				const float DistTarget = Inner + Spec.ForestBankWidth * BandT;
+				FVector2D Center;
+				FVector2D Perp;
+				if (!River.SampleAlongXY(Along, Center, Perp))
+				{
+					continue;
+				}
+				const FVector Local(Center.X + Perp.X * DistTarget * Side, Center.Y + Perp.Y * DistTarget * Side, 0.f);
 				const float Dist = Bank.DistanceToXY(Local);
-				const float Inner = Spec.RiverWidth * 0.55f;
-				const float Outer = Inner + Spec.ForestBankWidth;
 				if (Dist < Inner || Dist > Outer)
 				{
 					continue;
 				}
-				const float Density = UeremcpNoise::SmoothNoise2D(Spec.Seed ^ 0xD00Dull, U * 8.f, V * 8.f);
-				if (Density < 0.35f)
+				const float Density = UeremcpNoise::SmoothNoise2D(
+					Spec.Seed ^ 0xD00Dull, Local.X * 0.001f, Local.Y * 0.001f);
+				if (Density < 0.28f)
 				{
 					continue;
 				}
@@ -773,7 +783,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				Xf.SetLocation(WorldPos);
 				Xf.SetScale3D(FVector(0.4f + Density * 0.8f));
 				Hism->AddInstance(Xf);
-				if (River.SignedSideToClosestXY(Local) >= 0.f)
+				if (Side >= 0.f)
 				{
 					++LeftBankCount;
 				}
