@@ -1069,6 +1069,21 @@ bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
 {
 	OutRejection = FUeremcpEnvironmentRejection();
 
+	// Mergeable recovery must still pass ValidateScaleAndQuality: match axes
+	// AND keep scale_z under the needle threshold (default 5). NEEDLE alone used
+	// to patch only scale_z → agents hit NONUNIFORM on the next call (3 RTT).
+	constexpr float NeedleCap = 5.f;
+	auto MakeSafeUniformTerrainPatch = [&](float Preferred) -> TSharedPtr<FJsonObject>
+	{
+		const float SafeUniform = Preferred > NeedleCap ? 3.f : Preferred;
+		TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Terrain = MakeShared<FJsonObject>();
+		Terrain->SetNumberField(TEXT("scale_xy"), SafeUniform);
+		Terrain->SetNumberField(TEXT("scale_z"), SafeUniform);
+		SpecPatch->SetObjectField(TEXT("terrain"), Terrain);
+		return SpecPatch;
+	};
+
 	// P0-3. Nonuniform scale bakes wrong slopes in permanently, and every "fix"
 	// after the fact is another rebuild. An agent set (300, 100) and corrected
 	// spiky terrain three times without ever being told the cause.
@@ -1083,17 +1098,9 @@ bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
 				 "terrain.allow_nonuniform_scale=true only if the distortion is intended."),
 			Spec.ScaleXY, Spec.ScaleZ);
 		OutRejection.NextArgs = MakeShared<FJsonObject>();
-		TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
-		TSharedPtr<FJsonObject> Terrain = MakeShared<FJsonObject>();
-		// Mergeable recovery must still pass ValidateScaleAndQuality: match axes
-		// AND keep scale_z under the needle threshold (default 5).
-		constexpr float NeedleCap = 5.f;
 		const float Matched = FMath::Min(Spec.ScaleXY, Spec.ScaleZ);
-		const float SafeUniform = Matched > NeedleCap ? 3.f : Matched;
-		Terrain->SetNumberField(TEXT("scale_xy"), SafeUniform);
-		Terrain->SetNumberField(TEXT("scale_z"), SafeUniform);
-		SpecPatch->SetObjectField(TEXT("terrain"), Terrain);
-		OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
+		OutRejection.NextArgs->SetObjectField(
+			TEXT("specification"), MakeSafeUniformTerrainPatch(Matched));
 		return false;
 	}
 
@@ -1108,11 +1115,10 @@ bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
 				 "terrain.allow_extreme_scale_z=true to override."),
 			Spec.ScaleZ);
 		OutRejection.NextArgs = MakeShared<FJsonObject>();
-		TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
-		TSharedPtr<FJsonObject> Terrain = MakeShared<FJsonObject>();
-		Terrain->SetNumberField(TEXT("scale_z"), 3.0);
-		SpecPatch->SetObjectField(TEXT("terrain"), Terrain);
-		OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
+		// Patch BOTH axes so merging into a uniform (100,100) request succeeds on
+		// the next call — not after an extra NONUNIFORM hop.
+		OutRejection.NextArgs->SetObjectField(
+			TEXT("specification"), MakeSafeUniformTerrainPatch(Spec.ScaleZ));
 		return false;
 	}
 
@@ -1371,7 +1377,11 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	TSharedPtr<FJsonObject> HeightMetrics;
 	GenerateHeightmap(Spec, River, Heights, HeightMetrics);
 	Result.StructuralMetrics = HeightMetrics;
-	const FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+	FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+	// Baked valley width written into the landscape hash. Additive water may
+	// request a different river.width for the mesh without rebuilding terrain —
+	// that must not flip HEIGHTMAP_MISMATCH. We re-bind this after World is up.
+	float HeightmapRiverWidth = Spec.RiverWidth;
 
 	const uint32 RevisionCrc = FCrc::StrCrc32(*FString::Printf(
 		TEXT("env-v2-1|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d|%s|%d|%d"),
@@ -1570,6 +1580,38 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	// Must run after World / bOwnsMapLifecycle exist (not before dry_run early-out).
 	if (!bOwnsMapLifecycle && !Spec.bIncludeTerrain)
 	{
+		// River.width carves the valley into the heightmap at landscape-create time.
+		// Additive create_water_body may pass a different width for the water mesh;
+		// that must not recompute a different surface hash. Re-bind Heights to the
+		// baked valley width stored on UEREMCP_Metadata.
+		const FString StoredRiverWidth = ReadEnvironmentTag(World, TEXT("UEREMCP_RIVER_WIDTH="));
+		if (!StoredRiverWidth.IsEmpty())
+		{
+			const float BakedWidth = FCString::Atof(*StoredRiverWidth);
+			if (BakedWidth > 0.f
+				&& !FMath::IsNearlyEqual(BakedWidth, Spec.RiverWidth, 0.01f))
+			{
+				FUeremcpEnvironmentBuildSpec TerrainSpec = Spec;
+				TerrainSpec.RiverWidth = BakedWidth;
+				const FBox BakedExtents(
+					FVector(0, 0, 0),
+					FVector(
+						float(TerrainSpec.SizeX - 1) * TerrainSpec.ScaleXY,
+						float(TerrainSpec.SizeY - 1) * TerrainSpec.ScaleXY,
+						0));
+				const FUeremcpSplinePath BakedRiver =
+					UeremcpSpline::MakeRiverAcross(TerrainSpec.Seed, BakedExtents, 12, BakedWidth);
+				GenerateHeightmap(TerrainSpec, BakedRiver, Heights, HeightMetrics);
+				Result.StructuralMetrics = HeightMetrics;
+				HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+				HeightmapRiverWidth = BakedWidth;
+				Result.CapabilityNotes.Add(FString::Printf(
+					TEXT("Heightmap match uses landscape-baked river.width=%.1f; water mesh "
+						 "uses specification.river.width=%.1f."),
+					BakedWidth, Spec.RiverWidth));
+			}
+		}
+
 		const FString ExistingHash = ReadEnvironmentTag(World, TEXT("UEREMCP_HEIGHTMAP_HASH="));
 		if (!ExistingHash.IsEmpty() && ExistingHash != HeightmapHash)
 		{
@@ -1589,7 +1631,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
 			SpecPatch->SetStringField(
 				TEXT("note"),
-				TEXT("Repeat the exact seed + terrain block from the landscape that produced level_heightmap_hash, or set include.terrain/rebuild."));
+				TEXT("Repeat the exact seed + terrain block from the landscape that produced level_heightmap_hash, or set include.terrain/rebuild. river.width alone does not rebuild the heightmap on additive water."));
 			Result.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
 			return Result;
 		}
@@ -1715,11 +1757,18 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			ELandscapeImportAlphamapType::Additive,
 			TArrayView<const FLandscapeLayer>());
 
+		// Import alone can leave Visibility collision thin/missing — place_prefab
+		// and snap then miss at small uniform scales. Rebuild collision now.
+		// [VERIFIED: LandscapeProxy.h:1242] CreateLandscapeInfo
+		// [VERIFIED: LandscapeProxy.h:1405] RecreateCollisionComponents
+		Landscape->CreateLandscapeInfo();
+		Landscape->RecreateCollisionComponents();
+
 		CreatedLabels.Add(TEXT("UEREMCP_Landscape"));
 		Tech.Add(MakeTech(
 			TEXT("landscape_heightmap"),
 			TEXT("real"),
-			TEXT("ALandscape::Import applied [VERIFIED: LandscapeProxy.h:1418-1420]")));
+			TEXT("ALandscape::Import + RecreateCollisionComponents [VERIFIED: LandscapeProxy.h:1418-1420,1405]")));
 		Result.InternalOperations += 2;
 	}
 
@@ -2227,12 +2276,18 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.InternalOperations += 1;
 	}
 
+	DestroyOwnedEnvironmentActors(World, TEXT("UEREMCP_Metadata"));
 	if (AActor* Metadata = World->SpawnActor<AActor>(FVector::ZeroVector, FRotator::ZeroRotator))
 	{
+		// Singleton metadata: replace prior tags so additive stages do not leave
+		// stale UEREMCP_RIVER_WIDTH / HEIGHTMAP_HASH that ReadEnvironmentTag might
+		// miss or prefer incorrectly.
 		Metadata->SetActorLabel(TEXT("UEREMCP_Metadata"));
 		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_REV=%s"), *Result.Revision)));
 		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_SEED=%llu"), Spec.Seed)));
-		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_RIVER_WIDTH=%.3f"), Spec.RiverWidth)));
+		// Persist the width baked into the heightmap (not necessarily the water
+		// mesh width) so additive stages can rematch without HEIGHTMAP_MISMATCH.
+		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_RIVER_WIDTH=%.3f"), HeightmapRiverWidth)));
 		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_HEIGHTMAP_HASH=%s"), *HeightmapHash)));
 		CreatedLabels.Add(TEXT("UEREMCP_Metadata"));
 		++Result.InternalOperations;

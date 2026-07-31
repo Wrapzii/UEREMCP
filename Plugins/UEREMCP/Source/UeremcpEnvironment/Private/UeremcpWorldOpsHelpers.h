@@ -12,7 +12,10 @@ namespace UeremcpWorldOps
 
 	/**
 	 * Z of the landscape under a point, ignoring foliage and everything else.
-	 * [VERIFIED: LandscapeProxy.h] Cast on hit actor identifies landscape.
+	 * Visibility multi-trace first; falls back to ALandscapeProxy::GetHeightAtLocation
+	 * (Editor heightfield) when collision is missing — common right after Import
+	 * at small uniform scales.
+	 * [VERIFIED: LandscapeProxy.h] Cast on hit actor / GetHeightAtLocation.
 	 */
 	bool LandscapeZAt(UWorld* World, const FVector& Location, float& OutZ);
 

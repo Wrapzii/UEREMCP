@@ -33,6 +33,7 @@
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "LandscapeProxy.h"
+#include "LandscapeHeightfieldCollisionComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "CollisionQueryParams.h"
 #include "Dom/JsonObject.h"
@@ -46,19 +47,46 @@ namespace UeremcpWorldOps
 
 	bool LandscapeZAt(UWorld* World, const FVector& Location, float& OutZ)
 	{
-		const FVector Start(Location.X, Location.Y, Location.Z + 200000.f);
-		const FVector End(Location.X, Location.Y, Location.Z - 200000.f);
-
-		FCollisionQueryParams Params(SCENE_QUERY_STAT(UeremcpLandscapeSnap), true);
-		Params.bTraceComplex = true;
-
-		TArray<FHitResult> Hits;
-		World->LineTraceMultiByChannel(Hits, Start, End, ECC_Visibility, Params);
-		for (const FHitResult& Hit : Hits)
+		if (!World)
 		{
-			if (Cast<ALandscapeProxy>(Hit.GetActor()))
+			return false;
+		}
+
+		// Prefer a Visibility multi-trace so foliage / props above the surface do
+		// not win — we only accept ALandscapeProxy hits.
+		// [VERIFIED: Engine/World.h LineTraceMultiByChannel]
+		{
+			const FVector Start(Location.X, Location.Y, Location.Z + 200000.f);
+			const FVector End(Location.X, Location.Y, Location.Z - 200000.f);
+
+			FCollisionQueryParams Params(SCENE_QUERY_STAT(UeremcpLandscapeSnap), true);
+			Params.bTraceComplex = true;
+
+			TArray<FHitResult> Hits;
+			World->LineTraceMultiByChannel(Hits, Start, End, ECC_Visibility, Params);
+			for (const FHitResult& Hit : Hits)
 			{
-				OutZ = Hit.ImpactPoint.Z;
+				if (Cast<ALandscapeProxy>(Hit.GetActor()))
+				{
+					OutZ = Hit.ImpactPoint.Z;
+					return true;
+				}
+			}
+		}
+
+		// Fallback: sample the landscape heightfield directly. Freshly imported
+		// landscapes (especially at small uniform scales) often have no Visibility
+		// collision yet — GetHeightAtLocation(Editor) still returns a Z when the
+		// XY is on the landscape. Without this, place_prefab_on_landscape after
+		// NEEDLE/NONUNIFORM recovery to scale=3 floated at Z=0.
+		// [VERIFIED: LandscapeProxy.h:1101] GetHeightAtLocation
+		// [VERIFIED: LandscapeHeightfieldCollisionComponent.h:32] EHeightfieldSource::Editor
+		for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
+		{
+			const TOptional<float> Height = It->GetHeightAtLocation(Location, EHeightfieldSource::Editor);
+			if (Height.IsSet())
+			{
+				OutZ = Height.GetValue();
 				return true;
 			}
 		}

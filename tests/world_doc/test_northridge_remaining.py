@@ -120,6 +120,14 @@ class TestPlacePrefabReusesLandscapeZ(unittest.TestCase):
         body = read(WORLD_OPS)
         self.assertIn("bool LandscapeZAt(", body)
         self.assertIn("ClearFoliageInBoxes", body)
+        # Visibility miss after Import at small scales — Editor heightfield fallback.
+        self.assertIn("GetHeightAtLocation", body)
+        self.assertIn("EHeightfieldSource::Editor", body)
+
+    def test_landscape_import_recreates_collision(self):
+        body = read(ENV_SERVICE)
+        self.assertIn("RecreateCollisionComponents", body)
+        self.assertIn("CreateLandscapeInfo", body)
 
 
 class TestImportAndPaint(unittest.TestCase):
@@ -160,10 +168,32 @@ class TestAdditiveStagingIdempotency(unittest.TestCase):
         body = read(ENV_SERVICE)
         self.assertIn("SafeUniform", body)
         self.assertIn("NeedleCap", body)
+        self.assertIn("MakeSafeUniformTerrainPatch", body)
         # Hardcoded (100, 3) recovery was still nonuniform and failed on merge.
         self.assertNotIn(
             'Terrain->SetNumberField(TEXT("scale_xy"), 100.0);\n'
             '\t\tTerrain->SetNumberField(TEXT("scale_z"), 3.0);',
+            body)
+
+    def test_needle_next_args_set_both_axes(self):
+        body = read(ENV_SERVICE)
+        # NEEDLE must not patch only scale_z (that forced a NONUNIFORM hop).
+        needle_idx = body.find('TEXT("NEEDLE_SCALE_Z")')
+        self.assertGreater(needle_idx, 0)
+        needle_block = body[needle_idx:needle_idx + 900]
+        self.assertIn("MakeSafeUniformTerrainPatch", needle_block)
+        self.assertNotIn(
+            'Terrain->SetNumberField(TEXT("scale_z"), 3.0);\n'
+            '\t\tSpecPatch->SetObjectField(TEXT("terrain"), Terrain);',
+            needle_block)
+
+    def test_additive_heightmap_rebinds_stored_river_width(self):
+        body = read(ENV_SERVICE)
+        self.assertIn("UEREMCP_RIVER_WIDTH=", body)
+        self.assertIn("HeightmapRiverWidth", body)
+        self.assertIn("landscape-baked river.width", body)
+        self.assertIn(
+            "river.width alone does not rebuild the heightmap on additive water",
             body)
 
 

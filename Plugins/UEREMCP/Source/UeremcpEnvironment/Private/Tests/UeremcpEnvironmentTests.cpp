@@ -478,8 +478,45 @@ bool FUeremcpEnvironmentNextArgsNonuniformScaleTest::RunTest(const FString& Para
 	TestTrue(TEXT("spec patch"), (*NextArgs)->TryGetObjectField(TEXT("specification"), Spec) && Spec);
 	const TSharedPtr<FJsonObject>* Terrain = nullptr;
 	TestTrue(TEXT("terrain patch"), (*Spec)->TryGetObjectField(TEXT("terrain"), Terrain) && Terrain);
-	TestEqual(TEXT("scale_xy recipe"), (*Terrain)->GetNumberField(TEXT("scale_xy")), 100.0);
+	TestEqual(TEXT("scale_xy recipe"), (*Terrain)->GetNumberField(TEXT("scale_xy")), 3.0);
 	TestEqual(TEXT("scale_z recipe"), (*Terrain)->GetNumberField(TEXT("scale_z")), 3.0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentNextArgsNeedleScaleTest,
+	"UEREMCP.Environment.Spec.NextArgsNeedleScale",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentNextArgsNeedleScaleTest::RunTest(const FString& Parameters)
+{
+	// NEEDLE alone used to patch only scale_z → merge left scale_xy=100 and
+	// the next call failed NONUNIFORM (3 RTT). Both axes must be in next_args.
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"create_landscape",
+		"request_id":"scale-needle-1",
+		"target":{"asset_path":"/Game/__UeremcpPoc/ScaleGate"},
+		"options":{"dry_run":true},
+		"specification":{"seed":42,"terrain":{"profile":"mountains","scale_xy":100,"scale_z":100}}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::CreateLandscape(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	const TSharedPtr<FJsonObject>* Error = nullptr;
+	TestTrue(TEXT("error object"), Root->TryGetObjectField(TEXT("error"), Error) && Error);
+	TestEqual(TEXT("code"), (*Error)->GetStringField(TEXT("code")), FString(TEXT("NEEDLE_SCALE_Z")));
+	const TSharedPtr<FJsonObject>* NextArgs = nullptr;
+	TestTrue(TEXT("next_args"), (*Error)->TryGetObjectField(TEXT("next_args"), NextArgs) && NextArgs);
+	const TSharedPtr<FJsonObject>* Spec = nullptr;
+	TestTrue(TEXT("spec patch"), (*NextArgs)->TryGetObjectField(TEXT("specification"), Spec) && Spec);
+	const TSharedPtr<FJsonObject>* Terrain = nullptr;
+	TestTrue(TEXT("terrain patch"), (*Spec)->TryGetObjectField(TEXT("terrain"), Terrain) && Terrain);
+	TestEqual(TEXT("scale_xy recipe"), (*Terrain)->GetNumberField(TEXT("scale_xy")), 3.0);
+	TestEqual(TEXT("scale_z recipe"), (*Terrain)->GetNumberField(TEXT("scale_z")), 3.0);
+	TestTrue(TEXT("has scale_xy field"), (*Terrain)->HasField(TEXT("scale_xy")));
 	return true;
 }
 
