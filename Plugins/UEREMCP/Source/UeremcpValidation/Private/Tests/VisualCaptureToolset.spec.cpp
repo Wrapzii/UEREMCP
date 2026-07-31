@@ -1,9 +1,13 @@
 // WS-11 contract regressions for general visual capture + Niagara fail-soft gate.
 #include "Dom/JsonObject.h"
+#include "HAL/FileManager.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "UeremcpNiagaraToolset.h"
+#include "UeremcpVisualCaptureCommon.h"
 #include "UeremcpVisualCaptureToolset.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -15,6 +19,37 @@ namespace UeremcpVisualCaptureTests
 		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
 		return FJsonSerializer::Deserialize(Reader, Out) && Out.IsValid();
 	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpVisualCapturePngRereadTest,
+	"UEREMCP.Validation.VisualCapture.PngRereadHonesty",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpVisualCapturePngRereadTest::RunTest(const FString& Parameters)
+{
+	const FString Directory = FPaths::Combine(
+		FPaths::ProjectSavedDir(), TEXT("UEREMCP"), TEXT("Tests"));
+	IFileManager::Get().MakeDirectory(*Directory, true);
+	const FString ValidPath = FPaths::Combine(Directory, TEXT("valid-signature.png"));
+	const FString InvalidPath = FPaths::Combine(Directory, TEXT("invalid-signature.png"));
+	const TArray<uint8> ValidBytes = {
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
+	};
+	const TArray<uint8> InvalidBytes = {
+		0x89, 0x50, 0x4e, 0x46, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
+	};
+	TestTrue(TEXT("write valid fixture"),
+		FFileHelper::SaveArrayToFile(ValidBytes, *ValidPath));
+	TestTrue(TEXT("write invalid fixture"),
+		FFileHelper::SaveArrayToFile(InvalidBytes, *InvalidPath));
+	TestTrue(TEXT("valid PNG signature accepted"),
+		UeremcpVisualCapture::IsNonEmptyPng(ValidPath));
+	TestFalse(TEXT("invalid PNG signature rejected"),
+		UeremcpVisualCapture::IsNonEmptyPng(InvalidPath));
+	IFileManager::Get().Delete(*ValidPath);
+	IFileManager::Get().Delete(*InvalidPath);
+	return true;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(

@@ -2,6 +2,7 @@
 #include "UeremcpVisualCaptureCommon.h"
 
 #include "Components/SceneCaptureComponent2D.h"
+#include "HAL/PlatformProcess.h"
 #include "HAL/FileManager.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Misc/FileHelper.h"
@@ -123,7 +124,19 @@ namespace UeremcpVisualCapture
 		UKismetRenderingLibrary::ExportRenderTarget(
 			World, Target, Directory, FileName);
 		++InternalOperations;
-		return IsNonEmptyPng(Path);
+		// ExportRenderTarget closes its writer synchronously, but the immediately
+		// following read can still observe a not-yet-visible file on Windows.
+		// Bound the verification retry so a valid exported PNG is not reported as
+		// failed_validation while never accepting an absent or malformed file.
+		for (int32 Attempt = 0; Attempt < 10; ++Attempt)
+		{
+			if (IsNonEmptyPng(Path))
+			{
+				return true;
+			}
+			FPlatformProcess::Sleep(0.01f);
+		}
+		return false;
 	}
 
 	void ApplyPinnedExposure(USceneCaptureComponent2D* Capture)
