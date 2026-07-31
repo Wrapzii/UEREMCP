@@ -6,6 +6,7 @@
 #include "Misc/SecureHash.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpSchemaPublishing.h"
 
@@ -467,14 +468,56 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 	Payload->SetStringField(TEXT("detail"), Detail.IsEmpty() ? TEXT("summary") : Detail);
 	Payload->SetStringField(TEXT("set_name_filters_note"),
 		TEXT("FToolset::SetNameFilters exists [VERIFIED: Toolset.h:59-60] but UEREMCP does not apply global hides; router demotes SUPERSEDED instead."));
+
+	// MCP-013 / MCP-014 are not UEREMCP-owned. Advertising dead tools costs an agent
+	// a call and a wrong assumption every session.
+	TArray<TSharedPtr<FJsonValue>> External;
+	{
+		TSharedPtr<FJsonObject> Watch = MakeShared<FJsonObject>();
+		Watch->SetStringField(TEXT("name"), TEXT("user-unreal-watch"));
+		Watch->SetBoolField(TEXT("available"), false);
+		Watch->SetStringField(TEXT("fallback"), TEXT("Use CaptureWorldFrames / InspectEnvironment inside UEREMCP."));
+		External.Add(MakeShared<FJsonValueObject>(Watch));
+		TSharedPtr<FJsonObject> Sem = MakeShared<FJsonObject>();
+		Sem->SetStringField(TEXT("name"), TEXT("SemanticSearch"));
+		Sem->SetBoolField(TEXT("available"), false);
+		Sem->SetStringField(TEXT("fallback"), TEXT("Use ResolveIntent + find_project_assets; do not call SemanticSearch."));
+		External.Add(MakeShared<FJsonValueObject>(Sem));
+	}
+	Payload->SetArrayField(TEXT("external_mcp_capabilities"), External);
+	Payload->SetStringField(TEXT("asset_probe"),
+		TEXT("UeremcpEnvironment.UeremcpEnvironmentToolset.FindProjectAssets — ask the AssetRegistry before inventing mesh paths."));
 	Result.Payload = Payload;
 	return Result;
 }
 
-FUeremcpIntentRouterResult FUeremcpIntentRouter::DescribeOperation(const FString& ToolQuery)
+FUeremcpIntentRouterResult FUeremcpIntentRouter::DescribeOperation(const TSharedPtr<FJsonObject>& Spec)
 {
 	using namespace UeremcpIntentRouterInternal;
 	FUeremcpIntentRouterResult Result;
+
+	FString ToolQuery;
+	FString Detail = TEXT("slim");
+	FString IfNoneMatch;
+	if (Spec.IsValid())
+	{
+		Spec->TryGetStringField(TEXT("tool"), ToolQuery);
+		Spec->TryGetStringField(TEXT("detail"), Detail);
+		Spec->TryGetStringField(TEXT("if_none_match"), IfNoneMatch);
+	}
+	if (ToolQuery.IsEmpty())
+	{
+		Result.Status = TEXT("rejected");
+		Result.Summary = TEXT("specification.tool is required");
+		return Result;
+	}
+	if (!Detail.Equals(TEXT("index"), ESearchCase::IgnoreCase)
+		&& !Detail.Equals(TEXT("slim"), ESearchCase::IgnoreCase)
+		&& !Detail.Equals(TEXT("full"), ESearchCase::IgnoreCase))
+	{
+		Detail = TEXT("slim");
+	}
+
 	TArray<FToolDoc> Docs;
 	TSet<FString> Names;
 	FString Error;
@@ -533,57 +576,155 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::DescribeOperation(const FString
 		return Result;
 	}
 
+	auto OneLine = [](const FString& Text) -> FString
+	{
+		FString Out = Text;
+		int32 Nl = INDEX_NONE;
+		if (Out.FindChar(TEXT('\n'), Nl))
+		{
+			Out = Out.Left(Nl).TrimEnd();
+		}
+		if (Out.Len() > 160) Out = Out.Left(157) + TEXT("...");
+		return Out;
+	};
+
 	TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
 	Payload->SetStringField(TEXT("toolset"), Found->Toolset);
 	Payload->SetStringField(TEXT("tool"), Found->Tool);
 	Payload->SetStringField(TEXT("qualified"), Found->Qualified);
+	Payload->SetStringField(TEXT("detail"), Detail.ToLower());
 	if (!ToolQuery.Equals(Found->Tool, ESearchCase::CaseSensitive)
 		&& !ToolQuery.Equals(Found->Qualified, ESearchCase::CaseSensitive))
 	{
 		Payload->SetStringField(TEXT("normalized_from"), ToolQuery);
 	}
-	Payload->SetStringField(TEXT("description"), Found->Description);
 
-	// Prefer nested ADR-0003 envelope + specification (BACKLOG 1.2a / 1b.1) over the
-	// flat UHT property-name list. Falls back to property names if schema build fails.
-	if (const TSharedPtr<FJsonObject> Nested =
-			UeremcpSchemaPublishing::BuildNestedRequestSchemaForTool(Found->Tool))
+	if (Detail.Equals(TEXT("index"), ESearchCase::IgnoreCase))
 	{
-		Payload->SetObjectField(TEXT("input_schema"), Nested);
-	}
-	else
-	{
-		TArray<TSharedPtr<FJsonValue>> Props;
-		for (const FString& P : Found->Properties)
+		Payload->SetStringField(TEXT("description"), OneLine(Found->Description));
+		if (Found->CatalogOp.IsValid())
 		{
-			Props.Add(MakeShared<FJsonValueString>(P));
+			const TArray<TSharedPtr<FJsonValue>>* UseWhen = nullptr;
+			if (Found->CatalogOp->TryGetArrayField(TEXT("use_when"), UseWhen) && UseWhen)
+			{
+				Payload->SetArrayField(TEXT("use_when"), *UseWhen);
+			}
 		}
+	}
+	else if (Detail.Equals(TEXT("slim"), ESearchCase::IgnoreCase))
+	{
+		Payload->SetStringField(TEXT("description"), OneLine(Found->Description));
+		if (Found->CatalogOp.IsValid())
+		{
+			static const TCHAR* SlimFields[] = {
+				TEXT("use_when"), TEXT("do_not_use_for"), TEXT("expected_statuses"),
+				TEXT("recovery"), TEXT("batch_hint")
+			};
+			for (const TCHAR* Field : SlimFields)
+			{
+				if (Found->CatalogOp->HasField(Field))
+				{
+					Payload->SetField(Field, Found->CatalogOp->TryGetField(Field));
+				}
+			}
+			const TSharedPtr<FJsonObject>* Example = nullptr;
+			if (Found->CatalogOp->TryGetObjectField(TEXT("example_request"), Example) && Example)
+			{
+				Payload->SetObjectField(TEXT("request_json"), *Example);
+			}
+			if (Found->CatalogOp->HasField(TEXT("destructive")))
+			{
+				Payload->SetField(TEXT("destructive"), Found->CatalogOp->TryGetField(TEXT("destructive")));
+			}
+		}
+		// Required fields from UHT, not the 83 KB nested mirror.
 		TArray<TSharedPtr<FJsonValue>> Req;
 		for (const FString& R : Found->Required)
 		{
 			Req.Add(MakeShared<FJsonValueString>(R));
 		}
-		TSharedPtr<FJsonObject> Schema = MakeShared<FJsonObject>();
-		Schema->SetArrayField(TEXT("properties"), Props);
-		Schema->SetArrayField(TEXT("required"), Req);
-		Payload->SetObjectField(TEXT("input_schema"), Schema);
+		Payload->SetArrayField(TEXT("required"), Req);
 	}
-	if (Found->CatalogOp.IsValid())
+	else // full
 	{
-		const TSharedPtr<FJsonObject>* Example = nullptr;
-		if (Found->CatalogOp->TryGetObjectField(TEXT("example_request"), Example) && Example)
+		Payload->SetStringField(TEXT("description"), Found->Description);
+		if (const TSharedPtr<FJsonObject> Nested =
+				UeremcpSchemaPublishing::BuildNestedRequestSchemaForTool(Found->Tool))
 		{
-			Payload->SetObjectField(TEXT("request_json"), *Example);
+			Payload->SetObjectField(TEXT("input_schema"), Nested);
 		}
-		Payload->SetObjectField(TEXT("catalog"), Found->CatalogOp);
+		else
+		{
+			TArray<TSharedPtr<FJsonValue>> Props;
+			for (const FString& P : Found->Properties)
+			{
+				Props.Add(MakeShared<FJsonValueString>(P));
+			}
+			TArray<TSharedPtr<FJsonValue>> Req;
+			for (const FString& R : Found->Required)
+			{
+				Req.Add(MakeShared<FJsonValueString>(R));
+			}
+			TSharedPtr<FJsonObject> Schema = MakeShared<FJsonObject>();
+			Schema->SetArrayField(TEXT("properties"), Props);
+			Schema->SetArrayField(TEXT("required"), Req);
+			Payload->SetObjectField(TEXT("input_schema"), Schema);
+		}
+		if (Found->CatalogOp.IsValid())
+		{
+			const TSharedPtr<FJsonObject>* Example = nullptr;
+			if (Found->CatalogOp->TryGetObjectField(TEXT("example_request"), Example) && Example)
+			{
+				Payload->SetObjectField(TEXT("request_json"), *Example);
+			}
+			// Short catalog fields only — not the whole op dump (avoids duplicating
+			// the nested envelope mirror that bloated Environment describes to ~83 KB).
+			TSharedPtr<FJsonObject> SlimCatalog = MakeShared<FJsonObject>();
+			static const TCHAR* CatalogFields[] = {
+				TEXT("action"), TEXT("use_when"), TEXT("do_not_use_for"),
+				TEXT("expected_statuses"), TEXT("recovery"), TEXT("batch_hint"),
+				TEXT("destructive"), TEXT("idempotent")
+			};
+			for (const TCHAR* Field : CatalogFields)
+			{
+				if (Found->CatalogOp->HasField(Field))
+				{
+					SlimCatalog->SetField(Field, Found->CatalogOp->TryGetField(Field));
+				}
+			}
+			Payload->SetObjectField(TEXT("catalog"), SlimCatalog);
+		}
 	}
 	if (!Found->SupersededBy.IsEmpty())
 	{
 		Payload->SetStringField(TEXT("warning"),
 			FString::Printf(TEXT("superseded; prefer %s"), *Found->SupersededBy));
 	}
+
+	// content_hash for if_none_match caching (MCP-007).
+	FString PayloadJson;
+	{
+		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&PayloadJson);
+		FJsonSerializer::Serialize(Payload.ToSharedRef(), Writer);
+	}
+	const FTCHARToUTF8 Utf8(*PayloadJson);
+	const FString ContentHash = FMD5::HashBytes(
+		reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+	Payload->SetStringField(TEXT("content_hash"), ContentHash);
+
+	if (!IfNoneMatch.IsEmpty() && IfNoneMatch.Equals(ContentHash, ESearchCase::IgnoreCase))
+	{
+		Result.Status = TEXT("no_change_required");
+		Result.Summary = TEXT("Describe unchanged (if_none_match matched content_hash).");
+		TSharedPtr<FJsonObject> Empty = MakeShared<FJsonObject>();
+		Empty->SetStringField(TEXT("content_hash"), ContentHash);
+		Empty->SetBoolField(TEXT("not_modified"), true);
+		Result.Payload = Empty;
+		return Result;
+	}
+
 	Result.Status = TEXT("no_change_required");
-	Result.Summary = FString::Printf(TEXT("Described live tool %s"), *Found->Qualified);
+	Result.Summary = FString::Printf(TEXT("Described live tool %s (%s)"), *Found->Qualified, *Detail.ToLower());
 	Result.Payload = Payload;
 	return Result;
 }

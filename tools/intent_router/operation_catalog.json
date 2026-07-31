@@ -1,6 +1,6 @@
 {
   "catalog_version": "1.0.0",
-  "as_of": "2026-07-30",
+  "as_of": "2026-07-31",
   "owner": "WS-03",
   "notes": [
     "Enrichment overlay for ResolveIntent. Candidates still come only from the live registry/snapshot.",
@@ -139,6 +139,33 @@
         "scatter_foliage"
       ],
       "why": "clears instances that scattering placed"
+    },
+    {
+      "action": "find_project_assets",
+      "depends_on_actions": [],
+      "why": "read-only AssetRegistry probe; unblocks foliage/prefab paths"
+    },
+    {
+      "action": "import_mesh_for_world",
+      "depends_on_actions": [],
+      "why": "import is a source of geometry for scatter/place"
+    },
+    {
+      "action": "place_prefab_on_landscape",
+      "depends_on_actions": [
+        "create_landscape",
+        "import_mesh_for_world",
+        "find_project_assets"
+      ],
+      "why": "needs terrain and a real mesh"
+    },
+    {
+      "action": "paint_landscape_layers",
+      "depends_on_actions": [
+        "create_landscape",
+        "create_landscape_material"
+      ],
+      "why": "needs landscape + layer infos from the material"
     }
   ],
   "operations": [
@@ -209,7 +236,7 @@
         "envelope example"
       ],
       "do_not_use_for": [
-        "discovering which tool to pick \u2014 use ResolveIntent"
+        "discovering which tool to pick — use ResolveIntent"
       ],
       "destructive": false,
       "idempotent": true,
@@ -218,13 +245,14 @@
         "no_change_required",
         "rejected"
       ],
-      "recovery": "If the name is unknown, call ResolveIntent or list_toolsets.",
+      "recovery": "specification.detail: index|slim(default)|full. Pass if_none_match=content_hash to skip an unchanged body. Prefer slim over describe_toolset.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "describe_operation",
         "request_id": "do-1",
         "specification": {
-          "tool": "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect"
+          "tool": "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect",
+          "detail": "slim"
         }
       }
     },
@@ -544,7 +572,7 @@
         "notify tracks"
       ],
       "do_not_use_for": [
-        "montage authoring \u2014 UEREMCP does not author montages"
+        "montage authoring — UEREMCP does not author montages"
       ],
       "destructive": false,
       "idempotent": true,
@@ -582,7 +610,7 @@
         "no_change_required",
         "partially_completed"
       ],
-      "recovery": "Authoring unsupported \u2014 use Epic animation tools if write is required.",
+      "recovery": "Authoring unsupported — use Epic animation tools if write is required.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "read_anim_bp",
@@ -603,7 +631,7 @@
         "known pattern"
       ],
       "do_not_use_for": [
-        "direct asset creation when template_id already known \u2014 InstantiateTemplate"
+        "direct asset creation when template_id already known — InstantiateTemplate"
       ],
       "destructive": false,
       "idempotent": true,
@@ -948,8 +976,8 @@
         "creek"
       ],
       "do_not_use_for": [
-        "lakes \u2014 AWaterBodyLake is not implemented",
-        "oceans \u2014 AWaterBodyOcean is not implemented",
+        "lakes — AWaterBodyLake is not implemented",
+        "oceans — AWaterBodyOcean is not implemented",
         "any still water; only flowing river splines exist"
       ],
       "destructive": true,
@@ -1658,7 +1686,7 @@
         "no static mesh exists and any shape will do"
       ],
       "do_not_use_for": [
-        "hero foliage or anything that must look realistic \u2014 use StaticMeshTools.import_file",
+        "hero foliage or anything that must look realistic — use StaticMeshTools.import_file",
         "placing meshes in a level"
       ],
       "destructive": true,
@@ -1749,7 +1777,7 @@
         "use a downloaded model"
       ],
       "do_not_use_for": [
-        "procedural primitives \u2014 use SubmitMeshOps",
+        "procedural primitives — use SubmitMeshOps",
         "placing meshes in a level"
       ],
       "destructive": true,
@@ -1789,7 +1817,7 @@
         "photoreal material input"
       ],
       "do_not_use_for": [
-        "procedural noise \u2014 use CreateProceduralTexture"
+        "procedural noise — use CreateProceduralTexture"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1814,7 +1842,7 @@
         "skeletal fbx"
       ],
       "do_not_use_for": [
-        "static props \u2014 use StaticMeshTools.import_file"
+        "static props — use StaticMeshTools.import_file"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1855,9 +1883,31 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Assign the material to the landscape and paint or assign the layer weights, then CaptureWorldFrames. Layer names become landscape paint layers.",
+      "recovery": "Assign the material to the landscape, then paint_landscape_layers for height/slope weights, then CaptureWorldFrames. Layer names become paint layers.",
       "batch_hint": "FAN-OUT: ids are unique, actions are not. Author several materials in ONE execute_plan with atomic=false and on_failure=continue_independent.",
       "next_actions": [
+        {
+          "action": "paint_landscape_layers",
+          "why": "assign height/slope weights so the terrain is not the first layer only",
+          "specification_hint": {
+            "rules": [
+              {
+                "layer": "snow",
+                "min_height_m": 1100,
+                "blend_m": 150
+              },
+              {
+                "layer": "rock",
+                "min_slope_deg": 35,
+                "blend_deg": 8
+              },
+              {
+                "layer": "grass",
+                "fallback": true
+              }
+            ]
+          }
+        },
         {
           "action": "capture_world_frames",
           "why": "a terrain material is only judgeable by looking at it",
@@ -1924,7 +1974,7 @@
         "re-snap after rebuild"
       ],
       "do_not_use_for": [
-        "foliage instances \u2014 rescatter those instead"
+        "foliage instances — rescatter those instead"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1961,7 +2011,7 @@
         "cull foliage in an area"
       ],
       "do_not_use_for": [
-        "WaterBodyExclusionVolume \u2014 that excludes water, not foliage"
+        "WaterBodyExclusionVolume — that excludes water, not foliage"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1997,6 +2047,233 @@
           ]
         }
       }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.FindProjectAssets",
+      "action": "find_project_assets",
+      "use_when": [
+        "find foliage mesh",
+        "what trees exist",
+        "asset registry probe",
+        "resolve mesh path",
+        "PCG trees"
+      ],
+      "do_not_use_for": [
+        "importing a file from disk"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "unresolved roles need import_mesh_for_world or StaticMeshTools.import_file. Never invent /Game/Meshes/SM_Pine.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "find_project_assets",
+        "request_id": "fa-1",
+        "specification": {
+          "roles": [
+            "foliage.tree",
+            "foliage.grass",
+            "structure.wall"
+          ],
+          "class_filter": [
+            "StaticMesh"
+          ],
+          "path_scopes": [
+            "/Game",
+            "/Engine/BasicShapes"
+          ],
+          "max_per_role": 5
+        }
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "place a resolved foliage mesh",
+          "specification_hint": {
+            "biome": {
+              "mesh_path": "<resolved path>"
+            }
+          }
+        },
+        {
+          "action": "import_mesh_for_world",
+          "why": "when unresolved, import a real mesh",
+          "specification_hint": {}
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ImportMeshForWorld",
+      "action": "import_mesh_for_world",
+      "use_when": [
+        "import FBX for world",
+        "castle mesh",
+        "real foliage mesh",
+        "unit scale check"
+      ],
+      "do_not_use_for": [
+        "blockout primitives — use submit_mesh_ops"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "Pass expected_bounds_m. A >20% mismatch rejects with both numbers. Compose uses StaticMeshTools.import_file.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "import_mesh_for_world",
+        "request_id": "im-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Meshes/SM_Castle"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "source_file": "C:/exports/castle.fbx",
+          "source_unit": "meters",
+          "collision": "complex_as_simple",
+          "nanite": false,
+          "expected_bounds_m": [
+            240,
+            145,
+            90
+          ]
+        }
+      },
+      "next_actions": [
+        {
+          "action": "place_prefab_on_landscape",
+          "why": "drop the imported mesh on terrain",
+          "specification_hint": {
+            "mesh_path": "<primary_asset>"
+          }
+        },
+        {
+          "action": "scatter_foliage",
+          "why": "use as foliage species",
+          "specification_hint": {
+            "biome": {
+              "mesh_path": "<primary_asset>"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.PlacePrefabOnLandscape",
+      "action": "place_prefab_on_landscape",
+      "use_when": [
+        "place building on terrain",
+        "castle on landscape",
+        "snap and clear foundation"
+      ],
+      "do_not_use_for": [
+        "foliage scatter"
+      ],
+      "destructive": true,
+      "idempotent": false,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "flatten_pad is unsupported — other steps still apply. Mesh must exist (find_project_assets or import_mesh_for_world).",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "place_prefab_on_landscape",
+        "request_id": "pp-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "mesh_path": "/Game/__UeremcpPoc/Meshes/SM_Castle",
+          "location_xy": [
+            1800,
+            -2000
+          ],
+          "rotation_yaw": 35,
+          "clear_foliage_radius_cm": 1500
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.PaintLandscapeLayers",
+      "action": "paint_landscape_layers",
+      "use_when": [
+        "paint snow rock grass",
+        "landscape layer weights",
+        "white landscape",
+        "auto paint terrain"
+      ],
+      "do_not_use_for": [
+        "authoring the material — use create_landscape_material first"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "LayerInfo objects must exist on the landscape. Exactly one rule with fallback=true. Reads live landscape height — never recomputes.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "paint_landscape_layers",
+        "request_id": "pl-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "rules": [
+            {
+              "layer": "snow",
+              "min_height_m": 1100,
+              "blend_m": 150
+            },
+            {
+              "layer": "rock",
+              "min_slope_deg": 35,
+              "blend_deg": 8
+            },
+            {
+              "layer": "grass",
+              "fallback": true
+            }
+          ]
+        }
+      }
     }
-  ]
+  ],
+  "asset_role_patterns": {
+    "foliage.tree": [
+      "*Tree*",
+      "*Pine*",
+      "*Conifer*",
+      "*Oak*",
+      "PCG_Tree*"
+    ],
+    "foliage.grass": [
+      "*Grass*",
+      "*Fern*",
+      "*Bush*"
+    ],
+    "structure.wall": [
+      "*Wall*",
+      "*Fence*",
+      "SM_*Wall*"
+    ]
+  }
 }

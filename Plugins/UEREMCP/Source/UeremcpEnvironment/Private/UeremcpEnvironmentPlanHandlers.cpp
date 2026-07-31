@@ -40,6 +40,10 @@ namespace
 			TEXT("submit_mesh_ops"),
 			TEXT("snap_actors_to_landscape"),
 			TEXT("clear_foliage_in_volumes"),
+			TEXT("find_project_assets"),
+			TEXT("import_mesh_for_world"),
+			TEXT("place_prefab_on_landscape"),
+			TEXT("paint_landscape_layers"),
 		};
 		return Names;
 	}
@@ -78,6 +82,10 @@ bool FUeremcpEnvironmentPlanHandlers::Register(FString& OutError)
 	if (!Bind(TEXT("submit_mesh_ops"), &UUeremcpEnvironmentToolset::SubmitMeshOps)) return false;
 	if (!Bind(TEXT("snap_actors_to_landscape"), &UUeremcpEnvironmentToolset::SnapActorsToLandscape)) return false;
 	if (!Bind(TEXT("clear_foliage_in_volumes"), &UUeremcpEnvironmentToolset::ClearFoliageInVolumes)) return false;
+	if (!Bind(TEXT("find_project_assets"), &UUeremcpEnvironmentToolset::FindProjectAssets)) return false;
+	if (!Bind(TEXT("import_mesh_for_world"), &UUeremcpEnvironmentToolset::ImportMeshForWorld)) return false;
+	if (!Bind(TEXT("place_prefab_on_landscape"), &UUeremcpEnvironmentToolset::PlacePrefabOnLandscape)) return false;
+	if (!Bind(TEXT("paint_landscape_layers"), &UUeremcpEnvironmentToolset::PaintLandscapeLayers)) return false;
 	OutError.Reset();
 	return true;
 }

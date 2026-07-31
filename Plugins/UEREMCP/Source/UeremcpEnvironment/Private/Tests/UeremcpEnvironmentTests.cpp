@@ -448,3 +448,84 @@ bool FUeremcpEnvironmentMinimalDryRunTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("summary mentions opt-in"), Summary.Contains(TEXT("no include")));
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentNextArgsNonuniformScaleTest,
+	"UEREMCP.Environment.Spec.NextArgsNonuniformScale",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentNextArgsNonuniformScaleTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"create_landscape",
+		"request_id":"scale-1",
+		"target":{"asset_path":"/Game/__UeremcpPoc/ScaleGate"},
+		"options":{"dry_run":true},
+		"specification":{"seed":42,"terrain":{"profile":"mountains","scale_xy":300,"scale_z":100}}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::CreateLandscape(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	const TSharedPtr<FJsonObject>* Error = nullptr;
+	TestTrue(TEXT("error object"), Root->TryGetObjectField(TEXT("error"), Error) && Error);
+	TestEqual(TEXT("code"), (*Error)->GetStringField(TEXT("code")), FString(TEXT("NONUNIFORM_SCALE")));
+	const TSharedPtr<FJsonObject>* NextArgs = nullptr;
+	TestTrue(TEXT("next_args"), (*Error)->TryGetObjectField(TEXT("next_args"), NextArgs) && NextArgs);
+	const TSharedPtr<FJsonObject>* Spec = nullptr;
+	TestTrue(TEXT("spec patch"), (*NextArgs)->TryGetObjectField(TEXT("specification"), Spec) && Spec);
+	const TSharedPtr<FJsonObject>* Terrain = nullptr;
+	TestTrue(TEXT("terrain patch"), (*Spec)->TryGetObjectField(TEXT("terrain"), Terrain) && Terrain);
+	TestEqual(TEXT("scale_xy recipe"), (*Terrain)->GetNumberField(TEXT("scale_xy")), 100.0);
+	TestEqual(TEXT("scale_z recipe"), (*Terrain)->GetNumberField(TEXT("scale_z")), 3.0);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpFindProjectAssetsRejectsEmptyRolesTest,
+	"UEREMCP.Environment.FindProjectAssets.RejectsEmptyRoles",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpFindProjectAssetsRejectsEmptyRolesTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"find_project_assets",
+		"request_id":"fa-empty",
+		"specification":{}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::FindProjectAssets(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpPlacePrefabDryRunTest,
+	"UEREMCP.Environment.PlacePrefab.DryRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpPlacePrefabDryRunTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"place_prefab_on_landscape",
+		"request_id":"pp-dry",
+		"options":{"dry_run":true},
+		"specification":{
+			"mesh_path":"/Engine/BasicShapes/Cube",
+			"location_xy":[0,0],
+			"clear_foliage_radius_cm":500
+		}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("no_change_required")));
+	return true;
+}

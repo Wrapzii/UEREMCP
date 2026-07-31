@@ -1007,18 +1007,41 @@ bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
 	const FUeremcpEnvironmentBuildSpec& Spec,
 	FString& OutError)
 {
+	FUeremcpEnvironmentRejection Rejection;
+	if (!ValidateScaleAndQuality(Spec, Rejection))
+	{
+		OutError = Rejection.Message;
+		return false;
+	}
+	return true;
+}
+
+bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
+	const FUeremcpEnvironmentBuildSpec& Spec,
+	FUeremcpEnvironmentRejection& OutRejection)
+{
+	OutRejection = FUeremcpEnvironmentRejection();
+
 	// P0-3. Nonuniform scale bakes wrong slopes in permanently, and every "fix"
 	// after the fact is another rebuild. An agent set (300, 100) and corrected
 	// spiky terrain three times without ever being told the cause.
 	if (!Spec.bAllowNonUniformScale
 		&& !FMath::IsNearlyEqual(Spec.ScaleXY, Spec.ScaleZ, 0.01f * FMath::Max(Spec.ScaleXY, 1.f)))
 	{
-		OutError = FString::Printf(
+		OutRejection.Code = TEXT("NONUNIFORM_SCALE");
+		OutRejection.Message = FString::Printf(
 			TEXT("terrain.scale_xy (%.1f) != terrain.scale_z (%.1f). Nonuniform scale distorts "
 				 "every slope in the landscape and cannot be corrected without rebuilding. Set "
 				 "both the same, and raise terrain.max_altitude_m to make peaks taller. Pass "
 				 "terrain.allow_nonuniform_scale=true only if the distortion is intended."),
 			Spec.ScaleXY, Spec.ScaleZ);
+		OutRejection.NextArgs = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Terrain = MakeShared<FJsonObject>();
+		Terrain->SetNumberField(TEXT("scale_xy"), 100.0);
+		Terrain->SetNumberField(TEXT("scale_z"), 3.0);
+		SpecPatch->SetObjectField(TEXT("terrain"), Terrain);
+		OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
 		return false;
 	}
 
@@ -1026,11 +1049,18 @@ bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
 	constexpr float NeedleThreshold = 5.f;
 	if (!Spec.bAllowExtremeScaleZ && Spec.ScaleZ > NeedleThreshold)
 	{
-		OutError = FString::Printf(
+		OutRejection.Code = TEXT("NEEDLE_SCALE_Z");
+		OutRejection.Message = FString::Printf(
 			TEXT("terrain.scale_z=%.1f produces vertical needles rather than mountains. Sane "
 				 "range is 2-5; start at 3. Raise terrain.max_altitude_m for taller peaks. Pass "
 				 "terrain.allow_extreme_scale_z=true to override."),
 			Spec.ScaleZ);
+		OutRejection.NextArgs = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Terrain = MakeShared<FJsonObject>();
+		Terrain->SetNumberField(TEXT("scale_z"), 3.0);
+		SpecPatch->SetObjectField(TEXT("terrain"), Terrain);
+		OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
 		return false;
 	}
 
@@ -1043,15 +1073,57 @@ bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
 			|| Spec.MeshPath.Contains(TEXT("/Engine/BasicShapes"));
 		if (bPlaceholder)
 		{
-			OutError = FString::Printf(
+			OutRejection.Code = Spec.MeshPath.IsEmpty()
+				? TEXT("MESH_PATH_MISSING") : TEXT("REALISM_GATE");
+			OutRejection.Message = FString::Printf(
 				TEXT("quality='%s' forbids placeholder foliage. biome.mesh_path is %s. Resolve a "
-					 "real mesh first: StaticMeshTools.import_file, or search the project for an "
-					 "existing one. submit_mesh_ops output is blockout and does not satisfy a "
-					 "realism goal. Use quality='blockout' if primitives are genuinely wanted."),
+					 "real mesh first: find_project_assets, StaticMeshTools.import_file, or "
+					 "import_mesh_for_world. submit_mesh_ops output is blockout and does not "
+					 "satisfy a realism goal. Use quality='blockout' if primitives are genuinely wanted."),
 				*Spec.Quality,
 				Spec.MeshPath.IsEmpty() ? TEXT("unset") : TEXT("an engine placeholder"));
+			OutRejection.NextArgs = MakeShared<FJsonObject>();
+			TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+			if (Spec.MeshPath.IsEmpty())
+			{
+				TSharedPtr<FJsonObject> Biome = MakeShared<FJsonObject>();
+				Biome->SetStringField(
+					TEXT("mesh_path"),
+					TEXT("<path from find_project_assets or import_mesh_for_world>"));
+				SpecPatch->SetObjectField(TEXT("biome"), Biome);
+			}
+			else
+			{
+				SpecPatch->SetStringField(TEXT("quality"), TEXT("blockout"));
+			}
+			OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
 			return false;
 		}
+	}
+	return true;
+}
+
+bool FUeremcpEnvironmentService::ParseBuildSpec(
+	const TSharedPtr<FJsonObject>& Spec,
+	FUeremcpEnvironmentBuildSpec& Out,
+	FUeremcpEnvironmentRejection& OutRejection)
+{
+	FString Error;
+	if (!ParseBuildSpec(Spec, Out, Error))
+	{
+		OutRejection.Message = Error;
+		// Re-run the structured gate so Code/NextArgs are filled when that is why.
+		FUeremcpEnvironmentBuildSpec Probe = Out;
+		FUeremcpEnvironmentRejection Structured;
+		if (!ValidateScaleAndQuality(Probe, Structured) && Structured.Message == Error)
+		{
+			OutRejection = Structured;
+		}
+		else
+		{
+			OutRejection.Code = TEXT("UNKNOWN");
+		}
+		return false;
 	}
 	return true;
 }
@@ -1249,38 +1321,6 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.StructuralMetrics = HeightMetrics;
 	const FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
 
-	// MCP-006. A staged call that PLACES on terrain but does not REBUILD it still
-	// recomputes the heightmap from whatever spec it was handed, and then places
-	// against those computed heights.
-	//
-	// If the caller does not repeat the exact terrain parameters that built the
-	// landscape -- seed, profile, size, scale_z -- the computed surface differs
-	// from the real one, and every instance lands at the wrong Z. That is the
-	// floating castle, huts and boardwalk in the field-test screenshots, and the
-	// "ScatterFoliage mutated the heightmap again" report: the hash changed
-	// because the recomputed surface was a different surface.
-	//
-	// The landscape already records its hash as a level tag, so this is
-	// checkable. Refuse rather than place into a fiction.
-	if (!bOwnsMapLifecycle && !Spec.bIncludeTerrain)
-	{
-		const FString ExistingHash = ReadEnvironmentTag(World, TEXT("UEREMCP_HEIGHTMAP_HASH="));
-		if (!ExistingHash.IsEmpty() && ExistingHash != HeightmapHash)
-		{
-			Result.Status = TEXT("rejected");
-			Result.Summary = FString::Printf(
-				TEXT("terrain parameters do not match the landscape in this level "
-					 "(level heightmap_hash=%s, this request computes %s). Placement would "
-					 "use a different surface than the one that exists and every actor would "
-					 "land at the wrong height. Repeat the SAME specification.seed and "
-					 "terrain block used to build the landscape, or call build_environment "
-					 "to rebuild the whole scene."),
-				*ExistingHash, *HeightmapHash);
-			Result.StructuralMetrics->SetStringField(TEXT("level_heightmap_hash"), ExistingHash);
-			Result.StructuralMetrics->SetStringField(TEXT("request_heightmap_hash"), HeightmapHash);
-			return Result;
-		}
-	}
 	const uint32 RevisionCrc = FCrc::StrCrc32(*FString::Printf(
 		TEXT("env-v2-1|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d|%s|%d|%d"),
 		*HeightmapHash,
@@ -1431,10 +1471,15 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			if (World && World->GetOutermost()->IsDirty())
 			{
 				Result.Status = TEXT("rejected");
+				Result.ErrorCode = TEXT("DIRTY_MAP_BLOCKS_SWITCH");
 				Result.Summary = FString::Printf(
 					TEXT("Current map %s has unsaved changes; refusing to switch maps and risk user content"),
 					*CurrentPackage);
 				Result.CapabilityNotes.Add(TEXT("Save or discard the current map explicitly, then retry BuildEnvironment."));
+				Result.NextArgs = MakeShared<FJsonObject>();
+				Result.NextArgs->SetStringField(
+					TEXT("recovery"),
+					TEXT("SaveAs or discard the current map, then retry with the same request."));
 				return Result;
 			}
 
@@ -1455,6 +1500,47 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.Status = TEXT("failed_validation");
 		Result.Summary = TEXT("No editor world loaded");
 		return Result;
+	}
+
+	// MCP-006. A staged call that PLACES on terrain but does not REBUILD it still
+	// recomputes the heightmap from whatever spec it was handed, and then places
+	// against those computed heights.
+	//
+	// If the caller does not repeat the exact terrain parameters that built the
+	// landscape -- seed, profile, size, scale_z -- the computed surface differs
+	// from the real one, and every instance lands at the wrong Z. That is the
+	// floating castle, huts and boardwalk in the field-test screenshots, and the
+	// "ScatterFoliage mutated the heightmap again" report: the hash changed
+	// because the recomputed surface was a different surface.
+	//
+	// The landscape already records its hash as a level tag, so this is
+	// checkable. Refuse rather than place into a fiction.
+	// Must run after World / bOwnsMapLifecycle exist (not before dry_run early-out).
+	if (!bOwnsMapLifecycle && !Spec.bIncludeTerrain)
+	{
+		const FString ExistingHash = ReadEnvironmentTag(World, TEXT("UEREMCP_HEIGHTMAP_HASH="));
+		if (!ExistingHash.IsEmpty() && ExistingHash != HeightmapHash)
+		{
+			Result.Status = TEXT("rejected");
+			Result.ErrorCode = TEXT("HEIGHTMAP_MISMATCH");
+			Result.Summary = FString::Printf(
+				TEXT("terrain parameters do not match the landscape in this level "
+					 "(level heightmap_hash=%s, this request computes %s). Placement would "
+					 "use a different surface than the one that exists and every actor would "
+					 "land at the wrong height. Repeat the SAME specification.seed and "
+					 "terrain block used to build the landscape, or call build_environment "
+					 "to rebuild the whole scene."),
+				*ExistingHash, *HeightmapHash);
+			Result.StructuralMetrics->SetStringField(TEXT("level_heightmap_hash"), ExistingHash);
+			Result.StructuralMetrics->SetStringField(TEXT("request_heightmap_hash"), HeightmapHash);
+			Result.NextArgs = MakeShared<FJsonObject>();
+			TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+			SpecPatch->SetStringField(
+				TEXT("note"),
+				TEXT("Repeat the exact seed + terrain block from the landscape that produced level_heightmap_hash, or set include.terrain/rebuild."));
+			Result.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
+			return Result;
+		}
 	}
 
 	const FString ExistingRevision = ReadEnvironmentRevision(World);

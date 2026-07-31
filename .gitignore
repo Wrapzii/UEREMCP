@@ -35,3 +35,5 @@ desktop.ini
 
 # Runtime junction of repo schemas/ into the plugin (see Content/Schemas.README.md).
 Plugins/UEREMCP/Content/Schemas/
+
+_build/

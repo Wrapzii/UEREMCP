@@ -376,9 +376,9 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 			 "expressions are what make this a landscape material "
 			 "[VERIFIED: MaterialInterface.h EMaterialUsage]."));
 	Response.CapabilityNotes.Add(
-		TEXT("Height and slope bands are recorded as paint-layer names and weights. Automatic "
-			 "height/slope-driven weight painting is NOT applied here — assign the layers on "
-			 "the landscape, or paint them, to see the banding."));
+		TEXT("Height and slope bands are recorded as paint-layer names. Call "
+			 "paint_landscape_layers next to write live height/slope weights — without that "
+			 "the terrain stays the first layer (the white-landscape failure)."));
 	Response.Metrics.InternalOperations = Ops;
 	Response.Metrics.AssetsAffected = 1;
 

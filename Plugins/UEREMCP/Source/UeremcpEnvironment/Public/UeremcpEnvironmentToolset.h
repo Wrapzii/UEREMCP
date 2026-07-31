@@ -202,6 +202,63 @@ public:
 	static FString ClearFoliageInVolumes(const FString& RequestJson);
 
 	/**
+	 * Probe the AssetRegistry for meshes matching semantic roles.
+	 *
+	 * Use when: you need a real foliage/structure mesh that EXISTS in this project
+	 *   before scattering or placing. This is why agents stopped inventing
+	 *   /Game/Meshes/SM_Pine.
+	 * Inputs: action=find_project_assets; specification.roles REQUIRED array of
+	 *   semantic roles (foliage.tree, foliage.grass, structure.wall, …). Optional
+	 *   class_filter, path_scopes, max_per_role.
+	 * Outputs: resolved[] with real paths, unresolved[] with searched patterns and
+	 *   satisfied_by import action. Never fabricates a path.
+	 * Do not use for: importing a file — use import_mesh_for_world when unresolved.
+	 * Example: {"protocol_version":"1.0","action":"find_project_assets","request_id":"fa-1","specification":{"roles":["foliage.tree"],"class_filter":["StaticMesh"],"path_scopes":["/Game"],"max_per_role":5}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString FindProjectAssets(const FString& RequestJson);
+
+	/**
+	 * Import a mesh for world use: file → unit check → collision → Nanite.
+	 *
+	 * Use when: bringing an FBX/OBJ into /Game for foliage or prefabs. Composes
+	 *   StaticMeshTools.import_file; does not reimplement FBX import.
+	 * Inputs: action=import_mesh_for_world; target.asset_path; specification.source_file
+	 *   REQUIRED. Optional source_unit, collision, nanite, expected_bounds_m.
+	 *   expected_bounds_m is the load-bearing field — reject when actual bounds
+	 *   differ by more than ~20%.
+	 * Example: {"protocol_version":"1.0","action":"import_mesh_for_world","target":{"asset_path":"/Game/__UeremcpPoc/Meshes/SM_Castle"},"specification":{"source_file":"C:/exports/castle.fbx","source_unit":"meters","collision":"complex_as_simple","nanite":false,"expected_bounds_m":[240,145,90]}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString ImportMeshForWorld(const FString& RequestJson);
+
+	/**
+	 * Place a static-mesh prefab on the landscape: spawn + snap + clear foliage.
+	 *
+	 * Use when: dropping a building/prop that must sit on terrain, not canopy.
+	 * Inputs: action=place_prefab_on_landscape; specification.mesh_path,
+	 *   location_xy, optional rotation_yaw, clear_foliage_radius_cm, flatten_pad.
+	 *   flatten_pad is currently unsupported — other steps still apply and the
+	 *   response is partially_completed naming it.
+	 * Example: {"protocol_version":"1.0","action":"place_prefab_on_landscape","specification":{"mesh_path":"/Game/__UeremcpPoc/Meshes/SM_Castle","location_xy":[1800,-2000],"rotation_yaw":35,"clear_foliage_radius_cm":1500}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString PlacePrefabOnLandscape(const FString& RequestJson);
+
+	/**
+	 * Paint landscape layer weights from height/slope rules on the LIVE landscape.
+	 *
+	 * Use when: terrain material layers exist but the ground is still the first
+	 *   layer (the white-landscape failure). Reads height/slope from the landscape
+	 *   itself — never recomputes a heightmap.
+	 * Inputs: action=paint_landscape_layers; specification.rules REQUIRED. Exactly
+	 *   one rule may set fallback=true; weights sum to 1 per vertex.
+	 * Example: {"protocol_version":"1.0","action":"paint_landscape_layers","specification":{"rules":[{"layer":"snow","min_height_m":1100,"blend_m":150},{"layer":"rock","min_slope_deg":35,"blend_deg":8},{"layer":"grass","fallback":true}]}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString PaintLandscapeLayers(const FString& RequestJson);
+
+	/**
 	 * Read-only inspect of environment actors/metrics in the current editor world.
 	 *
 	 * Use when: diagnostics after BuildEnvironment / ExecutePlan.

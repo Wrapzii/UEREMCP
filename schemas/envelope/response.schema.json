@@ -25,6 +25,43 @@
       "type": "string",
       "description": "One or two sentences an agent can act on without parsing the rest. State what actually happened, including what was NOT done. This is the field most likely to be all the agent reads."
     },
+    "error": {
+      "type": "object",
+      "description": "Structured rejection (MCP-011). Present when status is rejected and the service knows a machine-readable fix. next_args is a PATCH to merge into the failing request.",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "NONUNIFORM_SCALE",
+            "NEEDLE_SCALE_Z",
+            "HEIGHTMAP_MISMATCH",
+            "REALISM_GATE",
+            "MESH_PATH_MISSING",
+            "MESH_BOUNDS_MISMATCH",
+            "BODY_TYPE_UNSUPPORTED",
+            "DIRTY_MAP_BLOCKS_SWITCH",
+            "REPLACE_OWNED_WIPE_CONFIRM_REQUIRED",
+            "ASSET_REGISTRY_LOADING",
+            "FLATTEN_PAD_UNSUPPORTED",
+            "LAYER_NOT_FOUND",
+            "UNKNOWN"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "next_args": {
+          "type": "object",
+          "description": "Patch to merge into the failing request (not a whole new envelope).",
+          "additionalProperties": true
+        }
+      }
+    },
     "understood": {
       "type": "object",
       "description": "What the service resolved the request to mean: derived paths, selected template, expanded defaults, inferred dependencies. Present when the service made non-trivial interpretive choices, so a wrong interpretation is visible without a second call (master prompt \u00a72.2).",

@@ -104,14 +104,36 @@ struct FUeremcpEnvironmentBuildResult
 	FString Revision;
 	int32 InternalOperations = 0;
 	bool bApproximated = false;
+
+	/** MCP-011 structured rejection fields. Copied onto the response envelope. */
+	FString ErrorCode;
+	TSharedPtr<FJsonObject> NextArgs;
+};
+
+/** Optional structured detail returned alongside a parse/validation failure. */
+struct FUeremcpEnvironmentRejection
+{
+	FString Message;
+	FString Code;
+	TSharedPtr<FJsonObject> NextArgs;
 };
 
 namespace FUeremcpEnvironmentService
 {
 	bool ParseBuildSpec(const TSharedPtr<FJsonObject>& Spec, FUeremcpEnvironmentBuildSpec& Out, FString& OutError);
 
+	/** Like ParseBuildSpec but fills Code/NextArgs for known recoverable rejections. */
+	bool ParseBuildSpec(
+		const TSharedPtr<FJsonObject>& Spec,
+		FUeremcpEnvironmentBuildSpec& Out,
+		FUeremcpEnvironmentRejection& OutRejection);
+
 	/** P0-3 / P0-5: uniform scale, needle threshold, and the realism gate. */
 	bool ValidateScaleAndQuality(const FUeremcpEnvironmentBuildSpec& Spec, FString& OutError);
+
+	bool ValidateScaleAndQuality(
+		const FUeremcpEnvironmentBuildSpec& Spec,
+		FUeremcpEnvironmentRejection& OutRejection);
 
 	bool ValidateIncludeDependencies(const FUeremcpEnvironmentBuildSpec& Spec, FString& OutError);
 

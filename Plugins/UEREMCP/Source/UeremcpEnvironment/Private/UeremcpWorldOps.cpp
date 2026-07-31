@@ -25,6 +25,7 @@
 //     RemoveInstance(int32).
 
 #include "UeremcpEnvironmentToolset.h"
+#include "UeremcpWorldOpsHelpers.h"
 
 #include "UeremcpEnvelope.h"
 
@@ -36,20 +37,13 @@
 #include "CollisionQueryParams.h"
 #include "Dom/JsonObject.h"
 
-namespace
+namespace UeremcpWorldOps
 {
 	UWorld* EditorWorld()
 	{
 		return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
 	}
 
-	/**
-	 * Z of the landscape under a point, ignoring everything else.
-	 *
-	 * The point of this function is what it does NOT hit. A generic downward
-	 * trace stops on the first blocking thing, which in a forested scene is a
-	 * tree. That is why the castle floated.
-	 */
 	bool LandscapeZAt(UWorld* World, const FVector& Location, float& OutZ)
 	{
 		const FVector Start(Location.X, Location.Y, Location.Z + 200000.f);
@@ -71,6 +65,44 @@ namespace
 		return false;
 	}
 
+	int32 ClearFoliageInBoxes(UWorld* World, const TArray<FBox>& Volumes, bool bDryRun, int32& OutInspected)
+	{
+		int32 Removed = 0;
+		OutInspected = 0;
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			TArray<UInstancedStaticMeshComponent*> Components;
+			It->GetComponents<UInstancedStaticMeshComponent>(Components);
+			for (UInstancedStaticMeshComponent* Ism : Components)
+			{
+				if (!Ism) continue;
+				for (int32 i = Ism->GetInstanceCount() - 1; i >= 0; --i)
+				{
+					FTransform Xf;
+					if (!Ism->GetInstanceTransform(i, Xf, /*bWorldSpace=*/true)) continue;
+					++OutInspected;
+					const FVector P = Xf.GetLocation();
+					for (const FBox& Box : Volumes)
+					{
+						if (Box.IsInsideOrOn(P))
+						{
+							if (!bDryRun)
+							{
+								Ism->RemoveInstance(i);
+							}
+							++Removed;
+							break;
+						}
+					}
+				}
+			}
+		}
+		return Removed;
+	}
+}
+
+namespace
+{
 	TArray<AActor*> ActorsByLabelPrefixes(UWorld* World, const TArray<FString>& Prefixes)
 	{
 		TArray<AActor*> Out;
@@ -137,9 +169,6 @@ namespace
 	}
 }
 
-// ---------------------------------------------------------------------------
-// MCP-002
-// ---------------------------------------------------------------------------
 FString UUeremcpEnvironmentToolset::SnapActorsToLandscape(const FString& RequestJson)
 {
 	FUeremcpRequest Request;
@@ -149,7 +178,7 @@ FString UUeremcpEnvironmentToolset::SnapActorsToLandscape(const FString& Request
 		return Rejection;
 	}
 
-	UWorld* World = EditorWorld();
+	UWorld* World = UeremcpWorldOps::EditorWorld();
 	if (!World)
 	{
 		return FUeremcpEnvelope::MakeRejection(Request.RequestId, TEXT("No editor world."));
@@ -188,10 +217,8 @@ FString UUeremcpEnvironmentToolset::SnapActorsToLandscape(const FString& Request
 		if (!Actor || Cast<ALandscapeProxy>(Actor)) continue;
 		const FVector Loc = Actor->GetActorLocation();
 		float Z = 0.f;
-		if (!LandscapeZAt(World, Loc, Z))
+		if (!UeremcpWorldOps::LandscapeZAt(World, Loc, Z))
 		{
-			// Named, not silently left where it was. An actor over a hole in the
-			// terrain is exactly the one a human will spot floating.
 			NoLandscape.Add(Actor->GetActorLabel());
 			continue;
 		}
@@ -217,9 +244,6 @@ FString UUeremcpEnvironmentToolset::SnapActorsToLandscape(const FString& Request
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }
 
-// ---------------------------------------------------------------------------
-// MCP-003
-// ---------------------------------------------------------------------------
 FString UUeremcpEnvironmentToolset::ClearFoliageInVolumes(const FString& RequestJson)
 {
 	FUeremcpRequest Request;
@@ -229,13 +253,12 @@ FString UUeremcpEnvironmentToolset::ClearFoliageInVolumes(const FString& Request
 		return Rejection;
 	}
 
-	UWorld* World = EditorWorld();
+	UWorld* World = UeremcpWorldOps::EditorWorld();
 	if (!World)
 	{
 		return FUeremcpEnvelope::MakeRejection(Request.RequestId, TEXT("No editor world."));
 	}
 
-	// Boxes in world space: {center:[x,y,z], extent:[x,y,z]}.
 	TArray<FBox> Volumes;
 	const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
 	if (Request.Specification.IsValid()
@@ -269,37 +292,9 @@ FString UUeremcpEnvironmentToolset::ClearFoliageInVolumes(const FString& Request
 	Response.UnderstoodAction = Request.Action;
 	Response.Metrics.McpRoundTrips = 1;
 
-	int32 Removed = 0;
 	int32 Inspected = 0;
-	for (TActorIterator<AActor> It(World); It; ++It)
-	{
-		TArray<UInstancedStaticMeshComponent*> Components;
-		It->GetComponents<UInstancedStaticMeshComponent>(Components);
-		for (UInstancedStaticMeshComponent* Ism : Components)
-		{
-			if (!Ism) continue;
-			// Descending: RemoveInstance shifts every index above it.
-			for (int32 i = Ism->GetInstanceCount() - 1; i >= 0; --i)
-			{
-				FTransform Xf;
-				if (!Ism->GetInstanceTransform(i, Xf, /*bWorldSpace=*/true)) continue;
-				++Inspected;
-				const FVector P = Xf.GetLocation();
-				for (const FBox& Box : Volumes)
-				{
-					if (Box.IsInsideOrOn(P))
-					{
-						if (!Request.bDryRun)
-						{
-							Ism->RemoveInstance(i);
-						}
-						++Removed;
-						break;
-					}
-				}
-			}
-		}
-	}
+	const int32 Removed = UeremcpWorldOps::ClearFoliageInBoxes(
+		World, Volumes, Request.bDryRun, Inspected);
 
 	Response.Status = Request.bDryRun ? TEXT("no_change_required") : TEXT("created_with_warnings");
 	Response.Summary = FString::Printf(

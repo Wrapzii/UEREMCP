@@ -57,6 +57,8 @@ namespace
 			Extra->SetBoolField(TEXT("approximated"), true);
 		}
 		Response.ExtraFields = Extra;
+		Response.ErrorCode = Result.ErrorCode;
+		Response.NextArgs = Result.NextArgs;
 	}
 
 	enum class EEnvStage : uint8
@@ -141,11 +143,12 @@ namespace
 		const bool bReadOnly = ExpectedAction.Equals(TEXT("inspect_environment"))
 			|| ExpectedAction.Equals(TEXT("validate_environment"));
 		FUeremcpEnvironmentBuildSpec Spec;
-		FString SpecError;
+		FUeremcpEnvironmentRejection Rejection;
 		if (!bReadOnly
-			&& !FUeremcpEnvironmentService::ParseBuildSpec(Request.Specification, Spec, SpecError))
+			&& !FUeremcpEnvironmentService::ParseBuildSpec(Request.Specification, Spec, Rejection))
 		{
-			return FUeremcpEnvelope::MakeRejection(Request.RequestId, SpecError);
+			return FUeremcpEnvelope::MakeRejection(
+				Request.RequestId, Rejection.Message, Rejection.Code, Rejection.NextArgs);
 		}
 		if (Spec.DestinationLevelPath.IsEmpty())
 		{

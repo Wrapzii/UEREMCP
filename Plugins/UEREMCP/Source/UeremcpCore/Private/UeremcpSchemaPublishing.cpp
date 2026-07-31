@@ -334,6 +334,8 @@ namespace
 		Props->SetObjectField(TEXT("idempotency_key"), IdempotencyKey);
 
 		// Legacy escape hatch still documented inside the nested schema.
+		// contentSchema mirror REMOVED (MCP-007): it duplicated the nested envelope
+		// and was roughly half of the ~83 KB Environment describe_toolset payload.
 		TSharedPtr<FJsonObject> Legacy = MakeShared<FJsonObject>();
 		Legacy->SetStringField(TEXT("type"), TEXT("string"));
 		Legacy->SetStringField(
@@ -341,23 +343,6 @@ namespace
 			TEXT("LEGACY: entire envelope as a JSON string. Prefer nested fields above. "
 				 "When present alone, it is accepted by ExecuteToolInternal."));
 		Legacy->SetStringField(TEXT("contentMediaType"), TEXT("application/json"));
-		if (SpecSchema.IsValid())
-		{
-			// contentSchema mirrors the nested envelope without the legacy field.
-			TSharedPtr<FJsonObject> Content = MakeShared<FJsonObject>();
-			Content->SetStringField(TEXT("type"), TEXT("object"));
-			TSharedPtr<FJsonObject> ContentProps = MakeShared<FJsonObject>();
-			for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : Props->Values)
-			{
-				if (!Pair.Key.Equals(TEXT("requestJson")))
-				{
-					ContentProps->SetField(Pair.Key, Pair.Value);
-				}
-			}
-			Content->SetObjectField(TEXT("properties"), ContentProps);
-			Content->SetArrayField(TEXT("required"), Required);
-			Legacy->SetObjectField(TEXT("contentSchema"), Content);
-		}
 		Props->SetObjectField(TEXT("requestJson"), Legacy);
 
 		Envelope->SetObjectField(TEXT("properties"), Props);

@@ -160,6 +160,14 @@ struct UEREMCPPROTOCOL_API FUeremcpResponse
 	 */
 	TArray<TSharedPtr<FJsonObject>> NextActions;
 
+	/**
+	 * Structured rejection (MCP-011). Present when status is rejected and the
+	 * service knows a machine-readable fix. next_args is a PATCH to merge into
+	 * the failing request — not a whole new envelope.
+	 */
+	FString ErrorCode;
+	TSharedPtr<FJsonObject> NextArgs;
+
 	/** Raw extensions kept for fields not yet modelled (validation, changes, …).
 	 *  Prefer typed fields above; this exists so Serialize can round-trip extras
 	 *  without inventing envelope fields. */
@@ -204,6 +212,16 @@ public:
 
 	/** Convenience for the two rejection paths every tool needs. */
 	static FString MakeRejection(const FString& RequestId, const FString& Reason);
+
+	/**
+	 * Rejection with a stable error.code and a next_args patch (MCP-011).
+	 * Code must be one of the enum values in response.schema.json.
+	 */
+	static FString MakeRejection(
+		const FString& RequestId,
+		const FString& Reason,
+		const FString& ErrorCode,
+		const TSharedPtr<FJsonObject>& NextArgs);
 
 	/** Convenience for reporting an operation that ran but could not be verified. */
 	static FString MakeUnverified(const FString& RequestId, const FString& Summary,

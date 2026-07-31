@@ -453,6 +453,21 @@ FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 	Root->SetStringField(TEXT("status"), Response.Status);
 	Root->SetStringField(TEXT("summary"), Response.Summary);
 
+	if (!Response.ErrorCode.IsEmpty() || Response.NextArgs.IsValid())
+	{
+		TSharedPtr<FJsonObject> Error = MakeShared<FJsonObject>();
+		if (!Response.ErrorCode.IsEmpty())
+		{
+			Error->SetStringField(TEXT("code"), Response.ErrorCode);
+		}
+		Error->SetStringField(TEXT("message"), Response.Summary);
+		if (Response.NextArgs.IsValid())
+		{
+			Error->SetObjectField(TEXT("next_args"), Response.NextArgs);
+		}
+		Root->SetObjectField(TEXT("error"), Error);
+	}
+
 	if (!Response.UnderstoodAction.IsEmpty() || !Response.UnderstoodTarget.IsEmpty()
 		|| !Response.UnderstoodTemplate.IsEmpty() || Response.InterpretationNotes.Num() > 0)
 	{
@@ -604,11 +619,22 @@ FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 
 FString FUeremcpEnvelope::MakeRejection(const FString& RequestId, const FString& Reason)
 {
+	return MakeRejection(RequestId, Reason, FString(), nullptr);
+}
+
+FString FUeremcpEnvelope::MakeRejection(
+	const FString& RequestId,
+	const FString& Reason,
+	const FString& ErrorCode,
+	const TSharedPtr<FJsonObject>& NextArgs)
+{
 	FUeremcpResponse Response;
 	Response.ProtocolVersion = ProtocolVersion();
 	Response.RequestId = RequestId;
 	Response.Status = TEXT("rejected");
 	Response.Summary = Reason;
+	Response.ErrorCode = ErrorCode;
+	Response.NextArgs = NextArgs;
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = 0;
 
@@ -640,6 +666,12 @@ FString FUeremcpEnvelope::MakeRejection(const FString& RequestId, const FString&
 	Response.CapabilityNotes.Add(TEXT(
 		"next: fix the rejected field, or call UeremcpCore.UeremcpReferenceToolset.GetStarted "
 		"then ResolveIntent for a worked request_json."));
+	if (NextArgs.IsValid())
+	{
+		Response.CapabilityNotes.Add(TEXT(
+			"error.next_args is a PATCH to merge into the failing request, not a whole "
+			"new envelope. Merge it and retry."));
+	}
 
 	return SerializeResponse(Response);
 }
