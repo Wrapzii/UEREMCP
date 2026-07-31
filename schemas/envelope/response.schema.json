@@ -410,6 +410,11 @@
               "consumes"
             ],
             "description": "implied = the declared next step. consumed_by = one layer UP, what is built from what you just made. consumes = one layer DOWN, what this is built from -- offered even though it is behind you, because the common failure is having the thing and still lacking its inputs."
+          },
+          "reference": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "The suggested action's contract, inline: use_when, do_not_use_for, expected_statuses, recovery, batch_hint, destructive. Deliberately the short fields, not a schema dump -- the point is to remove a describe_toolset round trip, not to relocate an 83 KB toolset description into every response."
           }
         }
       }

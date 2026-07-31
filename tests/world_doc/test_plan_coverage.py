@@ -533,5 +533,53 @@ class TestNoPhantomAssetPaths(unittest.TestCase):
         self.assertIn("EXISTS", op["recovery"])
         self.assertIn("BasicShapes", op["recovery"])
 
+
+class TestSuggestionsCarryTheContract(unittest.TestCase):
+    """Naming a next action without its contract moves the lookup one call later.
+
+    Measured in one session: ~61 describe_toolset calls, and the Environment
+    toolset dump alone is ~83 KB of duplicated nested envelope mirrors. Agents
+    spent round trips learning what the response already knew -- including
+    calling describe_toolset on UeremcpReferenceToolset itself.
+    """
+
+    NEXT_ACTIONS = os.path.join(SOURCE, "UeremcpCore", "Private",
+                                "UeremcpNextActions.cpp")
+
+    def test_reference_block_is_attached(self):
+        body = read(self.NEXT_ACTIONS)
+        self.assertIn('SetObjectField(TEXT("reference")', body)
+
+    def test_carries_the_short_fields_only(self):
+        """Relocating 83 KB into every response is not an improvement."""
+        body = read(self.NEXT_ACTIONS)
+        for field in ("use_when", "do_not_use_for", "expected_statuses",
+                      "recovery", "batch_hint"):
+            self.assertIn('TEXT("%s")' % field, body)
+        self.assertNotIn('TEXT("input_schema")', body)
+        self.assertNotIn('contentSchema', body)
+
+    def test_schema_declares_reference(self):
+        with io.open(os.path.join(REPO, "schemas", "envelope",
+                                  "response.schema.json"), encoding="utf-8") as fh:
+            schema = json.load(fh)
+        item = schema["properties"]["next_actions"]["items"]
+        self.assertIn("reference", item["properties"])
+
+    def test_every_suggestable_action_has_contract_fields(self):
+        """A reference block that is empty for half the catalog helps nobody."""
+        ops = {o.get("action"): o for o in catalog()["operations"]}
+        suggested = set()
+        for op in ops.values():
+            for nxt in op.get("next_actions") or []:
+                suggested.add(nxt["action"])
+        for action in suggested:
+            op = ops.get(action)
+            self.assertIsNotNone(op, action)
+            self.assertTrue(op.get("use_when"),
+                            "%s is suggested but has no use_when to serve" % action)
+            self.assertTrue(op.get("expected_statuses"),
+                            "%s is suggested but declares no expected_statuses" % action)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

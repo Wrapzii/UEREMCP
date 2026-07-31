@@ -59,6 +59,8 @@ namespace
 		TMap<FString, TArray<FString>> ConsumedBy;
 		/** action -> its `why` from the dependency graph, for explaining an edge */
 		TMap<FString, FString> Why;
+		/** action -> its full catalog entry, so a suggestion can carry the contract */
+		TMap<FString, TSharedPtr<FJsonObject>> Ops;
 	};
 
 	/** Parsed once; the catalog is static at runtime. */
@@ -123,6 +125,7 @@ namespace
 			if (!Op.IsValid()) continue;
 			FString Action;
 			if (!Op->TryGetStringField(TEXT("action"), Action) || Action.IsEmpty()) continue;
+			G.Ops.Add(Action, Op);
 			const TArray<TSharedPtr<FJsonValue>>* Next = nullptr;
 			if (!Op->TryGetArrayField(TEXT("next_actions"), Next) || !Next) continue;
 
@@ -239,6 +242,54 @@ TArray<TSharedPtr<FJsonObject>> FUeremcpNextActions::Suggest(
 		TSharedPtr<FJsonObject> Suggestion = MakeShared<FJsonObject>();
 		Suggestion->SetStringField(TEXT("action"), NextAction);
 		Suggestion->SetStringField(TEXT("relation"), Relation);
+
+		// Carry the CONTRACT, not just the name.
+		//
+		// Measured: ~61 describe_toolset calls in one session, and the Environment
+		// dump alone is ~83 KB of duplicated nested envelope mirrors. Agents were
+		// spending round trips to learn what this response already knows. Naming
+		// a next action without its contract just moves the lookup one call later.
+		//
+		// Deliberately the SHORT fields -- use_when, do_not_use_for,
+		// expected_statuses, recovery -- not the schema dump. The point is to
+		// remove a round trip, not to relocate 83 KB into every response.
+		if (const TSharedPtr<FJsonObject>* CatOp = G.Ops.Find(NextAction))
+		{
+			TSharedPtr<FJsonObject> Ref = MakeShared<FJsonObject>();
+			auto CopyArray = [&](const TCHAR* Field)
+			{
+				const TArray<TSharedPtr<FJsonValue>>* Arr = nullptr;
+				if ((*CatOp)->TryGetArrayField(Field, Arr) && Arr)
+				{
+					Ref->SetArrayField(Field, *Arr);
+				}
+			};
+			auto CopyString = [&](const TCHAR* Field)
+			{
+				FString Value;
+				if ((*CatOp)->TryGetStringField(Field, Value) && !Value.IsEmpty())
+				{
+					Ref->SetStringField(Field, Value);
+				}
+			};
+			CopyArray(TEXT("use_when"));
+			CopyArray(TEXT("do_not_use_for"));
+			CopyArray(TEXT("expected_statuses"));
+			CopyString(TEXT("recovery"));
+			CopyString(TEXT("batch_hint"));
+			bool bDestructive = false;
+			if ((*CatOp)->TryGetBoolField(TEXT("destructive"), bDestructive))
+			{
+				Ref->SetBoolField(TEXT("destructive"), bDestructive);
+			}
+			if (Ref->Values.Num() > 0)
+			{
+				Ref->SetStringField(TEXT("note"),
+					TEXT("Contract for this action, inline. You do not need describe_toolset "
+						 "to send the request_json above."));
+				Suggestion->SetObjectField(TEXT("reference"), Ref);
+			}
+		}
 		Suggestion->SetStringField(TEXT("why"), Why);
 		Suggestion->SetObjectField(TEXT("request_json"), Request);
 		Suggestion->SetStringField(TEXT("confidence"), Confidence);
