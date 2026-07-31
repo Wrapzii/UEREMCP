@@ -309,6 +309,68 @@ bool FUeremcpProtocolGoldenEnvelope::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpProtocolRejectionContractEcho,
+	"UEREMCP.Protocol.Envelope.RejectionContractEcho",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpProtocolRejectionContractEcho::RunTest(const FString& Parameters)
+{
+	const FString Serialized = FUeremcpEnvelope::MakeRejection(
+		TEXT("reject-contract-1"),
+		TEXT("specification.intent is required"));
+
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Serialized);
+	TestTrue(
+		TEXT("MakeRejection produces one valid response object"),
+		FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	if (!Root.IsValid())
+	{
+		return false;
+	}
+
+	TestEqual(TEXT("rejection status"), Root->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	TestEqual(
+		TEXT("rejection preserves request id"),
+		Root->GetStringField(TEXT("request_id")),
+		FString(TEXT("reject-contract-1")));
+	TestEqual(
+		TEXT("rejection preserves reason"),
+		Root->GetStringField(TEXT("summary")),
+		FString(TEXT("specification.intent is required")));
+
+	const TArray<TSharedPtr<FJsonValue>>* Notes = nullptr;
+	TestTrue(
+		TEXT("rejection includes contract notes"),
+		Root->TryGetArrayField(TEXT("capability_notes"), Notes) && Notes != nullptr);
+	if (!Notes)
+	{
+		return false;
+	}
+
+	FString Joined;
+	for (const TSharedPtr<FJsonValue>& Note : *Notes)
+	{
+		Joined += Note->AsString();
+		Joined += TEXT("\n");
+	}
+	TestTrue(TEXT("contract names required top-level fields"),
+		Joined.Contains(TEXT("protocol_version (required)"))
+		&& Joined.Contains(TEXT("action (required)")));
+	TestTrue(TEXT("contract gives a complete minimal request shape"),
+		Joined.Contains(TEXT("\"specification\":{}"))
+		&& Joined.Contains(TEXT("\"options\":{\"dry_run\":true}")));
+	TestTrue(TEXT("contract gives the next recovery action in the same response"),
+		Joined.Contains(TEXT("UeremcpCore.UeremcpReferenceToolset.GetStarted"))
+		&& Joined.Contains(TEXT("ResolveIntent")));
+
+	const TSharedPtr<FJsonObject> Metrics = Root->GetObjectField(TEXT("metrics"));
+	TestEqual(TEXT("one rejection is one MCP round trip"),
+		static_cast<int32>(Metrics->GetNumberField(TEXT("mcp_round_trips"))), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpProtocolGoldenRef,
 	"UEREMCP.Protocol.Golden.Ref",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
