@@ -37,6 +37,7 @@ namespace
 			TEXT("place_structures"),
 			TEXT("inspect_environment"),
 			TEXT("validate_environment"),
+			TEXT("submit_mesh_ops"),
 		};
 		return Names;
 	}
@@ -69,6 +70,10 @@ bool FUeremcpEnvironmentPlanHandlers::Register(FString& OutError)
 	if (!Bind(TEXT("place_structures"), &UUeremcpEnvironmentToolset::PlaceStructures)) return false;
 	if (!Bind(TEXT("inspect_environment"), &UUeremcpEnvironmentToolset::InspectEnvironment)) return false;
 	if (!Bind(TEXT("validate_environment"), &UUeremcpEnvironmentToolset::ValidateEnvironment)) return false;
+	// Mesh authoring is the first operation in a from-scratch plan. Without
+	// this line execute_plan rejects the whole batch with "no handler for
+	// submit_mesh_ops" and the agent falls back to one call per mesh.
+	if (!Bind(TEXT("submit_mesh_ops"), &UUeremcpEnvironmentToolset::SubmitMeshOps)) return false;
 	OutError.Reset();
 	return true;
 }

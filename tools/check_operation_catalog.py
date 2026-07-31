@@ -10,6 +10,7 @@ routing plans point agents at callables that do not exist.
 from __future__ import annotations
 
 import json
+import re
 import os
 import sys
 
@@ -32,6 +33,42 @@ def load_snapshot_names() -> set[str]:
             if tool.get("qualified_name"):
                 names.add(tool["qualified_name"])
     return names
+
+
+# Actions that legitimately have no execute_plan handler: they orchestrate or
+# describe plans rather than being steps inside one.
+PLAN_EXEMPT = {
+    "get_started", "resolve_intent", "describe_operation",
+    "execute_plan", "get_job_result", "cancel_job",
+}
+
+
+def registered_plan_actions() -> set[str]:
+    """Actions bound via FUeremcpPlanExecutor::RegisterAction, read from source.
+
+    Being AICallable and being usable inside execute_plan are TWO registries.
+    A tool present in one and absent from the other fails only at plan time --
+    "no handler registered for '<action>'" -- after the agent has already
+    committed to a batch and has to abandon it. Measured in a live run: a
+    correct texture -> material -> mesh -> scatter plan was thrown away and
+    re-issued one call at a time, because submit_mesh_ops and
+    create_procedural_texture were never plan-registered.
+    """
+    found: set[str] = set()
+    src = os.path.join(ROOT, "Plugins", "UEREMCP", "Source")
+    for dirpath, _dirs, files in os.walk(src):
+        for name in files:
+            if not name.endswith("PlanHandlers.cpp"):
+                continue
+            with open(os.path.join(dirpath, name), encoding="utf-8", errors="replace") as fh:
+                body = fh.read()
+            for m in re.finditer(r'Bind\(\s*TEXT\("([a-z0-9_]+)"\)', body):
+                found.add(m.group(1))
+            for m in re.finditer(r'RegisterAction\(\s*TEXT\("([a-z0-9_]+)"\)', body):
+                found.add(m.group(1))
+            for m in re.finditer(r'return\s+TEXT\("([a-z0-9_]+)"\);', body):
+                found.add(m.group(1))
+    return found
 
 
 def main() -> int:
@@ -83,7 +120,24 @@ def main() -> int:
                 print("CATALOG UNKNOWN depends_on_actions: %s (from %s)" % (parent, action))
                 problems += 1
 
-    print("checked %d catalog operation(s) against registry snapshot" % len(operations))
+    # Every mutating action the router can put in a batch must be executable
+    # inside that batch.
+    plan_actions = registered_plan_actions()
+    for op in operations:
+        action = op.get("action")
+        if not action or action in PLAN_EXEMPT or "." in action:
+            continue
+        if not op.get("destructive"):
+            continue
+        if action not in plan_actions:
+            print("NO PLAN HANDLER %s: routable and destructive, but no "
+                  "FUeremcpPlanExecutor::RegisterAction binding found in any "
+                  "*PlanHandlers.cpp. execute_plan will reject a batch "
+                  "containing it." % action)
+            problems += 1
+
+    print("checked %d catalog operation(s) against registry snapshot; "
+          "%d plan-registered action(s)" % (len(operations), len(plan_actions)))
     print("%d problem(s)" % problems)
     return 1 if problems else 0
 

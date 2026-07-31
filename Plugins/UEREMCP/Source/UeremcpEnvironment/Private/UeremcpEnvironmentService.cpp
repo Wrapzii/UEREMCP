@@ -624,13 +624,28 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		Out.SchemaVersion = int32(SchemaVersion);
 	}
 
-	auto ReadObjNumber = [&](const FString& Obj, const FString& Key, double& InOut)
+	// Returns whether the field was PRESENT, and always clears InOut first.
+	//
+	// It previously left InOut untouched when the field was absent. Every call
+	// site shares one `Tmp`, so an absent field silently inherited the value of
+	// whichever field was read before it, and the `if (Tmp > 0)` guard then
+	// applied that unrelated number.
+	//
+	// Measured consequence: a request omitting vegetation.slope_limit_deg picked
+	// up min_normalized_height's 0.95 and enforced a 0.95-degree slope limit,
+	// rejecting effectively every candidate and scattering 0 instances -- while
+	// reporting success. Same mechanism silently corrupted terrain scale_z from
+	// terrain size.
+	auto ReadObjNumber = [&](const FString& Obj, const FString& Key, double& InOut) -> bool
 	{
+		InOut = 0;
 		const TSharedPtr<FJsonObject>* Child = nullptr;
 		if (Spec->TryGetObjectField(Obj, Child) && Child && (*Child)->HasField(Key))
 		{
 			InOut = (*Child)->GetNumberField(Key);
+			return true;
 		}
+		return false;
 	};
 
 	double Tmp = 0;
@@ -685,8 +700,10 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
 		ReadObjNumber(TEXT("vegetation"), TEXT("slope_limit_deg"), Tmp);
 		if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
-		ReadObjNumber(TEXT("vegetation"), TEXT("min_normalized_height"), Tmp);
-		if (Tmp >= 0) Out.FoliageMinNormalizedHeight = float(Tmp);
+		if (ReadObjNumber(TEXT("vegetation"), TEXT("min_normalized_height"), Tmp) && Tmp >= 0)
+		{
+			Out.FoliageMinNormalizedHeight = float(Tmp);
+		}
 		ReadObjNumber(TEXT("vegetation"), TEXT("max_normalized_height"), Tmp);
 		if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
 		(*Vegetation)->TryGetStringField(TEXT("mesh_path"), Out.MeshPath);
@@ -695,7 +712,7 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	ReadObjNumber(TEXT("biome"), TEXT("forest_bank_width"), Tmp); if (Tmp > 0) Out.ForestBankWidth = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("max_foliage_instances"), Tmp); if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("slope_limit_deg"), Tmp); if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
-	ReadObjNumber(TEXT("biome"), TEXT("min_normalized_height"), Tmp); if (Tmp >= 0) Out.FoliageMinNormalizedHeight = float(Tmp);
+	if (ReadObjNumber(TEXT("biome"), TEXT("min_normalized_height"), Tmp) && Tmp >= 0) { Out.FoliageMinNormalizedHeight = float(Tmp); }
 	ReadObjNumber(TEXT("biome"), TEXT("max_normalized_height"), Tmp); if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
 	const TSharedPtr<FJsonObject>* Biome = nullptr;
 	if (Spec->TryGetObjectField(TEXT("biome"), Biome) && Biome)
