@@ -21,7 +21,7 @@ Legend — **V** verified live · **W** written, uncompiled · **P** proposal on
 | 1.3a | ResolveIntent / DescribeOperation / capture stack | **V done** | Exact live names callable |
 | 1.3b | Template **authoring** (not seeded library) | **open** | Promote preview-only; no CreateTemplate — WS-15 |
 | 1.3c | GetStarted collision | **V done** | Live `GetStarted` on Reference toolset |
-| 1.3d | Router plan score-gate / cap | **W → verify after Core rebuild** | Score-floor 35% + default max_steps=3 landed in tip; live re-proof pending rebuild |
+| 1.3d | Router plan score-gate / cap | **V done** | Live Coding Core patch: mountain/river → **1-step** `BuildEnvironment` (score 62, floor 21.7); no CaptureMaterialFrames noise |
 | 1.4 | Unify naming | **V done (aliases)** | PascalCase live; snake/kebab normalize — full rename deferred |
 | 1b.2–1b.7 | Agent-reported call-count gaps | **open** | After 1b.1; do not skip |
 | 2.1–2.5 | Discoverability machinery | **V done** (2.3 focus **disabled**) | Focus withheld until 1.2a live + descriptions stay green |
@@ -154,12 +154,11 @@ without it every template is a fireball variant.
 `next_call=ResolveIntent`. Historical note: an earlier tip (`UEREMCP-ws01`) lacked
 it — deploy path was the collision.
 
-**1.3d Router plan-ordering defect — reported by a live agent.** **W on tip;
-live re-proof after Core rebuild.** Pre-fix live mountain/river intent correctly
-ranked `BuildEnvironment` top-1 but still emitted a score-`5.2`
-`CaptureMaterialFrames` plan step. Offline router after score-gate: **1-step plan**
-`BuildEnvironment` (floor = 35% of best); held-out top-1 **84.21%**, top-3 **100%**,
-confident-wrong **0**.
+**1.3d Router plan-ordering defect — reported by a live agent.** **V done**
+(2026-07-30 Live Coding Core patch on deploy tip). Live mountain/river intent:
+summary `Routed 1 step(s)`, sole plan step `BuildEnvironment` score 62,
+`plan_score_floor` 21.7; weak `CaptureMaterialFrames` no longer in plan.
+Offline held-out unchanged: top-1 **84.21%**, top-3 **100%**, confident-wrong **0**.
 
 Landed fixes:
 1. **Score-gate plan membership** at 35% of best hit (`plan_score_floor` in payload).
