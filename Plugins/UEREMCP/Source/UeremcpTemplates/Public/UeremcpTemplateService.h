@@ -21,7 +21,13 @@ public:
 
 	FUeremcpTemplateInstantiateResult Instantiate(const FUeremcpTemplateInstantiateRequest& Request) const;
 
-	FUeremcpTemplatePromotionResult PlanPromotion(const FUeremcpTemplatePromotionRequest& Request) const;
+	FUeremcpTemplatePromotionResult PlanPromotion(const FUeremcpTemplatePromotionRequest& Request);
+
+	/** Author a new template document into the agent-writable library. */
+	FUeremcpTemplateAuthorResult CreateTemplate(const FUeremcpTemplateAuthorRequest& Request);
+
+	/** Replace an existing template document. */
+	FUeremcpTemplateAuthorResult UpdateTemplate(const FUeremcpTemplateAuthorRequest& Request);
 
 private:
 	static float ScoreRecord(const FUeremcpTemplateRecord& Record, const FUeremcpTemplateSearchQuery& Query);

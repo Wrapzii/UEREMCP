@@ -2,6 +2,7 @@
 
 #include "UeremcpTemplatesModule.h"
 
+#include "HAL/FileManager.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/CoreDelegates.h"
 #include "Misc/Paths.h"
@@ -34,6 +35,15 @@ public:
 
 		TArray<FString> Errors;
 		Store->LoadFromDirectory(UeremcpTemplates::ResolveTemplatesDirectory(), Errors);
+		TArray<FString> AgentErrors;
+		const FString AgentDir = UeremcpTemplates::ResolveAgentTemplatesDirectory();
+		IFileManager::Get().MakeDirectory(*AgentDir, true);
+		Store->MergeFromDirectory(AgentDir, AgentErrors);
+		Errors.Append(AgentErrors);
+		for (const FString& Err : Errors)
+		{
+			UE_LOG(LogUeremcpTemplates, Warning, TEXT("template load: %s"), *Err);
+		}
 
 		OnPostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddRaw(
 			this, &FUeremcpTemplatesModule::RegisterTemplatesToolset);
@@ -127,6 +137,12 @@ namespace UeremcpTemplates
 		}
 
 		return FPaths::Combine(FPaths::ProjectDir(), TEXT("templates"));
+	}
+
+	FString ResolveAgentTemplatesDirectory()
+	{
+		return FPaths::ConvertRelativePathToFull(
+			FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UEREMCP/Templates/agent")));
 	}
 
 	FUeremcpTemplateStore& GetStore()

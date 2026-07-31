@@ -32,3 +32,6 @@ desktop.ini
 # Research findings belong in docs/research/, not here.
 .scratch/
 *.local.md
+
+# Runtime junction of repo schemas/ into the plugin (see Content/Schemas.README.md).
+Plugins/UEREMCP/Content/Schemas/

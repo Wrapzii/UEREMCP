@@ -18,6 +18,12 @@ public:
 	/** Load template documents and element presets recursively. Invalid files are skipped with OutErrors. */
 	int32 LoadFromDirectory(const FString& RootDirectory, TArray<FString>& OutErrors);
 
+	/**
+	 * Like LoadFromDirectory but does not Reset(). New ids are inserted; duplicates are
+	 * skipped with an error (agent quarantine must not clobber bundled fixtures).
+	 */
+	int32 MergeFromDirectory(const FString& RootDirectory, TArray<FString>& OutErrors);
+
 	const FUeremcpTemplateRecord* FindById(const FString& TemplateId) const;
 	const FUeremcpElementPreset* FindElementPreset(const FString& Element) const;
 
@@ -25,6 +31,22 @@ public:
 
 	int32 Count() const { return Records.Num(); }
 	int32 ElementPresetCount() const { return ElementPresets.Num(); }
+
+	/**
+	 * Insert or replace a template record in memory. Does not touch disk.
+	 * Returns false if TemplateId is empty or Document is invalid.
+	 */
+	bool Upsert(const FUeremcpTemplateRecord& Record, FString& OutError);
+
+	/**
+	 * Serialize Record.Document to AbsoluteFilePath and Upsert into the index.
+	 * Creates parent directories. Overwrites existing files.
+	 */
+	bool SaveDocument(
+		const TSharedPtr<FJsonObject>& Document,
+		const FString& AbsoluteFilePath,
+		FUeremcpTemplateRecord& OutRecord,
+		FString& OutError);
 
 private:
 	bool ParseTemplateFile(const FString& FilePath, FUeremcpTemplateRecord& OutRecord, FString& OutError) const;

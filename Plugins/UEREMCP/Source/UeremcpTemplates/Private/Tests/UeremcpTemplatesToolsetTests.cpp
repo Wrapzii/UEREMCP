@@ -165,9 +165,9 @@ bool FUeremcpTemplatesToolsetPromotePreviewTest::RunTest(const FString& Paramete
 		return false;
 	}
 	TestEqual(
-		TEXT("promotion remains an honest preview"),
+		TEXT("dry_run promotion is no_change_required"),
 		Status,
-		FString(TEXT("partially_completed")));
+		FString(TEXT("no_change_required")));
 	TestFalse(
 		TEXT("preview does not report changes"),
 		Root->HasField(TEXT("changes")));
@@ -177,6 +177,9 @@ bool FUeremcpTemplatesToolsetPromotePreviewTest::RunTest(const FString& Paramete
 	TestFalse(
 		TEXT("preview does not claim modified_and_validated"),
 		ResponseJson.Contains(TEXT("\"status\":\"modified_and_validated\"")));
+	TestTrue(
+		TEXT("dry_run notes no file write"),
+		ResponseJson.Contains(TEXT("dry_run")));
 	return true;
 }
 

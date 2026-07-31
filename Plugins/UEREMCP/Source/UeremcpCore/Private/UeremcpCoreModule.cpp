@@ -1,10 +1,12 @@
 #include "Modules/ModuleManager.h"
 #include "Modules/ModuleInterface.h"
 #include "Misc/CoreDelegates.h"
+#include "Containers/Ticker.h"
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpPlanTransactionCoordinator.h"
 #include "UeremcpReferenceToolset.h"
+#include "UeremcpSchemaPublishing.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcp, Log, All);
 
@@ -37,6 +39,12 @@ public:
 	{
 		FUeremcpPlanTransactionCoordinator::UnregisterFromExecutor();
 
+		if (SchemaPublishTickerHandle.IsValid())
+		{
+			FTSTicker::GetCoreTicker().RemoveTicker(SchemaPublishTickerHandle);
+			SchemaPublishTickerHandle.Reset();
+		}
+
 		if (OnPostEngineInitHandle.IsValid())
 		{
 			FCoreDelegates::GetOnPostEngineInit().Remove(OnPostEngineInitHandle);
@@ -67,6 +75,12 @@ private:
 				     "can re-check."));
 		}
 
+		// Publish nested schemas after sibling Ueremcp* modules finish their
+		// PostEngineInit RegisterToolsetClass calls (next tick).
+		SchemaPublishTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
+			FTickerDelegate::CreateRaw(this, &FUeremcpCoreModule::PublishSchemasNextTick),
+			0.0f);
+
 		FString PlanTransactionError;
 		if (FUeremcpPlanTransactionCoordinator::RegisterWithExecutor(PlanTransactionError))
 		{
@@ -80,7 +94,18 @@ private:
 		}
 	}
 
+	bool PublishSchemasNextTick(float)
+	{
+		SchemaPublishTickerHandle.Reset();
+		const int32 Wrapped = UeremcpSchemaPublishing::PublishNestedSchemasForAllUeremcpToolsets();
+		UE_LOG(LogUeremcp, Log,
+			TEXT("Nested envelope schema publishing wrapped %d Ueremcp toolset(s) (BACKLOG 1.2a)."),
+			Wrapped);
+		return false; // one-shot
+	}
+
 	FDelegateHandle OnPostEngineInitHandle;
+	FTSTicker::FDelegateHandle SchemaPublishTickerHandle;
 };
 
 IMPLEMENT_MODULE(FUeremcpCoreModule, UeremcpCore)

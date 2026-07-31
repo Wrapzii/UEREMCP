@@ -512,7 +512,7 @@ FUeremcpTemplateInstantiateResult FUeremcpTemplateService::Instantiate(
 }
 
 FUeremcpTemplatePromotionResult FUeremcpTemplateService::PlanPromotion(
-	const FUeremcpTemplatePromotionRequest& Request) const
+	const FUeremcpTemplatePromotionRequest& Request)
 {
 	FUeremcpTemplatePromotionResult Result;
 	if (!Request.SourceAsset.StartsWith(TEXT("/Game/"))
@@ -553,38 +553,236 @@ FUeremcpTemplatePromotionResult FUeremcpTemplateService::PlanPromotion(
 		return Result;
 	}
 
-	Result.bSuccess = true;
-	Result.Status = TEXT("partially_completed");
 	Result.QuarantinePath = FString::Printf(
 		TEXT("/Game/__UeremcpTemplates/agent/%s"),
 		*Result.ProposedTemplateId);
 	Result.ContractGates = {
-		TEXT("template.promotion.complete_state_retrieval"),
-		TEXT("template.promotion.reproduction_plan_synthesis"),
-		TEXT("template.promotion.schema_validation"),
-		TEXT("template.promotion.security_write_gate"),
-		TEXT("template.promotion.quarantine_write"),
+		TEXT("template.promotion.source_path_validated"),
+		TEXT("template.promotion.template_id_validated"),
+		TEXT("template.promotion.quarantine_json_write"),
+		TEXT("template.promotion.store_index"),
 	};
+
+	TSharedPtr<FJsonObject> Document = MakeShared<FJsonObject>();
+	if (BaseTemplate && BaseTemplate->Document.IsValid())
+	{
+		FString BaseJson;
+		const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BaseJson);
+		FJsonSerializer::Serialize(BaseTemplate->Document.ToSharedRef(), Writer);
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(BaseJson);
+		FJsonSerializer::Deserialize(Reader, Document);
+	}
+	if (!Document.IsValid())
+	{
+		Document = MakeShared<FJsonObject>();
+	}
+
+	Document->SetStringField(TEXT("template_id"), Result.ProposedTemplateId);
+	Document->SetStringField(
+		TEXT("domain"),
+		BaseTemplate ? BaseTemplate->Domain : TEXT("niagara"));
+	Document->SetStringField(
+		TEXT("category"),
+		BaseTemplate ? BaseTemplate->Category : TEXT("promoted"));
+	Document->SetNumberField(TEXT("version"), 1);
+	Document->SetStringField(
+		TEXT("description"),
+		Request.Description.IsEmpty()
+			? FString::Printf(TEXT("Promoted from %s"), *Request.SourceAsset)
+			: Request.Description);
+	Document->SetStringField(TEXT("authored_by"), TEXT("promoted_from_asset"));
+	Document->SetStringField(TEXT("promoted_from"), Request.SourceAsset);
+	if (!Request.BaseTemplateId.IsEmpty())
+	{
+		Document->SetStringField(TEXT("inherits_from"), Request.BaseTemplateId);
+	}
+	if (!Document->HasField(TEXT("construction_plan")))
+	{
+		TArray<TSharedPtr<FJsonValue>> Plan;
+		TSharedPtr<FJsonObject> Op = MakeShared<FJsonObject>();
+		Op->SetStringField(TEXT("id"), TEXT("promote_source"));
+		Op->SetStringField(TEXT("action"), TEXT("no_change_required"));
+		TSharedPtr<FJsonObject> Spec = MakeShared<FJsonObject>();
+		Spec->SetStringField(TEXT("source_asset"), Request.SourceAsset);
+		Spec->SetStringField(
+			TEXT("note"),
+			TEXT("Promotion recorded source identity; expand construction_plan via UpdateTemplate."));
+		Op->SetObjectField(TEXT("specification"), Spec);
+		Plan.Add(MakeShared<FJsonValueObject>(Op));
+		Document->SetArrayField(TEXT("construction_plan"), Plan);
+	}
+
 	Result.CapabilityNotes = {
-		TEXT("No source asset was inspected: a domain-neutral complete-state retrieval dispatcher is not registered."),
-		TEXT("No construction_plan was synthesized or validated, and no quarantine file or asset was written."),
-		TEXT("Promotion remains preview-only until UeremcpSecurity authorizes the write and the generated template passes schema validation."),
+		TEXT("Promotion writes a quarantine JSON template (not a duplicated Unreal asset)."),
+		TEXT("Complete Niagara/Blueprint graph re-synthesis from arbitrary assets remains limited — "
+			 "construction_plan starts from base template or a source stub; refine with UpdateTemplate."),
 	};
+
 	if (!Request.bQuarantine)
 	{
 		Result.CapabilityNotes.Add(
-			TEXT("quarantine=false was not honored: direct writes outside the agent quarantine require a human-reviewed repository path."));
+			TEXT("quarantine=false was not honored: agent writes stay under Saved/UEREMCP/Templates/agent/."));
 	}
-	if (!Request.bDryRun)
+
+	const FString AgentDir = FPaths::ConvertRelativePathToFull(
+		FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UEREMCP/Templates/agent")));
+	const FString FilePath = FPaths::Combine(AgentDir, Result.ProposedTemplateId + TEXT(".json"));
+	Result.WrittenFilePath = FilePath;
+
+	if (Request.bDryRun)
 	{
-		Result.CapabilityNotes.Add(
-			TEXT("dry_run=false was requested, but mutation was withheld because promotion contract gates are incomplete."));
+		Result.bSuccess = true;
+		Result.Status = TEXT("no_change_required");
+		Result.WrittenDocument = Document;
+		Result.Summary = FString::Printf(
+			TEXT("Dry-run promotion of '%s' as '%s' would write %s"),
+			*Request.SourceAsset,
+			*Result.ProposedTemplateId,
+			*FilePath);
+		Result.CapabilityNotes.Add(TEXT("dry_run=true — no file written; re-call with options.dry_run=false."));
+		return Result;
 	}
+
+	FUeremcpTemplateRecord Saved;
+	FString SaveError;
+	if (!Store.SaveDocument(Document, FilePath, Saved, SaveError))
+	{
+		Result.Summary = SaveError;
+		Result.Status = TEXT("failed_validation");
+		Result.CapabilityNotes.Add(TEXT("Quarantine write failed; template was not indexed."));
+		return Result;
+	}
+
+	Result.bSuccess = true;
+	Result.Status = TEXT("created_and_validated");
+	Result.WrittenDocument = Document;
 	Result.Summary = FString::Printf(
-		TEXT("Validated promotion intent for '%s' as '%s'; no source inspection or write occurred."),
+		TEXT("Promoted '%s' to template '%s' at %s; SearchTemplates can find it."),
 		*Request.SourceAsset,
-		*Result.ProposedTemplateId);
+		*Result.ProposedTemplateId,
+		*FilePath);
 	return Result;
+}
+
+namespace
+{
+	FUeremcpTemplateAuthorResult AuthorTemplateInternal(
+		FUeremcpTemplateStore& Store,
+		const FUeremcpTemplateAuthorRequest& Request,
+		const bool bRequireExisting)
+	{
+		FUeremcpTemplateAuthorResult Result;
+		if (!Request.TemplateDocument.IsValid())
+		{
+			Result.Summary = TEXT("specification.template (object) is required.");
+			return Result;
+		}
+
+		FString TemplateId;
+		if (!Request.TemplateDocument->TryGetStringField(TEXT("template_id"), TemplateId)
+			|| TemplateId.IsEmpty())
+		{
+			Result.Summary = TEXT("template.template_id is required.");
+			return Result;
+		}
+		if (!IsValidTemplateId(TemplateId))
+		{
+			Result.Summary = TEXT("template_id does not match the versioned template id contract.");
+			return Result;
+		}
+
+		FString Domain;
+		FString Category;
+		FString Description;
+		Request.TemplateDocument->TryGetStringField(TEXT("domain"), Domain);
+		Request.TemplateDocument->TryGetStringField(TEXT("category"), Category);
+		Request.TemplateDocument->TryGetStringField(TEXT("description"), Description);
+		if (Domain.IsEmpty() || Category.IsEmpty() || Description.IsEmpty())
+		{
+			Result.Summary = TEXT("template.domain, template.category, and template.description are required.");
+			return Result;
+		}
+
+		const bool bExists = Store.FindById(TemplateId) != nullptr;
+		if (bRequireExisting && !bExists)
+		{
+			Result.Summary = FString::Printf(
+				TEXT("UpdateTemplate: template_id '%s' not found. Use CreateTemplate."),
+				*TemplateId);
+			return Result;
+		}
+		if (!bRequireExisting && bExists && !Request.bAllowOverwrite)
+		{
+			Result.Summary = FString::Printf(
+				TEXT("CreateTemplate: template_id '%s' already exists. Pass allow_overwrite=true or use UpdateTemplate."),
+				*TemplateId);
+			return Result;
+		}
+
+		Result.TemplateId = TemplateId;
+		FString DestDir = Request.DestinationDirectory;
+		if (DestDir.IsEmpty())
+		{
+			DestDir = FPaths::ConvertRelativePathToFull(
+				FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("UEREMCP/Templates/agent")));
+		}
+		const FString FilePath = FPaths::Combine(DestDir, TemplateId + TEXT(".json"));
+		Result.WrittenFilePath = FilePath;
+		Result.WrittenDocument = Request.TemplateDocument;
+
+		if (Request.bDryRun)
+		{
+			Result.bSuccess = true;
+			Result.Status = TEXT("no_change_required");
+			Result.Summary = FString::Printf(
+				TEXT("Dry-run would %s template '%s' at %s"),
+				bRequireExisting ? TEXT("update") : TEXT("create"),
+				*TemplateId,
+				*FilePath);
+			Result.CapabilityNotes.Add(TEXT("dry_run=true — no file written."));
+			return Result;
+		}
+
+		if (!Request.TemplateDocument->HasField(TEXT("authored_by")))
+		{
+			Request.TemplateDocument->SetStringField(TEXT("authored_by"), TEXT("agent"));
+		}
+		if (!Request.TemplateDocument->HasField(TEXT("version")))
+		{
+			Request.TemplateDocument->SetNumberField(TEXT("version"), 1);
+		}
+
+		FUeremcpTemplateRecord Saved;
+		FString SaveError;
+		if (!Store.SaveDocument(Request.TemplateDocument, FilePath, Saved, SaveError))
+		{
+			Result.Summary = SaveError;
+			return Result;
+		}
+
+		Result.bSuccess = true;
+		Result.Status = bRequireExisting || bExists
+			? TEXT("modified_and_validated")
+			: TEXT("created_and_validated");
+		Result.Summary = FString::Printf(
+			TEXT("%s template '%s' at %s"),
+			bRequireExisting || bExists ? TEXT("Updated") : TEXT("Created"),
+			*TemplateId,
+			*FilePath);
+		return Result;
+	}
+}
+
+FUeremcpTemplateAuthorResult FUeremcpTemplateService::CreateTemplate(
+	const FUeremcpTemplateAuthorRequest& Request)
+{
+	return AuthorTemplateInternal(Store, Request, false);
+}
+
+FUeremcpTemplateAuthorResult FUeremcpTemplateService::UpdateTemplate(
+	const FUeremcpTemplateAuthorRequest& Request)
+{
+	return AuthorTemplateInternal(Store, Request, true);
 }
 
 float FUeremcpTemplateService::ScoreRecord(

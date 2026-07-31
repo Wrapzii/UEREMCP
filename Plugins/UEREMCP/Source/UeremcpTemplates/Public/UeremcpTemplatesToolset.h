@@ -37,11 +37,30 @@ public:
 	static FString InstantiateTemplate(const FString& RequestJson);
 
 	/**
-	 * Preview promotion of a successful scratch asset into a reusable template.
-	 * Use when: capture a validated result as a repeatable pattern; currently preview-only.
-	 * Inputs: action=promote_to_template; specification.source_asset is required.
-	 * Example: {"protocol_version":"1.0","action":"promote_to_template","options":{"dry_run":true},"specification":{"source_asset":"/Game/__UeremcpTests/NS_Good","proposed_template_id":"niagara.projectile.good.v1"}}
+	 * Promote a successful scratch asset into a reusable, versioned template JSON.
+	 * Use when: bank a validated result for later InstantiateTemplate.
+	 * Inputs: action=promote_to_template; specification.source_asset required.
+	 * Writes under Saved/UEREMCP/Templates/agent/ when options.dry_run=false (default dry_run=true).
+	 * Example: {"protocol_version":"1.0","action":"promote_to_template","options":{"dry_run":false},"specification":{"source_asset":"/Game/__UeremcpTests/NS_Good","proposed_template_id":"niagara.projectile.good.v1"}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Templates")
 	static FString PromoteToTemplate(const FString& RequestJson);
+
+	/**
+	 * Author a new template from a complete template document (not from an existing asset).
+	 * Use when: define emitter roles, materials, meshes, timing, inputs from scratch for this game.
+	 * Inputs: action=create_template; specification.template object required (template_id/domain/category/description).
+	 * Example: {"protocol_version":"1.0","action":"create_template","options":{"dry_run":false},"specification":{"template":{"template_id":"niagara.cast.helix.v1","domain":"niagara","category":"cast","version":1,"description":"Ice helix cast ring","construction_plan":[]}}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Templates")
+	static FString CreateTemplate(const FString& RequestJson);
+
+	/**
+	 * Replace an existing agent-authored template document by template_id.
+	 * Use when: refine construction_plan / inputs after CreateTemplate or PromoteToTemplate.
+	 * Inputs: action=update_template; specification.template object required; template_id must already exist.
+	 * Example: {"protocol_version":"1.0","action":"update_template","options":{"dry_run":false},"specification":{"template":{"template_id":"niagara.cast.helix.v1","domain":"niagara","category":"cast","version":2,"description":"Refined helix","construction_plan":[]}}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Templates")
+	static FString UpdateTemplate(const FString& RequestJson);
 };

@@ -7,6 +7,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpSchemaPublishing.h"
 
 namespace UeremcpIntentRouterInternal
 {
@@ -542,20 +543,31 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::DescribeOperation(const FString
 		Payload->SetStringField(TEXT("normalized_from"), ToolQuery);
 	}
 	Payload->SetStringField(TEXT("description"), Found->Description);
-	TArray<TSharedPtr<FJsonValue>> Props;
-	for (const FString& P : Found->Properties)
+
+	// Prefer nested ADR-0003 envelope + specification (BACKLOG 1.2a / 1b.1) over the
+	// flat UHT property-name list. Falls back to property names if schema build fails.
+	if (const TSharedPtr<FJsonObject> Nested =
+			UeremcpSchemaPublishing::BuildNestedRequestSchemaForTool(Found->Tool))
 	{
-		Props.Add(MakeShared<FJsonValueString>(P));
+		Payload->SetObjectField(TEXT("input_schema"), Nested);
 	}
-	TArray<TSharedPtr<FJsonValue>> Req;
-	for (const FString& R : Found->Required)
+	else
 	{
-		Req.Add(MakeShared<FJsonValueString>(R));
+		TArray<TSharedPtr<FJsonValue>> Props;
+		for (const FString& P : Found->Properties)
+		{
+			Props.Add(MakeShared<FJsonValueString>(P));
+		}
+		TArray<TSharedPtr<FJsonValue>> Req;
+		for (const FString& R : Found->Required)
+		{
+			Req.Add(MakeShared<FJsonValueString>(R));
+		}
+		TSharedPtr<FJsonObject> Schema = MakeShared<FJsonObject>();
+		Schema->SetArrayField(TEXT("properties"), Props);
+		Schema->SetArrayField(TEXT("required"), Req);
+		Payload->SetObjectField(TEXT("input_schema"), Schema);
 	}
-	TSharedPtr<FJsonObject> Schema = MakeShared<FJsonObject>();
-	Schema->SetArrayField(TEXT("properties"), Props);
-	Schema->SetArrayField(TEXT("required"), Req);
-	Payload->SetObjectField(TEXT("input_schema"), Schema);
 	if (Found->CatalogOp.IsValid())
 	{
 		const TSharedPtr<FJsonObject>* Example = nullptr;
@@ -704,6 +716,47 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 		{
 			H.Why = TEXT("lexical match against live registry");
 		}
+
+		// BACKLOG 1b.3: when existing_assets are supplied, prefer inspect/capture/modify.
+		if (Context.IsValid())
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Existing = nullptr;
+			if (Context->TryGetArrayField(TEXT("existing_assets"), Existing) && Existing && Existing->Num() > 0)
+			{
+				const FString ToolLower = Docs[i].Tool.ToLower();
+				if (ToolLower.Contains(TEXT("inspect"))
+					|| ToolLower.Contains(TEXT("capture"))
+					|| ToolLower.Contains(TEXT("read"))
+					|| ToolLower.Contains(TEXT("validate"))
+					|| ToolLower.Contains(TEXT("modify"))
+					|| ToolLower.Contains(TEXT("submit")))
+				{
+					H.Score *= 1.35;
+					H.Why = TEXT("existing_assets present — prefer inspect/capture/modify over create");
+				}
+				else if (ToolLower.Contains(TEXT("create")) || ToolLower.Contains(TEXT("build")))
+				{
+					H.Score *= 0.75;
+				}
+			}
+			FString DomainFilter;
+			if (Context->TryGetStringField(TEXT("domain"), DomainFilter) && !DomainFilter.IsEmpty())
+			{
+				const FString TsLower = Docs[i].Toolset.ToLower();
+				const FString DomLower = DomainFilter.ToLower();
+				if (TsLower.Contains(DomLower)
+					|| (DomLower.Equals(TEXT("capture")) && TsLower.Contains(TEXT("validation")))
+					|| (DomLower.Equals(TEXT("material")) && TsLower.Contains(TEXT("material"))))
+				{
+					H.Score *= 1.25;
+					H.Matched.AddUnique(TEXT("domain_filter"));
+				}
+				else if (Docs[i].bIsUeremcp)
+				{
+					H.Score *= 0.55;
+				}
+			}
+		}
 		Hits.Add(H);
 	}
 	Hits.Sort([](const FHit& A, const FHit& B) { return A.Score > B.Score; });
@@ -831,14 +884,22 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 			}
 			StepObj->SetArrayField(TEXT("matched_terms"), Matched);
 			StepObj->SetStringField(TEXT("purpose"), Doc.Description.Left(160));
-			TSharedPtr<FJsonObject> Schema = MakeShared<FJsonObject>();
-			TArray<TSharedPtr<FJsonValue>> Props;
-			for (const FString& P : Doc.Properties) Props.Add(MakeShared<FJsonValueString>(P));
-			TArray<TSharedPtr<FJsonValue>> Req;
-			for (const FString& R : Doc.Required) Req.Add(MakeShared<FJsonValueString>(R));
-			Schema->SetArrayField(TEXT("properties"), Props);
-			Schema->SetArrayField(TEXT("required"), Req);
-			StepObj->SetObjectField(TEXT("input_schema"), Schema);
+			if (const TSharedPtr<FJsonObject> Nested =
+					UeremcpSchemaPublishing::BuildNestedRequestSchemaForTool(Doc.Tool))
+			{
+				StepObj->SetObjectField(TEXT("input_schema"), Nested);
+			}
+			else
+			{
+				TSharedPtr<FJsonObject> Schema = MakeShared<FJsonObject>();
+				TArray<TSharedPtr<FJsonValue>> Props;
+				for (const FString& P : Doc.Properties) Props.Add(MakeShared<FJsonValueString>(P));
+				TArray<TSharedPtr<FJsonValue>> Req;
+				for (const FString& R : Doc.Required) Req.Add(MakeShared<FJsonValueString>(R));
+				Schema->SetArrayField(TEXT("properties"), Props);
+				Schema->SetArrayField(TEXT("required"), Req);
+				StepObj->SetObjectField(TEXT("input_schema"), Schema);
+			}
 
 			TSharedPtr<FJsonObject> Safety = MakeShared<FJsonObject>();
 			Safety->SetBoolField(TEXT("destructive"), false);

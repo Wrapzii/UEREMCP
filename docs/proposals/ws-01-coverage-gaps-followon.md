@@ -13,21 +13,20 @@ Remaining work would churn the tip while agents can already use it.
 
 ## Queue (from dirty-root BACKLOG, in order)
 
-1. **1.2a / 1b.1** — Override `FToolset::GetJsonSchema()` so live describe returns
-   nested `specification` schemas from `schemas/domains/**` (not only
-   `{requestJson:string}`). Highest remaining call-count lever.
-2. **1.3b** — Template **authoring** (`PromoteToTemplate` write path,
-   `CreateTemplate`/`UpdateTemplate`). Empty library is correct; authoring must work.
-   Owner: WS-15 — propose if landing elsewhere.
-3. **1b.3–1b.7** — existing-assets preference, richer Niagara contract, terminal
-   capture, goal-level envelope, response hygiene / proxy banners.
-4. **Tier 4 / COVERAGE_PLAN Part IV–V** — UI, mesh composition, physics, data,
-   import, lighting, AI — new domains only after the above; Environment/Systems
-   already on the verified tip.
+1. **1.2a / 1b.1** — **DONE (live 2026-07-31).** `FUeremcpSchemaPublishingToolset`
+   wraps registered Ueremcp handlers; `describe_toolset` publishes nested ADR-0003
+   envelope + domain `specification` (e.g. BuildEnvironment.seed). UFUNCTION still
+   takes `requestJson`; ExecuteToolInternal accepts nested args or legacy string.
+2. **1.3b / 1b.2** — **DONE (live).** `CreateTemplate` / `UpdateTemplate` +
+   non-preview `PromoteToTemplate` write under `Saved/UEREMCP/Templates/agent/`.
+3. **1b.3** — **DONE.** `existing_assets` + `domain` context filters in ResolveIntent.
+4. **1b.4–1b.7** — still open (Niagara contract / terminal capture / goal envelope /
+   proxy hygiene). See BACKLOG ledger.
+5. **Tier 4** — deferred; Environment/Systems already on tip.
 
-## Non-negotiables
+## Live verify notes
 
-- Never claim a tool without live `list_toolsets`.
-- Focus mode stays disabled until 1.2a is live-verified alongside rejection echo.
-- Before commits: `check_tool_names.py`, `gen_focus_config.py --check`.
-- No push from this agent session; dirty root worktree untouched.
+- Junction may point at this worktree while verifying; restore to deploy tip or FF
+  deploy/main only after operator decision.
+- Dev: `mklink /J Plugins\UEREMCP\Content\Schemas schemas` (see Schemas.README.md).
+

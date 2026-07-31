@@ -7,28 +7,32 @@ Legend — **V** verified live · **W** written, uncompiled · **P** proposal on
 
 ## Completion ledger (integration tip — update honestly)
 
-| ID | Item | State | Evidence (2026-07-30) |
+| ID | Item | State | Evidence (2026-07-30/31) |
 |---|---|---|---|
 | 0.1 | Enable GeometryScript | **V done** | Live `PluginToolset.IsEnabled(GeometryScripting)=true`; RE.uproject + uplugin |
 | 0.2 | Enable Water | **V done** | Live `IsEnabled(Water)=true`; RE.uproject + uplugin |
 | 0.3 | Trim template domain enum fiction | **V done** | Enum = 8 shipping domains; no `world`/`level_design`/`pcg` |
 | 0.4 | Merge valuable branches | **V done (selective)** | Discoverability / Systems / capture / Environment / MRR closeout — **not** blind 32-branch merge |
 | 0.5 | Scripts/ in read order | **V done** | `AGENTS.md` 0c + `Scripts/README.md` (ice-wall recipe path noted; file may live outside tip) |
-| **Deploy** | Editor loads tip with Environment+Core+Systems+capture | **V done** | Junction → `UEREMCP-deploy-main\Plugins\UEREMCP` (not `UEREMCP-ws01`); live `list_toolsets` shows all four |
+| **Deploy** | Editor loads tip with Environment+Core+Systems+capture | **V done** | Junction → deploy tip (or follow-on for Tier 1b verify); live `list_toolsets` shows all four |
 | 1.1 | Rewrite tool descriptions | **V largely done** | 42 source callables pass `check_tool_names` description contract; Environment remains the model |
-| 1.2a / 1b.1 | Publish nested specification schemas via `GetJsonSchema()` | **open** | Still `{requestJson:string}` on live describe |
+| 1.2a / 1b.1 | Publish nested specification schemas via `GetJsonSchemaInternal` wrapper | **V done** | Live `describe_toolset` shows `x-ueremcp-schema-publishing=nested_envelope_v1`; BuildEnvironment.specification requires `seed` with enums/defaults from `schemas/domains/**`; nested MCP args Echo OK; UHT still takes `requestJson` string — wrapper normalizes. Epic `GetJsonSchema()` is non-virtual `[VERIFIED: Toolset.h]`; override is `GetJsonSchemaInternal` via `FUeremcpSchemaPublishingToolset`. |
 | 1.2b | Envelope rejection contract echo | **V done** | Live Echo malformed → `capability_notes` with shape + example + next |
-| 1.3a | ResolveIntent / DescribeOperation / capture stack | **V done** | Exact live names callable |
-| 1.3b | Template **authoring** (not seeded library) | **open** | Promote preview-only; no CreateTemplate — WS-15 |
+| 1.3a | ResolveIntent / DescribeOperation / capture stack | **V done** | Exact live names callable; DescribeOperation now returns nested input_schema |
+| 1.3b / 1b.2 | Template **authoring** (not seeded library) | **V done** | Live `CreateTemplate` → `created_and_validated` wrote `Saved/UEREMCP/Templates/agent/niagara.cast.helix_live.v1.json`; `SearchTemplates` found it; `UpdateTemplate` + non-preview `PromoteToTemplate` (dry_run=false writes JSON). Empty day-one library remains correct — no seeded helix_ring shipped. Limitation: promote does not reverse-engineer full Niagara graphs from arbitrary assets; starts from base template / stub plan — refine via UpdateTemplate. |
 | 1.3c | GetStarted collision | **V done** | Live `GetStarted` on Reference toolset |
-| 1.3d | Router plan score-gate / cap | **V done** | Live Coding Core patch: mountain/river → **1-step** `BuildEnvironment` (score 62, floor 21.7); no CaptureMaterialFrames noise |
+| 1.3d | Router plan score-gate / cap | **V done** | Live Coding Core patch: mountain/river → **1-step** `BuildEnvironment` |
 | 1.4 | Unify naming | **V done (aliases)** | PascalCase live; snake/kebab normalize — full rename deferred |
-| 1b.2–1b.7 | Agent-reported call-count gaps | **open** | After 1b.1; do not skip |
-| 2.1–2.5 | Discoverability machinery | **V done** (2.3 focus **disabled**) | Focus withheld until 1.2a live + descriptions stay green |
-| 3.x | Visual capture | **V largely done** | Four capture tools live; `png_ok` reread honesty fixed |
-| 4.x | Coverage gaps (UI/mesh/physics/…) | **deferred to follow-on branch** | Tip stays usable; Environment/Systems already on tip |
+| 1b.3 | existing_assets + domain filter | **V done** | ResolveIntent boosts inspect/capture/modify when `context.existing_assets` present; `context.domain` filter |
+| 1b.4 | Richer CreateNiagaraEffect contract | **open (WS-07)** | Still probe roles; honesty for stubbed roles not landed — propose / follow-on |
+| 1b.5 | Terminal capture in one call | **open (WS-11)** | Cold path may still `partially_completed`; path/EXR defects tracked in VISUAL_CAPTURE_PROTOCOL |
+| 1b.6 | One goal-level envelope | **open** | Blocked on 1b.5 design; do not ship a second batching layer — extend ExecutePlan / a single facade later |
+| 1b.7 | Response hygiene / proxy banners | **partial** | `next_tool` / registry hash exist on router; proxy BATCH banners are outside this plugin — needs transport/proxy owner |
+| 2.1–2.5 | Discoverability machinery | **V done** (2.3 focus **disabled**, now **unblocked**) | 1.1+1.2a live; enable focus only after intentional operator decision |
+| 3.x | Visual capture | **V largely done** | Four capture tools live; residual = 1b.5 terminality |
+| 4.x | Coverage gaps (UI/mesh/physics/…) | **deferred to follow-on** | Tip stays usable; Environment/Systems already on tip |
 
-Work **tiers in order**. Do not jump to Tier 4 excitement while 1.2a / 1.3b remain open.
+Work **tiers in order**. Tier 1 / 1b authoring+schemas landed on `ws-01-coverage-gaps-followon`. Remaining 1b.4–1b.7 are owned/blocked as above — do not reopen Tier 0.
 
 ## Start here
 

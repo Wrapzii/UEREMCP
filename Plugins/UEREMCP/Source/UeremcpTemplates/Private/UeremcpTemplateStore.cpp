@@ -77,6 +77,65 @@ int32 FUeremcpTemplateStore::LoadFromDirectory(const FString& RootDirectory, TAr
 	return Loaded;
 }
 
+int32 FUeremcpTemplateStore::MergeFromDirectory(const FString& RootDirectory, TArray<FString>& OutErrors)
+{
+	if (!FPaths::DirectoryExists(RootDirectory))
+	{
+		return 0;
+	}
+
+	TArray<FString> Files;
+	IFileManager::Get().FindFilesRecursive(Files, *RootDirectory, TEXT("*.json"), true, false);
+
+	int32 Loaded = 0;
+	for (const FString& FilePath : Files)
+	{
+		if (FPaths::GetCleanFilename(FPaths::GetPath(FilePath)).Equals(TEXT("elements"), ESearchCase::IgnoreCase))
+		{
+			FUeremcpElementPreset Preset;
+			FString Error;
+			if (!ParseElementPresetFile(FilePath, Preset, Error))
+			{
+				OutErrors.Add(FString::Printf(TEXT("%s: %s"), *FilePath, *Error));
+				continue;
+			}
+			const FString ElementKey = Preset.Element.ToLower();
+			if (ElementPresets.Contains(ElementKey))
+			{
+				OutErrors.Add(FString::Printf(
+					TEXT("%s: duplicate element preset '%s' (merge skipped)"),
+					*FilePath,
+					*Preset.Element));
+				continue;
+			}
+			ElementPresets.Add(ElementKey, MoveTemp(Preset));
+			continue;
+		}
+
+		FUeremcpTemplateRecord Record;
+		FString Error;
+		if (!ParseTemplateFile(FilePath, Record, Error))
+		{
+			OutErrors.Add(FString::Printf(TEXT("%s: %s"), *FilePath, *Error));
+			continue;
+		}
+
+		if (Records.Contains(Record.TemplateId))
+		{
+			OutErrors.Add(FString::Printf(
+				TEXT("%s: duplicate template_id '%s' (merge skipped)"),
+				*FilePath,
+				*Record.TemplateId));
+			continue;
+		}
+
+		Records.Add(Record.TemplateId, MoveTemp(Record));
+		++Loaded;
+	}
+
+	return Loaded;
+}
+
 const FUeremcpTemplateRecord* FUeremcpTemplateStore::FindById(const FString& TemplateId) const
 {
 	return Records.Find(TemplateId);
@@ -242,3 +301,66 @@ void FUeremcpTemplateStore::IndexRecordMetadata(FUeremcpTemplateRecord& Record)
 		}
 	}
 }
+
+bool FUeremcpTemplateStore::Upsert(const FUeremcpTemplateRecord& Record, FString& OutError)
+{
+	if (Record.TemplateId.IsEmpty() || !Record.Document.IsValid())
+	{
+		OutError = TEXT("Upsert requires template_id and a document object.");
+		return false;
+	}
+	FUeremcpTemplateRecord Copy = Record;
+	IndexRecordMetadata(Copy);
+	Records.Add(Copy.TemplateId, MoveTemp(Copy));
+	return true;
+}
+
+bool FUeremcpTemplateStore::SaveDocument(
+	const TSharedPtr<FJsonObject>& Document,
+	const FString& AbsoluteFilePath,
+	FUeremcpTemplateRecord& OutRecord,
+	FString& OutError)
+{
+	if (!Document.IsValid())
+	{
+		OutError = TEXT("document is required");
+		return false;
+	}
+	if (AbsoluteFilePath.IsEmpty())
+	{
+		OutError = TEXT("destination path is required");
+		return false;
+	}
+
+	FString TemplateId;
+	if (!Document->TryGetStringField(TEXT("template_id"), TemplateId) || TemplateId.IsEmpty())
+	{
+		OutError = TEXT("document.template_id is required");
+		return false;
+	}
+
+	const FString Dir = FPaths::GetPath(AbsoluteFilePath);
+	IFileManager::Get().MakeDirectory(*Dir, true);
+
+	FString JsonText;
+	const TSharedRef<TJsonWriter<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>> Writer =
+		TJsonWriterFactory<TCHAR, TPrettyJsonPrintPolicy<TCHAR>>::Create(&JsonText);
+	if (!FJsonSerializer::Serialize(Document.ToSharedRef(), Writer))
+	{
+		OutError = TEXT("failed to serialize template document");
+		return false;
+	}
+	if (!FFileHelper::SaveStringToFile(JsonText, *AbsoluteFilePath, FFileHelper::EEncodingOptions::ForceUTF8WithoutBOM))
+	{
+		OutError = FString::Printf(TEXT("failed to write template file: %s"), *AbsoluteFilePath);
+		return false;
+	}
+
+	OutRecord = FUeremcpTemplateRecord();
+	if (!ParseTemplateFile(AbsoluteFilePath, OutRecord, OutError))
+	{
+		return false;
+	}
+	return Upsert(OutRecord, OutError);
+}
+

@@ -92,7 +92,7 @@ struct UEREMCPTEMPLATES_API FUeremcpTemplatePromotionRequest
 	bool bDryRun = true;
 };
 
-/** Contract-validated promotion preview. No write occurs until every gate is bound. */
+/** Contract-validated promotion. Writes a quarantine JSON template when dry_run=false. */
 struct UEREMCPTEMPLATES_API FUeremcpTemplatePromotionResult
 {
 	bool bSuccess = false;
@@ -100,6 +100,28 @@ struct UEREMCPTEMPLATES_API FUeremcpTemplatePromotionResult
 	FString Summary;
 	FString ProposedTemplateId;
 	FString QuarantinePath;
+	FString WrittenFilePath;
 	TArray<FString> ContractGates;
 	TArray<FString> CapabilityNotes;
+	TSharedPtr<FJsonObject> WrittenDocument;
+};
+
+/** create_template / update_template specification. */
+struct UEREMCPTEMPLATES_API FUeremcpTemplateAuthorRequest
+{
+	TSharedPtr<FJsonObject> TemplateDocument;
+	bool bAllowOverwrite = false;
+	bool bDryRun = true;
+	FString DestinationDirectory;
+};
+
+struct UEREMCPTEMPLATES_API FUeremcpTemplateAuthorResult
+{
+	bool bSuccess = false;
+	FString Status = TEXT("failed_validation");
+	FString Summary;
+	FString TemplateId;
+	FString WrittenFilePath;
+	TArray<FString> CapabilityNotes;
+	TSharedPtr<FJsonObject> WrittenDocument;
 };
