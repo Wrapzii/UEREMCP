@@ -375,6 +375,15 @@ def assemble_batch(steps: list[dict], catalog: dict) -> dict | None:
             o["depends_on"] = build_ids
             o["_why"] = "verification runs last, once there is something to observe"
 
+    # A batch is a claim that these operations belong together. Without at least
+    # one real dependency among them they are competing alternatives, not a
+    # sequence -- and wrapping three unrelated reads in one transaction with
+    # rollback_all is worse than three calls: a failure in any one discards the
+    # others. Measured: "read the editor log for errors" produced a batch of
+    # GetLogEntries + ReadAnimBp + ReadGraph.
+    if not any(op.get("depends_on") for op in operations):
+        return None
+
     # Emit in dependency order so a reader sees the build order directly.
     resolved, remaining = [], list(operations)
     while remaining:

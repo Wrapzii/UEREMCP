@@ -56,6 +56,10 @@ public:
 	 *
 	 * Use when: generate mountains/valley heightmap only; ExecutePlan terrain stage.
 	 * Inputs: action=create_landscape; specification.seed REQUIRED; terrain.* optional.
+	 *   terrain.scale_z defaults to 100 and is a PERCENTAGE of the default height
+	 *   range, not a metre value. 100 is normal relief. Values above ~150 produce
+	 *   vertical needles rather than mountains — a measured failure, twice. To make
+	 *   peaks higher, raise terrain.max_altitude_m and leave scale_z alone.
 	 * Outputs: heightmap_hash (determinism gate), structural_metrics.
 	 * Do not use for: AlphaBrush sculpting — unavailable [VERIFIED-RUNTIME: COVERAGE_PLAN III.1].
 	 * Example: {"protocol_version":"1.0","action":"create_landscape", "target":{"asset_path":"/Game/__UeremcpPoc/Biome"}, "options":{"dry_run":true},"specification":{"seed":42, "terrain":{"profile":"mountains","max_altitude_m":1800}}}
@@ -134,9 +138,15 @@ public:
 	/**
 	 * Author a StaticMesh asset from ordered GeometryScript primitive ops.
 	 *
-	 * Use when: you need a mesh from scratch in an empty project — a tree, a
-	 *   rock, a tower — before anything can scatter or place it. This is the mesh
-	 *   PRIMITIVE FLOOR: it composes geometry and consumes no existing asset.
+	 * Use when: you need BLOCKOUT geometry — a crate, a wall segment, a pillar, a
+	 *   collision proxy — or a stand-in that unblocks layout while real art is
+	 *   sourced. This is the mesh PRIMITIVE FLOOR: it consumes no existing asset.
+	 * NOT FOR HERO ART. Boxes, cylinders, cones and spheres cannot look like a
+	 *   photograph. A cylinder with a cone on top reads as a tree ICON, not a tree.
+	 *   If the caller said realistic, high quality, hero, or matching a reference,
+	 *   use editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file and
+	 *   bring in a real model. Shipping primitives against a quality ask is the
+	 *   failure this note exists to prevent.
 	 * Inputs: action=submit_mesh_ops, target.asset_path (StaticMesh under
 	 *   /Game/__UeremcpTests/ or /Game/__UeremcpPoc/); specification.ops is a
 	 *   REQUIRED non-empty array applied in order. Each op is one of:
@@ -148,8 +158,9 @@ public:
 	 *   request — a partially built mesh is indistinguishable from a correct one.
 	 * Do not use for: placing meshes in a level — use ScatterFoliage or
 	 *   PlaceStructures with the asset path this returns.
-	 * Next tool: ScatterFoliage with biome.mesh_path set to this asset path.
-	 * Example: {"protocol_version":"1.0","action":"submit_mesh_ops","target":{"asset_path":"/Game/__UeremcpTests/Meshes/SM_Conifer"},"options":{"dry_run":true},"specification":{"ops":[{"op":"cylinder","radius":18,"height":220},{"op":"cone","base_radius":130,"height":420,"origin":[0,0,180]}]}}
+	 * Next tool: PlaceStructures, or ScatterFoliage via biome.mesh_path — but only
+	 *   when blockout foliage is genuinely what was asked for.
+	 * Example: {"protocol_version":"1.0","action":"submit_mesh_ops","target":{"asset_path":"/Game/__UeremcpTests/Meshes/SM_CrateBlockout"},"options":{"dry_run":true},"specification":{"ops":[{"op":"box","size":[120,120,120]},{"op":"box","size":[130,130,12],"origin":[0,0,120]}]}}
 	 *
 	 * @param RequestJson  Request with action submit_mesh_ops and target.asset_path set.
 	 */

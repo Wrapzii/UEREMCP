@@ -31,9 +31,10 @@
       "action": "scatter_foliage",
       "depends_on_actions": [
         "create_landscape",
-        "create_water_body"
+        "create_water_body",
+        "submit_mesh_ops"
       ],
-      "why": "bank forest needs terrain + river exclusion corridor"
+      "why": "needs terrain, and a real mesh with a real material -- without one it places /Engine/BasicShapes/Cube. Author the texture and master material FIRST, then the mesh, then scatter. Placing geometry before its surface exists is how blockout gets mistaken for finished work."
     },
     {
       "action": "attach_weather",
@@ -111,7 +112,7 @@
       "depends_on_actions": [
         "create_master_material"
       ],
-      "why": "a mesh needs a surface material before it is useful downstream"
+      "why": "a mesh without a surface is a grey solid; author the material before the geometry that wears it"
     },
     {
       "action": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
@@ -1521,15 +1522,16 @@
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SubmitMeshOps",
       "action": "submit_mesh_ops",
       "use_when": [
-        "mesh from scratch",
-        "need a tree mesh",
-        "author geometry",
-        "no static mesh exists",
-        "build a rock or tower"
+        "blockout geometry",
+        "crate or wall segment",
+        "collision proxy",
+        "placeholder mesh to unblock layout",
+        "simple primitive shape",
+        "no static mesh exists and any shape will do"
       ],
       "do_not_use_for": [
-        "placing meshes in a level",
-        "landscape terrain"
+        "hero foliage or anything that must look realistic \u2014 use StaticMeshTools.import_file",
+        "placing meshes in a level"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1540,13 +1542,13 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Pass primary_asset as biome.mesh_path to ScatterFoliage, or as a kit mesh to PlaceStructures.",
+      "recovery": "Blockout only. If the ask implied quality -- realistic, hero, matching a reference -- stop and use editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file instead. A cylinder plus a cone reads as a tree icon, not a tree.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "submit_mesh_ops",
         "request_id": "mo-1",
         "target": {
-          "asset_path": "/Game/__UeremcpTests/Meshes/SM_Conifer"
+          "asset_path": "/Game/__UeremcpTests/Meshes/SM_CrateBlockout"
         },
         "options": {
           "dry_run": true
@@ -1554,18 +1556,24 @@
         "specification": {
           "ops": [
             {
-              "op": "cylinder",
-              "radius": 18,
-              "height": 220
+              "op": "box",
+              "size": [
+                120,
+                120,
+                120
+              ]
             },
             {
-              "op": "cone",
-              "base_radius": 130,
-              "height": 420,
+              "op": "box",
+              "size": [
+                130,
+                130,
+                12
+              ],
               "origin": [
                 0,
                 0,
-                180
+                120
               ]
             }
           ]
@@ -1576,12 +1584,21 @@
       "qualified": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
       "action": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
       "use_when": [
-        "import a real mesh",
-        "use a downloaded model",
+        "asset the procedural tools cannot make",
+        "believable foliage",
         "fbx obj gltf from disk",
-        "trees that match a reference",
+        "final art",
+        "hero asset",
+        "high quality",
+        "import a real mesh",
+        "looks like the reference",
+        "not blockout",
+        "photoreal",
         "photoreal asset",
-        "asset the procedural tools cannot make"
+        "realistic",
+        "should look like a real tree",
+        "trees that match a reference",
+        "use a downloaded model"
       ],
       "do_not_use_for": [
         "procedural primitives \u2014 use SubmitMeshOps",
