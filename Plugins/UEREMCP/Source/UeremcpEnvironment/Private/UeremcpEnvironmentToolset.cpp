@@ -81,7 +81,7 @@ namespace
 			Spec.bIncludeForest = true;
 			Spec.bIncludeRain = true;
 			Spec.bIncludeLighting = true;
-			Spec.bCaptureScreenshot = true;
+			Spec.bCaptureScreenshot = false;
 			break;
 		case EEnvStage::Landscape:
 			Spec.bIncludeTerrain = true;

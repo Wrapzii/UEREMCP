@@ -26,12 +26,14 @@
 
 #include "WaterBodyRiverActor.h"
 #include "WaterBodyActor.h"
+#include "WaterBodyComponent.h"
 #include "WaterSplineComponent.h"
 #include "DynamicMeshActor.h"
 #include "Components/DynamicMeshComponent.h"
 #include "UDynamicMesh.h"
 #include "GeometryScript/MeshPrimitiveFunctions.h"
 #include "GeometryScript/GeometryScriptTypes.h"
+#include "Kismet/GameplayStatics.h"
 
 #define UEREMCP_HAS_WATER 1
 
@@ -102,10 +104,19 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	double Tmp = 0;
 	ReadObjNumber(TEXT("terrain"), TEXT("size_x"), Tmp); if (Tmp > 0) Out.SizeX = int32(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("size_y"), Tmp); if (Tmp > 0) Out.SizeY = int32(Tmp);
+	// Alias: terrain.size → square SizeX/SizeY (COVERAGE_PLAN / agent examples).
+	ReadObjNumber(TEXT("terrain"), TEXT("size"), Tmp);
+	if (Tmp > 0)
+	{
+		Out.SizeX = int32(Tmp);
+		Out.SizeY = int32(Tmp);
+	}
 	ReadObjNumber(TEXT("terrain"), TEXT("mountain_amplitude"), Tmp); if (Tmp > 0) Out.MountainAmplitude = float(Tmp);
+	ReadObjNumber(TEXT("terrain"), TEXT("mountain_weight"), Tmp); if (Tmp > 0) Out.MountainAmplitude = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("valley_depth"), Tmp); if (Tmp > 0) Out.ValleyDepth = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("scale_xy"), Tmp); if (Tmp > 0) Out.ScaleXY = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("scale_z"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
+	ReadObjNumber(TEXT("terrain"), TEXT("z_scale"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
 
 	ReadObjNumber(TEXT("river"), TEXT("width"), Tmp); if (Tmp > 0) Out.RiverWidth = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("forest_bank_width"), Tmp); if (Tmp > 0) Out.ForestBankWidth = float(Tmp);
@@ -143,10 +154,21 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	const TSharedPtr<FJsonObject>* Structures = nullptr;
 	if (Spec->TryGetObjectField(TEXT("structures"), Structures) && Structures)
 	{
+		Out.bIncludeStructures = true;
 		double Count = 0;
 		if ((*Structures)->TryGetNumberField(TEXT("count"), Count) && Count > 0)
 		{
 			Out.StructureCount = int32(Count);
+		}
+	}
+
+	const TSharedPtr<FJsonObject>* Capture = nullptr;
+	if (Spec->TryGetObjectField(TEXT("capture"), Capture) && Capture)
+	{
+		bool bEnabled = false;
+		if ((*Capture)->TryGetBoolField(TEXT("enabled"), bEnabled))
+		{
+			Out.bCaptureScreenshot = bEnabled;
 		}
 	}
 
@@ -377,9 +399,28 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	if (Spec.bIncludeRiver)
 	{
 #if UEREMCP_HAS_WATER
-		AWaterBodyRiver* RiverActor = World->SpawnActor<AWaterBodyRiver>(River.Points[0].Location, FRotator::ZeroRotator);
+		// Deferred spawn so we can clear bAffectsLandscape before OnLevelActorAddedToWorld
+		// auto-spawns AWaterBrushManager. SetupDefaultMaterials + brush rebuild deadlocks the
+		// game thread when invoked under a sync MCP tools/call
+		// [VERIFIED-RUNTIME: BuildEnvironment hung at WaterBrushManager spawn 2026-07-30]
+		// [VERIFIED: WaterBodyComponent.h:630] bAffectsLandscape
+		// [VERIFIED: WaterEditorModule.cpp:190] AffectsLandscape() gates brush spawn
+		// [VERIFIED: World.h:3851] SpawnActorDeferred
+		const FTransform RiverXform(River.Points[0].Location);
+		AWaterBodyRiver* RiverActor = World->SpawnActorDeferred<AWaterBodyRiver>(
+			AWaterBodyRiver::StaticClass(),
+			RiverXform,
+			nullptr,
+			nullptr,
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (RiverActor)
 		{
+			if (UWaterBodyComponent* WaterComp = RiverActor->GetWaterBodyComponent())
+			{
+				// Valley already carved into the heightmap; skip landmass brush.
+				WaterComp->bAffectsLandscape = false;
+			}
+			UGameplayStatics::FinishSpawningActor(RiverActor, RiverXform);
 			RiverActor->SetActorLabel(TEXT("UEREMCP_River"));
 			// [VERIFIED: WaterBodyActor.h:103] GetWaterSpline
 			if (UWaterSplineComponent* Spline = RiverActor->GetWaterSpline())
@@ -395,13 +436,15 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			Tech.Add(MakeTech(
 				TEXT("water_river"),
 				TEXT("real"),
-				TEXT("AWaterBodyRiver spawned with spline [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyActor.h:103]")));
+				TEXT("AWaterBodyRiver deferred spawn, bAffectsLandscape=false, spline set [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyComponent.h:630]")));
+			Result.CapabilityNotes.Add(
+				TEXT("River uses visible water mesh without landscape water brush (heightmap valley is authoritative)."));
 			Result.InternalOperations += 2;
 		}
 		else
 		{
-			Result.Warnings.Add(TEXT("AWaterBodyRiver spawn returned null — river skipped"));
-			Tech.Add(MakeTech(TEXT("water_river"), TEXT("blocked"), TEXT("SpawnActor<AWaterBodyRiver> returned null")));
+			Result.Warnings.Add(TEXT("AWaterBodyRiver deferred spawn returned null — river skipped"));
+			Tech.Add(MakeTech(TEXT("water_river"), TEXT("blocked"), TEXT("SpawnActorDeferred<AWaterBodyRiver> returned null")));
 		}
 #else
 		Result.Warnings.Add(TEXT("Water plugin headers not compiled in — river approximated as empty channel only"));

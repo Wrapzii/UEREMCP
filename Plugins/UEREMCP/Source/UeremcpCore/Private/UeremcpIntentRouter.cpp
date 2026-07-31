@@ -439,6 +439,7 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 	Payload->SetStringField(TEXT("next_call"),
 		TEXT("ResolveIntent with specification.intent = your goal, mode=recommend"));
 	TArray<TSharedPtr<FJsonValue>> Prefer;
+	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpEnvironment.UeremcpEnvironmentToolset")));
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpNiagara.UeremcpNiagaraToolset")));
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpMaterial.UeremcpMaterialToolset")));
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpBlueprint.UeremcpBlueprintToolset")));

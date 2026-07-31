@@ -97,3 +97,32 @@ bool FUeremcpEnvironmentRejectsWrongActionTest::RunTest(const FString& Parameter
 	TestTrue(TEXT("has notes"), Root->TryGetArrayField(TEXT("capability_notes"), Notes) && Notes && Notes->Num() > 0);
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentParseAliasesTest,
+	"UEREMCP.Environment.Spec.ParseAliases",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentParseAliasesTest::RunTest(const FString& Parameters)
+{
+	const FString SpecJson = TEXT(R"({
+		"seed":99,
+		"terrain":{"size":63,"z_scale":250,"mountain_weight":0.4},
+		"structures":{"count":4},
+		"capture":{"enabled":false}
+	})");
+	TSharedPtr<FJsonObject> SpecObj;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SpecJson);
+	TestTrue(TEXT("parse spec"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	FUeremcpEnvironmentBuildSpec Spec;
+	FString Err;
+	TestTrue(TEXT("ParseBuildSpec"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestEqual(TEXT("size alias"), Spec.SizeX, 63);
+	TestEqual(TEXT("size alias y"), Spec.SizeY, 63);
+	TestEqual(TEXT("z_scale alias"), Spec.ScaleZ, 250.f);
+	TestEqual(TEXT("mountain_weight alias"), Spec.MountainAmplitude, 0.4f);
+	TestTrue(TEXT("structures include"), Spec.bIncludeStructures);
+	TestEqual(TEXT("structure count"), Spec.StructureCount, 4);
+	TestFalse(TEXT("capture off"), Spec.bCaptureScreenshot);
+	return true;
+}
