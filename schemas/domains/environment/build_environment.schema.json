@@ -43,13 +43,18 @@
       "properties": {
         "forest_bank_width": { "type": "number", "minimum": 1 },
         "max_foliage_instances": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "slope_limit_deg": { "type": "number", "exclusiveMinimum": 0, "maximum": 90 },
+        "min_normalized_height": { "type": "number", "minimum": 0, "maximum": 1 },
+        "max_normalized_height": { "type": "number", "minimum": 0, "maximum": 1 },
         "mesh_path": { "type": "string", "description": "Static mesh for foliage instances" }
       }
     },
     "weather": {
       "type": "object",
       "properties": {
-        "rain_system_path": { "type": "string", "description": "Niagara system for rain" }
+        "rain_system_path": { "type": "string", "description": "Optional Niagara system for rain; absent uses an honestly reported visible instanced-streak fallback." },
+        "follow": { "type": "string", "enum": ["player_camera", "player_pawn"], "default": "player_camera" },
+        "streak_count": { "type": "integer", "minimum": 32, "maximum": 512, "default": 256 }
       }
     },
     "include": {
@@ -60,7 +65,14 @@
         "forest": { "type": "boolean" },
         "rain": { "type": "boolean" },
         "lighting": { "type": "boolean" },
-        "capture": { "type": "boolean" }
+        "capture": { "type": "boolean" },
+        "structures": { "type": "boolean" }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false }
       }
     }
   },

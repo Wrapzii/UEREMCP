@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/environment/validate_environment.schema.json",
+  "title": "UEREMCP validate_environment specification",
+  "description": "Read-only structural and optional PIE camera-follow gates. Extends specification only.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "require_weather_follow_10m": {
+      "type": "boolean",
+      "default": false,
+      "description": "Require PIE-observed player camera movement of at least 1000 cm."
+    }
+  }
+}

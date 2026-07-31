@@ -84,6 +84,36 @@ struct FUeremcpSplinePath
 		}
 		return Width;
 	}
+
+	/** Signed side of the closest segment in XY; positive/negative identify opposite banks. */
+	float SignedSideToClosestXY(const FVector& World) const
+	{
+		if (Points.Num() < 2)
+		{
+			return 0.f;
+		}
+		const FVector2D P(World.X, World.Y);
+		float BestDistanceSq = TNumericLimits<float>::Max();
+		float BestSide = 0.f;
+		for (int32 I = 1; I < Points.Num(); ++I)
+		{
+			const FVector2D A(Points[I - 1].Location.X, Points[I - 1].Location.Y);
+			const FVector2D B(Points[I].Location.X, Points[I].Location.Y);
+			const FVector2D AB = B - A;
+			const float LengthSq = AB.SizeSquared();
+			const float T = LengthSq > KINDA_SMALL_NUMBER
+				? FMath::Clamp(FVector2D::DotProduct(P - A, AB) / LengthSq, 0.f, 1.f)
+				: 0.f;
+			const FVector2D Closest = A + AB * T;
+			const float DistanceSq = FVector2D::DistSquared(P, Closest);
+			if (DistanceSq < BestDistanceSq)
+			{
+				BestDistanceSq = DistanceSq;
+				BestSide = AB.X * (P.Y - A.Y) - AB.Y * (P.X - A.X);
+			}
+		}
+		return BestSide;
+	}
 };
 
 namespace UeremcpSpline

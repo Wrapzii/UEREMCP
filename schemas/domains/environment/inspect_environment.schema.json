@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/environment/inspect_environment.schema.json",
+  "title": "UEREMCP inspect_environment specification",
+  "description": "Read-only inspection of the loaded editor or PIE environment. Extends specification only.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {}
+}
