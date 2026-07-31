@@ -71,6 +71,31 @@ bool FUeremcpNiagaraPocBEmitterPlanOfflineTest::RunTest(const FString& Parameter
 		ExpectedTemplates.FindRef(TEXT("impact_burst")));
 
 	TestEqual(
+		TEXT("rain role uses RecycleParticlesInView"),
+		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("rain")),
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/RecycleParticlesInView")));
+	TestEqual(
+		TEXT("precipitation role aliases rain template"),
+		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("precipitation")),
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/RecycleParticlesInView")));
+	TestEqual(
+		TEXT("mist role uses HangingParticulates"),
+		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("mist")),
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/HangingParticulates")));
+	TestEqual(
+		TEXT("rain emitter name"),
+		UeremcpNiagaraRoles::RoleToEmitterName(TEXT("rain")),
+		FString(TEXT("Rain")));
+	const TArray<FString> PrecipRoles = UeremcpNiagaraRoles::DefaultPrecipitationComponentRoles();
+	TestEqual(TEXT("precipitation default role count"), PrecipRoles.Num(), 2);
+	TestTrue(TEXT("precipitation includes rain"), PrecipRoles.Contains(TEXT("rain")));
+	TestTrue(TEXT("precipitation includes mist"), PrecipRoles.Contains(TEXT("mist")));
+	TestEqual(
+		TEXT("rain material purpose"),
+		UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(TEXT("rain")),
+		FString(TEXT("elemental_projectile_core")));
+
+	TestEqual(
 		TEXT("ribbon_trail material purpose"),
 		UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(TEXT("ribbon_trail")),
 		FString(TEXT("elemental_projectile_trail")));

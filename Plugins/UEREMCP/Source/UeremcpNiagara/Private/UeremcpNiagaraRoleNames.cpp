@@ -32,12 +32,25 @@ FString UeremcpNiagaraRoles::ResolveEmitterTemplatePath(const FString& Role)
 		{ TEXT("impact_burst"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/OmnidirectionalBurst") },
 		{ TEXT("crystalline"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/SimpleSpriteBurst") },
 		{ TEXT("ice_impact"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/OmnidirectionalBurst") },
+		// Precipitation / weather — RecycleParticlesInView keeps particles in the camera frustum
+		// [VERIFIED: Engine/Plugins/FX/Niagara/Content/DefaultAssets/Templates/Emitters/RecycleParticlesInView.uasset]
+		{ TEXT("rain"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/RecycleParticlesInView") },
+		{ TEXT("precipitation"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/RecycleParticlesInView") },
+		{ TEXT("mist"), TEXT("/Niagara/DefaultAssets/Templates/Emitters/HangingParticulates") },
 	};
 	if (const FString* Found = RoleTemplates.Find(Key))
 	{
 		return *Found;
 	}
 	return RoleTemplates.FindRef(TEXT("sparks"));
+}
+
+TArray<FString> UeremcpNiagaraRoles::DefaultPrecipitationComponentRoles()
+{
+	return {
+		TEXT("rain"),
+		TEXT("mist"),
+	};
 }
 
 TArray<FString> UeremcpNiagaraRoles::DefaultPocBComponentRoles()
@@ -66,7 +79,10 @@ FString UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(const FString& Role)
 		|| Key == TEXT("smoke")
 		|| Key == TEXT("impact_burst")
 		|| Key == TEXT("crystalline")
-		|| Key == TEXT("ice_impact"))
+		|| Key == TEXT("ice_impact")
+		|| Key == TEXT("rain")
+		|| Key == TEXT("precipitation")
+		|| Key == TEXT("mist"))
 	{
 		return TEXT("elemental_projectile_core");
 	}

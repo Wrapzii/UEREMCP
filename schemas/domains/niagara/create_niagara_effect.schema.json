@@ -15,7 +15,7 @@
     "effect_type": {
       "type": "string",
       "minLength": 1,
-      "description": "Open-ended category (projectile, explosion, beam, aura, …). New values add WS-15 templates, not schema forks."
+      "description": "Open-ended category (projectile, explosion, beam, aura, precipitation, rain, weather, …). precipitation/rain/weather default to rain+mist emitters when components omitted. New values add WS-15 templates, not schema forks."
     },
     "element": {
       "type": "string",
@@ -33,7 +33,7 @@
             "properties": {
               "role": {
                 "type": "string",
-                "description": "Semantic role: core, flame_shell, sparks, smoke, ribbon_trail, impact_burst, …"
+                "description": "Semantic role: core, flame_shell, sparks, smoke, ribbon_trail, impact_burst, rain, precipitation, mist, …"
               },
               "archetype": {
                 "type": "string",
