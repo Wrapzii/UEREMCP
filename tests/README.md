@@ -213,10 +213,22 @@ Live PASS `warm_changed_pixels=36921` `[VERIFIED-RUNTIME: editor_UEREMCP_Niagara
 
 ### MCP Niagara frame capture
 
-`UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames` is a
-rendering-enabled MCP observer. It writes a baseline and deterministic-age PNGs
-below `Saved/UEREMCP/VfxCapture/<asset>/<request-id>/`, rereads each PNG, and
-reports a baseline pixel delta. It does not author or compile Niagara assets.
+`UeremcpValidation.UeremcpVisualCaptureToolset` exposes:
+
+- `CaptureEffectFrames` (Niagara ages)
+- `CaptureWorldFrames` (editor world + structural snapshot)
+- `CaptureMaterialFrames` / `CaptureAnimationFrames` (stage + structural identity)
+
+Shared primitives: warm-up ticks, deterministic camera presets, `Saved/UEREMCP/**`
+path isolation, PNG reread, pixel stats, teardown. Screenshots are supplemental
+(B10). World acceptance offline evaluator:
+
+```bash
+python tests/visual/mountain_river_rain_harness.py --self-test
+python tests/visual/mountain_river_rain_harness.py <evidence_dir>
+```
+
+Semantic eval telemetry schema: `tests/schemas/semantic_eval_report.schema.json`.
 
 Contract filter:
 
@@ -236,3 +248,6 @@ The generated six-emitter scratch probe returned `failed_validation` because it
 had renderers but no verified material bindings and produced zero changed
 pixels. That is expected honest scope: image capture cannot repair or certify
 the authored Niagara system.
+
+General (world/material/animation) live proof: see
+`tests/visual/LIVE_INTEGRATION_CHECKLIST.md` — deferred while sibling owns RE.
