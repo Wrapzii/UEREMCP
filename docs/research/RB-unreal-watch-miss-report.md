@@ -316,6 +316,7 @@ Log contains `Successfully connected to stdio server`.
 ## 9. Fixed (2026-07-31)
 
 **Repo / branch:** `REAgentTools` → `cursor/unreal-watch-mcp-fix` (UnrealWatchMCP v0.4.0)  
+**Commits:** REAgentTools `956c88a`; this report `9e659cf` (UEREMCP `ws-11-northridge-remaining-impl`)  
 **Cursor config:** `%USERPROFILE%\.cursor\mcp.json` → spawn via `uv run --python 3.11 --with mcp>=1.9,<2` + GitHub `UnrealWatchMCP\server.py`; `UNREAL_WATCH_PROJECT` → `ueremcp_fieldtest`; `UNREAL_WATCH_HEARTBEAT_S=5`.
 
 ### What changed
