@@ -63,7 +63,7 @@ bool FUeremcpEnvironmentBuildDryRunTest::RunTest(const FString& Parameters)
 		"request_id":"env-dry-1",
 		"target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain"},
 		"options":{"dry_run":true,"validate":true},
-		"specification":{"seed":42,"include":{"capture":false}}
+		"specification":{"seed":42,"include":{"terrain":true,"river":true,"forest":true,"rain":true,"lighting":true,"capture":false},"fallback_policy":"allow_approximate"}
 	})");
 	const FString Json = UUeremcpEnvironmentToolset::BuildEnvironment(Request);
 	TSharedPtr<FJsonObject> Root;
@@ -124,6 +124,11 @@ bool FUeremcpEnvironmentParseAliasesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("structures include"), Spec.bIncludeStructures);
 	TestEqual(TEXT("structure count"), Spec.StructureCount, 4);
 	TestFalse(TEXT("capture off"), Spec.bCaptureScreenshot);
+	TestFalse(TEXT("terrain opt-in default"), Spec.bIncludeTerrain);
+	TestFalse(TEXT("river opt-in default"), Spec.bIncludeRiver);
+	TestFalse(TEXT("forest opt-in default"), Spec.bIncludeForest);
+	TestFalse(TEXT("rain opt-in default"), Spec.bIncludeRain);
+	TestFalse(TEXT("lighting opt-in default"), Spec.bIncludeLighting);
 	TestEqual(TEXT("missing river width keeps default"), Spec.RiverWidth, 600.f);
 	TestEqual(TEXT("missing forest width keeps default"), Spec.ForestBankWidth, 3500.f);
 	return true;
@@ -165,5 +170,104 @@ bool FUeremcpEnvironmentReadOnlyNoSeedTest::RunTest(const FString& Parameters)
 	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
 	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
 	TestNotEqual(TEXT("not rejected for absent seed"), Root->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentMinimalSpecOptInTest,
+	"UEREMCP.Environment.Spec.MinimalOptInDefaults",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentMinimalSpecOptInTest::RunTest(const FString& Parameters)
+{
+	const FString SpecJson = TEXT(R"({"seed":1})");
+	TSharedPtr<FJsonObject> SpecObj;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SpecJson);
+	TestTrue(TEXT("parse spec"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	FUeremcpEnvironmentBuildSpec Spec;
+	FString Err;
+	TestTrue(TEXT("ParseBuildSpec"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestFalse(TEXT("terrain default false"), Spec.bIncludeTerrain);
+	TestFalse(TEXT("river default false"), Spec.bIncludeRiver);
+	TestFalse(TEXT("forest default false"), Spec.bIncludeForest);
+	TestFalse(TEXT("rain default false"), Spec.bIncludeRain);
+	TestFalse(TEXT("lighting default false"), Spec.bIncludeLighting);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentRainOnlyIncludeTest,
+	"UEREMCP.Environment.Spec.RainOnlyInclude",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentRainOnlyIncludeTest::RunTest(const FString& Parameters)
+{
+	const FString SpecJson = TEXT(R"({
+		"seed":99,
+		"include":{"rain":true},
+		"weather":{"follow":"player_camera"},
+		"fallback_policy":"allow_approximate"
+	})");
+	TSharedPtr<FJsonObject> SpecObj;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SpecJson);
+	TestTrue(TEXT("parse spec"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	FUeremcpEnvironmentBuildSpec Spec;
+	FString Err;
+	TestTrue(TEXT("ParseBuildSpec rain-only"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestTrue(TEXT("rain included"), Spec.bIncludeRain);
+	TestFalse(TEXT("forest not forced"), Spec.bIncludeForest);
+	TestFalse(TEXT("terrain not forced"), Spec.bIncludeTerrain);
+	TestFalse(TEXT("river not forced"), Spec.bIncludeRiver);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentIncludeDependencyTest,
+	"UEREMCP.Environment.Spec.IncludeDependencies",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentIncludeDependencyTest::RunTest(const FString& Parameters)
+{
+	const FString ForestOnly = TEXT(R"({"seed":1,"include":{"forest":true}})");
+	TSharedPtr<FJsonObject> SpecObj;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ForestOnly);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	FUeremcpEnvironmentBuildSpec Spec;
+	FString Err;
+	TestFalse(TEXT("forest without river rejected"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestTrue(TEXT("error mentions river"), Err.Contains(TEXT("include.river")));
+
+	const FString RainPreferReal = TEXT(R"({"seed":1,"include":{"rain":true}})");
+	Reader = TJsonReaderFactory<>::Create(RainPreferReal);
+	SpecObj.Reset();
+	TestTrue(TEXT("parse rain"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	Err.Reset();
+	TestFalse(TEXT("rain prefer_real without path rejected"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestTrue(TEXT("error mentions rain_system_path"), Err.Contains(TEXT("rain_system_path")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentMinimalDryRunTest,
+	"UEREMCP.Environment.Build.MinimalDryRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentMinimalDryRunTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"build_environment",
+		"request_id":"env-minimal-1",
+		"target":{"asset_path":"/Game/__UeremcpTests/OptInShell"},
+		"options":{"dry_run":true},
+		"specification":{"seed":1}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::BuildEnvironment(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(JsonReader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("no_change_required")));
+	const FString Summary = Root->GetStringField(TEXT("summary"));
+	TestTrue(TEXT("summary mentions opt-in"), Summary.Contains(TEXT("no include")));
 	return true;
 }

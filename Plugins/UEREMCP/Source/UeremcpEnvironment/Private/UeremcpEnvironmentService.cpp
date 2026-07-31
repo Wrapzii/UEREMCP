@@ -310,6 +310,33 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		OutError = TEXT("weather.follow must be player_camera or player_pawn");
 		return false;
 	}
+	return ValidateIncludeDependencies(Out, OutError);
+}
+
+bool FUeremcpEnvironmentService::ValidateIncludeDependencies(
+	const FUeremcpEnvironmentBuildSpec& Spec,
+	FString& OutError)
+{
+	if (Spec.bIncludeForest && !Spec.bIncludeRiver)
+	{
+		OutError = TEXT(
+			"include.forest requires include.river: true (bank scatter needs a river exclusion corridor; add river or set forest false)");
+		return false;
+	}
+	if (Spec.bIncludeStructures && !Spec.bIncludeRiver)
+	{
+		OutError = TEXT(
+			"include.structures requires include.river: true (structures are placed along the river spline)");
+		return false;
+	}
+	if (Spec.bIncludeRain && Spec.RainSystemPath.IsEmpty()
+		&& Spec.FallbackPolicy.Equals(TEXT("prefer_real"), ESearchCase::CaseSensitive))
+	{
+		OutError = TEXT(
+			"include.rain with fallback_policy=prefer_real requires weather.rain_system_path "
+			"(set fallback_policy=allow_approximate for visible streak fallback, or omit include.rain)");
+		return false;
+	}
 	return true;
 }
 
@@ -445,48 +472,99 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.Revision = FString::Printf(TEXT("env:%08x"), RevisionCrc);
 	Result.InternalOperations += 1;
 
+	const bool bAnyStage = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.bIncludeForest
+		|| Spec.bIncludeRain || Spec.bIncludeLighting || Spec.bCaptureScreenshot
+		|| Spec.bIncludeStructures;
+
 	if (bDryRun)
 	{
-		Tech.Add(MakeTech(
-			TEXT("landscape_heightmap"),
-			TEXT("real"),
-			TEXT("ALandscape::Import heightmap path planned [VERIFIED: LandscapeProxy.h:1418-1420]")));
+		if (Spec.bIncludeTerrain)
+		{
+			Tech.Add(MakeTech(
+				TEXT("landscape_heightmap"),
+				TEXT("real"),
+				TEXT("ALandscape::Import heightmap path planned [VERIFIED: LandscapeProxy.h:1418-1420]")));
+		}
 #if UEREMCP_HAS_WATER
-		Tech.Add(MakeTech(
-			TEXT("water_river"),
-			TEXT("real"),
-			TEXT("AWaterBodyRiver planned [VERIFIED: WaterBodyRiverActor.h:28]")));
+		if (Spec.bIncludeRiver)
+		{
+			Tech.Add(MakeTech(
+				TEXT("water_river"),
+				TEXT("real"),
+				TEXT("AWaterBodyRiver planned [VERIFIED: WaterBodyRiverActor.h:28]")));
+		}
 #else
-		Tech.Add(MakeTech(
-			TEXT("water_river"),
-			TEXT("blocked"),
-			TEXT("Water headers unavailable at compile time")));
+		if (Spec.bIncludeRiver)
+		{
+			Tech.Add(MakeTech(
+				TEXT("water_river"),
+				TEXT("blocked"),
+				TEXT("Water headers unavailable at compile time")));
+		}
 #endif
-		Tech.Add(MakeTech(
-			TEXT("foliage_scatter"),
-			Spec.MeshPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
-			TEXT("Seeded HISMC / InstancedFoliageActor scatter with exclusion corridor")));
-		Tech.Add(MakeTech(
-			TEXT("rain_camera_follow"),
-			Spec.RainSystemPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
-			TEXT("Niagara component attach to viewport/player camera when system path provided")));
-		Tech.Add(MakeTech(
-			TEXT("structures_geometryscript"),
-			TEXT("real"),
-			TEXT("GeometryScript AppendBox available [VERIFIED: MeshPrimitiveFunctions.h:168] [VERIFIED-RUNTIME: GeometryScripting enabled]")));
+		if (Spec.bIncludeForest)
+		{
+			Tech.Add(MakeTech(
+				TEXT("foliage_scatter"),
+				Spec.MeshPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
+				TEXT("Seeded HISMC / InstancedFoliageActor scatter with exclusion corridor")));
+		}
+		if (Spec.bIncludeRain)
+		{
+			const bool bRainReal = !Spec.RainSystemPath.IsEmpty();
+			Tech.Add(MakeTech(
+				TEXT("rain_camera_follow"),
+				bRainReal ? FString(TEXT("real")) : FString(TEXT("approximated")),
+				bRainReal
+					? TEXT("Niagara component attach to viewport/player camera when system path provided")
+					: TEXT("Visible instanced-streak fallback (fallback_policy=allow_approximate)")));
+		}
+		if (Spec.bIncludeLighting)
+		{
+			Tech.Add(MakeTech(
+				TEXT("lighting"),
+				TEXT("real"),
+				TEXT("DirectionalLight + SkyLight + ExponentialHeightFog")));
+		}
+		if (Spec.bIncludeStructures)
+		{
+			Tech.Add(MakeTech(
+				TEXT("structures_geometryscript"),
+				TEXT("real"),
+				TEXT("GeometryScript AppendBox available [VERIFIED: MeshPrimitiveFunctions.h:168] [VERIFIED-RUNTIME: GeometryScripting enabled]")));
+		}
 		AddTechArray(Result.RealVsApproximated, TEXT("technologies"), Tech);
 		Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
 		Result.ChangeManifest->SetNumberField(TEXT("seed"), double(Spec.Seed));
 		Result.ChangeManifest->SetBoolField(TEXT("dry_run"), true);
 		Result.ChangeManifest->SetStringField(TEXT("revision"), Result.Revision);
 		Result.Status = TEXT("no_change_required");
-		Result.Summary = FString::Printf(
-			TEXT("Dry-run build_environment seed=%llu destination=%s — height_range=%.3f non_flat=%s river_len=%.0f"),
-			Spec.Seed,
-			*Dest,
-			HeightMetrics->GetNumberField(TEXT("height_range")),
-			HeightMetrics->GetBoolField(TEXT("non_flat")) ? TEXT("true") : TEXT("false"),
-			HeightMetrics->GetNumberField(TEXT("river_length")));
+		if (!bAnyStage)
+		{
+			Result.Summary = FString::Printf(
+				TEXT("Dry-run build_environment seed=%llu destination=%s — no include.* stages requested (opt-in; set include.terrain/river/forest/rain/lighting true to build)"),
+				Spec.Seed,
+				*Dest);
+			Result.CapabilityNotes.Add(
+				TEXT("opt-in includes: omitting include builds only a level shell on mutate; no subsystems are implied."));
+		}
+		else
+		{
+			Result.Summary = FString::Printf(
+				TEXT("Dry-run build_environment seed=%llu destination=%s — height_range=%.3f non_flat=%s river_len=%.0f stages=%s"),
+				Spec.Seed,
+				*Dest,
+				HeightMetrics->GetNumberField(TEXT("height_range")),
+				HeightMetrics->GetBoolField(TEXT("non_flat")) ? TEXT("true") : TEXT("false"),
+				HeightMetrics->GetNumberField(TEXT("river_length")),
+				*FString::Printf(
+					TEXT("terrain=%s river=%s forest=%s rain=%s lighting=%s"),
+					Spec.bIncludeTerrain ? TEXT("true") : TEXT("false"),
+					Spec.bIncludeRiver ? TEXT("true") : TEXT("false"),
+					Spec.bIncludeForest ? TEXT("true") : TEXT("false"),
+					Spec.bIncludeRain ? TEXT("true") : TEXT("false"),
+					Spec.bIncludeLighting ? TEXT("true") : TEXT("false")));
+		}
 		Result.CapabilityNotes.Add(TEXT("dry_run: no actors spawned; re-call with options.dry_run=false to mutate."));
 		Result.CapabilityNotes.Add(TEXT("Batching: internal plan terrain→river→foliage→weather→capture; no second batch layer."));
 		return Result;
@@ -903,13 +981,21 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			else
 			{
 				RainActor->NiagaraRain->SetVisibility(false);
+				if (!Spec.FallbackPolicy.Equals(TEXT("allow_approximate"), ESearchCase::CaseSensitive))
+				{
+					DestroyOwnedEnvironmentActors(World);
+					Result.Status = TEXT("failed_validation");
+					Result.Summary = TEXT(
+						"include.rain with fallback_policy=prefer_real requires weather.rain_system_path");
+					return Result;
+				}
 				RainActor->ConfigureFallbackRain(int32(Spec.Seed), Spec.RainStreakCount);
 				Tech.Add(MakeTech(
 					TEXT("rain_camera_follow"),
 					TEXT("approximated"),
-					TEXT("Camera-follow transform is real; visible rain uses bounded instanced streak fallback")));
+					TEXT("Camera-follow transform is real; visible rain uses bounded instanced streak fallback (fallback_policy=allow_approximate)")));
 				Result.Warnings.Add(
-					TEXT("rain_system_path missing — using visible instanced-streak rain fallback"));
+					TEXT("rain_system_path missing — using visible instanced-streak rain fallback (allow_approximate)"));
 			}
 			CreatedLabels.Add(TEXT("UEREMCP_Rain"));
 			bRainCreated = true;
@@ -1005,11 +1091,15 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.ChangeManifest->SetStringField(TEXT("revision"), Result.Revision);
 
 	const bool bNonFlat = Result.StructuralMetrics->GetBoolField(TEXT("non_flat"));
+	const bool bNonFlatGate = !Spec.bIncludeTerrain || bNonFlat;
 	const bool bForestOk = !Spec.bIncludeForest || FoliageCount > 0;
 	const bool bBothBanks = !Spec.bIncludeForest || (LeftBankCount > 0 && RightBankCount > 0);
 	const bool bOpenChannel = !Spec.bIncludeForest || ExclusionViolations == 0;
 	const bool bRiverOk = !Spec.bIncludeRiver || bRiverCreated;
 	const bool bWeatherOk = !Spec.bIncludeRain || bRainCreated;
+	const bool bAnyBuilt = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.bIncludeForest
+		|| Spec.bIncludeRain || Spec.bIncludeLighting || Spec.bCaptureScreenshot
+		|| Spec.bIncludeStructures;
 
 	if (bOwnsMapLifecycle && Request.bSave)
 	{
@@ -1044,7 +1134,16 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	const bool bPersistenceOk = !bOwnsMapLifecycle
 		|| !Request.bSave
 		|| (bSaved && (!Request.bValidate || bReloaded));
-	if (bNonFlat && bForestOk && bBothBanks && bOpenChannel
+	if (!bAnyBuilt)
+	{
+		Result.Status = TEXT("no_change_required");
+		Result.Summary = FString::Printf(
+			TEXT("No include.* stages requested for seed=%llu — level shell only (metadata); set include.terrain/river/forest/rain/lighting true to build subsystems"),
+			Spec.Seed);
+		Result.CapabilityNotes.Add(
+			TEXT("opt-in includes: BuildEnvironment does not imply terrain/river/forest/rain unless explicitly requested."));
+	}
+	else if (bNonFlatGate && bForestOk && bBothBanks && bOpenChannel
 		&& bRiverOk && bWeatherOk && bPersistenceOk)
 	{
 		Result.Status = Result.Warnings.IsEmpty()
@@ -1063,7 +1162,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.Status = TEXT("failed_validation");
 		Result.Summary = FString::Printf(
 			TEXT("Environment structural gates failed: non_flat=%s forest=%s both_banks=%s open_channel=%s river=%s weather=%s persistence=%s"),
-			bNonFlat ? TEXT("true") : TEXT("false"),
+			bNonFlatGate ? TEXT("true") : TEXT("false"),
 			bForestOk ? TEXT("true") : TEXT("false"),
 			bBothBanks ? TEXT("true") : TEXT("false"),
 			bOpenChannel ? TEXT("true") : TEXT("false"),

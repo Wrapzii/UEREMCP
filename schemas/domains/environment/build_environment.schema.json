@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/environment/build_environment.schema.json",
   "title": "UEREMCP build_environment specification",
-  "description": "Goal-level seeded environment build (BACKLOG Tier 4–5). Extends specification only (ADR-0003).",
+  "description": "Goal-level seeded environment build (BACKLOG Tier 4–5). Extends specification only (ADR-0003). Subsystems are opt-in: set include.* true for each stage to build. Omitting include builds a level shell only (metadata). Rain is rain-only when include.rain is true and other includes are false or absent. Snow is not implemented; weather.type enum is future work (see docs/proposals/ws-16-weather-type-enum.md).",
   "type": "object",
   "required": ["seed"],
   "additionalProperties": true,
@@ -19,7 +19,8 @@
     "fallback_policy": {
       "type": "string",
       "enum": ["prefer_real", "allow_approximate"],
-      "default": "prefer_real"
+      "default": "prefer_real",
+      "description": "When include.rain is true: prefer_real requires weather.rain_system_path (Niagara). allow_approximate permits visible instanced-streak fallback when no system path is supplied."
     },
     "terrain": {
       "type": "object",
@@ -51,22 +52,24 @@
     },
     "weather": {
       "type": "object",
+      "description": "Rain-only weather today. Snow and weather.type selection are not implemented.",
       "properties": {
-        "rain_system_path": { "type": "string", "description": "Optional Niagara system for rain; absent uses an honestly reported visible instanced-streak fallback." },
+        "rain_system_path": { "type": "string", "description": "Niagara system for rain. Required when include.rain is true and fallback_policy=prefer_real (default)." },
         "follow": { "type": "string", "enum": ["player_camera", "player_pawn"], "default": "player_camera" },
-        "streak_count": { "type": "integer", "minimum": 32, "maximum": 512, "default": 256 }
+        "streak_count": { "type": "integer", "minimum": 32, "maximum": 512, "default": 256, "description": "Instanced-streak count when fallback_policy=allow_approximate and rain_system_path is absent." }
       }
     },
     "include": {
       "type": "object",
+      "description": "Opt-in subsystem flags. All default false — only stages set true are built.",
       "properties": {
-        "terrain": { "type": "boolean" },
-        "river": { "type": "boolean" },
-        "forest": { "type": "boolean" },
-        "rain": { "type": "boolean" },
-        "lighting": { "type": "boolean" },
-        "capture": { "type": "boolean" },
-        "structures": { "type": "boolean" }
+        "terrain": { "type": "boolean", "default": false },
+        "river": { "type": "boolean", "default": false },
+        "forest": { "type": "boolean", "default": false },
+        "rain": { "type": "boolean", "default": false },
+        "lighting": { "type": "boolean", "default": false },
+        "capture": { "type": "boolean", "default": false },
+        "structures": { "type": "boolean", "default": false }
       }
     },
     "capture": {
@@ -78,12 +81,21 @@
   },
   "examples": [
     {
+      "seed": 99,
+      "destination_level_path": "/Game/__UeremcpPoc/RainOnly",
+      "include": { "rain": true },
+      "weather": { "follow": "player_camera" },
+      "fallback_policy": "allow_approximate"
+    },
+    {
       "seed": 42,
       "destination_level_path": "/Game/__UeremcpPoc/MountainRiverRain",
       "terrain": { "mountain_amplitude": 0.55, "valley_depth": 0.12 },
       "river": { "width": 600 },
       "biome": { "forest_bank_width": 3500, "max_foliage_instances": 800 },
-      "include": { "terrain": true, "river": true, "forest": true, "rain": true, "lighting": true, "capture": true }
+      "weather": { "follow": "player_camera" },
+      "fallback_policy": "allow_approximate",
+      "include": { "terrain": true, "river": true, "forest": true, "rain": true, "lighting": true, "capture": false }
     }
   ]
 }

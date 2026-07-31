@@ -745,15 +745,16 @@
         "protocol_version": "1.0",
         "action": "build_environment",
         "request_id": "env-1",
-        "target": {
-          "asset_path": "/Game/__UeremcpPoc/MountainRiverRain"
-        },
-        "options": {
-          "dry_run": true,
-          "validate": true
-        },
+        "target": {"asset_path": "/Game/__UeremcpPoc/MountainRiverRain"},
+        "options": {"dry_run": true, "validate": true},
         "specification": {
-          "seed": 42
+          "seed": 42,
+          "include": {"terrain": true, "river": true, "forest": true, "rain": true, "lighting": true},
+          "terrain": {"mountain_amplitude": 0.55, "valley_depth": 0.12},
+          "river": {"width": 600},
+          "biome": {"forest_bank_width": 3500, "max_foliage_instances": 800},
+          "weather": {"follow": "player_camera"},
+          "fallback_policy": "allow_approximate"
         }
       }
     },
