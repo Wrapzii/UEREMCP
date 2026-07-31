@@ -188,10 +188,10 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 			Request.RequestId, TEXT("NewObject<UMaterial> returned null."));
 	}
 
-	// Without this the material silently fails to apply to a landscape -- the
-	// exact symptom reported as "layered mat silently failed, BaseColor
-	// disconnected". It is not optional and it is easy to forget.
-	Material->bUsedWithLandscape = true;
+	// UE 5.8 has no bUsedWithLandscape / MATUSAGE_Landscape
+	// [VERIFIED: MaterialInterface.h EMaterialUsage; Material.h usage flags].
+	// Landscape acceptance comes from LandscapeLayerBlend (and kin) below —
+	// that is what prevents the "layered mat silently failed" symptom.
 	Material->TwoSided = false;
 
 	UMaterialExpressionLandscapeLayerBlend* Blend =
@@ -309,7 +309,9 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 		TEXT("paint layers created: %s — assign these on the landscape to see the blend"),
 		*FString::Join(WiredLayers, TEXT(", "))));
 	Response.CapabilityNotes.Add(
-		TEXT("bUsedWithLandscape set; without it a landscape silently refuses the material."));
+		TEXT("UE 5.8 has no bUsedWithLandscape usage flag; LandscapeLayerBlend "
+			 "expressions are what make this a landscape material "
+			 "[VERIFIED: MaterialInterface.h EMaterialUsage]."));
 	Response.CapabilityNotes.Add(
 		TEXT("Height and slope bands are recorded as paint-layer names and weights. Automatic "
 			 "height/slope-driven weight painting is NOT applied here — assign the layers on "
