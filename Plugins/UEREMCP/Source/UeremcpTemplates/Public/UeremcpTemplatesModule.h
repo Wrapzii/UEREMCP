@@ -22,6 +22,7 @@ namespace UeremcpTemplates
 	UEREMCPTEMPLATES_API FUeremcpTemplateStore& GetStore();
 	UEREMCPTEMPLATES_API FUeremcpTemplateService& GetService();
 	UEREMCPTEMPLATES_API FString ResolveTemplatesDirectory();
+	UEREMCPTEMPLATES_API FString ResolveAgentTemplatesDirectory();
 
 	UEREMCPTEMPLATES_API void SetExecutePlanDelegate(FUeremcpExecutePlanDelegate InDelegate);
 	UEREMCPTEMPLATES_API void ClearExecutePlanDelegate();

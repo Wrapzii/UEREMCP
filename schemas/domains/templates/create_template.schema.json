@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/templates/create_template.schema.json",
+  "title": "create_template specification",
+  "description": "Author a new template document into the per-game agent library (BACKLOG 1.3b / 1b.2). Empty library on day one is correct; this is how agents fill it.",
+  "type": "object",
+  "required": ["template"],
+  "additionalProperties": false,
+  "properties": {
+    "template": {
+      "type": "object",
+      "description": "Full template.schema.json document (template_id, domain, category, description, construction_plan, …).",
+      "required": ["template_id", "domain", "category", "description"],
+      "additionalProperties": true,
+      "properties": {
+        "template_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+\\.v[0-9]+$"
+        },
+        "domain": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "construction_plan": { "type": "array" },
+        "inputs": { "type": "object" },
+        "modifier_definitions": { "type": "object" }
+      }
+    },
+    "allow_overwrite": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, CreateTemplate may replace an existing id. Prefer UpdateTemplate for intentional edits."
+    },
+    "destination_directory": {
+      "type": "string",
+      "description": "Optional absolute directory. Default: <ProjectSaved>/UEREMCP/Templates/agent/"
+    }
+  }
+}

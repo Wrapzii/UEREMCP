@@ -448,22 +448,106 @@ FString UUeremcpTemplatesToolset::PromoteToTemplate(const FString& RequestJson)
 	{
 		Response.InterpretationNotes.Add(
 			PromotionRequest.bDryRun
-				? TEXT("Promotion defaulted to preview-only dry_run behavior.")
-				: TEXT("Promotion mutation was requested but withheld behind contract gates."));
+				? TEXT("dry_run=true — promotion planned; no file written.")
+				: TEXT("Template JSON written under Saved/UEREMCP/Templates/agent/."));
 		Response.InterpretationNotes.Add(
-			PromotionRequest.bQuarantine
-				? TEXT("Resolved output to the agent quarantine.")
-				: TEXT("Resolved a quarantine preview despite quarantine=false."));
+			TEXT("SearchTemplates should list the new template_id after a successful non-dry-run promote."));
 
 		Response.ExtraFields = MakeShared<FJsonObject>();
+		Response.ExtraFields->SetStringField(TEXT("proposed_template_id"), Result.ProposedTemplateId);
+		Response.ExtraFields->SetStringField(TEXT("written_file_path"), Result.WrittenFilePath);
+		Response.ExtraFields->SetStringField(TEXT("quarantine_asset_path"), Result.QuarantinePath);
+		if (Result.WrittenDocument.IsValid())
+		{
+			Response.ExtraFields->SetObjectField(TEXT("template"), Result.WrittenDocument);
+		}
 		const TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
-		TArray<TSharedPtr<FJsonValue>> Skipped;
+		TArray<TSharedPtr<FJsonValue>> Passed;
 		for (const FString& Gate : Result.ContractGates)
 		{
-			Skipped.Add(MakeShared<FJsonValueString>(Gate));
+			Passed.Add(MakeShared<FJsonValueString>(Gate));
 		}
-		Validation->SetArrayField(TEXT("checks_skipped"), Skipped);
+		Validation->SetArrayField(TEXT("checks_passed"), Passed);
 		Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
 	}
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }
+
+namespace
+{
+	FString HandleAuthorTemplate(
+		const FString& RequestJson,
+		const FString& ExpectedAction,
+		const bool bUpdate)
+	{
+		FUeremcpRequest Request;
+		FString ParseError;
+		if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+		{
+			return FUeremcpEnvelope::MakeRejection(FString(), ParseError);
+		}
+		if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+		{
+			return FUeremcpEnvelope::MakeRejection(
+				Request.RequestId,
+				TEXT("Unsupported protocol_version for template authoring."));
+		}
+		if (!Request.Action.Equals(ExpectedAction, ESearchCase::CaseSensitive))
+		{
+			return FUeremcpEnvelope::MakeRejection(
+				Request.RequestId,
+				FString::Printf(TEXT("Action must be '%s'."), *ExpectedAction));
+		}
+
+		const TSharedPtr<FJsonObject> Spec = ParseSpecification(Request);
+		const TSharedPtr<FJsonObject>* TemplateObj = nullptr;
+		if (!Spec.IsValid()
+			|| !Spec->TryGetObjectField(TEXT("template"), TemplateObj)
+			|| !TemplateObj
+			|| !TemplateObj->IsValid())
+		{
+			return FUeremcpEnvelope::MakeRejection(
+				Request.RequestId,
+				TEXT("specification.template (object) is required."));
+		}
+
+		FUeremcpTemplateAuthorRequest AuthorRequest;
+		AuthorRequest.TemplateDocument = *TemplateObj;
+		AuthorRequest.bDryRun = ResolvePromotionDryRun(RequestJson);
+		Spec->TryGetBoolField(TEXT("allow_overwrite"), AuthorRequest.bAllowOverwrite);
+		Spec->TryGetStringField(TEXT("destination_directory"), AuthorRequest.DestinationDirectory);
+
+		const FUeremcpTemplateAuthorResult Result = bUpdate
+			? UeremcpTemplates::GetService().UpdateTemplate(AuthorRequest)
+			: UeremcpTemplates::GetService().CreateTemplate(AuthorRequest);
+
+		FUeremcpResponse Response;
+		Response.RequestId = Request.RequestId;
+		Response.Status = Result.Status;
+		Response.Summary = Result.Summary;
+		Response.UnderstoodAction = Request.Action;
+		Response.UnderstoodTemplate = Result.TemplateId;
+		Response.UnderstoodTarget = Result.WrittenFilePath;
+		Response.CapabilityNotes = Result.CapabilityNotes;
+		Response.Metrics.McpRoundTrips = 1;
+		Response.ExtraFields = MakeShared<FJsonObject>();
+		Response.ExtraFields->SetStringField(TEXT("template_id"), Result.TemplateId);
+		Response.ExtraFields->SetStringField(TEXT("written_file_path"), Result.WrittenFilePath);
+		if (Result.WrittenDocument.IsValid())
+		{
+			Response.ExtraFields->SetObjectField(TEXT("template"), Result.WrittenDocument);
+		}
+		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+}
+
+FString UUeremcpTemplatesToolset::CreateTemplate(const FString& RequestJson)
+{
+	return HandleAuthorTemplate(RequestJson, TEXT("create_template"), false);
+}
+
+FString UUeremcpTemplatesToolset::UpdateTemplate(const FString& RequestJson)
+{
+	return HandleAuthorTemplate(RequestJson, TEXT("update_template"), true);
+}
+

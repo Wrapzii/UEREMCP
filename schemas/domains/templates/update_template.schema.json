@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/templates/update_template.schema.json",
+  "title": "update_template specification",
+  "description": "Replace an existing agent-authored template by template_id (BACKLOG 1.3b / 1b.2).",
+  "type": "object",
+  "required": ["template"],
+  "additionalProperties": false,
+  "properties": {
+    "template": {
+      "type": "object",
+      "description": "Full replacement template document. template_id must already exist in the store.",
+      "required": ["template_id", "domain", "category", "description"],
+      "additionalProperties": true
+    },
+    "destination_directory": {
+      "type": "string",
+      "description": "Optional absolute directory. Default: <ProjectSaved>/UEREMCP/Templates/agent/"
+    }
+  }
+}

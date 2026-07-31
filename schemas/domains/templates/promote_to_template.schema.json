@@ -27,7 +27,7 @@
     "quarantine": {
       "type": "boolean",
       "default": true,
-      "description": "When true, resolve output under /Game/__UeremcpTemplates/agent/ only. The current scaffold remains preview-only until complete-state retrieval, plan synthesis, schema validation, and the shared security write gate are bound."
+      "description": "When true (always for agent writes), output lands under Saved/UEREMCP/Templates/agent/ as JSON. dry_run=false performs the write; dry_run=true plans only."
     }
   }
 }

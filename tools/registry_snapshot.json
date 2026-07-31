@@ -2,8 +2,8 @@
  "generated_utc": "2026-07-31T01:15:59+00:00",
  "snapshot_schema_version": 2,
  "source": "live MCP registry via list_toolsets + describe_toolset",
- "source_surface_fingerprint": "164bcae952a4760d2f213a4f1e257aff706f634420419147b23972bb49ee2ac9",
- "tool_count": 978,
+ "source_surface_fingerprint": "31ef6d284e8c4ac53d83a6238c67a890a6153e61a0adffc340bad68dc8b87326",
+ "tool_count": 980,
  "toolset_count": 82,
  "toolsets": {
   "AutomationTestToolset.AutomationTestToolset": {
@@ -3703,6 +3703,26 @@
   "UeremcpTemplates.UeremcpTemplatesToolset": {
    "description": "Thin toolset over FUeremcpTemplateService. One envelope in, one envelope out\nper ADR-0002 / ADR-0003.",
    "tools": {
+    "CreateTemplate": {
+     "description": "CreateTemplate (nested envelope; see live describe)",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpTemplates.UeremcpTemplatesToolset.CreateTemplate",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
     "InstantiateTemplate": {
      "description": "Build assets from one reusable template and validated inputs/modifiers.\nUse when: a template_id is known and should produce a complete asset or asset set.\nInputs: action=instantiate_template; specification.template_id is required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"instantiate_template\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/NS_FromTemplate\"},\"options\":{\"dry_run\":true},\"specification\":{\"template_id\":\"niagara.projectile.elemental.v1\",\"inputs\":{\"element\":\"fire\"}}}",
      "properties": [
@@ -3731,6 +3751,26 @@
      "qualified_name": "UeremcpTemplates.UeremcpTemplatesToolset.SearchTemplates",
      "required": [
       "requestJson"
+     ]
+    },
+    "UpdateTemplate": {
+     "description": "UpdateTemplate (nested envelope; see live describe)",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpTemplates.UeremcpTemplatesToolset.UpdateTemplate",
+     "required": [
+      "protocol_version",
+      "action"
      ]
     }
    },
