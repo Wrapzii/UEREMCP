@@ -52,6 +52,7 @@ public:
 	 * Outputs: prefer_toolsets, next_call=ResolveIntent, envelope reminder.
 	 * Do not use for: creating assets — call ResolveIntent then a domain tool.
 	 * Next tool: ResolveIntent with your plain-text goal.
+	 * Example: {"protocol_version":"1.0","action":"get_started","specification":{}}
 	 *
 	 * @param RequestJson Request envelope (schemas/domains/_shared/get_started.schema.json).
 	 * @return Response envelope; no editor mutation.
@@ -70,6 +71,7 @@ public:
 	 * request_json examples, input_schema, missing_fields, safety, recovery.
 	 * Do not use for: skipping verification — routing accuracy ≠ end-to-end success.
 	 * Next tool: call each plan step; on low confidence answer clarification_questions.
+	 * Example: {"protocol_version":"1.0","action":"resolve_intent","specification":{"intent":"make a fire projectile effect","mode":"recommend"}}
 	 *
 	 * Candidates come only from the live ToolsetRegistry
 	 * [VERIFIED: UToolsetRegistry::GetAllToolsetJsonSchemas].
@@ -90,6 +92,7 @@ public:
 	 * Outputs: description, input_schema, request_json example when catalogued.
 	 * Do not use for: choosing which tool — use ResolveIntent first.
 	 * Next tool: call_tool with the returned request_json.
+	 * Example: {"protocol_version":"1.0","action":"describe_operation","specification":{"tool":"create_niagara_effect"}}
 	 *
 	 * @param RequestJson Request envelope (schemas/domains/_shared/describe_operation.schema.json).
 	 * @return Response envelope; rejected if the name is not in the live registry.
@@ -102,6 +105,8 @@ public:
 	 *
 	 * Use when: confirming UEREMCP MCP registration is alive before domain work.
 	 * Do not use for: domain operations.
+	 * Inputs: no arguments.
+	 * Example: call Ping with no arguments.
 	 * @return Response envelope JSON (protocol_version, status, summary, metrics).
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP")
@@ -112,6 +117,8 @@ public:
 	 *
 	 * Use when: validating envelope shape without touching assets.
 	 * Do not use for: production domain work.
+	 * Inputs: requestJson envelope; specification has no required keys.
+	 * Example: {"protocol_version":"1.0","action":"echo","specification":{}}
 	 *
 	 * @param RequestJson Request envelope JSON string (schemas/envelope/request.schema.json).
 	 * @return Response envelope JSON. Malformed input yields status "rejected".
@@ -125,6 +132,8 @@ public:
 	 * Use when: you already have an explicit multi-step plan JSON.
 	 * Do not use for: first-choice surface — prefer InstantiateTemplate or domain tools.
 	 * Next tool: GetJobResult if partially_completed.
+	 * Inputs: action=execute_plan; specification.operations is required.
+	 * Example: {"protocol_version":"1.0","action":"execute_plan","options":{"dry_run":true},"specification":{"operations":[]}}
 	 *
 	 * @param RequestJson Request envelope JSON (schemas/batch/plan.schema.json as specification).
 	 * @return Response envelope JSON with consolidated result + change manifest.
@@ -137,6 +146,8 @@ public:
 	 *
 	 * Use when: a prior call returned partially_completed with job.job_id.
 	 * Do not use for: starting new domain work.
+	 * Inputs: action=get_job_result; specification.job_id is required.
+	 * Example: {"protocol_version":"1.0","action":"get_job_result","specification":{"job_id":"<prior job.job_id>"}}
 	 *
 	 * @param RequestJson Request envelope JSON with specification.job_id.
 	 * @return Response envelope JSON for the current job snapshot.
@@ -149,6 +160,8 @@ public:
 	 *
 	 * Use when: stop a UEREMCP long job by job_id.
 	 * Do not use for: assuming MCP notifications/cancelled alone is enough.
+	 * Inputs: action=cancel_job; specification.job_id is required.
+	 * Example: {"protocol_version":"1.0","action":"cancel_job","specification":{"job_id":"<prior job.job_id>"}}
 	 *
 	 * @param RequestJson Request envelope JSON with specification.job_id.
 	 * @return Response envelope JSON reflecting cancellation outcome.

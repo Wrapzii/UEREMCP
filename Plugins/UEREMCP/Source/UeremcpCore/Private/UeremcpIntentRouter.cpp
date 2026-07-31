@@ -124,6 +124,23 @@ namespace UeremcpIntentRouterInternal
 		return Tok;
 	}
 
+	static FString NormalizeToolName(const FString& Name)
+	{
+		// Backward-compatible lookup alias: PascalCase, snake_case, kebab-case,
+		// and case-only variants resolve to the live registry spelling. This
+		// never registers a second callable or changes the canonical name.
+		FString Out;
+		Out.Reserve(Name.Len());
+		for (const TCHAR C : Name)
+		{
+			if (FChar::IsAlnum(C))
+			{
+				Out.AppendChar(FChar::ToLower(C));
+			}
+		}
+		return Out;
+	}
+
 	static FString PluginContentCatalogPath()
 	{
 		if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("UEREMCP")))
@@ -472,11 +489,12 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::DescribeOperation(const FString
 	ApplyCatalogEnrichment(Docs, Catalog);
 
 	const FToolDoc* Found = nullptr;
+	TArray<const FToolDoc*> NormalizedMatches;
+	const FString NormalizedQuery = NormalizeToolName(ToolQuery);
 	for (const FToolDoc& Doc : Docs)
 	{
 		if (Doc.Qualified.Equals(ToolQuery, ESearchCase::IgnoreCase)
-			|| Doc.Tool.Equals(ToolQuery, ESearchCase::IgnoreCase)
-			|| Doc.Qualified.EndsWith(TEXT(".") + ToolQuery))
+			|| Doc.Tool.Equals(ToolQuery, ESearchCase::IgnoreCase))
 		{
 			Found = &Doc;
 			if (Doc.Qualified.Equals(ToolQuery, ESearchCase::IgnoreCase))
@@ -484,6 +502,27 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::DescribeOperation(const FString
 				break;
 			}
 		}
+		else if (NormalizeToolName(Doc.Qualified).Equals(NormalizedQuery)
+			|| NormalizeToolName(Doc.Tool).Equals(NormalizedQuery))
+		{
+			NormalizedMatches.Add(&Doc);
+		}
+	}
+	if (!Found && NormalizedMatches.Num() == 1)
+	{
+		Found = NormalizedMatches[0];
+	}
+	else if (!Found && NormalizedMatches.Num() > 1)
+	{
+		Result.Status = TEXT("rejected");
+		Result.Summary = FString::Printf(
+			TEXT("Tool alias '%s' is ambiguous; use a fully-qualified live registry name"),
+			*ToolQuery);
+		for (const FToolDoc* Match : NormalizedMatches)
+		{
+			Result.CapabilityNotes.Add(Match->Qualified);
+		}
+		return Result;
 	}
 	if (!Found)
 	{
@@ -497,6 +536,11 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::DescribeOperation(const FString
 	Payload->SetStringField(TEXT("toolset"), Found->Toolset);
 	Payload->SetStringField(TEXT("tool"), Found->Tool);
 	Payload->SetStringField(TEXT("qualified"), Found->Qualified);
+	if (!ToolQuery.Equals(Found->Tool, ESearchCase::CaseSensitive)
+		&& !ToolQuery.Equals(Found->Qualified, ESearchCase::CaseSensitive))
+	{
+		Payload->SetStringField(TEXT("normalized_from"), ToolQuery);
+	}
 	Payload->SetStringField(TEXT("description"), Found->Description);
 	TArray<TSharedPtr<FJsonValue>> Props;
 	for (const FString& P : Found->Properties)

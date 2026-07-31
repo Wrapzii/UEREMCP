@@ -114,6 +114,27 @@ def expand(query: str) -> list[str]:
     return toks
 
 
+def normalize_tool_name(name: str) -> str:
+    """Normalize lookup aliases without changing live canonical registry names."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def resolve_tool_alias(query: str, known_names: set[str]) -> str | None:
+    """Resolve Pascal/snake/kebab and case variants; fail closed on ambiguity."""
+    if query in known_names:
+        return query
+    exact_ci = [name for name in known_names if name.lower() == query.lower()]
+    if len(exact_ci) == 1:
+        return exact_ci[0]
+    needle = normalize_tool_name(query)
+    matches = [
+        name for name in known_names
+        if normalize_tool_name(name) == needle
+        or normalize_tool_name(name.rsplit(".", 1)[-1]) == needle
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
 def registry_hash(snap: dict) -> str:
     names: list[str] = []
     for ts_name, ts in sorted((snap.get("toolsets") or {}).items()):
