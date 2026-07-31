@@ -14,7 +14,26 @@ where the agent goes wrong *without* being told what comes next.
 Two new UEREMCP tools were written without an editor available and have never
 been compiled. Build them, fix what does not compile, and change nothing else.
 
-Repo: main branch, commit da18335.
+Repo: main branch, commit 608e304.
+
+ROUND 2 — what changed since the last build, and why
+
+The first field test found three defects. All are fixed and none is compiled.
+
+  1. execute_plan had no handler for submit_mesh_ops or
+     create_procedural_texture, so a correct texture -> material -> mesh ->
+     scatter plan was rejected at plan time and had to be re-issued one call at
+     a time. Now 27 actions are plan-registered, up from 15. New
+     *PlanHandlers pairs for Blueprint, Templates and Systems.
+  2. ReadObjNumber in UeremcpEnvironmentService.cpp left its out-param
+     untouched when a field was absent, and all 21 call sites share one `Tmp`.
+     An absent field inherited the previous field's value. Omitting
+     vegetation.slope_limit_deg picked up min_normalized_height's 0.95 and
+     enforced a 0.95-DEGREE slope limit -> 0 foliage instances, reported as
+     success. It now clears the out-param and returns presence.
+  3. options.on_unsupported = fail | partial was added to the envelope,
+     schema, and router hint, so a caller can ask for "do what you can" instead
+     of facing all-or-nothing. NOTE: domain services do not branch on it yet.
 
 NEW FILES / EDITS
   Plugins/UEREMCP/Source/UeremcpEnvironment/Private/UeremcpMeshOps.cpp   (new)
@@ -74,6 +93,26 @@ AFTER IT BUILDS
        python tests/world_doc/test_router_batch.py
        python tests/run_unit_tests.py
   3. Commit the snapshot refresh separately from any source fix.
+  4. Verify the plan-handler fix end to end. This is the one worth proving,
+     because it is what makes the from-scratch cascade a single transaction:
+
+       {"protocol_version":"1.0","action":"execute_plan","request_id":"c-1",
+        "options":{"dry_run":true},
+        "specification":{"operations":[
+          {"id":"tex","action":"create_procedural_texture",
+           "target":{"asset_path":"/Game/__UeremcpTests/Textures/T_Bark"},
+           "specification":{"generate":"noise","dimensions":[256,256],"seed":7}},
+          {"id":"mat","action":"create_master_material","depends_on":["tex"],
+           "target":{"asset_path":"/Game/__UeremcpTests/Materials/Masters/M_Bark"},
+           "specification":{"features":["fresnel","dynamic_color"]}},
+          {"id":"mesh","action":"submit_mesh_ops","depends_on":["mat"],
+           "target":{"asset_path":"/Game/__UeremcpTests/Meshes/SM_Pine"},
+           "specification":{"ops":[{"op":"cylinder","radius":18,"height":220},
+                                   {"op":"cone","base_radius":130,"height":420,
+                                    "origin":[0,0,180]}]}}]}}
+
+     It must NOT return "no handler registered for ...". If it does, the
+     module wiring did not take.
 
 REPORT BACK
   - Every signature that was wrong, with the correct one, so the [UNVERIFIED]
@@ -121,16 +160,21 @@ exactly what is missing rather than substituting something close.
 `castle_keep`-style geometry must be refused or built from `submit_mesh_ops`,
 not swapped for a box without saying so. This is the honesty test.
 
-## Prompt 3 — iteration, the real cost model
+## Prompt 3 — iteration, and the partial-application contract
 
 ```
 The trees are too dense and too short, and I want the ones above the treeline
 to have snow on them. Change just that. Do not rebuild the scene.
 ```
 
-**What to watch for.** Does it re-derive everything from scratch, or modify
-what exists? This is the question the world-document model exists to answer,
-and right now there is no `read_world`, so expect it to struggle. **How** it
+**What to watch for.** Last run it did *nothing* — it could thin and shorten
+but not add snow, so it applied neither, saying "nothing is half-changed". That
+was honest and useless, and it is why `options.on_unsupported` now exists.
+
+Watch whether it discovers that option from the envelope contract on its own.
+If it still refuses everything, the advertising is not reaching it and the
+option may as well not exist. Also note: there is still no `read_world`, so
+there is no true incremental path — expect it to struggle, and **how** it
 struggles is the useful data.
 
 ## Prompt 4 — the report we actually want
@@ -201,6 +245,11 @@ So these are not reported as discoveries:
   which is the correct behaviour and the model the other tools should follow
 - no day/night or weather-cycle contract exists
 - there is no `read_world`, so Prompt 3 has no good path yet
+- `create_landscape` has a determinism gate (`heightmap_hash`) and **no quality
+  contract at all** — "mountains" produces spikes and reports success. The last
+  run's terrain looked like a spike field, which no status code catches
+- domain services accept `options.on_unsupported` but do not branch on it yet,
+  so `partial` currently parses and is then ignored
 
 If the agent reports these, that is confirmation. If it reports them as
 *successes*, that is the bug.
