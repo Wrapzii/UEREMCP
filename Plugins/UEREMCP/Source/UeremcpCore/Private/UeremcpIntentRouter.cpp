@@ -719,17 +719,31 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 	}
 	TArray<FHit> Chosen;
 	BestPerToolset.GenerateValueArray(Chosen);
+	// Score-primary ordering: dependsOn ranks only break near-ties. Declared domain
+	// order used to force weakly matched toolsets into the plan (BACKLOG 1.3d).
 	Chosen.Sort([](const FHit& A, const FHit& B)
 	{
+		const double Diff = FMath::Abs(A.Score - B.Score);
+		if (Diff > 1.0) return A.Score > B.Score;
 		if (A.OrderRank != B.OrderRank) return A.OrderRank < B.OrderRank;
 		return A.Score > B.Score;
 	});
+
+	double BestHitScore = 0.0;
+	for (const FHit& H : Hits)
+	{
+		BestHitScore = FMath::Max(BestHitScore, H.Score);
+	}
+	// Drop plan steps far below the best hit (BACKLOG 1.3d score-gate).
+	constexpr double PlanScoreRatio = 0.35;
+	const double PlanScoreFloor = BestHitScore * PlanScoreRatio;
 
 	double UeremcpTop = 0.0;
 	double CatalogTop = 0.0;
 	TSet<FString> TopMatched;
 	for (int32 i = 0; i < Chosen.Num() && i < 3; ++i)
 	{
+		if (Chosen[i].Score < PlanScoreFloor) continue;
 		const FToolDoc& Doc = Docs[Chosen[i].DocIndex];
 		if (Doc.bIsUeremcp) UeremcpTop = FMath::Max(UeremcpTop, Chosen[i].Score);
 		if (Doc.CatalogOp.IsValid()) CatalogTop = FMath::Max(CatalogTop, Chosen[i].Score);
@@ -749,7 +763,7 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 	{
 		if (Anchors.Contains(M)) { bHasAnchor = true; break; }
 	}
-	const double TopScore = Chosen.Num() > 0 ? Chosen[0].Score : 0.0;
+	const double TopScore = BestHitScore;
 	const bool bStrong = FMath::Max(UeremcpTop, CatalogTop) >= 25.0
 		&& (bHasAnchor || TopMatched.Num() >= 2);
 
@@ -772,6 +786,8 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 	}
 	Payload->SetStringField(TEXT("confidence"), Confidence);
 	Payload->SetStringField(TEXT("confidence_reason"), ConfidenceReason);
+	Payload->SetNumberField(TEXT("plan_score_floor"),
+		FMath::RoundToFloat(static_cast<float>(PlanScoreFloor) * 10.0f) / 10.0f);
 
 	const bool bAbstain = !bStrong;
 	Payload->SetBoolField(TEXT("abstained"), bAbstain);
@@ -784,13 +800,15 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 	};
 
 	TArray<TSharedPtr<FJsonValue>> PlanArr;
-	const int32 Cap = FMath::Clamp(MaxSteps > 0 ? MaxSteps : 6, 1, 12);
+	// Default cap 3: single-domain intents must not emit five speculative steps (1.3d).
+	const int32 Cap = FMath::Clamp(MaxSteps > 0 ? MaxSteps : 3, 1, 12);
 	if (!bAbstain)
 	{
 		int32 Step = 1;
 		for (const FHit& H : Chosen)
 		{
 			if (Step > Cap) break;
+			if (H.Score + KINDA_SMALL_NUMBER < PlanScoreFloor) continue;
 			const FToolDoc& Doc = Docs[H.DocIndex];
 			if (!Names.Contains(Doc.Qualified) || !AllowedInPlan(Doc))
 			{

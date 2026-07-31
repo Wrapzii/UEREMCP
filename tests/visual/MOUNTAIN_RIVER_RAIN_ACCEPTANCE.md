@@ -14,7 +14,7 @@ Request id: `ws16-build-final-3`
 | 1 | `UeremcpIntent.UeremcpIntentToolset.ResolveIntent` | router | top-1 `BuildEnvironment` (extra noisy steps also returned) |
 | 2 | `UeremcpEnvironment.UeremcpEnvironmentToolset.BuildEnvironment` | mutate | `created_with_warnings` |
 | 3 | `UeremcpEnvironment.UeremcpEnvironmentToolset.ValidateEnvironment` | structural | `no_change_required` |
-| 4 | `UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames` | screenshots | PNGs written; tool reported `png_ok:false` (over-strict) |
+| 4 | `UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames` | screenshots | WS-16 run wrote PNGs but reported `png_ok:false`; superseded on integration by live `png_ok:true` after bounded reread fix |
 | 5 | `EditorToolset.EditorAppToolset.StartPIE` | PIE | started |
 | 6 | `UeremcpEnvironment.UeremcpEnvironmentToolset.InspectEnvironment` | PIE metrics | `weather_followed_10m=true` (~91 m tracked) |
 | 7 | `editor_toolset.toolsets.actor.ActorTools.set_actor_transform` | move pawn | true |
@@ -55,6 +55,9 @@ Copied from RE `Saved/UEREMCP/WorldCapture/`:
 ## Blockers / notes
 
 1. WS-16 not yet in `docs/WORK_ALLOCATION.md` → `check_ownership.py --ws WS-16` fails until WS-01/02 accept proposal.
-2. CaptureWorldFrames writes valid PNGs but reports `failed_validation` / `png_ok:false` (WS-11 ownership).
-3. Router returns extra steps beyond BuildEnvironment (intent noise, not environment defect).
+2. **Resolved on integration:** CaptureWorldFrames live rerun returned
+   `no_change_required`, `png_ok:true`, `png_files_reread:true`, and
+   `stage_teardown_complete:true`.
+3. Router extra steps beyond BuildEnvironment: score-gate landed on tip (1.3d);
+   live re-proof after Core rebuild; offline plan is already 1-step BuildEnvironment.
 4. No Niagara rain asset in RE → streak fallback with honest `approximated` technology note.

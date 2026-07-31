@@ -709,7 +709,7 @@ retrofitted for:
 | `UeremcpWorld` module name | Unassigned domain → WS-01 `UeremcpEnvironment` | superseded naming |
 | Audio / networking / WP | Thin registry; goal ops added on `ws-01-remaining-domain-coverage` | `UeremcpSystems` SoundCue + validate_replication + WP inspect/repair; MetaSound graph + HLOD builders still blocked |
 | Schema fiction `world/level_design/pcg` | Confirmed bug | trimmed in `template.schema.json` |
-| GetStarted missing live | DLL exports present; multi-editor stale MCP session | registration smoke + clean restart required |
+| GetStarted missing live | Superseded by fresh single-editor deploy | `GetStarted`, `ResolveIntent`, `DescribeOperation` exact advertised names callable live 2026-07-30 |
 
 ## Capability ledger
 
@@ -719,11 +719,11 @@ retrofitted for:
 | CP-III.3-landscape | `create_landscape` + `heightmap_hash` | `completed_and_verified` | unit hash + live `heightmap_hash=9dde558d` |
 | CP-III.3-water | `create_water_body` | `completed_and_verified` | live `AWaterBodyRiver` with `bAffectsLandscape=false` |
 | CP-III.3-foliage | `scatter_foliage` + exclusion measure | `completed_and_verified` | corridor-biased banks; exclusion=0; cubes approximated |
-| CP-III.3-weather | `attach_weather` | `completed_with_documented_limitation` | live rain actor; `weather_followed_10m=false` without rain Niagara asset |
+| CP-III.3-weather | `attach_weather` | `completed_with_documented_limitation` | live PIE `weather_followed_10m=true`; rain particle visuals remain approximated because no Niagara rain asset exists |
 | CP-III.3-structures | `place_structures` | `completed_and_verified` | live `structures_placed=3` AppendBox |
 | CP-III.3-inspect | `inspect_environment` / `validate_environment` | `completed_and_verified` | live Validate gates passed |
 | CP-III.8-plan | ExecutePlan composition | `completed_and_verified` | `FUeremcpEnvironmentPlanHandlers` |
-| CP-III.10-capture | world capture | `completed_and_verified` (structural+PNG reread) | live `mrr-cap-1` 2/2 frames; beauty still human |
+| CP-III.10-capture | world capture | `completed_and_verified` (structural+PNG reread) | retry-hardened reread live: `png_ok=true`, 1/1, 56,257 lit pixels; beauty still human |
 | CP-III.10-material-capture | material capture | `completed_with_documented_limitation` | `capture_material_frames`; live pending |
 | CP-III.10-animation-capture | animation capture | `completed_with_documented_limitation` | `capture_animation_frames`; live pending |
 | CP-III.10-world-acceptance | mountain-river-rain harness | `completed_with_documented_limitation` | structural live PASS; full PNG aesthetic checklist still human |
