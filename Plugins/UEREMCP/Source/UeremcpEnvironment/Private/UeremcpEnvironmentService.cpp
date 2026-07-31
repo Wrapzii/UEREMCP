@@ -528,12 +528,20 @@ namespace
 		return ReadEnvironmentTag(World, TEXT("UEREMCP_REV="));
 	}
 
-	int32 DestroyOwnedEnvironmentActors(UWorld* World)
+	// Destroys UEREMCP-owned actors. With a prefix, ONLY that group.
+	//
+	// This used to take out everything labelled UEREMCP_ unconditionally, which
+	// made foliage replace-not-append: scattering a second species wiped the
+	// first, so "a few different kinds of trees" could never be one forest. A
+	// scatter that owns one species must not delete another's work, or the
+	// terrain, or a structure.
+	int32 DestroyOwnedEnvironmentActors(UWorld* World, const FString& LabelPrefix = FString())
 	{
+		const FString Prefix = LabelPrefix.IsEmpty() ? TEXT("UEREMCP_") : LabelPrefix;
 		TArray<AActor*> ToDestroy;
 		for (TActorIterator<AActor> It(World); It; ++It)
 		{
-			if (It->GetActorLabel().StartsWith(TEXT("UEREMCP_")))
+			if (It->GetActorLabel().StartsWith(Prefix))
 			{
 				ToDestroy.Add(*It);
 			}
@@ -707,8 +715,13 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		ReadObjNumber(TEXT("vegetation"), TEXT("max_normalized_height"), Tmp);
 		if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
 		(*Vegetation)->TryGetStringField(TEXT("mesh_path"), Out.MeshPath);
+		(*Vegetation)->TryGetStringField(TEXT("group"), Out.FoliageGroup);
 	}
 
+	if (const TSharedPtr<FJsonObject>* BiomeObj = nullptr; Spec->TryGetObjectField(TEXT("biome"), BiomeObj) && BiomeObj)
+	{
+		(*BiomeObj)->TryGetStringField(TEXT("group"), Out.FoliageGroup);
+	}
 	ReadObjNumber(TEXT("biome"), TEXT("forest_bank_width"), Tmp); if (Tmp > 0) Out.ForestBankWidth = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("max_foliage_instances"), Tmp); if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("slope_limit_deg"), Tmp); if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
@@ -983,13 +996,14 @@ bool FUeremcpEnvironmentService::ValidateIncludeDependencies(
 	const FUeremcpEnvironmentBuildSpec& Spec,
 	FString& OutError)
 {
-	if (Spec.WantsVegetation() && !Spec.bIncludeRiver)
-	{
-		OutError = TEXT(
-			"vegetation/forest bank scatter requires hydrology.river or include.river: true "
-			"(bank scatter needs a river exclusion corridor; use vegetation.mode=none or add river)");
-		return false;
-	}
+	// Vegetation used to REQUIRE a river, because the only scatter implemented
+	// was a band along a bank. "Trees on a hillside" was therefore impossible --
+	// an agent asked for exactly that, was told to add a river it did not want,
+	// and a river appeared in a scene that should not have had one.
+	//
+	// A river is now an optional constraint, not a precondition: with one, the
+	// bank corridor applies; without one, foliage scatters across the terrain
+	// under the slope and height gates alone.
 	for (const FUeremcpStructurePlacementSpec& Placement : Spec.Structures)
 	{
 		if (Placement.Kind.Equals(TEXT("box_along_river"), ESearchCase::IgnoreCase) && !Spec.bIncludeRiver)
@@ -1528,7 +1542,9 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		if (Mesh)
 		{
 			AActor* Holder = World->SpawnActor<AActor>(FVector::ZeroVector, FRotator::ZeroRotator);
-			Holder->SetActorLabel(TEXT("UEREMCP_Forest"));
+			// Group-scoped label: a second species spawns its own holder rather
+			// than colliding with (and being wiped by) the first.
+			Holder->SetActorLabel(Spec.FoliageActorLabel());
 			USceneComponent* Root = NewObject<USceneComponent>(Holder);
 			Root->SetMobility(EComponentMobility::Static);
 			Holder->SetRootComponent(Root);
@@ -1550,12 +1566,17 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 					FMath::Lerp(Extents.Min.X, Extents.Max.X, U),
 					FMath::Lerp(Extents.Min.Y, Extents.Max.Y, V),
 					0.f);
-				const float Dist = Bank.DistanceToXY(Local);
-				const float Inner = Spec.RiverWidth * 0.55f;
-				const float Outer = Inner + Spec.ForestBankWidth;
-				if (Dist < Inner || Dist > Outer)
+				if (Spec.bIncludeRiver)
 				{
-					continue;
+					// Bank corridor: keep a clear channel, and band the forest
+					// along it. Only meaningful when a river actually exists.
+					const float Dist = Bank.DistanceToXY(Local);
+					const float Inner = Spec.RiverWidth * 0.55f;
+					const float Outer = Inner + Spec.ForestBankWidth;
+					if (Dist < Inner || Dist > Outer)
+					{
+						continue;
+					}
 				}
 				const float Density = UeremcpNoise::SmoothNoise2D(Spec.Seed ^ 0xD00Dull, U * 8.f, V * 8.f);
 				if (Density < 0.35f)

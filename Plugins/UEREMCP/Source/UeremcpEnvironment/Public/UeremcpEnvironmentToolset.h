@@ -86,6 +86,13 @@ public:
 	 * Inputs: action=scatter_foliage; specification.seed; biome.mesh_path; max_foliage_instances.
 	 * Outputs: foliage_instances, exclusion_violations (must be 0).
 	 * Cross-domain: exclusions reference the river spline (why BuildEnvironment is C++ not only a template).
+	 * Multiple species: set vegetation.group (or biome.group) to a distinct name per
+	 *   species. A scatter replaces only its OWN group, so a second call ADDS a
+	 *   species instead of wiping the first. Omitting it uses one shared group and
+	 *   each scatter replaces the last.
+	 * A river is optional. With hydrology.river the forest bands along the bank and
+	 *   keeps a clear channel; without one it scatters across the terrain under the
+	 *   slope and height gates alone. Trees on a bare hillside no longer need a river.
 	 * Honesty: when biome.mesh_path is absent or unloadable this places
 	 *   /Engine/BasicShapes/Cube as a placeholder and warns. Supply a real mesh,
 	 *   or generate one first, if you want trees rather than boxes.

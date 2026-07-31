@@ -53,6 +53,22 @@ struct FUeremcpEnvironmentBuildSpec
 		return WeatherPhenomena.Num() > 0 || bIncludeRain;
 	}
 
+	/**
+	 * Names the foliage group this scatter owns, so several species can coexist.
+	 *
+	 * Empty means the legacy single shared group. Set it (vegetation.group) and a
+	 * scatter replaces only its OWN instances, leaving other species, the
+	 * terrain, and structures alone.
+	 */
+	FString FoliageGroup;
+
+	FString FoliageActorLabel() const
+	{
+		return FoliageGroup.IsEmpty()
+			? FString(TEXT("UEREMCP_Forest"))
+			: FString::Printf(TEXT("UEREMCP_Forest_%s"), *FoliageGroup);
+	}
+
 	bool WantsVegetation() const
 	{
 		return bIncludeForest
