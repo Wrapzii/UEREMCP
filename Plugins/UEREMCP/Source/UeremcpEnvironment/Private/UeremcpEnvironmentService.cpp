@@ -1388,8 +1388,47 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	const FScopedTransaction Transaction(
 		NSLOCTEXT("UEREMCP", "BuildEnvironmentTransaction", "UEREMCP Build Environment"),
 		Request.bAtomic);
-	const int32 ReplacedActorCount = DestroyOwnedEnvironmentActors(World);
+	// Destroy only what THIS request owns.
+	//
+	// Every stage previously wiped every UEREMCP_ actor, so "add a river" deleted
+	// the landscape you had just made, and a foliage scatter deleted both. Agents
+	// hit this repeatedly, abandoned the procedural path, and hand-placed props --
+	// which is what floating trees and disconnected water in the field-test
+	// screenshots actually are.
+	//
+	// A full build_environment legitimately owns the whole scene and still
+	// replaces everything. A staged call replaces only its own stage.
+	int32 ReplacedActorCount = 0;
+	TArray<FString> ReplacedPrefixes;
+	if (bOwnsMapLifecycle)
+	{
+		ReplacedActorCount = DestroyOwnedEnvironmentActors(World);
+		ReplacedPrefixes.Add(TEXT("UEREMCP_"));
+	}
+	else
+	{
+		auto ReplaceStage = [&](const TCHAR* Prefix)
+		{
+			ReplacedActorCount += DestroyOwnedEnvironmentActors(World, Prefix);
+			ReplacedPrefixes.Add(Prefix);
+		};
+		if (Spec.bIncludeTerrain)      { ReplaceStage(TEXT("UEREMCP_Landscape")); }
+		if (Spec.bIncludeRiver)        { ReplaceStage(TEXT("UEREMCP_River")); }
+		if (Spec.WantsVegetation())    { ReplaceStage(*Spec.FoliageActorLabel()); }
+		if (Spec.Structures.Num() > 0) { ReplaceStage(TEXT("UEREMCP_Structure")); }
+		if (Spec.HasAnyWeatherPhenomenon()) { ReplaceStage(TEXT("UEREMCP_Weather")); }
+	}
 	Result.ChangeManifest->SetNumberField(TEXT("replaced_owned_actors"), ReplacedActorCount);
+	{
+		// Say what was removed. A silent wipe is indistinguishable from a bug.
+		TArray<TSharedPtr<FJsonValue>> PrefixArr;
+		for (const FString& P : ReplacedPrefixes)
+		{
+			PrefixArr.Add(MakeShared<FJsonValueString>(P));
+		}
+		Result.ChangeManifest->SetArrayField(TEXT("replaced_owned_prefixes"), PrefixArr);
+		Result.ChangeManifest->SetBoolField(TEXT("replaced_all_owned"), bOwnsMapLifecycle);
+	}
 
 	TArray<FString> CreatedLabels;
 	bool bRiverCreated = false;

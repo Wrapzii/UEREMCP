@@ -476,5 +476,62 @@ class TestScaleZGuidance(unittest.TestCase):
                          "the header still recommends the value that produces spikes")
         self.assertIn("2-5", body)
 
+
+class TestStagedWipeIsScoped(unittest.TestCase):
+    """"Add a river" must not delete the landscape.
+
+    Every stage used to call DestroyOwnedEnvironmentActors with no prefix, so it
+    removed every UEREMCP_ actor. create_water_body wiped the terrain;
+    scatter_foliage wiped both. Agents hit this repeatedly, abandoned the
+    procedural path and hand-placed props -- which is what the floating trees and
+    disconnected water in the field-test screenshots actually are.
+
+    An earlier fix added a prefix PARAMETER and changed no caller, so the wipe
+    survived untouched. These tests check the call sites, not the signature.
+    """
+
+    SERVICE = os.path.join(SOURCE, "UeremcpEnvironment", "Private",
+                           "UeremcpEnvironmentService.cpp")
+
+    def test_staged_calls_pass_a_prefix(self):
+        body = read(self.SERVICE)
+        self.assertIn("ReplaceStage", body,
+                      "no per-stage destroy path; the wipe is still global")
+        for prefix in ("UEREMCP_Landscape", "UEREMCP_River", "UEREMCP_Structure"):
+            self.assertIn('TEXT("%s")' % prefix, body)
+
+    def test_full_build_still_replaces_everything(self):
+        """A whole-scene rebuild legitimately owns the whole scene."""
+        body = read(self.SERVICE)
+        self.assertIn("if (bOwnsMapLifecycle)", body)
+
+    def test_foliage_uses_its_group_label(self):
+        body = read(self.SERVICE)
+        self.assertIn("Spec.FoliageActorLabel()", body)
+
+    def test_removal_is_reported_not_silent(self):
+        """A silent wipe is indistinguishable from a bug."""
+        body = read(self.SERVICE)
+        self.assertIn("replaced_owned_prefixes", body)
+        self.assertIn("replaced_all_owned", body)
+
+
+class TestNoPhantomAssetPaths(unittest.TestCase):
+    """The catalog handed agents /Game/Meshes/SM_Pine, which exists in no empty
+    project. Following it silently yields cubes."""
+
+    def test_scatter_example_has_no_stock_pine(self):
+        for op in catalog()["operations"]:
+            if op.get("action") != "scatter_foliage":
+                continue
+            example = json.dumps(op.get("example_request") or {})
+            self.assertNotIn("/Game/Meshes/SM_Pine", example)
+
+    def test_scatter_recovery_says_the_mesh_must_exist(self):
+        op = next(o for o in catalog()["operations"]
+                  if o.get("action") == "scatter_foliage")
+        self.assertIn("EXISTS", op["recovery"])
+        self.assertIn("BasicShapes", op["recovery"])
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

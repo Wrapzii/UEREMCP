@@ -976,7 +976,7 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Create terrain and water first; require exclusion_violations=0.",
+      "recovery": "biome.mesh_path must be a mesh that EXISTS. There is no stock /Game/Meshes/SM_Pine in an empty project -- resolve one first via import_file, submit_mesh_ops, or a project search. Without a real mesh this places /Engine/BasicShapes/Cube. Create terrain and water first; require exclusion_violations=0.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "scatter_foliage",
@@ -989,7 +989,7 @@
         "specification": {
           "seed": 4471,
           "biome": {
-            "mesh_path": "/Game/Meshes/SM_Pine",
+            "mesh_path": "<mesh_path from submit_mesh_ops, import_file, or a project asset>",
             "max_foliage_instances": 800
           }
         }
