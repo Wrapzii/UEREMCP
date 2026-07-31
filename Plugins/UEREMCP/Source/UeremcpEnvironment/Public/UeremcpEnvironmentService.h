@@ -27,11 +27,11 @@ struct FUeremcpEnvironmentBuildSpec
 	FString RainSystemPath; // optional Niagara; empty → visible instanced-rain fallback
 	FString WeatherFollow = TEXT("player_camera");
 	int32 RainStreakCount = 256;
-	bool bIncludeTerrain = true;
-	bool bIncludeRiver = true;
-	bool bIncludeForest = true;
-	bool bIncludeRain = true;
-	bool bIncludeLighting = true;
+	bool bIncludeTerrain = false;
+	bool bIncludeRiver = false;
+	bool bIncludeForest = false;
+	bool bIncludeRain = false;
+	bool bIncludeLighting = false;
 	bool bCaptureScreenshot = false; // opt-in; prefer CaptureWorldFrames (avoids MCP hang)
 	bool bIncludeStructures = false;
 	int32 StructureCount = 6;
@@ -56,6 +56,9 @@ struct FUeremcpEnvironmentBuildResult
 namespace FUeremcpEnvironmentService
 {
 	bool ParseBuildSpec(const TSharedPtr<FJsonObject>& Spec, FUeremcpEnvironmentBuildSpec& Out, FString& OutError);
+
+	/** Reject impossible include combinations before mutating the world. */
+	bool ValidateIncludeDependencies(const FUeremcpEnvironmentBuildSpec& Spec, FString& OutError);
 
 	/** Pure heightmap generation — unit-testable without editor world. */
 	void GenerateHeightmap(

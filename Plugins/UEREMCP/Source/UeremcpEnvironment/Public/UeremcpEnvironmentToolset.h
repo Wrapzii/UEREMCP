@@ -11,7 +11,7 @@
 /**
  * Build and verify procedural environments (landscape, river, forest, weather, structures).
  *
- * Prefer BuildEnvironment for the full mountain/river/forest/rain scene.
+ * Prefer BuildEnvironment with explicit include.* flags for each subsystem (all default false).
  * Prefer CreateLandscape / CreateWaterBody / ScatterFoliage / AttachWeather when
  * composing via ExecutePlan with $ref chaining (COVERAGE_PLAN III.8 / III.10).
  * Use ResolveIntent when unsure which world tool to call.
@@ -25,12 +25,14 @@ public:
 	virtual FString GetToolsetVersion() const override { return TEXT("0.3.0-environment-acceptance"); }
 
 	/**
-	 * Build a seeded environment: mountains, river, forest banks, rain, lighting, optional capture.
+	 * Build a seeded environment with opt-in subsystems (include.* all default false).
 	 *
-	 * Use when: "make a landscape with mountains and a river, forest around it, raining, screenshot".
+	 * Use when: full mountain/river/forest/rain scene — set each include.* true explicitly.
+	 * Rain-only: include.rain true; supply weather.rain_system_path or fallback_policy=allow_approximate.
 	 * Inputs: action=build_environment; target under /Game/__UeremcpPoc/; specification.seed REQUIRED;
 	 * options.dry_run must be true for preflight; false creates, saves, reloads, and structurally validates.
-	 * Example: {"protocol_version":"1.0","action":"build_environment","request_id":"env-1","target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain/"},"idempotency_key":"mountain-river-rain-v1","options":{"dry_run":true,"validate":true,"save":true},"specification":{"seed":4471,"terrain":{"size_x":127,"size_y":127,"mountain_amplitude":0.6,"valley_depth":0.18},"river":{"width":900},"biome":{"max_foliage_instances":1000,"slope_limit_deg":32},"weather":{"follow":"player_camera"},"fallback_policy":"allow_approximate"}}
+	 * Example (full scene): {"protocol_version":"1.0","action":"build_environment","request_id":"env-1","target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain/"},"options":{"dry_run":true,"validate":true,"save":true},"specification":{"seed":4471,"include":{"terrain":true,"river":true,"forest":true,"rain":true,"lighting":true},"terrain":{"size_x":127,"size_y":127,"mountain_amplitude":0.6,"valley_depth":0.18},"river":{"width":900},"biome":{"max_foliage_instances":1000,"slope_limit_deg":32},"weather":{"follow":"player_camera"},"fallback_policy":"allow_approximate"}}
+	 * Example (rain on camera only): {"protocol_version":"1.0","action":"build_environment","request_id":"env-rain","target":{"asset_path":"/Game/__UeremcpPoc/RainOnly"},"options":{"dry_run":true},"specification":{"seed":99,"include":{"rain":true},"weather":{"follow":"player_camera"},"fallback_policy":"allow_approximate"}}
 	 * Next: ValidateEnvironment; CaptureWorldFrames; or GetJobResult if partially_completed.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
@@ -72,7 +74,7 @@ public:
 	 * Attach rain/fog weather that can follow the player/camera.
 	 *
 	 * Use when: "make it raining including on the player camera"; ExecutePlan weather stage.
-	 * Inputs: action=attach_weather; weather.rain_system_path optional; follow=player_camera.
+	 * Inputs: action=attach_weather; weather.rain_system_path optional when fallback_policy=allow_approximate; follow=player_camera.
 	 * Outputs: weather actors. PIE camera-follow proof requires rain system asset + movement check.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")

@@ -9,6 +9,14 @@ Request id: `ws16-build-final-3`
 
 ## Call telemetry (acceptance path)
 
+**Specification must set explicit `include.*` flags** (all default false). Full-scene
+acceptance uses:
+
+```json
+"include": {"terrain": true, "river": true, "forest": true, "rain": true, "lighting": true},
+"fallback_policy": "allow_approximate"
+```
+
 | # | Toolset.tool | Role | Result |
 |---|---|---|---|
 | 1 | `UeremcpIntent.UeremcpIntentToolset.ResolveIntent` | router | top-1 `BuildEnvironment` (extra noisy steps also returned) |
