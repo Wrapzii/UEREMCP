@@ -29,6 +29,12 @@ Epic primitives. Do not begin with a 77-toolset browse unless ResolveIntent abst
 | Known pattern / multi-asset from library | `UeremcpTemplates…InstantiateTemplate` | Inventing `ExecutePlan` as first choice |
 | Long job poll / cancel | `UeremcpReference…GetJobResult` / `CancelJob` | Assuming MCP `notifications/cancelled` alone |
 | Niagara pixel evidence | `UeremcpValidation…CaptureEffectFrames` | Screenshot-driven authoring loops |
+| Mountain / river / forest / rain world | `UeremcpEnvironment…BuildEnvironment` | Landscape/Water/foliage primitive chains |
+| Environment inspect / validate | `…InspectEnvironment` / `…ValidateEnvironment` | Screenshot-as-gate |
+| SoundCue + attenuation | `UeremcpSystems…CreateAudioCue` | MetaSound graph inventing; Epic audio primitives |
+| Replication / Pattern B audit | `…ValidateReplication` | `get/set_variable_replication` loops |
+| World Partition inspect / dry-run repair | `…InspectWorldPartition` / `…RepairWorldPartition` | Silent WP commandlet wraps; HLOD claims |
+| World / material / animation frames | `…CaptureWorldFrames` / `CaptureMaterialFrames` / `CaptureAnimationFrames` | HighResShot-only workflows |
 
 **Rule:** one semantic operation with a complete ADR-0003 envelope beats many
 primitive calls (`AGENTS.md` rule 5; WHY cost model).
@@ -40,7 +46,7 @@ Use Epic (or REAgentTools) when:
 - the need is **read-only discovery** and no UEREMCP action covers it
 - [`docs/CAPABILITY_CATALOG.md`](../CAPABILITY_CATALOG.md) still lists the goal as
   `planned` / `research`
-- the task is outside UEREMCP domains (world building utilities, etc.)
+- the task is outside UEREMCP domains (MetaSound graphs, WP HLOD builders, etc.)
 
 Do **not** hide useful Epic read-only tools globally. `FToolset::SetNameFilters`
 exists `[VERIFIED: ToolsetRegistry/Toolset.h:59-60]` and is authorized by ADR-0002
@@ -77,7 +83,9 @@ MCP tool name. Worked envelopes:
 | Templates vs direct domain | Template when a library match exists; else domain create/submit. |
 | `read_graph` / `submit_graph` | Read complete → edit → submit with `expected_revision`. |
 | `cancel_job` | Cooperative UEREMCP cancel via Reference toolset. |
-| Visual capture | Existing Niagara system → `CaptureEffectFrames`; does not author assets. |
+| Visual capture | Niagara → `CaptureEffectFrames`; world → `CaptureWorldFrames`; material → `CaptureMaterialFrames`; AnimSequence → `CaptureAnimationFrames`. Screenshots never replace structural validation. |
+| Environment | Full biome → `BuildEnvironment`; stage primitives only via ExecutePlan `$ref` chaining. |
+| Systems | SoundCue → `CreateAudioCue`; replication → `ValidateReplication`; WP → inspect first, repair only with `dry_run:false` + destructive opt-in. |
 
 ## 5. Envelope fields that affect routing
 

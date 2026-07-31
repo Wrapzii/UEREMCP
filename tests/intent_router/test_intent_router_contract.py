@@ -91,7 +91,8 @@ class IntentRouterContractTests(unittest.TestCase):
 
     def test_all_callable_descriptions_are_agent_callable(self):
         source = discover_source_tools()
-        self.assertEqual(len(source), 35)
+        # Environment (8) + Systems (5) + general capture (4 vs prior 1) raise the surface.
+        self.assertEqual(len(source), 42)
         self.assertEqual(check_source_descriptions(source), 0)
 
     def test_pascal_snake_kebab_aliases_normalize_without_dual_registration(self):

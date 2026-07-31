@@ -723,8 +723,12 @@ retrofitted for:
 | CP-III.3-structures | `place_structures` | `completed_and_verified` (API path) | GeometryScript AppendBox — plan III.5 "blocked" **superseded** |
 | CP-III.3-inspect | `inspect_environment` / `validate_environment` | `completed_and_verified` | Toolset |
 | CP-III.8-plan | ExecutePlan composition | `completed_and_verified` | `FUeremcpEnvironmentPlanHandlers` |
-| CP-III.10-capture | world capture | `completed_and_verified` | `CaptureWorldFrames` |
-| CP-audio | SoundCue/attenuation goal tool | `completed_with_documented_limitation` | `create_audio_cue` / `inspect_audio`; MetaSound graph still blocked |
+| CP-III.10-capture | world capture | `completed_with_documented_limitation` | `CaptureWorldFrames` + structural snapshot; beauty not gated; live RE pending for full checklist |
+| CP-III.10-material-capture | material capture | `completed_with_documented_limitation` | `capture_material_frames`; live pending |
+| CP-III.10-animation-capture | animation capture | `completed_with_documented_limitation` | `capture_animation_frames`; live pending |
+| CP-III.10-world-acceptance | mountain-river-rain harness | `completed_with_documented_limitation` | offline harness; needs isolated-editor evidence |
+| CP-III.10-eval-telemetry | semantic eval schema | `completed_and_verified` (unit) | `tests/schemas/semantic_eval_report.schema.json` |
+| CP-audio | SoundCue/attenuation goal tool | `completed_with_documented_limitation` | `create_audio_cue` / `inspect_audio`; MetaSound graph still blocked; router registration 2026-07-30 |
 | CP-net | replication goal tool | `completed_with_documented_limitation` | `validate_replication`; multi-client still WS-11 |
 | CP-wp | world partition inspect/repair | `completed_with_documented_limitation` | `inspect_world_partition` / `repair_world_partition`; HLOD commandlets blocked |
 

@@ -5,7 +5,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpNiagara.UeremcpNiagaraToolset",
     "expected_top1_tool": "InspectSystem",
-    "expected_any_of_toolsets": ["UeremcpNiagara.UeremcpNiagaraToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpNiagara.UeremcpNiagaraToolset"
+    ],
     "should_abstain": false,
     "notes": "Direct Niagara system inspection. Independently authored 2026-07-30."
   },
@@ -15,7 +17,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpNiagara.UeremcpNiagaraToolset",
     "expected_top1_tool": "CreateNiagaraEffect",
-    "expected_any_of_toolsets": ["UeremcpNiagara.UeremcpNiagaraToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpNiagara.UeremcpNiagaraToolset"
+    ],
     "should_abstain": false,
     "notes": "Single-domain Niagara authoring."
   },
@@ -25,7 +29,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpMaterial.UeremcpMaterialToolset",
     "expected_top1_tool": "CreateProceduralTexture",
-    "expected_any_of_toolsets": ["UeremcpMaterial.UeremcpMaterialToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpMaterial.UeremcpMaterialToolset"
+    ],
     "should_abstain": false,
     "notes": "Procedural texture generation."
   },
@@ -35,7 +41,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpMaterial.UeremcpMaterialToolset",
     "expected_top1_tool": "CreateVfxMaterial",
-    "expected_any_of_toolsets": ["UeremcpMaterial.UeremcpMaterialToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpMaterial.UeremcpMaterialToolset"
+    ],
     "should_abstain": false,
     "notes": "Semantic VFX material creation."
   },
@@ -45,7 +53,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpBlueprint.UeremcpBlueprintToolset",
     "expected_top1_tool": "ReadGraph",
-    "expected_any_of_toolsets": ["UeremcpBlueprint.UeremcpBlueprintToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpBlueprint.UeremcpBlueprintToolset"
+    ],
     "should_abstain": false,
     "notes": "Explicit Blueprint graph inspection."
   },
@@ -55,7 +65,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpBlueprint.UeremcpBlueprintToolset",
     "expected_top1_tool": "SubmitGraph",
-    "expected_any_of_toolsets": ["UeremcpBlueprint.UeremcpBlueprintToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpBlueprint.UeremcpBlueprintToolset"
+    ],
     "should_abstain": false,
     "notes": "Complete-state Blueprint submission."
   },
@@ -65,7 +77,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpGameplay.UeremcpGameplayToolset",
     "expected_top1_tool": "CreateSpell",
-    "expected_any_of_toolsets": ["UeremcpGameplay.UeremcpGameplayToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpGameplay.UeremcpGameplayToolset"
+    ],
     "should_abstain": false,
     "notes": "GAS spell creation without projectile behavior."
   },
@@ -75,7 +89,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpAnimation.UeremcpAnimationToolset",
     "expected_top1_tool": "InspectMontage",
-    "expected_any_of_toolsets": ["UeremcpAnimation.UeremcpAnimationToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpAnimation.UeremcpAnimationToolset"
+    ],
     "should_abstain": false,
     "notes": "Read-only montage inspection."
   },
@@ -85,7 +101,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpAnimation.UeremcpAnimationToolset",
     "expected_top1_tool": "ReadAnimBp",
-    "expected_any_of_toolsets": ["UeremcpAnimation.UeremcpAnimationToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpAnimation.UeremcpAnimationToolset"
+    ],
     "should_abstain": false,
     "notes": "Read-only Animation Blueprint inspection."
   },
@@ -95,7 +113,9 @@
     "category": "ambiguous",
     "expected_top1_toolset": "UeremcpTemplates.UeremcpTemplatesToolset",
     "expected_top1_tool": "SearchTemplates",
-    "expected_any_of_toolsets": ["UeremcpTemplates.UeremcpTemplatesToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpTemplates.UeremcpTemplatesToolset"
+    ],
     "should_abstain": false,
     "notes": "Template search preferred."
   },
@@ -105,7 +125,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpTemplates.UeremcpTemplatesToolset",
     "expected_top1_tool": "InstantiateTemplate",
-    "expected_any_of_toolsets": ["UeremcpTemplates.UeremcpTemplatesToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpTemplates.UeremcpTemplatesToolset"
+    ],
     "should_abstain": false,
     "notes": "Explicit template instantiation."
   },
@@ -128,7 +150,9 @@
     "category": "supported",
     "expected_top1_toolset": "UeremcpCore.UeremcpReferenceToolset",
     "expected_top1_tool": "ExecutePlan",
-    "expected_any_of_toolsets": ["UeremcpCore.UeremcpReferenceToolset"],
+    "expected_any_of_toolsets": [
+      "UeremcpCore.UeremcpReferenceToolset"
+    ],
     "should_abstain": false,
     "notes": "Explicit plan execution."
   },
@@ -150,23 +174,27 @@
   },
   {
     "id": "ho-15",
-    "intent": "Lay out a medieval village across the open world with roads, houses, foliage, and terrain shaping.",
-    "category": "unsupported",
-    "expected_top1_toolset": null,
-    "expected_top1_tool": null,
-    "expected_any_of_toolsets": [],
-    "should_abstain": true,
-    "notes": "World building unsupported."
+    "intent": "Make a mountain landscape with a river through the valley, forest on the banks, and rain falling.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpEnvironment.UeremcpEnvironmentToolset",
+    "expected_top1_tool": "BuildEnvironment",
+    "expected_any_of_toolsets": [
+      "UeremcpEnvironment.UeremcpEnvironmentToolset"
+    ],
+    "should_abstain": false,
+    "notes": "Environment semantic tool; updated 2026-07-30 router registration."
   },
   {
     "id": "ho-16",
-    "intent": "Compose and import an adaptive combat music system with exploration, tension, and boss layers.",
-    "category": "unsupported",
-    "expected_top1_toolset": null,
-    "expected_top1_tool": null,
-    "expected_any_of_toolsets": [],
-    "should_abstain": true,
-    "notes": "Audio unsupported."
+    "intent": "Create a SoundCue with attenuation from my cast SoundWave under /Game/__UeremcpTests/Audio/.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpSystems.UeremcpSystemsToolset",
+    "expected_top1_tool": "CreateAudioCue",
+    "expected_any_of_toolsets": [
+      "UeremcpSystems.UeremcpSystemsToolset"
+    ],
+    "should_abstain": false,
+    "notes": "Systems CreateAudioCue; MetaSound still blocked."
   },
   {
     "id": "ho-17",
@@ -187,5 +215,51 @@
     "expected_any_of_toolsets": [],
     "should_abstain": true,
     "notes": "Underspecified; must abstain."
+  },
+  {
+    "id": "ho-19",
+    "intent": "Validate that Health is REPLICATED and Pattern B server cast authority is correct on BP_Rep.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpSystems.UeremcpSystemsToolset",
+    "expected_top1_tool": "ValidateReplication",
+    "expected_any_of_toolsets": [
+      "UeremcpSystems.UeremcpSystemsToolset"
+    ],
+    "should_abstain": false,
+    "notes": "Replication goal tool."
+  },
+  {
+    "id": "ho-20",
+    "intent": "Is this editor map world-partitioned, and is streaming enabled?",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpSystems.UeremcpSystemsToolset",
+    "expected_top1_tool": "InspectWorldPartition",
+    "expected_any_of_toolsets": [
+      "UeremcpSystems.UeremcpSystemsToolset"
+    ],
+    "should_abstain": false,
+    "notes": "World partition inspect."
+  },
+  {
+    "id": "ho-21",
+    "intent": "Compose and import an adaptive combat music system with exploration, tension, and boss MetaSound layers.",
+    "category": "unsupported",
+    "expected_top1_toolset": null,
+    "expected_top1_tool": null,
+    "expected_any_of_toolsets": [],
+    "should_abstain": true,
+    "notes": "MetaSound graph authoring still blocked."
+  },
+  {
+    "id": "ho-22",
+    "intent": "Capture a framed PNG of the current alpine editor world after BuildEnvironment for human review.",
+    "category": "supported",
+    "expected_top1_toolset": "UeremcpValidation.UeremcpVisualCaptureToolset",
+    "expected_top1_tool": "CaptureWorldFrames",
+    "expected_any_of_toolsets": [
+      "UeremcpValidation.UeremcpVisualCaptureToolset"
+    ],
+    "should_abstain": false,
+    "notes": "General world capture."
   }
 ]

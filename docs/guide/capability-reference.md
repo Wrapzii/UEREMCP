@@ -197,6 +197,64 @@ that the subject changed the captured frame; it does not judge appearance,
 compile validity, material correctness, or gameplay integration. Prefer this for
 pixel evidence after structural create/inspect — not instead of them.
 
+Also on the same toolset (status **partial** until live checklist):
+`CaptureWorldFrames` (`capture_world_frames`), `CaptureMaterialFrames`
+(`capture_material_frames`), `CaptureAnimationFrames`
+(`capture_animation_frames`). See
+[`tests/visual/MATERIAL_CAPTURE_PROTOCOL.md`](../../tests/visual/MATERIAL_CAPTURE_PROTOCOL.md)
+and
+[`tests/visual/ANIMATION_CAPTURE_PROTOCOL.md`](../../tests/visual/ANIMATION_CAPTURE_PROTOCOL.md).
+
+---
+
+## Environment — `build_environment` / `inspect_environment` / `validate_environment`
+
+| | |
+|---|---|
+| Status | **partial** |
+| Toolset / tools | `UeremcpEnvironment.UeremcpEnvironmentToolset` → `BuildEnvironment`, `InspectEnvironment`, `ValidateEnvironment` (+ stage primitives) |
+| Spec schema | [`build_environment.schema.json`](../../schemas/domains/environment/build_environment.schema.json) |
+
+```json
+{
+  "protocol_version": "1.0",
+  "action": "build_environment",
+  "target": { "asset_path": "/Game/__UeremcpPoc/MountainRiverRain" },
+  "options": { "dry_run": true, "validate": true },
+  "specification": { "seed": 42 }
+}
+```
+
+Prefer `BuildEnvironment` for mountain/river/forest/rain. Screenshots never gate
+acceptance — pair with `ValidateEnvironment` then optional `CaptureWorldFrames`.
+
+---
+
+## Systems — audio / replication / world partition
+
+| | |
+|---|---|
+| Status | **partial** |
+| Toolset / tools | `UeremcpSystems.UeremcpSystemsToolset` → `CreateAudioCue`, `InspectAudio`, `ValidateReplication`, `InspectWorldPartition`, `RepairWorldPartition` |
+| Spec schemas | [`schemas/domains/audio/`](../../schemas/domains/audio/), [`networking/`](../../schemas/domains/networking/), [`world_partition/`](../../schemas/domains/world_partition/) |
+
+```json
+{
+  "protocol_version": "1.0",
+  "action": "create_audio_cue",
+  "target": { "asset_path": "/Game/__UeremcpTests/Audio/SC_Cast" },
+  "options": { "dry_run": true },
+  "specification": {
+    "sound_waves": ["/Game/Audio/SW_Cast"],
+    "create_attenuation": true
+  }
+}
+```
+
+`RepairWorldPartition` defaults to `options.dry_run: true` and must no-op without
+explicit `dry_run: false` plus destructive opt-in. MetaSound graph authoring and
+WP HLOD builders remain blocked.
+
 ---
 
 ## Material — `create_vfx_material`

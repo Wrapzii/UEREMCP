@@ -20,8 +20,8 @@ rationale remains above/in git history. Machine-readable states:
 | 2.4 | route_prototype | `completed_static_live_pending` | Production/offline twins, catalog dependency ordering, deterministic held-out suite, and absent-name guards present |
 | 2.5 | domain validation in CI | `implemented_static_live_pending` | Canonical enum must map to a live UEREMCP toolset; stale/missing mappings fail closed |
 | 3.1 | Compile VisualCapture | `superseded_by_verified_implementation` | On main; Validation DLL present |
-| 3.2 | Capture beyond Niagara | `completed_and_verified` | `CaptureWorldFrames` added |
-| 3.3 | GetSystemSummary crash | `superseded_by_verified_implementation` | Fail-soft guards in `UeremcpNiagaraInspect.cpp` on main |
+| 3.2 | Capture beyond Niagara | `completed_with_documented_limitation` | `CaptureWorldFrames` + `CaptureMaterialFrames` + `CaptureAnimationFrames` on tip; live RE checklist still pending for material/animation |
+| 3.3 | GetSystemSummary crash | `completed_with_documented_limitation` | Fail-soft guards + Validation missing-asset regression; throwaway crash isolation still open |
 | 4.x | Coverage gaps landscape/water/foliage/mesh | `completed_with_documented_limitation` | `BuildEnvironment` semantic tool; GeometryScript mesh composition deferred (landscape path preferred) |
 | 4.audio | Audio semantic | `completed_with_documented_limitation` | `UeremcpSystems.CreateAudioCue` / `InspectAudio` (SoundCue+attenuation). MetaSound graph authoring still blocked |
 | 4.net | Networking semantic | `completed_with_documented_limitation` | `ValidateReplication` goal audit (+ optional configure). Multi-client proof remains WS-11/RB-14 |

@@ -58,7 +58,13 @@ Canonical policy: [`docs/guide/tool-selection-policy.md`](guide/tool-selection-p
 | VFX material | `UeremcpMaterial…CreateVfxMaterial` | `create_vfx_material` | MaterialTools expressions |
 | Template instantiate | `UeremcpTemplates…InstantiateTemplate` | `instantiate_template` | inventing ExecutePlan as first choice |
 | Job poll/cancel | `UeremcpReference…GetJobResult` / `CancelJob` | `get_job_result` / `cancel_job` | MCP cancel alone |
-| Visual frames | `UeremcpValidation…CaptureEffectFrames` | `capture_effect_frames` | screenshot authoring |
+| Visual frames (Niagara) | `UeremcpValidation…CaptureEffectFrames` | `capture_effect_frames` | screenshot authoring |
+| World / material / anim frames | `…CaptureWorldFrames` / `CaptureMaterialFrames` / `CaptureAnimationFrames` | `capture_*_frames` | HighResShot-only |
+| Mountain/river/forest/rain | `UeremcpEnvironment…BuildEnvironment` | `build_environment` | Landscape/Water primitive chains |
+| Environment inspect/validate | `…InspectEnvironment` / `ValidateEnvironment` | `inspect_environment` / `validate_environment` | screenshot-as-gate |
+| SoundCue + attenuation | `UeremcpSystems…CreateAudioCue` | `create_audio_cue` | MetaSound inventing |
+| Replication / Pattern B | `…ValidateReplication` | `validate_replication` | `get/set_variable_replication` loops |
+| World Partition | `…InspectWorldPartition` / `RepairWorldPartition` | `inspect_world_partition` / `repair_world_partition` | silent WP commandlets; HLOD claims |
 
 Epic tools remain appropriate for read-only discovery and catalog gaps
 (`planned` / `research`). This table does **not** claim arbitrary LLM tool choice
@@ -93,6 +99,22 @@ names below are the semantic actions; notes map to the live tool surface.
 | `validate_asset` | validation | WS-11 | planned | |
 | `validate_system` | validation | WS-11 | planned | |
 | `capture_effect_frames` | validation | WS-11 | available | `UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames`; warm path live-verified. Cold renderer residual: first call may return ADR-0009 `partially_completed`; poll `get_job_result` (non-cancellable). Fresh-editor cold path completed after one poll with changed lit pixels. Requires editor world + renderer/RHI; pixel change proves rendering, not appearance or structural correctness. |
+| `capture_world_frames` | validation | WS-11 | partial | Editor-world SceneCapture2D + structural snapshot; beauty not gated; live RE pending on general-capture tip |
+| `capture_material_frames` | validation | WS-11 | partial | Disposable lit stage + structural material identity; live pending |
+| `capture_animation_frames` | validation | WS-11 | partial | Posed AnimSequence capture; needs `skeletal_mesh_path` when sequence has no mesh; live pending |
+
+### Environment / world building
+
+| Action | Domain | WS | Status | Brief |
+|---|---|---|---|---|
+| `build_environment` | environment | WS-01 | partial | Seeded landscape + river + forest banks + rain (+ optional capture). Dry-run default. Screenshots never the structural gate. |
+| `create_landscape` | environment | WS-01 | partial | Heightmap import via `ALandscape::Import`; ExecutePlan terrain stage |
+| `create_water_body` | environment | WS-01 | partial | WaterBody river/lake/ocean from spline |
+| `scatter_foliage` | environment | WS-01 | partial | Seeded HISM with river exclusion corridor |
+| `attach_weather` | environment | WS-01 | partial | Rain/fog attach; PIE camera-follow proof still limited |
+| `place_structures` | environment | WS-01 | partial | GeometryScript AppendBox along spline |
+| `inspect_environment` | environment | WS-01 | partial | Read-only environment metrics |
+| `validate_environment` | environment | WS-01 | partial | Structural gates only |
 
 ### Niagara
 
