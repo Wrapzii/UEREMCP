@@ -1248,6 +1248,39 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	GenerateHeightmap(Spec, River, Heights, HeightMetrics);
 	Result.StructuralMetrics = HeightMetrics;
 	const FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+
+	// MCP-006. A staged call that PLACES on terrain but does not REBUILD it still
+	// recomputes the heightmap from whatever spec it was handed, and then places
+	// against those computed heights.
+	//
+	// If the caller does not repeat the exact terrain parameters that built the
+	// landscape -- seed, profile, size, scale_z -- the computed surface differs
+	// from the real one, and every instance lands at the wrong Z. That is the
+	// floating castle, huts and boardwalk in the field-test screenshots, and the
+	// "ScatterFoliage mutated the heightmap again" report: the hash changed
+	// because the recomputed surface was a different surface.
+	//
+	// The landscape already records its hash as a level tag, so this is
+	// checkable. Refuse rather than place into a fiction.
+	if (!bOwnsMapLifecycle && !Spec.bIncludeTerrain)
+	{
+		const FString ExistingHash = ReadEnvironmentTag(World, TEXT("UEREMCP_HEIGHTMAP_HASH="));
+		if (!ExistingHash.IsEmpty() && ExistingHash != HeightmapHash)
+		{
+			Result.Status = TEXT("rejected");
+			Result.Summary = FString::Printf(
+				TEXT("terrain parameters do not match the landscape in this level "
+					 "(level heightmap_hash=%s, this request computes %s). Placement would "
+					 "use a different surface than the one that exists and every actor would "
+					 "land at the wrong height. Repeat the SAME specification.seed and "
+					 "terrain block used to build the landscape, or call build_environment "
+					 "to rebuild the whole scene."),
+				*ExistingHash, *HeightmapHash);
+			Result.StructuralMetrics->SetStringField(TEXT("level_heightmap_hash"), ExistingHash);
+			Result.StructuralMetrics->SetStringField(TEXT("request_heightmap_hash"), HeightmapHash);
+			return Result;
+		}
+	}
 	const uint32 RevisionCrc = FCrc::StrCrc32(*FString::Printf(
 		TEXT("env-v2-1|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d|%s|%d|%d"),
 		*HeightmapHash,
