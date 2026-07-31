@@ -31,9 +31,10 @@
       "action": "scatter_foliage",
       "depends_on_actions": [
         "create_landscape",
-        "create_water_body"
+        "create_water_body",
+        "submit_mesh_ops"
       ],
-      "why": "bank forest needs terrain + river exclusion corridor"
+      "why": "bank forest needs terrain + river exclusion corridor, and a real mesh or it places cubes"
     },
     {
       "action": "attach_weather",
@@ -98,6 +99,20 @@
       "action": "get_job_result",
       "depends_on_actions": [],
       "why": "poll after a prior partially_completed response"
+    },
+    {
+      "action": "create_master_material",
+      "depends_on_actions": [
+        "create_procedural_texture"
+      ],
+      "why": "a master samples the textures it wires; generate them first"
+    },
+    {
+      "action": "submit_mesh_ops",
+      "depends_on_actions": [
+        "create_master_material"
+      ],
+      "why": "a mesh needs a surface material before it is useful downstream"
     }
   ],
   "operations": [
@@ -1418,6 +1433,105 @@
         "specification": {
           "skeletal_mesh_path": "/Game/Characters/SK_Hero",
           "frame_count": 4
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateMasterMaterial",
+      "action": "create_master_material",
+      "use_when": [
+        "material from scratch",
+        "no assets yet",
+        "author a master material",
+        "empty project",
+        "need a material before anything else"
+      ],
+      "do_not_use_for": [
+        "material instances with preset defaults",
+        "texture generation"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Check skipped_features; then CreateVfxMaterial with master_template set to primary_asset.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_master_material",
+        "request_id": "mm-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Materials/Masters/M_Stone"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "features": [
+            "fresnel",
+            "erosion",
+            "dynamic_color"
+          ]
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SubmitMeshOps",
+      "action": "submit_mesh_ops",
+      "use_when": [
+        "mesh from scratch",
+        "need a tree mesh",
+        "author geometry",
+        "no static mesh exists",
+        "build a rock or tower"
+      ],
+      "do_not_use_for": [
+        "placing meshes in a level",
+        "landscape terrain"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "no_change_required",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Pass primary_asset as biome.mesh_path to ScatterFoliage, or as a kit mesh to PlaceStructures.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "submit_mesh_ops",
+        "request_id": "mo-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Meshes/SM_Conifer"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "ops": [
+            {
+              "op": "cylinder",
+              "radius": 18,
+              "height": 220
+            },
+            {
+              "op": "cone",
+              "base_radius": 130,
+              "height": 420,
+              "origin": [
+                0,
+                0,
+                180
+              ]
+            }
+          ]
         }
       }
     }

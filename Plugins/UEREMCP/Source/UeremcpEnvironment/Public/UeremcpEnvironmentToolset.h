@@ -122,6 +122,31 @@ public:
 	static FString PlaceStructures(const FString& RequestJson);
 
 	/**
+	 * Author a StaticMesh asset from ordered GeometryScript primitive ops.
+	 *
+	 * Use when: you need a mesh from scratch in an empty project — a tree, a
+	 *   rock, a tower — before anything can scatter or place it. This is the mesh
+	 *   PRIMITIVE FLOOR: it composes geometry and consumes no existing asset.
+	 * Inputs: action=submit_mesh_ops, target.asset_path (StaticMesh under
+	 *   /Game/__UeremcpTests/ or /Game/__UeremcpPoc/); specification.ops is a
+	 *   REQUIRED non-empty array applied in order. Each op is one of:
+	 *   {"op":"box","size":[x,y,z],"origin":[x,y,z]},
+	 *   {"op":"cylinder","radius":r,"height":h},
+	 *   {"op":"cone","base_radius":r,"top_radius":r2,"height":h},
+	 *   {"op":"sphere","radius":r}.
+	 * Outputs: primary_asset (the StaticMesh). An unsupported op REJECTS the whole
+	 *   request — a partially built mesh is indistinguishable from a correct one.
+	 * Do not use for: placing meshes in a level — use ScatterFoliage or
+	 *   PlaceStructures with the asset path this returns.
+	 * Next tool: ScatterFoliage with biome.mesh_path set to this asset path.
+	 * Example: {"protocol_version":"1.0","action":"submit_mesh_ops","target":{"asset_path":"/Game/__UeremcpTests/Meshes/SM_Conifer"},"options":{"dry_run":true},"specification":{"ops":[{"op":"cylinder","radius":18,"height":220},{"op":"cone","base_radius":130,"height":420,"origin":[0,0,180]}]}}
+	 *
+	 * @param RequestJson  Request with action submit_mesh_ops and target.asset_path set.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString SubmitMeshOps(const FString& RequestJson);
+
+	/**
 	 * Read-only inspect of environment actors/metrics in the current editor world.
 	 *
 	 * Use when: diagnostics after BuildEnvironment / ExecutePlan.

@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "scenario": "poc_a",
+  "run_id": "poc-a-77967df8-1511-473c-af22-ffe65d62b66a",
+  "outcome": "fail",
+  "criteria": {
+    "A1": {
+      "status": "fail"
+    },
+    "A2": {
+      "status": "fail"
+    },
+    "A3": {
+      "status": "fail"
+    },
+    "A4": {
+      "status": "fail"
+    },
+    "A5": {
+      "status": "fail"
+    },
+    "A6": {
+      "status": "fail"
+    },
+    "A7": {
+      "status": "fail"
+    },
+    "A8": {
+      "status": "fail"
+    },
+    "A9": {
+      "status": "fail"
+    },
+    "A10": {
+      "status": "fail"
+    },
+    "A11": {
+      "status": "fail"
+    }
+  },
+  "metrics": {
+    "mcp_round_trips": 1,
+    "internal_operations": 0.0,
+    "tokens_total": 0,
+    "wall_clock_seconds": 1.6738129,
+    "primitive_call_equivalent": 15
+  },
+  "errors": [
+    "response must contain exactly one diagnostics graph"
+  ],
+  "raw_responses": [
+    {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "!!! STOP - BATCH THIS WORK. DO NOT KEEP ONE-SHOTTING. !!!\nYou just paid a FULL context tool round-trip for a SINGLE search/edit hop.\nHOW TO SEARCH (Epic find_* is one query each - wrap many queries):\n  ONE ProgrammaticToolset.execute_tool_script that loops your search terms\n  e.g. ['CastFirebolt','IA_Cast','ControlRotation','GetControlRotation']\n  and returns {term: results}. Misses are fine. ONE MCP hop.\nDo NOT fire find_nodes twice for near-duplicates. Prefer one broader term,\nor dump ALL candidate terms in that script.\nFOR EDITS: write_graph_dsl (whole graph) + compile once; Niagara: ONE script.\n--- real tool result follows (not blocked - use the data, then BATCH) ---\n"
+          },
+          {
+            "type": "text",
+            "text": "{\"returnValue\":\"{\\r\\n\\t\\\"protocol_version\\\": \\\"1.0\\\",\\r\\n\\t\\\"request_id\\\": \\\"poc-a-77967df8-1511-473c-af22-ffe65d62b66a-read\\\",\\r\\n\\t\\\"status\\\": \\\"rejected\\\",\\r\\n\\t\\\"summary\\\": \\\"Blueprint not found at '/Game/__UeremcpPoc/Blueprint/BP_CompleteRoundTripTransport.BP_CompleteRoundTripTransport'\\\",\\r\\n\\t\\\"metrics\\\":\\r\\n\\t{\\r\\n\\t\\t\\\"mcp_round_trips\\\": 1,\\r\\n\\t\\t\\\"internal_operations\\\": 0\\r\\n\\t}\\r\\n}\"}"
+          }
+        ]
+      }
+    }
+  ]
+}

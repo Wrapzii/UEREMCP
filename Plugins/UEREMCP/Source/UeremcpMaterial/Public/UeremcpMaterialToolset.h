@@ -67,4 +67,26 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
 	static FString CreateProceduralTexture(const FString& RequestJson);
+
+	/**
+	 * Author a master material directly from a feature list. No template library.
+	 *
+	 * Use when: you need a material from scratch in an empty project, or a master
+	 *   whose feature set no preset covers. This is the material PRIMITIVE FLOOR:
+	 *   it composes MaterialEditingLibrary expressions and needs no existing asset.
+	 * Inputs: action=create_master_material, target.asset_path (UMaterial under
+	 *   /Game/__UeremcpTests/ or /Game/__UeremcpPoc/); specification.features is a
+	 *   REQUIRED non-empty array of feature tokens; specification.trail optional bool.
+	 *   Known tokens: radial_falloff, animated_noise, fresnel, erosion, depth_fade,
+	 *   distortion, panning_textures, flow_maps, flipbook_subuv, dynamic_color,
+	 *   dynamic_intensity. Unknown tokens are reported in skipped_features, not faked.
+	 * Outputs: primary_asset (the master), wired_features, skipped_features.
+	 * Do not use for: material INSTANCES with preset defaults — use CreateVfxMaterial.
+	 * Next tool: CreateVfxMaterial with master_template set to this asset path.
+	 * Example: {"protocol_version":"1.0","action":"create_master_material","target":{"asset_path":"/Game/__UeremcpTests/Materials/Masters/M_Stone"},"options":{"dry_run":true},"specification":{"features":["fresnel","erosion","dynamic_color"]}}
+	 *
+	 * @param RequestJson  Request with action create_master_material and target.asset_path set.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
+	static FString CreateMasterMaterial(const FString& RequestJson);
 };

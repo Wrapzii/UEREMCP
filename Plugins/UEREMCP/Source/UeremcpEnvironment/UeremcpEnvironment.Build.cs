@@ -35,6 +35,8 @@ public class UeremcpEnvironment : ModuleRules
 			"GeometryFramework",
 			"GeometryCore",
 			"GeometryScriptingCore",
+			// submit_mesh_ops: StaticMesh asset creation from a UDynamicMesh.
+			"GeometryScriptingEditor",
 
 			"UeremcpCore",
 			"UeremcpSecurity",
