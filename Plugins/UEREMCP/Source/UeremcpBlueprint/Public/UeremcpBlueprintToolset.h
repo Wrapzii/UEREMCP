@@ -31,6 +31,8 @@ public:
 	 * Liveness probe for the Blueprint domain module.
 	 * Use when: confirming Blueprint toolset registration.
 	 * Do not use for: reading or writing graphs.
+	 * Inputs: no arguments.
+	 * Example: call Ping with no arguments.
 	 * @return Response envelope JSON (protocol_version, status, summary, metrics).
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
@@ -40,6 +42,8 @@ public:
 	 * Parses a request envelope and echoes understood fields inside a response envelope.
 	 * Use when: validating envelope shape without touching assets.
 	 * Do not use for: production graph work.
+	 * Inputs: requestJson envelope; specification has no required keys.
+	 * Example: {"protocol_version":"1.0","action":"echo","specification":{}}
 	 *
 	 * @param RequestJson Request envelope JSON (schemas/envelope/request.schema.json).
 	 * @return Response envelope JSON. Malformed input yields status "rejected".
@@ -56,6 +60,8 @@ public:
 	 * Outputs: graph JSON + diagnostics + revision.
 	 * Do not use for: pin-by-pin BlueprintTools loops.
 	 * Next tool: SubmitGraph with expected_revision after editing the JSON.
+	 * Specification has no required keys.
+	 * Example: {"protocol_version":"1.0","action":"read_graph","target":{"asset_path":"/Game/BP_Mage","graph_id":"EventGraph"},"specification":{}}
 	 *
 	 * @param RequestJson Request envelope; target.asset_path required.
 	 * @return Response envelope with diagnostics.graphs at response_detail complete.
@@ -72,6 +78,7 @@ public:
 	 * Outputs: modified_and_validated only after compile/save/re-read evidence.
 	 * Do not use for: create_node/connect_pins chains.
 	 * Next tool: ReadGraph to verify; on revision conflict re-read then resubmit.
+	 * Example: {"protocol_version":"1.0","action":"submit_graph","mode":"replace","target":{"asset_path":"/Game/BP_Mage","graph_id":"EventGraph"},"expected_revision":"<read_graph revision>","options":{"dry_run":true},"specification":{"graph":{"schema_version":"1.0","nodes":[],"edges":[]}}}
 	 *
 	 * MCP toolset: UeremcpBlueprint.UeremcpBlueprintToolset
 	 * [VERIFIED-RUNTIME: user-unreal-mcp list_toolsets, 2026-07-30]

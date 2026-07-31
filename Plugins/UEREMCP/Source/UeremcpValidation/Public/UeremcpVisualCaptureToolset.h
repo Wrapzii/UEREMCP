@@ -30,6 +30,7 @@ public:
 	 * Outputs: frame paths under Saved/UEREMCP/VfxCapture + numeric deltas.
 	 * Do not use for: authoring assets; HighResShot-only workflows when this tool exists.
 	 * Next tool: GetJobResult once if cold renderer returns partially_completed.
+	 * Example: {"protocol_version":"1.0","action":"capture_effect_frames","target":{"asset_path":"/Game/VFX/NS_PoisonCloud"},"options":{"validate":true},"specification":{"frame_count":6}}
 	 *
 	 * This verifies that pixels changed against the empty-stage baseline. It does
 	 * not judge appearance quality or prove that the source Niagara asset compiles.
@@ -46,6 +47,7 @@ public:
 	 * specification.frame_count, warm_up_ticks, width/height optional.
 	 * Outputs: PNG paths + basic pixel stats. Not a quality gate (BACKLOG 5.8).
 	 * Do not use for: claiming success from a screenshot alone.
+	 * Example: {"protocol_version":"1.0","action":"capture_world_frames","target":{"asset_path":"/Game/Maps/Alpine"},"options":{"validate":true},"specification":{"frame_count":1,"warm_up_ticks":30,"width":1280,"height":720}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Validation")
 	static FString CaptureWorldFrames(const FString& RequestJson);
