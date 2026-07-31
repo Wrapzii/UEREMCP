@@ -6,11 +6,24 @@
 // count (docs/WHY.md), so a round trip spent on "what now?" is among the most
 // expensive things the protocol can do.
 //
-// The catalog already declares the forward chain per operation. This serves it
-// on the response, with THIS response's primary_asset already substituted into
-// the next request. So after submit_mesh_ops the agent receives a
-// scatter_foliage request with biome.mesh_path already filled in, and can send
-// it without thinking, looking anything up, or asking.
+// What gets offered is the GRAPH NEIGHBOURHOOD, not a single forward edge:
+//
+//   implied     the declared next step -- what usually follows
+//   consumes    one layer DOWN: what this is built from
+//   consumed_by one layer UP: what is built from this
+//
+// A single forward edge only helps an agent already going the right way. The
+// neighbourhood also covers "I have the material, I still need its texture"
+// (down) and "I have the mesh, what wants a mesh?" (up). Pairs become
+// bidirectional for free: material offers texture, texture offers material.
+//
+// Up and down are DERIVED by inverting depends_on_actions, so they cost no
+// hand-maintained table and cannot disagree with the dependency graph the
+// router and execute_plan already use.
+//
+// Each carries THIS response's primary_asset already substituted, so after
+// submit_mesh_ops the agent receives a scatter_foliage request with
+// biome.mesh_path filled in and can send it without looking anything up.
 //
 // Advisory, never binding. The agent may ignore every suggestion.
 
@@ -36,33 +49,73 @@ namespace
 		return FString();
 	}
 
-	/** action -> its next_actions array. Parsed once; the catalog is static at runtime. */
-	const TMap<FString, TArray<TSharedPtr<FJsonObject>>>& ChainByAction()
+	struct FGraph
 	{
-		static TMap<FString, TArray<TSharedPtr<FJsonObject>>> Chain;
+		/** action -> declared next_actions entries */
+		TMap<FString, TArray<TSharedPtr<FJsonObject>>> Chain;
+		/** action -> what it is built FROM (one layer down) */
+		TMap<FString, TArray<FString>> Consumes;
+		/** action -> what is built FROM IT (one layer up) */
+		TMap<FString, TArray<FString>> ConsumedBy;
+		/** action -> its `why` from the dependency graph, for explaining an edge */
+		TMap<FString, FString> Why;
+	};
+
+	/** Parsed once; the catalog is static at runtime. */
+	const FGraph& Graph()
+	{
+		static FGraph G;
 		static bool bLoaded = false;
 		if (bLoaded)
 		{
-			return Chain;
+			return G;
 		}
 		bLoaded = true;
+		TMap<FString, TArray<TSharedPtr<FJsonObject>>>& Chain = G.Chain;
 
 		FString Raw;
 		const FString Path = CatalogPath();
 		if (Path.IsEmpty() || !FFileHelper::LoadFileToString(Raw, *Path))
 		{
-			return Chain;
+			return G;
 		}
 		TSharedPtr<FJsonObject> Root;
 		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Raw);
 		if (!FJsonSerializer::Deserialize(Reader, Root) || !Root.IsValid())
 		{
-			return Chain;
+			return G;
 		}
+
+		// Derive both directions from the one dependency graph. A separate
+		// hand-written "what comes after" table would drift from it, and the
+		// drift would be invisible until an agent followed a stale edge.
+		const TArray<TSharedPtr<FJsonValue>>* Deps = nullptr;
+		if (Root->TryGetArrayField(TEXT("dependencies"), Deps) && Deps)
+		{
+			for (const TSharedPtr<FJsonValue>& V : *Deps)
+			{
+				const TSharedPtr<FJsonObject> Obj = V->AsObject();
+				if (!Obj.IsValid()) continue;
+				FString Action;
+				if (!Obj->TryGetStringField(TEXT("action"), Action) || Action.IsEmpty()) continue;
+				FString Why;
+				if (Obj->TryGetStringField(TEXT("why"), Why)) G.Why.Add(Action, Why);
+				const TArray<TSharedPtr<FJsonValue>>* Parents = nullptr;
+				if (!Obj->TryGetArrayField(TEXT("depends_on_actions"), Parents) || !Parents) continue;
+				for (const TSharedPtr<FJsonValue>& P : *Parents)
+				{
+					const FString Parent = P->AsString();
+					if (Parent.IsEmpty()) continue;
+					G.Consumes.FindOrAdd(Action).AddUnique(Parent);
+					G.ConsumedBy.FindOrAdd(Parent).AddUnique(Action);
+				}
+			}
+		}
+
 		const TArray<TSharedPtr<FJsonValue>>* Ops = nullptr;
 		if (!Root->TryGetArrayField(TEXT("operations"), Ops) || !Ops)
 		{
-			return Chain;
+			return G;
 		}
 		for (const TSharedPtr<FJsonValue>& V : *Ops)
 		{
@@ -86,7 +139,7 @@ namespace
 				Chain.Add(Action, MoveTemp(Entries));
 			}
 		}
-		return Chain;
+		return G;
 	}
 
 	/**
@@ -156,26 +209,23 @@ TArray<TSharedPtr<FJsonObject>> FUeremcpNextActions::Suggest(
 		return Out;
 	}
 
-	const TMap<FString, TArray<TSharedPtr<FJsonObject>>>& Chain = ChainByAction();
-	const TArray<TSharedPtr<FJsonObject>>* Entries = Chain.Find(CompletedAction);
-	if (!Entries)
-	{
-		return Out;
-	}
+	const FGraph& G = Graph();
 
-	int32 Index = 0;
-	for (const TSharedPtr<FJsonObject>& Entry : *Entries)
+	// One entry per action, best-first. An action reachable by two relations is
+	// offered once, under the strongest -- repeating it as three "options" makes
+	// a two-choice decision look like a six-choice one.
+	TSet<FString> Emitted;
+	Emitted.Add(CompletedAction);
+
+	auto Add = [&](const FString& NextAction, const FString& Relation,
+	               const FString& Why, const TSharedPtr<FJsonObject>* Hint,
+	               const TCHAR* Confidence)
 	{
-		FString NextAction;
-		if (!Entry->TryGetStringField(TEXT("action"), NextAction) || NextAction.IsEmpty())
+		if (NextAction.IsEmpty() || Emitted.Contains(NextAction))
 		{
-			continue;
+			return;
 		}
-		FString Why;
-		Entry->TryGetStringField(TEXT("why"), Why);
-
-		const TSharedPtr<FJsonObject>* Hint = nullptr;
-		Entry->TryGetObjectField(TEXT("specification_hint"), Hint);
+		Emitted.Add(NextAction);
 
 		TSharedPtr<FJsonObject> Request = MakeShared<FJsonObject>();
 		Request->SetStringField(TEXT("protocol_version"), TEXT("1.0"));
@@ -188,11 +238,64 @@ TArray<TSharedPtr<FJsonObject>> FUeremcpNextActions::Suggest(
 
 		TSharedPtr<FJsonObject> Suggestion = MakeShared<FJsonObject>();
 		Suggestion->SetStringField(TEXT("action"), NextAction);
+		Suggestion->SetStringField(TEXT("relation"), Relation);
 		Suggestion->SetStringField(TEXT("why"), Why);
 		Suggestion->SetObjectField(TEXT("request_json"), Request);
-		Suggestion->SetStringField(TEXT("confidence"), Index == 0 ? TEXT("high") : TEXT("medium"));
+		Suggestion->SetStringField(TEXT("confidence"), Confidence);
 		Out.Add(Suggestion);
-		++Index;
+	};
+
+	// 1. IMPLIED — the declared next step. Highest confidence: it carries a
+	//    specification_hint, so its request arrives ready to send.
+	if (const TArray<TSharedPtr<FJsonObject>>* Entries = G.Chain.Find(CompletedAction))
+	{
+		int32 Index = 0;
+		for (const TSharedPtr<FJsonObject>& Entry : *Entries)
+		{
+			FString NextAction;
+			if (!Entry->TryGetStringField(TEXT("action"), NextAction)) continue;
+			FString Why;
+			Entry->TryGetStringField(TEXT("why"), Why);
+			const TSharedPtr<FJsonObject>* Hint = nullptr;
+			Entry->TryGetObjectField(TEXT("specification_hint"), Hint);
+			Add(NextAction, TEXT("implied"), Why, Hint,
+				Index == 0 ? TEXT("high") : TEXT("medium"));
+			++Index;
+		}
+	}
+
+	// 2. UP — what is built FROM this. "I have a mesh; what wants a mesh?"
+	if (const TArray<FString>* Up = G.ConsumedBy.Find(CompletedAction))
+	{
+		for (const FString& Consumer : *Up)
+		{
+			const FString* EdgeWhy = G.Why.Find(Consumer);
+			Add(Consumer, TEXT("consumed_by"),
+				EdgeWhy ? *EdgeWhy
+				        : FString::Printf(TEXT("%s consumes what you just made"), *Consumer),
+				nullptr, TEXT("medium"));
+		}
+	}
+
+	// 3. DOWN — what this is built FROM. Offered even though it is "behind" the
+	//    agent, because the common failure is having the thing and still lacking
+	//    its inputs: a master material with no texture, a scatter with no mesh.
+	if (const TArray<FString>* Down = G.Consumes.Find(CompletedAction))
+	{
+		const FString* EdgeWhy = G.Why.Find(CompletedAction);
+		for (const FString& Input : *Down)
+		{
+			Add(Input, TEXT("consumes"),
+				EdgeWhy ? *EdgeWhy
+				        : FString::Printf(TEXT("%s supplies an input this consumes"), *Input),
+				nullptr, TEXT("low"));
+		}
+	}
+
+	// A menu longer than a handful stops being guidance and becomes a listing.
+	if (Out.Num() > 5)
+	{
+		Out.SetNum(5);
 	}
 	return Out;
 }

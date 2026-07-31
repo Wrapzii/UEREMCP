@@ -282,7 +282,48 @@ class TestNextActionsWiring(unittest.TestCase):
                                   "response.schema.json"), encoding="utf-8") as fh:
             schema = json.load(fh)
         item = schema["properties"]["next_actions"]["items"]
-        self.assertEqual(sorted(item["required"]), ["action", "request_json", "why"])
+        self.assertEqual(sorted(item["required"]),
+                         ["action", "relation", "request_json", "why"])
+        self.assertEqual(sorted(item["properties"]["relation"]["enum"]),
+                         ["consumed_by", "consumes", "implied"])
+
+    def test_all_three_directions_are_emitted(self):
+        """A single forward edge only helps an agent already going the right
+        way. Up covers "I have a mesh, what wants a mesh?"; down covers "I have
+        the material and still need its texture"."""
+        body = read(os.path.join(SOURCE, "UeremcpCore", "Private",
+                                 "UeremcpNextActions.cpp"))
+        for relation in ("implied", "consumed_by", "consumes"):
+            self.assertIn('TEXT("%s")' % relation, body)
+
+    def test_up_and_down_are_derived_not_hand_written(self):
+        """A separate "what comes after" table would drift from the dependency
+        graph, and the drift would be invisible until an agent followed a stale
+        edge."""
+        body = read(os.path.join(SOURCE, "UeremcpCore", "Private",
+                                 "UeremcpNextActions.cpp"))
+        self.assertIn("depends_on_actions", body)
+        self.assertIn("ConsumedBy", body)
+
+    def test_suggestions_are_deduplicated_and_capped(self):
+        """An action reachable two ways is offered once; a menu longer than a
+        handful stops being guidance and becomes a listing."""
+        body = read(os.path.join(SOURCE, "UeremcpCore", "Private",
+                                 "UeremcpNextActions.cpp"))
+        self.assertIn("Emitted", body)
+        self.assertIn("SetNum(5)", body)
+
+    def test_pairs_are_bidirectional_in_the_graph(self):
+        """material offers texture, texture offers material -- for free, from
+        one edge, because up and down are inverses."""
+        edges = {d["action"]: set(d.get("depends_on_actions") or [])
+                 for d in catalog()["dependencies"]}
+        self.assertIn("create_procedural_texture", edges.get("create_master_material", set()))
+        inverted = set()
+        for action, parents in edges.items():
+            if "create_procedural_texture" in parents:
+                inverted.add(action)
+        self.assertIn("create_master_material", inverted)
 
     def test_envelope_populates_centrally(self):
         """Asking every domain to know the whole graph is how the graph goes

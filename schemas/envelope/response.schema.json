@@ -371,14 +371,15 @@
     },
     "next_actions": {
       "type": "array",
-      "description": "What to call next, served WITH the result so the agent does not spend a round trip re-asking the router. Each entry carries a ready request_json with this response's primary_asset already substituted where the next action consumes it. Ordered best-first. Advisory: the agent may ignore it.",
+      "description": "The graph NEIGHBOURHOOD of what just completed, served with the result so the agent does not spend a round trip re-asking the router. Covers three directions -- the implied next step, one layer up (what consumes this), and one layer down (what this consumes) -- because a single forward edge only helps an agent already heading the right way. Each carries a ready request_json with this response's primary_asset substituted. Deduplicated, best-first, capped at 5. Advisory: the agent may ignore it.",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
           "action",
-          "why",
-          "request_json"
+          "relation",
+          "request_json",
+          "why"
         ],
         "properties": {
           "action": {
@@ -400,6 +401,15 @@
               "medium",
               "low"
             ]
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "implied",
+              "consumed_by",
+              "consumes"
+            ],
+            "description": "implied = the declared next step. consumed_by = one layer UP, what is built from what you just made. consumes = one layer DOWN, what this is built from -- offered even though it is behind you, because the common failure is having the thing and still lacking its inputs."
           }
         }
       }
