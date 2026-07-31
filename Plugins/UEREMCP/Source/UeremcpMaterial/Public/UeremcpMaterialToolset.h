@@ -98,4 +98,28 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
 	static FString CreateMasterMaterial(const FString& RequestJson);
+
+	/**
+	 * Author a layered LANDSCAPE material from height and slope bands.
+	 *
+	 * Use when: terrain surfaces -- snow above a treeline, rock on steep faces,
+	 *   grass on flats, sand at a coast. This is the SURFACE material floor and
+	 *   the only goal-level path to one.
+	 * Inputs: action=create_landscape_material, target.asset_path (UMaterial);
+	 *   specification.layers is a REQUIRED non-empty array. Each layer:
+	 *   {"name":"grass","base_color":[r,g,b],"roughness":0.9,"min_height_m":0,
+	 *    "max_height_m":800,"max_slope_deg":30,"base_color_texture":"/Game/..."}.
+	 *   Layer name becomes the landscape paint layer.
+	 * Outputs: primary_asset. Sets bUsedWithLandscape, without which a landscape
+	 *   silently refuses the material -- a measured failure.
+	 * Do not use for: VFX or particle materials -- use CreateVfxMaterial or
+	 *   CreateMasterMaterial, whose feature vocabulary is VFX-only and cannot
+	 *   express a surface at all.
+	 * Next tool: assign it to the landscape, then CaptureWorldFrames to look.
+	 * Example: {"protocol_version":"1.0","action":"create_landscape_material","target":{"asset_path":"/Game/__UeremcpPoc/Materials/M_Terrain"},"options":{"dry_run":true},"specification":{"layers":[{"name":"grass","base_color":[0.15,0.35,0.1],"roughness":0.9,"max_height_m":900,"max_slope_deg":30},{"name":"rock","base_color":[0.35,0.33,0.3],"roughness":0.8,"max_slope_deg":90},{"name":"snow","base_color":[0.9,0.92,0.95],"roughness":0.6,"min_height_m":1100}]}}
+	 *
+	 * @param RequestJson  Request with action create_landscape_material and target.asset_path set.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
+	static FString CreateLandscapeMaterial(const FString& RequestJson);
 };

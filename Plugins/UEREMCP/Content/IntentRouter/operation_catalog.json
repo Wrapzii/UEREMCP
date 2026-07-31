@@ -118,6 +118,13 @@
       "action": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
       "depends_on_actions": [],
       "why": "import is a source of geometry, not a consumer -- it runs before anything that places a mesh, and is the alternative to SubmitMeshOps when the result must match a reference rather than merely read as a tree"
+    },
+    {
+      "action": "create_landscape_material",
+      "depends_on_actions": [
+        "create_procedural_texture"
+      ],
+      "why": "layers may sample textures; author or import them first"
     }
   ],
   "operations": [
@@ -1798,6 +1805,89 @@
       "example_request": {
         "source_file": "C:/assets/SK_Char.fbx",
         "destination_path": "/Game/__UeremcpPoc/Characters"
+      }
+    },
+    {
+      "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateLandscapeMaterial",
+      "action": "create_landscape_material",
+      "use_when": [
+        "terrain material",
+        "landscape surface",
+        "snow rock grass sand layers",
+        "height based texture",
+        "slope based texture",
+        "layered terrain shader",
+        "material for the landscape"
+      ],
+      "do_not_use_for": [
+        "VFX or particle materials",
+        "static mesh surfaces"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Assign the material to the landscape and paint or assign the layer weights, then CaptureWorldFrames. Layer names become landscape paint layers.",
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Author several materials in ONE execute_plan with atomic=false and on_failure=continue_independent.",
+      "next_actions": [
+        {
+          "action": "capture_world_frames",
+          "why": "a terrain material is only judgeable by looking at it",
+          "specification_hint": {
+            "frame_count": 1
+          }
+        }
+      ],
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_landscape_material",
+        "request_id": "lm-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Materials/M_Terrain"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "layers": [
+            {
+              "name": "grass",
+              "base_color": [
+                0.15,
+                0.35,
+                0.1
+              ],
+              "roughness": 0.9,
+              "max_height_m": 900,
+              "max_slope_deg": 30
+            },
+            {
+              "name": "rock",
+              "base_color": [
+                0.35,
+                0.33,
+                0.3
+              ],
+              "roughness": 0.8,
+              "max_slope_deg": 90
+            },
+            {
+              "name": "snow",
+              "base_color": [
+                0.9,
+                0.92,
+                0.95
+              ],
+              "roughness": 0.6,
+              "min_height_m": 1100
+            }
+          ]
+        }
       }
     }
   ]

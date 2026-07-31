@@ -17,6 +17,20 @@ struct FUeremcpEnvironmentBuildSpec
 	int32 QuadsPerSection = 63;
 	float ScaleXY = 100.f;
 	float ScaleZ = 100.f;
+
+	/** Opt-in for scale_xy != scale_z. Mismatch bakes wrong slopes in permanently. */
+	bool bAllowNonUniformScale = false;
+	/** Opt-in for scale_z above the needle threshold. */
+	bool bAllowExtremeScaleZ = false;
+	/** realistic | hero | reference | blockout | approximate. Gates primitive output. */
+	FString Quality = TEXT("blockout");
+
+	bool DemandsRealism() const
+	{
+		return Quality.Equals(TEXT("realistic"), ESearchCase::IgnoreCase)
+			|| Quality.Equals(TEXT("hero"), ESearchCase::IgnoreCase)
+			|| Quality.Equals(TEXT("reference"), ESearchCase::IgnoreCase);
+	}
 	EUeremcpTerrainProfile TerrainProfile = EUeremcpTerrainProfile::Mountains;
 	float MountainAmplitude = 0.55f;
 	float ValleyDepth = 0.12f;
@@ -95,6 +109,9 @@ struct FUeremcpEnvironmentBuildResult
 namespace FUeremcpEnvironmentService
 {
 	bool ParseBuildSpec(const TSharedPtr<FJsonObject>& Spec, FUeremcpEnvironmentBuildSpec& Out, FString& OutError);
+
+	/** P0-3 / P0-5: uniform scale, needle threshold, and the realism gate. */
+	bool ValidateScaleAndQuality(const FUeremcpEnvironmentBuildSpec& Spec, FString& OutError);
 
 	bool ValidateIncludeDependencies(const FUeremcpEnvironmentBuildSpec& Spec, FString& OutError);
 

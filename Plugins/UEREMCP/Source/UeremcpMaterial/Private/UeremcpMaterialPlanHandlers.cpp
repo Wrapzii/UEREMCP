@@ -66,6 +66,7 @@ bool FUeremcpMaterialPlanHandlers::Register(FString& OutError)
 	// never plan-registered, so no cascade could run as a batch.
 	if (!Bind(TEXT("create_procedural_texture"), &UUeremcpMaterialToolset::CreateProceduralTexture)) return false;
 	if (!Bind(TEXT("create_master_material"), &UUeremcpMaterialToolset::CreateMasterMaterial)) return false;
+	if (!Bind(TEXT("create_landscape_material"), &UUeremcpMaterialToolset::CreateLandscapeMaterial)) return false;
 	if (!Bind(TEXT("create_vfx_material"), &UUeremcpMaterialToolset::CreateVfxMaterial)) return false;
 
 	OutError.Reset();
@@ -76,5 +77,6 @@ void FUeremcpMaterialPlanHandlers::Unregister()
 {
 	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_procedural_texture"));
 	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_master_material"));
+	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_landscape_material"));
 	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_vfx_material"));
 }

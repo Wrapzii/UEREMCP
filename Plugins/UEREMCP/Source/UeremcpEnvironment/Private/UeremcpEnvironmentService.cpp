@@ -682,6 +682,13 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	ReadObjNumber(TEXT("terrain"), TEXT("scale_xy"), Tmp); if (Tmp > 0) Out.ScaleXY = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("scale_z"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("z_scale"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
+	if (const TSharedPtr<FJsonObject>* TerrainObj = nullptr;
+		Spec->TryGetObjectField(TEXT("terrain"), TerrainObj) && TerrainObj)
+	{
+		(*TerrainObj)->TryGetBoolField(TEXT("allow_nonuniform_scale"), Out.bAllowNonUniformScale);
+		(*TerrainObj)->TryGetBoolField(TEXT("allow_extreme_scale_z"), Out.bAllowExtremeScaleZ);
+	}
+	Spec->TryGetStringField(TEXT("quality"), Out.Quality);
 
 	const TSharedPtr<FJsonObject>* Hydrology = nullptr;
 	if (Spec->TryGetObjectField(TEXT("hydrology"), Hydrology) && Hydrology)
@@ -989,7 +996,64 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		OutError = TEXT("weather.follow must be player_camera or player_pawn");
 		return false;
 	}
+	if (!ValidateScaleAndQuality(Out, OutError))
+	{
+		return false;
+	}
 	return ValidateIncludeDependencies(Out, OutError);
+}
+
+bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
+	const FUeremcpEnvironmentBuildSpec& Spec,
+	FString& OutError)
+{
+	// P0-3. Nonuniform scale bakes wrong slopes in permanently, and every "fix"
+	// after the fact is another rebuild. An agent set (300, 100) and corrected
+	// spiky terrain three times without ever being told the cause.
+	if (!Spec.bAllowNonUniformScale
+		&& !FMath::IsNearlyEqual(Spec.ScaleXY, Spec.ScaleZ, 0.01f * FMath::Max(Spec.ScaleXY, 1.f)))
+	{
+		OutError = FString::Printf(
+			TEXT("terrain.scale_xy (%.1f) != terrain.scale_z (%.1f). Nonuniform scale distorts "
+				 "every slope in the landscape and cannot be corrected without rebuilding. Set "
+				 "both the same, and raise terrain.max_altitude_m to make peaks taller. Pass "
+				 "terrain.allow_nonuniform_scale=true only if the distortion is intended."),
+			Spec.ScaleXY, Spec.ScaleZ);
+		return false;
+	}
+
+	// The default of 100 is itself the needle-maker [VERIFIED-RUNTIME: three builds].
+	constexpr float NeedleThreshold = 5.f;
+	if (!Spec.bAllowExtremeScaleZ && Spec.ScaleZ > NeedleThreshold)
+	{
+		OutError = FString::Printf(
+			TEXT("terrain.scale_z=%.1f produces vertical needles rather than mountains. Sane "
+				 "range is 2-5; start at 3. Raise terrain.max_altitude_m for taller peaks. Pass "
+				 "terrain.allow_extreme_scale_z=true to override."),
+			Spec.ScaleZ);
+		return false;
+	}
+
+	// P0-5. A warning that still succeeds is a warning nobody acts on: an agent
+	// read the note saying primitives cannot match a reference and shipped cone
+	// trees anyway, because the call returned success.
+	if (Spec.DemandsRealism() && Spec.WantsVegetation())
+	{
+		const bool bPlaceholder = Spec.MeshPath.IsEmpty()
+			|| Spec.MeshPath.Contains(TEXT("/Engine/BasicShapes"));
+		if (bPlaceholder)
+		{
+			OutError = FString::Printf(
+				TEXT("quality='%s' forbids placeholder foliage. biome.mesh_path is %s. Resolve a "
+					 "real mesh first: StaticMeshTools.import_file, or search the project for an "
+					 "existing one. submit_mesh_ops output is blockout and does not satisfy a "
+					 "realism goal. Use quality='blockout' if primitives are genuinely wanted."),
+				*Spec.Quality,
+				Spec.MeshPath.IsEmpty() ? TEXT("unset") : TEXT("an engine placeholder"));
+			return false;
+		}
+	}
+	return true;
 }
 
 bool FUeremcpEnvironmentService::ValidateIncludeDependencies(
@@ -1674,6 +1738,65 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			Result.InternalOperations += 1;
 		}
 	}
+	// P0-3 / P0-4. You cannot gate on what you never measure, and "the mountains
+	// look like needles" was only ever visible in a screenshot. A slope
+	// distribution and a flat-area percentage make terrain shape checkable
+	// without a human looking at it.
+	{
+		TSharedPtr<FJsonObject> Scale = MakeShared<FJsonObject>();
+		Scale->SetNumberField(TEXT("xy"), Spec.ScaleXY);
+		Scale->SetNumberField(TEXT("z"), Spec.ScaleZ);
+		Result.StructuralMetrics->SetObjectField(TEXT("actor_scale"), Scale);
+		Result.StructuralMetrics->SetBoolField(TEXT("uniform_scale"),
+			FMath::IsNearlyEqual(Spec.ScaleXY, Spec.ScaleZ, 0.01f * FMath::Max(Spec.ScaleXY, 1.f)));
+
+		if (Heights.Num() > 0)
+		{
+			TArray<float> Slopes;
+			const int32 StepsX = FMath::Max(1, Spec.SizeX / 32);
+			const int32 StepsY = FMath::Max(1, Spec.SizeY / 32);
+			Slopes.Reserve(1024);
+			for (int32 Y = 1; Y < Spec.SizeY - 1; Y += StepsY)
+			{
+				for (int32 X = 1; X < Spec.SizeX - 1; X += StepsX)
+				{
+					Slopes.Add(SampleSlopeDegrees(
+						Heights, Spec, X * Spec.ScaleXY, Y * Spec.ScaleXY));
+				}
+			}
+			if (Slopes.Num() > 0)
+			{
+				Slopes.Sort();
+				auto Pct = [&Slopes](float P) -> float
+				{
+					const int32 Idx = FMath::Clamp(
+						FMath::RoundToInt(P * (Slopes.Num() - 1)), 0, Slopes.Num() - 1);
+					return Slopes[Idx];
+				};
+				int32 Flat = 0;
+				for (float S : Slopes) { if (S < 15.f) ++Flat; }
+
+				TSharedPtr<FJsonObject> Hist = MakeShared<FJsonObject>();
+				Hist->SetNumberField(TEXT("samples"), Slopes.Num());
+				Hist->SetNumberField(TEXT("p50_deg"), Pct(0.50f));
+				Hist->SetNumberField(TEXT("p95_deg"), Pct(0.95f));
+				Hist->SetNumberField(TEXT("max_deg"), Slopes.Last());
+				Result.StructuralMetrics->SetObjectField(TEXT("slope"), Hist);
+				Result.StructuralMetrics->SetNumberField(TEXT("flat_area_pct"),
+					100.f * float(Flat) / float(Slopes.Num()));
+
+				// Buildable flat ground is what a settlement needs; a scene that
+				// is all slope reads as spikes no matter what the peaks measure.
+				if (Slopes.Num() > 0 && (100.f * float(Flat) / float(Slopes.Num())) < 5.f)
+				{
+					Result.Warnings.Add(TEXT(
+						"flat_area_pct below 5% — almost no buildable ground. Lower "
+						"terrain.scale_z or reduce mountain coverage if this should be habitable."));
+				}
+			}
+		}
+	}
+
 	Result.StructuralMetrics->SetNumberField(TEXT("foliage_instances"), FoliageCount);
 	Result.StructuralMetrics->SetBoolField(TEXT("forest_bounded"), FoliageCount <= Spec.MaxFoliageInstances);
 	Result.StructuralMetrics->SetNumberField(TEXT("exclusion_violations"), ExclusionViolations);
