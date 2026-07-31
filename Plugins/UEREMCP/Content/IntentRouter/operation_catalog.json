@@ -11,7 +11,14 @@
     {
       "action": "build_environment",
       "depends_on_actions": [],
-      "why": "composite environment; prefer over staging primitives when building a full biome"
+      "why": "composite environment; prefer over staging primitives when building a full biome",
+      "covers": [
+        "create_landscape",
+        "create_water_body",
+        "scatter_foliage",
+        "attach_weather"
+      ],
+      "covers_note": "One call that performs all four. If the intent enumerates the steps, the router must not silently substitute this composite: its failure modes and placeholder behaviour differ."
     },
     {
       "action": "create_water_body",
@@ -91,6 +98,25 @@
       "action": "get_job_result",
       "depends_on_actions": [],
       "why": "poll after a prior partially_completed response"
+    },
+    {
+      "action": "create_master_material",
+      "depends_on_actions": [
+        "create_procedural_texture"
+      ],
+      "why": "a master samples the textures it wires; generate them first"
+    },
+    {
+      "action": "submit_mesh_ops",
+      "depends_on_actions": [
+        "create_master_material"
+      ],
+      "why": "a mesh needs a surface material before it is useful downstream"
+    },
+    {
+      "action": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
+      "depends_on_actions": [],
+      "why": "import is a source of geometry, not a consumer -- it runs before anything that places a mesh, and is the alternative to SubmitMeshOps when the result must match a reference rather than merely read as a tree"
     }
   ],
   "operations": [
@@ -717,10 +743,25 @@
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.BuildEnvironment",
       "action": "build_environment",
       "use_when": [
-        "landscape", "mountains", "river", "forest", "rain", "snow", "hail", "ice wall",
-        "blizzard", "winter biome", "environment", "new world", "biome", "weather"
+        "landscape",
+        "mountains",
+        "river",
+        "forest",
+        "rain",
+        "snow",
+        "hail",
+        "ice wall",
+        "blizzard",
+        "winter biome",
+        "environment",
+        "new world",
+        "biome",
+        "weather"
       ],
-      "do_not_use_for": ["Niagara VFX authoring", "Blueprint graphs"],
+      "do_not_use_for": [
+        "Niagara VFX authoring",
+        "Blueprint graphs"
+      ],
       "destructive": true,
       "idempotent": true,
       "requires_revision": false,
@@ -736,18 +777,42 @@
         "protocol_version": "1.0",
         "action": "build_environment",
         "request_id": "env-snow-ice",
-        "target": {"asset_path": "/Game/__UeremcpPoc/SnowIceHail"},
-        "options": {"dry_run": true, "validate": true},
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/SnowIceHail"
+        },
+        "options": {
+          "dry_run": true,
+          "validate": true
+        },
         "specification": {
           "schema_version": 2,
           "seed": 8801,
-          "terrain": {"profile": "mountains", "mountain_amplitude": 0.62},
+          "terrain": {
+            "profile": "mountains",
+            "mountain_amplitude": 0.62
+          },
           "weather": [
-            {"phenomenon": "snow", "intensity": 0.75, "follow_player": true},
-            {"phenomenon": "hail", "intensity": 0.35, "follow_player": true}
+            {
+              "phenomenon": "snow",
+              "intensity": 0.75,
+              "follow_player": true
+            },
+            {
+              "phenomenon": "hail",
+              "intensity": 0.35,
+              "follow_player": true
+            }
           ],
-          "structures": [{"kind": "ice_wall_ring", "count": 28, "height": 900}],
-          "lighting": {"preset": "blizzard"}
+          "structures": [
+            {
+              "kind": "ice_wall_ring",
+              "count": 28,
+              "height": 900
+            }
+          ],
+          "lighting": {
+            "preset": "blizzard"
+          }
         }
       }
     },
@@ -1406,6 +1471,186 @@
           "skeletal_mesh_path": "/Game/Characters/SK_Hero",
           "frame_count": 4
         }
+      }
+    },
+    {
+      "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateMasterMaterial",
+      "action": "create_master_material",
+      "use_when": [
+        "material from scratch",
+        "no assets yet",
+        "author a master material",
+        "empty project",
+        "need a material before anything else"
+      ],
+      "do_not_use_for": [
+        "material instances with preset defaults",
+        "texture generation"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Check skipped_features; then CreateVfxMaterial with master_template set to primary_asset.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_master_material",
+        "request_id": "mm-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Materials/Masters/M_Stone"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "features": [
+            "fresnel",
+            "erosion",
+            "dynamic_color"
+          ]
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SubmitMeshOps",
+      "action": "submit_mesh_ops",
+      "use_when": [
+        "mesh from scratch",
+        "need a tree mesh",
+        "author geometry",
+        "no static mesh exists",
+        "build a rock or tower"
+      ],
+      "do_not_use_for": [
+        "placing meshes in a level",
+        "landscape terrain"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "no_change_required",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Pass primary_asset as biome.mesh_path to ScatterFoliage, or as a kit mesh to PlaceStructures.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "submit_mesh_ops",
+        "request_id": "mo-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Meshes/SM_Conifer"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "ops": [
+            {
+              "op": "cylinder",
+              "radius": 18,
+              "height": 220
+            },
+            {
+              "op": "cone",
+              "base_radius": 130,
+              "height": 420,
+              "origin": [
+                0,
+                0,
+                180
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "qualified": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
+      "action": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
+      "use_when": [
+        "import a real mesh",
+        "use a downloaded model",
+        "fbx obj gltf from disk",
+        "trees that match a reference",
+        "photoreal asset",
+        "asset the procedural tools cannot make"
+      ],
+      "do_not_use_for": [
+        "procedural primitives \u2014 use SubmitMeshOps",
+        "placing meshes in a level"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Pass the resulting asset path as biome.mesh_path to ScatterFoliage. This is the ONLY path to reference-faithful geometry: SubmitMeshOps composes boxes/cylinders/cones/spheres and cannot match a photograph.",
+      "example_request": {
+        "source_file": "C:/assets/SM_Pine.fbx",
+        "destination_path": "/Game/__UeremcpPoc/Meshes"
+      }
+    },
+    {
+      "qualified": "editor_toolset.toolsets.texture.TextureTools.import_file",
+      "action": "editor_toolset.toolsets.texture.TextureTools.import_file",
+      "use_when": [
+        "import a texture",
+        "use a downloaded image",
+        "png jpg from disk",
+        "real bark or foliage texture",
+        "photoreal material input"
+      ],
+      "do_not_use_for": [
+        "procedural noise \u2014 use CreateProceduralTexture"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Reference the imported texture from CreateMasterMaterial or CreateVfxMaterial.",
+      "example_request": {
+        "source_file": "C:/assets/T_Bark.png",
+        "destination_path": "/Game/__UeremcpPoc/Textures"
+      }
+    },
+    {
+      "qualified": "editor_toolset.toolsets.skeletal_mesh.SkeletalMeshTools.import_file",
+      "action": "editor_toolset.toolsets.skeletal_mesh.SkeletalMeshTools.import_file",
+      "use_when": [
+        "import a character",
+        "rigged mesh from disk",
+        "skeletal fbx"
+      ],
+      "do_not_use_for": [
+        "static props \u2014 use StaticMeshTools.import_file"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Inspect with UeremcpAnimation.ReadAnimBp or InspectMontage.",
+      "example_request": {
+        "source_file": "C:/assets/SK_Char.fbx",
+        "destination_path": "/Game/__UeremcpPoc/Characters"
       }
     }
   ]

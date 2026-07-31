@@ -71,6 +71,51 @@ def registered_plan_actions() -> set[str]:
     return found
 
 
+SHIPPED_CATALOG = os.path.join(
+    ROOT, "Plugins", "UEREMCP", "Content", "IntentRouter", "operation_catalog.json")
+TOOLS_CATALOG = os.path.join(ROOT, "tools", "intent_router", "operation_catalog.json")
+
+
+def check_catalog_drift() -> int:
+    """The two catalogs must be byte-identical.
+
+    There are two copies: the plugin one the shipped C++ router loads, and the
+    tools one the Python prototype loads. Nothing compared them, so they drifted
+    silently in BOTH directions -- the plugin copy was missing every operation
+    added during a week of work (CreateMasterMaterial, SubmitMeshOps, the
+    import_file entries), and the tools copy carried a stale `GetLog` that does
+    not exist in the registry at all.
+
+    The visible consequence: an agent was told there was no way to import a real
+    mesh. StaticMeshTools.import_file existed the whole time; it simply was not
+    in the catalog the router actually reads, and AllowedInPlan admits only
+    UEREMCP tools and catalog entries -- so the import path could never appear
+    in any plan.
+    """
+    if not (os.path.exists(SHIPPED_CATALOG) and os.path.exists(TOOLS_CATALOG)):
+        print("CATALOG DRIFT: expected a catalog at both %s and %s"
+              % (SHIPPED_CATALOG, TOOLS_CATALOG))
+        return 1
+    with open(SHIPPED_CATALOG, encoding="utf-8") as fh:
+        shipped = fh.read()
+    with open(TOOLS_CATALOG, encoding="utf-8") as fh:
+        tools = fh.read()
+    if shipped != tools:
+        a = json.loads(shipped).get("operations") or []
+        b = json.loads(tools).get("operations") or []
+        qa = {o.get("qualified") for o in a}
+        qb = {o.get("qualified") for o in b}
+        print("CATALOG DRIFT: the shipped and tools catalogs differ.")
+        for q in sorted(qb - qa):
+            print("  missing from the SHIPPED catalog (router cannot route it): %s" % q)
+        for q in sorted(qa - qb):
+            print("  missing from the TOOLS catalog: %s" % q)
+        if qa == qb:
+            print("  same operations, different bytes -- ordering or metadata differs")
+        return 1
+    return 0
+
+
 def main() -> int:
     if not os.path.exists(CATALOG):
         print("missing catalog: %s" % CATALOG)
@@ -82,7 +127,7 @@ def main() -> int:
     with open(CATALOG, encoding="utf-8") as fh:
         catalog = json.load(fh)
     registry = load_snapshot_names()
-    problems = 0
+    problems = check_catalog_drift()
 
     operations = catalog.get("operations") or []
     seen_actions: set[str] = set()
