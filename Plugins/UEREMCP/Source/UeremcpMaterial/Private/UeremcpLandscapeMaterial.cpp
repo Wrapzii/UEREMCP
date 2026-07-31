@@ -188,10 +188,31 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 			Request.RequestId, TEXT("NewObject<UMaterial> returned null."));
 	}
 
-	// UE 5.8 has no bUsedWithLandscape / MATUSAGE_Landscape
-	// [VERIFIED: MaterialInterface.h EMaterialUsage; Material.h usage flags].
-	// Landscape acceptance comes from LandscapeLayerBlend (and kin) below —
-	// that is what prevents the "layered mat silently failed" symptom.
+	// There is no landscape usage flag. I previously asserted bUsedWithLandscape
+	// and it does not exist: EMaterialUsage has 20 entries and none of them is
+	// Landscape [VERIFIED: Runtime/Engine/Public/Materials/MaterialInterface.h].
+	//
+	// What landscape ACTUALLY requires, verified rather than recalled:
+	//
+	// 1. MATUSAGE_StaticLighting, and only when the level has static lighting:
+	//      bIsValidMaterial &= !bHasStaticLighting
+	//          || MaterialInterface->CheckMaterialUsage_Concurrent(MATUSAGE_StaticLighting);
+	//    [VERIFIED: Runtime/Landscape/Private/LandscapeRender.cpp:1692]
+	//    It is the only usage flag landscape tests. Setting it unconditionally
+	//    costs a shader permutation and makes the material valid in both lit
+	//    modes, which is the right trade for a tool that cannot know the level's
+	//    lighting setup at author time.
+	//
+	// 2. Surface domain, which is the UMaterial default.
+	//
+	// 3. A LandscapeLayerBlend expression, which is what creates the paint layers
+	//    the landscape exposes [VERIFIED: Runtime/Landscape/Private/Landscape.cpp:59
+	//    includes MaterialExpressionLandscapeLayerBlend.h]. Wired below.
+	Material->bUsedWithStaticLighting = true;
+	// [VERIFIED: Runtime/Engine/Public/Materials/Material.h:771 bUsedWithStaticLighting,
+	//  Material.h:1310 SetMaterialUsage]. Setting the flag alone does not mark the
+	//  material dirty for recompile; SetMaterialUsage is the supported path.
+	Material->SetMaterialUsage(MATUSAGE_StaticLighting);
 	Material->TwoSided = false;
 
 	UMaterialExpressionLandscapeLayerBlend* Blend =
@@ -309,7 +330,7 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 		TEXT("paint layers created: %s — assign these on the landscape to see the blend"),
 		*FString::Join(WiredLayers, TEXT(", "))));
 	Response.CapabilityNotes.Add(
-		TEXT("UE 5.8 has no bUsedWithLandscape usage flag; LandscapeLayerBlend "
+		TEXT("MATUSAGE_StaticLighting set (the only usage flag landscape tests); LandscapeLayerBlend "
 			 "expressions are what make this a landscape material "
 			 "[VERIFIED: MaterialInterface.h EMaterialUsage]."));
 	Response.CapabilityNotes.Add(
