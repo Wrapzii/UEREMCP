@@ -83,6 +83,12 @@
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"TargetAllowList": [ "Editor" ]
+		},
+		{
+			"Name": "UeremcpSystems",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"TargetAllowList": [ "Editor" ]
 		}
 	],
 	"Plugins": [

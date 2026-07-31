@@ -472,6 +472,18 @@ bool FUeremcpNiagaraCreate::ParseSpecification(
 		return false;
 	}
 
+	if (OutSpec.ComponentRoles.Num() == 0)
+	{
+		const bool bPrecipitation =
+			OutSpec.EffectType.Equals(TEXT("precipitation"), ESearchCase::IgnoreCase)
+			|| OutSpec.EffectType.Equals(TEXT("rain"), ESearchCase::IgnoreCase)
+			|| OutSpec.EffectType.Equals(TEXT("weather"), ESearchCase::IgnoreCase);
+		if (bPrecipitation)
+		{
+			OutSpec.ComponentRoles = UeremcpNiagaraRoles::DefaultPrecipitationComponentRoles();
+		}
+	}
+
 	return true;
 }
 
@@ -608,8 +620,12 @@ bool FUeremcpNiagaraCreate::Run(
 		: (Spec.TemplateSystemPath.IsEmpty()
 			? FString(GLoopingSystemTemplate)
 			: Spec.TemplateSystemPath);
+	const bool bPrecipitationEffect =
+		Spec.EffectType.Equals(TEXT("precipitation"), ESearchCase::IgnoreCase)
+		|| Spec.EffectType.Equals(TEXT("rain"), ESearchCase::IgnoreCase)
+		|| Spec.EffectType.Equals(TEXT("weather"), ESearchCase::IgnoreCase);
 	if (!bVariation
-		&& Spec.EffectType.Equals(TEXT("projectile"), ESearchCase::IgnoreCase)
+		&& (Spec.EffectType.Equals(TEXT("projectile"), ESearchCase::IgnoreCase) || bPrecipitationEffect)
 		&& TemplatePath.Equals(GMinimalSystemTemplate, ESearchCase::IgnoreCase))
 	{
 		// MinimalLightweight resolves to Once + zero loop duration and completes before
@@ -617,6 +633,7 @@ bool FUeremcpNiagaraCreate::Run(
 		// system lifecycle; its template emitter is removed by PrepareRuntimeScaffold.
 		// [VERIFIED-RUNTIME: UEREMCP.Niagara.Create.PocBParticlesSpawn pre-fix:
 		//  resolved loopBehavior=Once, loopDuration=0, total_spawned_particles=0]
+		// Precipitation/rain likewise requires Infinite loop for camera-follow weather.
 		TemplatePath = GLoopingSystemTemplate;
 	}
 

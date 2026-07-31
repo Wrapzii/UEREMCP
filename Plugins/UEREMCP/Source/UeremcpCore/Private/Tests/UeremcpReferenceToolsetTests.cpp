@@ -664,6 +664,154 @@ bool FUeremcpReferenceToolsetCancelJobTest::RunTest(const FString& Parameters)
 
 
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+
+	FUeremcpReferenceToolsetResolveIntentPlanScoreGateTest,
+
+	"UeremcpCore.ReferenceToolset.ResolveIntent.PlanScoreGate",
+
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+
+
+bool FUeremcpReferenceToolsetResolveIntentPlanScoreGateTest::RunTest(const FString& Parameters)
+
+{
+
+	// BACKLOG 1.3d: weakly matched toolsets must not earn a plan step just
+
+	// because BestPerToolset + declared order included them.
+
+	const FString Request =
+
+		TEXT("{\"protocol_version\":\"1.0\",\"action\":\"resolve_intent\","
+
+		"\"specification\":{\"intent\":\"Make a landscape with mountains and a river, "
+
+		"forest around the banks, raining\",\"mode\":\"recommend\",\"max_steps\":6}}");
+
+	const FString Json = UUeremcpReferenceToolset::ResolveIntent(Request);
+
+	TSharedPtr<FJsonObject> Root;
+
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+
+	TestTrue(TEXT("ResolveIntent returns parseable JSON"),
+
+		FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+
+	if (!Root.IsValid())
+
+	{
+
+		return false;
+
+	}
+
+
+
+	const TSharedPtr<FJsonObject>* ResultObj = nullptr;
+
+	if (!Root->TryGetObjectField(TEXT("result"), ResultObj) || !ResultObj || !ResultObj->IsValid())
+
+	{
+
+		AddError(TEXT("result object missing"));
+
+		return false;
+
+	}
+
+
+
+	bool bAbstained = false;
+
+	(*ResultObj)->TryGetBoolField(TEXT("abstained"), bAbstained);
+
+	if (bAbstained)
+
+	{
+
+		// Live registry required; skip rather than false-fail offline.
+
+		AddWarning(TEXT("ResolveIntent abstained — live registry unavailable; score-gate not exercised"));
+
+		return true;
+
+	}
+
+
+
+	const TArray<TSharedPtr<FJsonValue>>* Plan = nullptr;
+
+	TestTrue(TEXT("plan array present"), (*ResultObj)->TryGetArrayField(TEXT("plan"), Plan) && Plan);
+
+	if (!Plan || Plan->Num() == 0)
+
+	{
+
+		AddError(TEXT("expected non-empty plan for environment intent"));
+
+		return false;
+
+	}
+
+
+
+	double TopScore = 0.0;
+
+	for (const TSharedPtr<FJsonValue>& StepVal : *Plan)
+
+	{
+
+		const TSharedPtr<FJsonObject> Step = StepVal->AsObject();
+
+		if (!Step.IsValid()) continue;
+
+		TopScore = FMath::Max(TopScore, Step->GetNumberField(TEXT("score")));
+
+	}
+
+	TestTrue(TEXT("top plan score is meaningful"), TopScore >= 25.0);
+
+
+
+	const double Floor = TopScore * 0.35;
+
+	for (const TSharedPtr<FJsonValue>& StepVal : *Plan)
+
+	{
+
+		const TSharedPtr<FJsonObject> Step = StepVal->AsObject();
+
+		if (!Step.IsValid()) continue;
+
+		const double Score = Step->GetNumberField(TEXT("score"));
+
+		TestTrue(
+
+			*FString::Printf(TEXT("plan step score %.1f >= floor %.1f (35%% of top)"), Score, Floor),
+
+			Score + KINDA_SMALL_NUMBER >= Floor);
+
+	}
+
+
+
+	FString FirstTool;
+
+	(*Plan)[0]->AsObject()->TryGetStringField(TEXT("tool"), FirstTool);
+
+	TestEqual(TEXT("top-1 is BuildEnvironment"), FirstTool, FString(TEXT("BuildEnvironment")));
+
+	TestTrue(TEXT("plan length capped (no speculative 5-step noise)"), Plan->Num() <= 3);
+
+	return true;
+
+}
+
+
+
 #endif // WITH_DEV_AUTOMATION_TESTS
 
 

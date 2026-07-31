@@ -1,8 +1,8 @@
 # WS-01 backlog completion — 2026-07-30
 
 **Branch:** `ws-01-backlog-integration`  
-**Deploy/main tip (local):** `434bc12` then follow-up commit(s) on this branch  
-**Dirty Opus root:** not modified (read-only copy of latest `COVERAGE_PLAN.md` + prototype echo)
+**Deploy tip (local):** `a4e225c` (junction from RE → `UEREMCP-deploy-main`)  
+**Dirty Opus root:** not modified (read-only provenance for `COVERAGE_PLAN.md`)
 
 ## Deployment / SHA
 
@@ -10,7 +10,9 @@
 |---|---|---|
 | Baseline main/deploy | `82337de` | Pre-integration |
 | Integration land | `434bc12` | Environment v0.1, echo, CaptureWorldFrames, ledger |
-| Follow-up | _(this commit)_ | COVERAGE_PLAN Part III ops, plan handlers, GeometryScript structures |
+| Hang fix | `d9f4936` | WaterBrushManager MCP deadlock (`bAffectsLandscape=false`) |
+| WS-16 harden adopt | `9edd138` | acceptance gates, Systems module, capture reread |
+| Foliage gate fix | `a4e225c` | corridor-biased banks + 55° slope default |
 
 RE junction: `...\RE\Plugins\UEREMCP` → `UEREMCP-deploy-main\Plugins\UEREMCP`.
 
@@ -32,38 +34,37 @@ Copied latest from dirty root (Parts II–III + III.1–III.11). Audited:
 6. **Exclusion re-measure** — post-scatter distance check (III.11.3).
 7. **World capture** — `CaptureWorldFrames` (III.10 / BACKLOG 3.2).
 8. **PCG** — audited; not duplicated for riverbank exclusion (W-DUP avoidance).
-9. **Audio / networking** — documented limitation; **world partition** —
-   `blocked_external` pending dedicated design.
+9. **Audio / networking / world partition** — `UeremcpSystems` goal tools landed
+   (see Part IV + `ws-01-systems-live-handoff.md`); thin Epic surface still limits depth.
 
 Full capability table: `docs/COVERAGE_PLAN.md` Part IV.
 
-## Commands / evidence
+## Live verification (2026-07-30 evening)
 
-```text
-python tools/validate_schemas.py          # OK (31 schemas)
-# GeometryScripting + Water persisted in RE.uproject
-# PluginToolset.IsEnabled GeometryScripting=true, Water=true [VERIFIED-RUNTIME]
-# ALandscape::Import [VERIFIED: LandscapeProxy.h:1418-1420]
-# AWaterBodyRiver [VERIFIED: WaterBodyRiverActor.h:28]
-# GetWaterSpline [VERIFIED: WaterBodyActor.h:103]
-# AppendBox [VERIFIED: MeshPrimitiveFunctions.h:168]
-```
+`[VERIFIED-RUNTIME]` single-editor MCP after `a4e225c` rebuild:
 
-Live verification requires clean single-editor restart after UBT rebuild
-(multi-editor MCP sessions previously hid GetStarted despite DLL exports).
+| Call | Result |
+|---|---|
+| `GetStarted` | `prefer_toolsets` includes `UeremcpEnvironment…` |
+| `ResolveIntent` (earlier session) | step1=`BuildEnvironment` confidence=high |
+| `BuildEnvironment` dry_run seed=42 | `no_change_required`, `heightmap_hash=35f8b900` |
+| `BuildEnvironment` mutate `mrr-build-004` | **`created_with_warnings`**, foliage=33, banks=6/27, exclusion=0, saved+reloaded, `heightmap_hash=9dde558d`, revision `env:19dc1524` |
+| `ValidateEnvironment` | gates passed (landscape/river/forest/rain/open_channel/both_banks) |
+| `CaptureWorldFrames` `mrr-cap-1` | 2/2 PNG reread OK @ 1280x720 → `Saved/UEREMCP/WorldCapture/MountainRiverRain/mrr-cap-1/` |
 
-## Acceptance scene
+Call count for mutate path after map load: **Build → Validate → Capture = 3** (within 2–3 target when ResolveIntent omitted).
 
-Target: `/Game/__UeremcpPoc/MountainRiverRain/`  
-Path: `ResolveIntent` → `BuildEnvironment` (dry_run=false) → `ValidateEnvironment` /
-`CaptureWorldFrames` (2–3 calls).
+### Hang / foliage defects fixed live
 
-Telemetry and screenshots recorded after rebuild+live pass in this proposal's
-follow-up section (or adjacent artifact under `Saved/UEREMCP/`).
+1. Sync `SpawnActor<AWaterBodyRiver>` under MCP deadlocked at `WaterBrushManager::SetupDefaultMaterials`
+   — deferred pre-spawn `bAffectsLandscape=false` `[VERIFIED: WaterBodyComponent.h:630]` /
+   `[VERIFIED: WaterEditorModule.cpp:190]`.
+2. Random-XY foliage + 32° slope rejected all bank candidates (`slope_rejected=168`, foliage=0)
+   — corridor-biased `SampleAlongXY` + default slope 55° → both banks populated.
 
 ## Remaining external limitations
 
-- PIE camera-follow rain needs a project Niagara rain asset + movement transforms.
-- World partition goal tooling: blocked pending design.
-- Audio MetaSounds semantic tool: not started (Epic gap; no wrap of arbitrary execution).
-- Focus mode still disabled until live describe+echo reconfirmed post-rebuild.
+- PIE rain camera-follow distance gate still false without a project Niagara rain asset + movement samples (`weather_followed_10m=false`).
+- Foliage/rain are **approximated** (cube HISMC / streak fallback) until `biome.mesh_path` / `weather.rain_system_path` supplied.
+- Full `MOUNTAIN_RIVER_RAIN_ACCEPTANCE.md` human PNG checklist (player_start / rain A–B) is companion evidence — structural gates passed; screenshot aesthetic gate is human review.
+- Focus mode still disabled until intentional enable after discoverability reconfirm.

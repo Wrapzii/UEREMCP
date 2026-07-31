@@ -29,111 +29,22 @@
 #include "UeremcpEnvelope.h"
 #include "UeremcpJobRegistry.h"
 #include "UeremcpMutatingDispatch.h"
+#include "UeremcpVisualCaptureCommon.h"
+
+#include "Animation/AnimSequence.h"
+#include "Animation/SkeletalMeshActor.h"
+#include "Animation/Skeleton.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
+#include "EngineUtils.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstance.h"
 
 namespace
 {
-	const FVector StageOrigin(49300.0, 0.0, 0.0);
-	constexpr float SimTickDelta = 1.0f / 60.0f;
-	constexpr int32 MinimumChangedLitPixels = 16;
-
-	struct FFrameStats
-	{
-		double Mean = 0.0;
-		int32 LitPixels = 0;
-		double Max = 0.0;
-	};
-
-	FVector CameraOffset(const FString& Preset)
-	{
-		if (Preset == TEXT("front")) { return FVector(-900.0, 0.0, 300.0); }
-		if (Preset == TEXT("side")) { return FVector(0.0, -950.0, 300.0); }
-		if (Preset == TEXT("top")) { return FVector(-300.0, 0.0, 1050.0); }
-		return FVector(-820.0, -560.0, 360.0);
-	}
-
-	bool ReadStats(UTextureRenderTarget2D* Target, FFrameStats& Out)
-	{
-		if (!Target)
-		{
-			return false;
-		}
-		FTextureRenderTargetResource* Resource = Target->GameThread_GetRenderTargetResource();
-		if (!Resource)
-		{
-			return false;
-		}
-
-		TArray<FColor> Pixels;
-		if (!Resource->ReadPixels(Pixels) || Pixels.IsEmpty())
-		{
-			return false;
-		}
-
-		double Total = 0.0;
-		for (const FColor& Color : Pixels)
-		{
-			const double Luminance =
-				0.2126 * Color.R + 0.7152 * Color.G + 0.0722 * Color.B;
-			Total += Luminance;
-			Out.LitPixels += Luminance > 40.0 ? 1 : 0;
-			Out.Max = FMath::Max(Out.Max, Luminance);
-		}
-		Out.Mean = Total / static_cast<double>(Pixels.Num());
-		return true;
-	}
-
-	bool IsNonEmptyPng(const FString& Path)
-	{
-		TArray<uint8> Bytes;
-		if (!FFileHelper::LoadFileToArray(Bytes, *Path) || Bytes.Num() < 8)
-		{
-			return false;
-		}
-		static constexpr uint8 PngSignature[8] =
-			{ 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
-		return FMemory::Memcmp(Bytes.GetData(), PngSignature, 8) == 0;
-	}
-
-	// [VERIFIED: Engine/Source/Runtime/Engine/Classes/Kismet/KismetRenderingLibrary.h:38-48,141-144]
-	bool CaptureExportAndVerify(
-		UWorld* World,
-		USceneCaptureComponent2D* Capture,
-		UTextureRenderTarget2D* Target,
-		const FString& Directory,
-		const FString& FileName,
-		FFrameStats& OutStats,
-		int32& InternalOperations)
-	{
-		const FString Path = FPaths::Combine(Directory, FileName);
-		IFileManager::Get().Delete(*Path, false, true);
-		UKismetRenderingLibrary::ClearRenderTarget2D(
-			World, Target, FLinearColor(0.005f, 0.008f, 0.015f, 1.0f));
-		++InternalOperations;
-		for (int32 Index = 0; Index < 3; ++Index)
-		{
-			Capture->CaptureScene();
-			++InternalOperations;
-		}
-		if (!ReadStats(Target, OutStats))
-		{
-			return false;
-		}
-		++InternalOperations;
-		UKismetRenderingLibrary::ExportRenderTarget(
-			World, Target, Directory, FileName);
-		++InternalOperations;
-		return IsNonEmptyPng(Path);
-	}
-
 	void DestroySpawnedActors(TArray<TWeakObjectPtr<AActor>>& Actors)
 	{
-		for (TWeakObjectPtr<AActor>& Actor : Actors)
-		{
-			if (Actor.IsValid())
-			{
-				Actor->Destroy();
-			}
-		}
+		UeremcpVisualCapture::DestroyTrackedActors(Actors);
 	}
 
 	bool ParseTerminalResponse(
@@ -191,6 +102,8 @@ FString CaptureEffectFramesImpl(
 	const FString& RequestJson,
 	const bool bAllowColdRetry)
 {
+	using namespace UeremcpVisualCapture;
+
 	FUeremcpMutatingDispatch Dispatch;
 	FString BlockingResponse;
 	// This operation writes under Saved/ and uses a shared transient stage origin,
@@ -686,33 +599,56 @@ FString UUeremcpVisualCaptureToolset::CaptureEffectFrames(
 	return CaptureEffectFramesImpl(RequestJson, true);
 }
 
+namespace
+{
+	bool ParseCaptureSpec(
+		const TSharedPtr<FJsonObject>& Spec,
+		int32& FrameCount,
+		int32& WarmUpTicks,
+		int32& Width,
+		int32& Height,
+		FString& CameraPreset,
+		double& DurationSeconds)
+	{
+		FrameCount = 2;
+		WarmUpTicks = 30;
+		Width = 1280;
+		Height = 720;
+		CameraPreset = TEXT("three_quarter");
+		DurationSeconds = 1.0;
+		if (Spec.IsValid())
+		{
+			Spec->TryGetNumberField(TEXT("frame_count"), FrameCount);
+			Spec->TryGetNumberField(TEXT("warm_up_ticks"), WarmUpTicks);
+			Spec->TryGetNumberField(TEXT("width"), Width);
+			Spec->TryGetNumberField(TEXT("height"), Height);
+			Spec->TryGetStringField(TEXT("camera"), CameraPreset);
+			Spec->TryGetNumberField(TEXT("duration_seconds"), DurationSeconds);
+		}
+		const TSet<FString> Cameras =
+			{ TEXT("front"), TEXT("three_quarter"), TEXT("side"), TEXT("top") };
+		return FrameCount >= 1 && FrameCount <= 32
+			&& WarmUpTicks >= 0 && WarmUpTicks <= 300
+			&& Width >= 64 && Width <= 4096
+			&& Height >= 64 && Height <= 4096
+			&& DurationSeconds >= 0.0 && DurationSeconds <= 60.0
+			&& Cameras.Contains(CameraPreset);
+	}
+
+	TSharedRef<FJsonObject> MakeVisualSupplementalNote()
+	{
+		TSharedRef<FJsonObject> Visual = MakeShared<FJsonObject>();
+		Visual->SetBoolField(TEXT("supplemental_only"), true);
+		Visual->SetStringField(
+			TEXT("policy"),
+			TEXT("POC_ACCEPTANCE B10 — screenshots never sole success"));
+		return Visual;
+	}
+}
+
 FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJson)
 {
-	FUeremcpRequest Request;
-	FString ParseError;
-	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
-	{
-		return FUeremcpEnvelope::MakeRejection(
-			FString(),
-			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
-	}
-	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
-	{
-		return FUeremcpEnvelope::MakeRejection(
-			Request.RequestId,
-			FString::Printf(
-				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
-				*Request.ProtocolVersion,
-				*FUeremcpEnvelope::ProtocolVersion()));
-	}
-	if (!Request.Action.Equals(TEXT("capture_world_frames"), ESearchCase::CaseSensitive))
-	{
-		return FUeremcpEnvelope::MakeRejection(
-			Request.RequestId,
-			FString::Printf(
-				TEXT("CaptureWorldFrames received action '%s'. Use action 'capture_world_frames'."),
-				*Request.Action));
-	}
+	using namespace UeremcpVisualCapture;
 
 	FUeremcpMutatingDispatch Dispatch;
 	FString Blocked;
@@ -720,87 +656,93 @@ FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJ
 	{
 		return Blocked;
 	}
+	const FUeremcpRequest& Request = Dispatch.GetRequest();
 
-	if (Dispatch.IsEffectiveDryRun())
+	auto Fail = [&Dispatch, &Request](const FString& Status, const FString& Summary)
 	{
 		FUeremcpResponse Response;
-		Response.RequestId = Dispatch.GetRequest().RequestId;
-		Response.UnderstoodAction = Dispatch.GetRequest().Action;
-		Response.UnderstoodTarget = Dispatch.GetRequest().TargetAssetPath;
-		Response.Status = TEXT("no_change_required");
-		Response.Summary = TEXT("Dry-run capture_world_frames — no render targets written.");
+		Response.RequestId = Request.RequestId;
+		Response.UnderstoodAction = TEXT("capture_world_frames");
+		Response.UnderstoodTarget = Request.TargetAssetPath;
+		Response.Status = Status;
+		Response.Summary = Summary;
 		Response.Metrics.McpRoundTrips = 1;
-		Response.CapabilityNotes.Add(
-			TEXT("World capture is evidence for human review, not a quality gate (BACKLOG 5.8)."));
 		return Dispatch.Complete(Response);
-	}
+	};
 
-	if (!GEditor)
+	if (Request.Action != TEXT("capture_world_frames"))
 	{
-		return FUeremcpEnvelope::MakeRejection(
-			Dispatch.GetRequest().RequestId, TEXT("GEditor unavailable"));
-	}
-	UWorld* World = GEditor->GetEditorWorldContext().World();
-	if (!World)
-	{
-		return FUeremcpEnvelope::MakeRejection(
-			Dispatch.GetRequest().RequestId, TEXT("No editor world"));
+		return Fail(TEXT("rejected"),
+			TEXT("action must be capture_world_frames"));
 	}
 
 	int32 FrameCount = 2;
 	int32 WarmUpTicks = 30;
 	int32 Width = 1280;
 	int32 Height = 720;
-	if (Dispatch.GetRequest().Specification.IsValid())
+	FString CameraPreset = TEXT("three_quarter");
+	double DurationSeconds = 1.0;
+	if (!ParseCaptureSpec(
+			Request.Specification, FrameCount, WarmUpTicks, Width, Height,
+			CameraPreset, DurationSeconds))
 	{
-		const TSharedPtr<FJsonObject>& Spec = Dispatch.GetRequest().Specification;
-		if (Spec->HasField(TEXT("frame_count")))
-		{
-			FrameCount = FMath::Clamp(int32(Spec->GetNumberField(TEXT("frame_count"))), 1, 8);
-		}
-		if (Spec->HasField(TEXT("warm_up_ticks")))
-		{
-			WarmUpTicks = FMath::Clamp(int32(Spec->GetNumberField(TEXT("warm_up_ticks"))), 0, 300);
-		}
-		if (Spec->HasField(TEXT("width")))
-		{
-			Width = FMath::Clamp(int32(Spec->GetNumberField(TEXT("width"))), 64, 3840);
-		}
-		if (Spec->HasField(TEXT("height")))
-		{
-			Height = FMath::Clamp(int32(Spec->GetNumberField(TEXT("height"))), 64, 2160);
-		}
+		return Fail(TEXT("rejected"),
+			TEXT("invalid specification for capture_world_frames"));
 	}
 
-	ASceneCapture2D* CaptureActor = World->SpawnActor<ASceneCapture2D>();
-	USceneCaptureComponent2D* Capture = CaptureActor ? CaptureActor->GetCaptureComponent2D() : nullptr;
-	UTextureRenderTarget2D* RT = NewObject<UTextureRenderTarget2D>();
-	if (!Capture || !RT)
+	if (Dispatch.IsEffectiveDryRun())
 	{
-		if (CaptureActor)
-		{
-			CaptureActor->Destroy();
-		}
-		return FUeremcpEnvelope::MakeRejection(
-			Dispatch.GetRequest().RequestId, TEXT("Failed to create scene capture"));
+		FUeremcpResponse Response;
+		Response.RequestId = Request.RequestId;
+		Response.UnderstoodAction = TEXT("capture_world_frames");
+		Response.UnderstoodTarget = Request.TargetAssetPath;
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = TEXT("Dry-run capture_world_frames — no render targets written.");
+		Response.Metrics.McpRoundTrips = 1;
+		Response.CapabilityNotes.Add(
+			TEXT("World capture is evidence for human review, not a quality gate."));
+		return Dispatch.Complete(Response);
 	}
-	RT->InitCustomFormat(Width, Height, PF_B8G8R8A8, false);
-	RT->UpdateResourceImmediate(true);
-	Capture->TextureTarget = RT;
-	Capture->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
-	Capture->bCaptureEveryFrame = false;
-	Capture->bCaptureOnMovement = false;
-	CaptureActor->SetActorLocation(FVector(0, -2500, 1200));
-	CaptureActor->SetActorRotation(FRotator(-25, 90, 0));
 
-	for (int32 Tick = 0; Tick < WarmUpTicks; ++Tick)
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (!World || !IsInGameThread())
 	{
-		World->Tick(LEVELTICK_All, SimTickDelta);
+		return Fail(TEXT("error"), TEXT("capture requires editor world on game thread"));
 	}
-	FlushRenderingCommands();
 
-	const FString OutDir = FPaths::ProjectSavedDir() / TEXT("UEREMCP") / TEXT("WorldCapture");
-	IFileManager::Get().MakeDirectory(*OutDir, true);
+	const FString Label = Request.TargetAssetPath.IsEmpty()
+		? World->GetMapName()
+		: FPaths::GetBaseFilename(Request.TargetAssetPath);
+	const FString OutDir = MakeOutputDirectory(
+		TEXT("WorldCapture"), Label, Request.RequestId);
+	if (!IFileManager::Get().MakeDirectory(*OutDir, true)
+		|| !IsPathUnderSavedUeremcp(OutDir))
+	{
+		return Fail(TEXT("error"), TEXT("could not create safe WorldCapture directory"));
+	}
+
+	int32 InternalOperations = 0;
+	TArray<TWeakObjectPtr<AActor>> Tracked;
+	ON_SCOPE_EXIT { DestroyTrackedActors(Tracked); };
+
+	UTextureRenderTarget2D* Target = CreateCaptureTarget(World, Width, Height);
+	if (!Target)
+	{
+		return Fail(TEXT("error"), TEXT("render-target creation failed"));
+	}
+	const FVector CamLoc = StageOrigin + CameraOffset(CameraPreset);
+	const FVector AimAt = StageOrigin + FVector(0.0, 0.0, 210.0);
+	ASceneCapture2D* CamActor = SpawnFramedCapture(
+		World, CamLoc, AimAt, Target, Tracked);
+	if (!CamActor)
+	{
+		return Fail(TEXT("error"), TEXT("scene-capture spawn failed"));
+	}
+	USceneCaptureComponent2D* Capture = CamActor->GetCaptureComponent2D();
+	++InternalOperations;
+
+	WarmUpWorldTicks(World, WarmUpTicks);
+	InternalOperations += WarmUpTicks;
 
 	TArray<TSharedPtr<FJsonValue>> FrameInfos;
 	int32 OkFrames = 0;
@@ -808,55 +750,532 @@ FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJ
 	{
 		World->Tick(LEVELTICK_All, SimTickDelta);
 		FlushRenderingCommands();
-		Capture->CaptureScene();
-		FlushRenderingCommands();
-
 		FFrameStats Stats;
-		const bool bStats = ReadStats(RT, Stats);
-		const FString Path = OutDir / FString::Printf(TEXT("world_frame_%02d.png"), Frame);
-		UKismetRenderingLibrary::ExportRenderTarget(World, RT, FPaths::GetPath(Path), FPaths::GetCleanFilename(Path));
-		const bool bPng = IsNonEmptyPng(Path);
-		if (bPng)
+		const FString FileName = FString::Printf(TEXT("world_frame_%02d.png"), Frame);
+		const bool bOk = CaptureExportAndVerify(
+			World, Capture, Target, OutDir, FileName, Stats, InternalOperations);
+		if (bOk)
 		{
 			++OkFrames;
 		}
-		TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
-		Info->SetStringField(TEXT("path"), Path);
-		Info->SetBoolField(TEXT("png_ok"), bPng);
-		if (bStats)
-		{
-			Info->SetNumberField(TEXT("mean_luminance"), Stats.Mean);
-			Info->SetNumberField(TEXT("lit_pixels"), Stats.LitPixels);
-			Info->SetNumberField(TEXT("max_luminance"), Stats.Max);
-		}
+		TSharedRef<FJsonObject> Info = MakeShared<FJsonObject>();
+		Info->SetStringField(TEXT("path"), FPaths::Combine(OutDir, FileName));
+		Info->SetBoolField(TEXT("png_ok"), bOk);
+		Info->SetNumberField(TEXT("mean_luminance"), Stats.Mean);
+		Info->SetNumberField(TEXT("lit_pixels"), Stats.LitPixels);
+		Info->SetNumberField(TEXT("max_luminance"), Stats.Max);
 		FrameInfos.Add(MakeShared<FJsonValueObject>(Info));
 	}
 
-	CaptureActor->Destroy();
+	DestroyTrackedActors(Tracked);
+	const bool bTeardown = TeardownComplete(Tracked);
+
+	int32 ActorCount = 0;
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		++ActorCount;
+	}
+
+	TSharedRef<FJsonObject> Structural = MakeShared<FJsonObject>();
+	Structural->SetStringField(TEXT("world_name"), World->GetMapName());
+	Structural->SetStringField(
+		TEXT("world_path"), World->GetOutermost() ? World->GetOutermost()->GetName() : FString());
+	Structural->SetNumberField(TEXT("actor_count"), ActorCount);
+	Structural->SetStringField(TEXT("camera"), CameraPreset);
+	Structural->SetBoolField(TEXT("stage_teardown_complete"), bTeardown);
 
 	FUeremcpResponse Response;
-	Response.RequestId = Dispatch.GetRequest().RequestId;
-	Response.UnderstoodAction = Dispatch.GetRequest().Action;
-	Response.UnderstoodTarget = Dispatch.GetRequest().TargetAssetPath;
+	Response.RequestId = Request.RequestId;
+	Response.UnderstoodAction = TEXT("capture_world_frames");
+	Response.UnderstoodTarget = Request.TargetAssetPath;
 	Response.Metrics.McpRoundTrips = 1;
-	Response.Metrics.InternalOperations = WarmUpTicks + FrameCount;
+	Response.Metrics.InternalOperations = InternalOperations;
 	Response.CapabilityNotes.Add(
-		TEXT("capture_world_frames: warm-up ticks + SceneCapture2D pixel stats; not a beauty gate."));
-	if (OkFrames > 0)
+		TEXT("Screenshots are supplemental; structural world snapshot + PNG reread are the gate."));
+	Response.CapabilityNotes.Add(
+		TEXT("Does not prove landscape quality, river continuity, or foliage exclusion — "
+			 "use tests/visual mountain_river harness for those."));
+	if (OkFrames == FrameCount && bTeardown)
 	{
-		Response.Status = TEXT("created_with_warnings");
+		Response.Status = TEXT("no_change_required");
 		Response.Summary = FString::Printf(
-			TEXT("Captured %d/%d world frames (%dx%d) after %d warm-up ticks"),
+			TEXT("Captured and reread %d/%d world frames (%dx%d) after %d warm-up ticks"),
 			OkFrames, FrameCount, Width, Height, WarmUpTicks);
+	}
+	else if (OkFrames > 0)
+	{
+		Response.Status = TEXT("partially_completed");
+		Response.Summary = FString::Printf(
+			TEXT("Captured %d/%d world frames; teardown=%s"),
+			OkFrames, FrameCount, bTeardown ? TEXT("ok") : TEXT("incomplete"));
 	}
 	else
 	{
 		Response.Status = TEXT("failed_validation");
 		Response.Summary = TEXT("World capture produced no valid PNG frames");
 	}
-	TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+
+	TSharedRef<FJsonObject> Extra = MakeShared<FJsonObject>();
+	Extra->SetStringField(TEXT("output_directory"), OutDir);
 	Extra->SetArrayField(TEXT("frames"), FrameInfos);
 	Extra->SetNumberField(TEXT("warm_up_ticks"), WarmUpTicks);
+	Extra->SetObjectField(TEXT("structural"), Structural);
+	Extra->SetObjectField(TEXT("visual"), MakeVisualSupplementalNote());
+	TSharedRef<FJsonObject> Verification = MakeShared<FJsonObject>();
+	Verification->SetBoolField(TEXT("png_files_reread"), OkFrames == FrameCount);
+	Verification->SetBoolField(TEXT("stage_teardown_complete"), bTeardown);
+	Verification->SetNumberField(TEXT("ok_frames"), OkFrames);
+	Extra->SetObjectField(TEXT("verification"), Verification);
+	Response.ExtraFields = Extra;
+	return Dispatch.Complete(Response);
+}
+
+FString UUeremcpVisualCaptureToolset::CaptureMaterialFrames(const FString& RequestJson)
+{
+	using namespace UeremcpVisualCapture;
+
+	FUeremcpMutatingDispatch Dispatch;
+	FString Blocked;
+	if (!Dispatch.TryBegin(RequestJson, true, 0, true, Blocked))
+	{
+		return Blocked;
+	}
+	const FUeremcpRequest& Request = Dispatch.GetRequest();
+
+	auto Fail = [&Dispatch, &Request](const FString& Status, const FString& Summary)
+	{
+		FUeremcpResponse Response;
+		Response.RequestId = Request.RequestId;
+		Response.UnderstoodAction = TEXT("capture_material_frames");
+		Response.UnderstoodTarget = Request.TargetAssetPath;
+		Response.Status = Status;
+		Response.Summary = Summary;
+		Response.Metrics.McpRoundTrips = 1;
+		return Dispatch.Complete(Response);
+	};
+
+	if (Request.Action != TEXT("capture_material_frames"))
+	{
+		return Fail(TEXT("rejected"), TEXT("action must be capture_material_frames"));
+	}
+	if (Request.TargetAssetPath.IsEmpty())
+	{
+		return Fail(TEXT("rejected"), TEXT("target.asset_path is required"));
+	}
+
+	int32 FrameCount = 2;
+	int32 WarmUpTicks = 8;
+	int32 Width = 960;
+	int32 Height = 540;
+	FString CameraPreset = TEXT("three_quarter");
+	double DurationSeconds = 0.0;
+	if (!ParseCaptureSpec(
+			Request.Specification, FrameCount, WarmUpTicks, Width, Height,
+			CameraPreset, DurationSeconds))
+	{
+		return Fail(TEXT("rejected"), TEXT("invalid specification for capture_material_frames"));
+	}
+
+	if (Dispatch.IsEffectiveDryRun())
+	{
+		FUeremcpResponse Response;
+		Response.RequestId = Request.RequestId;
+		Response.UnderstoodAction = TEXT("capture_material_frames");
+		Response.UnderstoodTarget = Request.TargetAssetPath;
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = TEXT("Dry-run capture_material_frames — no stage built.");
+		Response.Metrics.McpRoundTrips = 1;
+		return Dispatch.Complete(Response);
+	}
+
+	UMaterialInterface* Material =
+		LoadObject<UMaterialInterface>(nullptr, *Request.TargetAssetPath);
+	if (!Material)
+	{
+		return Fail(TEXT("rejected"),
+			FString::Printf(TEXT("could not load material: %s"), *Request.TargetAssetPath));
+	}
+
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (!World || !IsInGameThread())
+	{
+		return Fail(TEXT("error"), TEXT("capture requires editor world on game thread"));
+	}
+
+	const FString OutDir = MakeOutputDirectory(
+		TEXT("MaterialCapture"),
+		FPaths::GetBaseFilename(Request.TargetAssetPath),
+		Request.RequestId);
+	if (!IFileManager::Get().MakeDirectory(*OutDir, true)
+		|| !IsPathUnderSavedUeremcp(OutDir))
+	{
+		return Fail(TEXT("error"), TEXT("could not create safe MaterialCapture directory"));
+	}
+
+	int32 InternalOperations = 0;
+	TArray<TWeakObjectPtr<AActor>> Tracked;
+	ON_SCOPE_EXIT { DestroyTrackedActors(Tracked); };
+
+	UStaticMesh* Sphere =
+		LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+	if (!Sphere)
+	{
+		return Fail(TEXT("error"), TEXT("could not load /Engine/BasicShapes/Sphere"));
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.ObjectFlags |= RF_Transient;
+	AStaticMeshActor* Ball = World->SpawnActor<AStaticMeshActor>(
+		StageOrigin + FVector(0.0, 0.0, 100.0), FRotator::ZeroRotator, SpawnParameters);
+	Tracked.Add(Ball);
+	if (!Ball)
+	{
+		return Fail(TEXT("error"), TEXT("material ball spawn failed"));
+	}
+	Ball->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+	Ball->GetStaticMeshComponent()->SetStaticMesh(Sphere);
+	Ball->GetStaticMeshComponent()->SetMaterial(0, Material);
+	Ball->SetActorScale3D(FVector(2.0, 2.0, 2.0));
+	++InternalOperations;
+
+	ADirectionalLight* Key = World->SpawnActor<ADirectionalLight>(
+		StageOrigin + FVector(0.0, 0.0, 1000.0),
+		FRotator(-42.0, -140.0, 0.0), SpawnParameters);
+	Tracked.Add(Key);
+	if (Key)
+	{
+		Key->GetComponent()->SetMobility(EComponentMobility::Movable);
+		Key->GetComponent()->SetIntensity(2.0f);
+		++InternalOperations;
+	}
+
+	UTextureRenderTarget2D* Target = CreateCaptureTarget(World, Width, Height);
+	ASceneCapture2D* CamActor = SpawnFramedCapture(
+		World,
+		StageOrigin + CameraOffset(CameraPreset),
+		StageOrigin + FVector(0.0, 0.0, 100.0),
+		Target,
+		Tracked);
+	if (!Target || !CamActor)
+	{
+		return Fail(TEXT("error"), TEXT("capture rig creation failed"));
+	}
+	USceneCaptureComponent2D* Capture = CamActor->GetCaptureComponent2D();
+	WarmUpWorldTicks(World, WarmUpTicks);
+	InternalOperations += WarmUpTicks + 1;
+
+	FFrameStats Baseline;
+	Ball->SetActorHiddenInGame(true);
+	Ball->GetStaticMeshComponent()->SetVisibility(false);
+	if (!CaptureExportAndVerify(
+			World, Capture, Target, OutDir, TEXT("baseline.png"),
+			Baseline, InternalOperations)
+		|| Baseline.Max < 5.0)
+	{
+		return Fail(TEXT("failed_validation"),
+			TEXT("material baseline capture invalid"));
+	}
+	Ball->SetActorHiddenInGame(false);
+	Ball->GetStaticMeshComponent()->SetVisibility(true);
+
+	TArray<TSharedPtr<FJsonValue>> Frames;
+	int32 MaxDelta = 0;
+	for (int32 Index = 0; Index < FrameCount; ++Index)
+	{
+		FFrameStats Stats;
+		const FString FileName = FString::Printf(TEXT("mat_%02d.png"), Index);
+		if (!CaptureExportAndVerify(
+				World, Capture, Target, OutDir, FileName, Stats, InternalOperations))
+		{
+			return Fail(TEXT("failed_validation"),
+				FString::Printf(TEXT("material frame %d PNG failed"), Index));
+		}
+		const int32 Delta = Stats.LitPixels - Baseline.LitPixels;
+		MaxDelta = FMath::Max(MaxDelta, FMath::Abs(Delta));
+		TSharedRef<FJsonObject> Frame = MakeShared<FJsonObject>();
+		Frame->SetNumberField(TEXT("index"), Index);
+		Frame->SetStringField(TEXT("image"), FPaths::Combine(OutDir, FileName));
+		Frame->SetNumberField(TEXT("mean_luminance"), Stats.Mean);
+		Frame->SetNumberField(TEXT("lit_pixels"), Stats.LitPixels);
+		Frame->SetNumberField(TEXT("delta_lit_pixels"), Delta);
+		Frames.Add(MakeShared<FJsonValueObject>(Frame));
+	}
+
+	DestroyTrackedActors(Tracked);
+	const bool bTeardown = TeardownComplete(Tracked);
+	const bool bRendered = MaxDelta >= MinimumChangedLitPixels;
+
+	TSharedRef<FJsonObject> Structural = MakeShared<FJsonObject>();
+	Structural->SetStringField(TEXT("material_path"), Material->GetPathName());
+	Structural->SetStringField(TEXT("material_class"), Material->GetClass()->GetName());
+	if (const UMaterialInstance* Instance = Cast<UMaterialInstance>(Material))
+	{
+		Structural->SetBoolField(TEXT("is_instance"), true);
+		if (Instance->Parent)
+		{
+			Structural->SetStringField(TEXT("parent_path"), Instance->Parent->GetPathName());
+		}
+	}
+	else
+	{
+		Structural->SetBoolField(TEXT("is_instance"), false);
+	}
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.UnderstoodAction = TEXT("capture_material_frames");
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = Request.TargetAssetPath;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = InternalOperations;
+	Response.CapabilityNotes.Add(
+		TEXT("Pixel delta proves the material shaded something; not appearance quality."));
+	Response.Status = (bRendered && bTeardown)
+		? TEXT("no_change_required")
+		: TEXT("failed_validation");
+	Response.Summary = FString::Printf(
+		TEXT("Captured %d material frames; %s"),
+		FrameCount,
+		bRendered ? TEXT("pixels changed vs empty stage")
+				  : TEXT("no pixel change vs empty stage"));
+
+	TSharedRef<FJsonObject> Extra = MakeShared<FJsonObject>();
+	Extra->SetStringField(TEXT("output_directory"), OutDir);
+	Extra->SetArrayField(TEXT("frames"), Frames);
+	Extra->SetObjectField(TEXT("structural"), Structural);
+	Extra->SetObjectField(TEXT("visual"), MakeVisualSupplementalNote());
+	TSharedRef<FJsonObject> Verification = MakeShared<FJsonObject>();
+	Verification->SetBoolField(TEXT("png_files_reread"), true);
+	Verification->SetBoolField(TEXT("rendered_something"), bRendered);
+	Verification->SetBoolField(TEXT("stage_teardown_complete"), bTeardown);
+	Verification->SetNumberField(TEXT("max_delta_lit_pixels"), MaxDelta);
+	Extra->SetObjectField(TEXT("verification"), Verification);
+	Response.ExtraFields = Extra;
+	return Dispatch.Complete(Response);
+}
+
+FString UUeremcpVisualCaptureToolset::CaptureAnimationFrames(const FString& RequestJson)
+{
+	using namespace UeremcpVisualCapture;
+
+	FUeremcpMutatingDispatch Dispatch;
+	FString Blocked;
+	if (!Dispatch.TryBegin(RequestJson, true, 0, true, Blocked))
+	{
+		return Blocked;
+	}
+	const FUeremcpRequest& Request = Dispatch.GetRequest();
+
+	auto Fail = [&Dispatch, &Request](const FString& Status, const FString& Summary)
+	{
+		FUeremcpResponse Response;
+		Response.RequestId = Request.RequestId;
+		Response.UnderstoodAction = TEXT("capture_animation_frames");
+		Response.UnderstoodTarget = Request.TargetAssetPath;
+		Response.Status = Status;
+		Response.Summary = Summary;
+		Response.Metrics.McpRoundTrips = 1;
+		return Dispatch.Complete(Response);
+	};
+
+	if (Request.Action != TEXT("capture_animation_frames"))
+	{
+		return Fail(TEXT("rejected"), TEXT("action must be capture_animation_frames"));
+	}
+	if (Request.TargetAssetPath.IsEmpty())
+	{
+		return Fail(TEXT("rejected"), TEXT("target.asset_path is required"));
+	}
+
+	int32 FrameCount = 4;
+	int32 WarmUpTicks = 8;
+	int32 Width = 960;
+	int32 Height = 540;
+	FString CameraPreset = TEXT("three_quarter");
+	double DurationSeconds = 1.0;
+	FString MeshPath;
+	if (Request.Specification.IsValid())
+	{
+		Request.Specification->TryGetStringField(TEXT("skeletal_mesh_path"), MeshPath);
+	}
+	if (!ParseCaptureSpec(
+			Request.Specification, FrameCount, WarmUpTicks, Width, Height,
+			CameraPreset, DurationSeconds))
+	{
+		return Fail(TEXT("rejected"), TEXT("invalid specification for capture_animation_frames"));
+	}
+
+	if (Dispatch.IsEffectiveDryRun())
+	{
+		FUeremcpResponse Response;
+		Response.RequestId = Request.RequestId;
+		Response.UnderstoodAction = TEXT("capture_animation_frames");
+		Response.UnderstoodTarget = Request.TargetAssetPath;
+		Response.Status = TEXT("no_change_required");
+		Response.Summary = TEXT("Dry-run capture_animation_frames — no stage built.");
+		Response.Metrics.McpRoundTrips = 1;
+		return Dispatch.Complete(Response);
+	}
+
+	UAnimSequence* Sequence =
+		LoadObject<UAnimSequence>(nullptr, *Request.TargetAssetPath);
+	if (!Sequence)
+	{
+		return Fail(TEXT("rejected"),
+			FString::Printf(TEXT("could not load AnimSequence: %s"), *Request.TargetAssetPath));
+	}
+	if (MeshPath.IsEmpty())
+	{
+		return Fail(TEXT("rejected"),
+			TEXT("specification.skeletal_mesh_path is required for capture_animation_frames"));
+	}
+	USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, *MeshPath);
+	if (!Mesh)
+	{
+		return Fail(TEXT("rejected"),
+			FString::Printf(TEXT("could not load skeletal mesh: %s"), *MeshPath));
+	}
+
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (!World || !IsInGameThread())
+	{
+		return Fail(TEXT("error"), TEXT("capture requires editor world on game thread"));
+	}
+
+	const FString OutDir = MakeOutputDirectory(
+		TEXT("AnimationCapture"),
+		FPaths::GetBaseFilename(Request.TargetAssetPath),
+		Request.RequestId);
+	if (!IFileManager::Get().MakeDirectory(*OutDir, true)
+		|| !IsPathUnderSavedUeremcp(OutDir))
+	{
+		return Fail(TEXT("error"), TEXT("could not create safe AnimationCapture directory"));
+	}
+
+	int32 InternalOperations = 0;
+	TArray<TWeakObjectPtr<AActor>> Tracked;
+	ON_SCOPE_EXIT { DestroyTrackedActors(Tracked); };
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.ObjectFlags |= RF_Transient;
+	ASkeletalMeshActor* Subject = World->SpawnActor<ASkeletalMeshActor>(
+		StageOrigin, FRotator::ZeroRotator, SpawnParameters);
+	Tracked.Add(Subject);
+	if (!Subject)
+	{
+		return Fail(TEXT("error"), TEXT("animation subject spawn failed"));
+	}
+	USkeletalMeshComponent* Skel = Subject->GetSkeletalMeshComponent();
+	Skel->SetSkeletalMesh(Mesh);
+	Skel->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	// [VERIFIED: Engine/.../Components/SkeletalMeshComponent.h:1258,1267,1303,1804,2182]
+	Skel->SetAnimation(Sequence);
+	++InternalOperations;
+
+	ADirectionalLight* Key = World->SpawnActor<ADirectionalLight>(
+		StageOrigin + FVector(0.0, 0.0, 1000.0),
+		FRotator(-42.0, -140.0, 0.0), SpawnParameters);
+	Tracked.Add(Key);
+	if (Key)
+	{
+		Key->GetComponent()->SetMobility(EComponentMobility::Movable);
+		Key->GetComponent()->SetIntensity(2.0f);
+		++InternalOperations;
+	}
+
+	UTextureRenderTarget2D* Target = CreateCaptureTarget(World, Width, Height);
+	ASceneCapture2D* CamActor = SpawnFramedCapture(
+		World,
+		StageOrigin + CameraOffset(CameraPreset),
+		StageOrigin + FVector(0.0, 0.0, 80.0),
+		Target,
+		Tracked);
+	if (!Target || !CamActor)
+	{
+		return Fail(TEXT("error"), TEXT("capture rig creation failed"));
+	}
+	USceneCaptureComponent2D* Capture = CamActor->GetCaptureComponent2D();
+	WarmUpWorldTicks(World, WarmUpTicks);
+	InternalOperations += WarmUpTicks + 1;
+
+	// [VERIFIED: Engine/.../Animation/AnimSequenceBase.h:86 GetPlayLength]
+	const float PlayLength = Sequence->GetPlayLength();
+	const double EffectiveDuration =
+		DurationSeconds > 0.0 ? DurationSeconds : static_cast<double>(PlayLength);
+
+	TArray<TSharedPtr<FJsonValue>> Frames;
+	int32 OkFrames = 0;
+	for (int32 Index = 0; Index < FrameCount; ++Index)
+	{
+		const double Age = FrameCount == 1
+			? 0.0
+			: EffectiveDuration * Index / static_cast<double>(FrameCount - 1);
+		Skel->SetPosition(static_cast<float>(Age), false);
+		Skel->TickAnimation(0.0f, false);
+		Skel->RefreshBoneTransforms();
+		World->SendAllEndOfFrameUpdates();
+		FlushRenderingCommands();
+		InternalOperations += 4;
+
+		FFrameStats Stats;
+		const FString FileName = FString::Printf(TEXT("anim_%02d.png"), Index);
+		const bool bOk = CaptureExportAndVerify(
+			World, Capture, Target, OutDir, FileName, Stats, InternalOperations);
+		if (bOk)
+		{
+			++OkFrames;
+		}
+		TSharedRef<FJsonObject> Frame = MakeShared<FJsonObject>();
+		Frame->SetNumberField(TEXT("index"), Index);
+		Frame->SetNumberField(TEXT("age_seconds"), Age);
+		Frame->SetStringField(TEXT("image"), FPaths::Combine(OutDir, FileName));
+		Frame->SetBoolField(TEXT("png_ok"), bOk);
+		Frame->SetNumberField(TEXT("mean_luminance"), Stats.Mean);
+		Frame->SetNumberField(TEXT("lit_pixels"), Stats.LitPixels);
+		Frames.Add(MakeShared<FJsonValueObject>(Frame));
+	}
+
+	DestroyTrackedActors(Tracked);
+	const bool bTeardown = TeardownComplete(Tracked);
+
+	TSharedRef<FJsonObject> Structural = MakeShared<FJsonObject>();
+	Structural->SetStringField(TEXT("anim_sequence_path"), Sequence->GetPathName());
+	Structural->SetStringField(TEXT("skeletal_mesh_path"), Mesh->GetPathName());
+	Structural->SetNumberField(TEXT("play_length_seconds"), PlayLength);
+	Structural->SetNumberField(
+		TEXT("ref_bone_count"), Mesh->GetRefSkeleton().GetNum());
+	if (USkeleton* Skeleton = Mesh->GetSkeleton())
+	{
+		Structural->SetStringField(TEXT("skeleton_path"), Skeleton->GetPathName());
+	}
+	Structural->SetBoolField(TEXT("stage_teardown_complete"), bTeardown);
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.UnderstoodAction = TEXT("capture_animation_frames");
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = Request.TargetAssetPath;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = InternalOperations;
+	Response.CapabilityNotes.Add(
+		TEXT("Structural bone/length evidence is authoritative; PNGs are supplemental."));
+	Response.Status = (OkFrames == FrameCount && bTeardown && PlayLength > 0.0f)
+		? TEXT("no_change_required")
+		: TEXT("failed_validation");
+	Response.Summary = FString::Printf(
+		TEXT("Captured %d/%d animation frames over %.2fs (sequence length %.2fs)"),
+		OkFrames, FrameCount, EffectiveDuration, PlayLength);
+
+	TSharedRef<FJsonObject> Extra = MakeShared<FJsonObject>();
+	Extra->SetStringField(TEXT("output_directory"), OutDir);
+	Extra->SetArrayField(TEXT("frames"), Frames);
+	Extra->SetObjectField(TEXT("structural"), Structural);
+	Extra->SetObjectField(TEXT("visual"), MakeVisualSupplementalNote());
+	TSharedRef<FJsonObject> Verification = MakeShared<FJsonObject>();
+	Verification->SetBoolField(TEXT("png_files_reread"), OkFrames == FrameCount);
+	Verification->SetBoolField(TEXT("stage_teardown_complete"), bTeardown);
+	Verification->SetBoolField(TEXT("play_length_positive"), PlayLength > 0.0f);
+	Extra->SetObjectField(TEXT("verification"), Verification);
 	Response.ExtraFields = Extra;
 	return Dispatch.Complete(Response);
 }

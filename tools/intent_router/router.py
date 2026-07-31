@@ -114,6 +114,27 @@ def expand(query: str) -> list[str]:
     return toks
 
 
+def normalize_tool_name(name: str) -> str:
+    """Normalize lookup aliases without changing live canonical registry names."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def resolve_tool_alias(query: str, known_names: set[str]) -> str | None:
+    """Resolve Pascal/snake/kebab and case variants; fail closed on ambiguity."""
+    if query in known_names:
+        return query
+    exact_ci = [name for name in known_names if name.lower() == query.lower()]
+    if len(exact_ci) == 1:
+        return exact_ci[0]
+    needle = normalize_tool_name(query)
+    matches = [
+        name for name in known_names
+        if normalize_tool_name(name) == needle
+        or normalize_tool_name(name.rsplit(".", 1)[-1]) == needle
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
 def registry_hash(snap: dict) -> str:
     names: list[str] = []
     for ts_name, ts in sorted((snap.get("toolsets") or {}).items()):
@@ -192,7 +213,6 @@ def build_index(snap: dict, catalog: dict | None = None):
                 tool.get("description") or "",
                 " ".join(tool.get("properties") or []),
                 extra,
-                " ".join(op.get("do_not_use_for") or []),
                 op.get("action") or "",
             ])
             docs.append(Counter(tokenize(text)))
@@ -327,7 +347,9 @@ def plan(
         if key not in best or score > best[key][0]:
             best[key] = (score, matched, m, why, rank)
 
-    chosen = sorted(best.values(), key=lambda x: (x[4], -x[0]))
+    # Score-primary ordering (BACKLOG 1.3d). dependsOn ranks remain on each hit
+    # for near-tie diagnostics but do not force weak domains into the plan.
+    chosen = sorted(best.values(), key=lambda x: (-x[0], x[4]))
 
     def allowed_in_plan(m) -> bool:
         q = m["qualified"]
@@ -335,11 +357,15 @@ def plan(
             return True
         return any(q.startswith(p) or m["toolset"].startswith(p) for p in PLAN_ALLOW_PREFIXES)
 
-    ueremcp_top = max((c[0] for c in chosen if c[2]["is_ueremcp"]), default=0.0)
-    catalog_top = max((c[0] for c in chosen if c[2].get("catalog")), default=0.0)
-    top_score = max((c[0] for c in chosen), default=0.0)
+    best_hit_score = max((h[0] for h in hits), default=0.0)
+    plan_score_floor = best_hit_score * 0.35
+    chosen_gated = [c for c in chosen if c[0] + 1e-9 >= plan_score_floor]
+
+    ueremcp_top = max((c[0] for c in chosen_gated if c[2]["is_ueremcp"]), default=0.0)
+    catalog_top = max((c[0] for c in chosen_gated if c[2].get("catalog")), default=0.0)
+    top_score = best_hit_score
     top_matched = set()
-    for c in chosen[:3]:
+    for c in chosen_gated[:3]:
         top_matched.update(c[1])
     has_anchor = bool(top_matched & DOMAIN_ANCHORS)
 
@@ -354,6 +380,7 @@ def plan(
 
     out["confidence"] = confidence
     out["confidence_reason"] = reason
+    out["plan_score_floor"] = round(plan_score_floor, 1)
 
     if not strong_signal:
         out["abstained"] = True
@@ -363,7 +390,7 @@ def plan(
             "Is this create, inspect, modify, or visual-verify?",
             "Do you already have an asset path under /Game/?",
         ]
-        for score, matched, m, why, rank in chosen[:3]:
+        for score, matched, m, why, rank in chosen_gated[:3]:
             if m["qualified"] in known:
                 out["alternatives"].append({
                     "tool": m["qualified"],
@@ -377,8 +404,9 @@ def plan(
             "Confirm the primary domain (Niagara / Material / Blueprint / other).",
         ]
 
+    # Default cap 3 — single-domain intents must not emit five speculative steps.
     for i, (score, matched, m, why, rank) in enumerate(
-        [c for c in chosen if allowed_in_plan(c[2])][:6], 1
+        [c for c in chosen_gated if allowed_in_plan(c[2])][:3], 1
     ):
         if m["qualified"] not in known:
             continue  # structural impossibility guard

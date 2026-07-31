@@ -33,6 +33,8 @@ public:
 	 *
 	 * Use when: validating the Niagara module envelope path.
 	 * Do not use for: creating or inspecting systems.
+	 * Inputs: requestJson envelope; specification has no required keys.
+	 * Example: {"protocol_version":"1.0","action":"echo","specification":{}}
 	 *
 	 * @param RequestJson  Request envelope (schemas/envelope/request.schema.json).
 	 */
@@ -47,6 +49,8 @@ public:
 	 * Outputs: structured topology + diagnostics; some stacks intentionally lossy.
 	 * Do not use for: creating effects — use CreateNiagaraEffect.
 	 * Next tool: CreateNiagaraEffect to author; CaptureEffectFrames for visual proof.
+	 * Specification has no required keys.
+	 * Example: {"protocol_version":"1.0","action":"inspect_system","target":{"asset_path":"/Game/VFX/NS_FrostNova"},"specification":{}}
 	 *
 	 * @param RequestJson  Request with action inspect_system and target.asset_path set.
 	 */
@@ -62,6 +66,7 @@ public:
 	 * Outputs: honest statuses — may be partially_completed until visual gates close.
 	 * Do not use for: Epic NiagaraToolsets module primitives; material-only edits.
 	 * Next tool: InspectSystem to verify; CaptureEffectFrames to show what it looks like.
+	 * Example: {"protocol_version":"1.0","action":"create_niagara_effect","target":{"asset_path":"/Game/__UeremcpTests/NS_FireProjectile"},"options":{"dry_run":true,"validate":true},"specification":{"effect_type":"projectile","element":"fire","components":["core","ribbon_trail"]}}
 	 *
 	 * [VERIFIED: composes UNiagaraExternalEditUtilities — same substrate as NiagaraToolsets]
 	 *

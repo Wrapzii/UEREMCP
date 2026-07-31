@@ -47,4 +47,12 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "UEREMCP|Weather")
 	FVector FollowOffset = FVector(0.0, 0.0, 350.0);
+
+	/** True when visible rain is the HISMC streak approximation (opt-in fallback only). */
+	UPROPERTY(VisibleAnywhere, Category = "UEREMCP|Weather")
+	bool bRainApproximated = false;
+
+	/** Soft path of the bound UNiagaraSystem when rain is real. */
+	UPROPERTY(VisibleAnywhere, Category = "UEREMCP|Weather")
+	FString BoundRainSystemPath;
 };

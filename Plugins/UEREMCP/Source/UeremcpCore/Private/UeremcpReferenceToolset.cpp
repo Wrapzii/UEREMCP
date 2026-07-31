@@ -107,7 +107,7 @@ FString UUeremcpReferenceToolset::ResolveIntent(const FString& RequestJson)
 	Request.Specification->TryGetStringField(TEXT("mode"), Mode);
 	FString ExpectedHash;
 	Request.Specification->TryGetStringField(TEXT("expected_registry_hash"), ExpectedHash);
-	int32 MaxSteps = 6;
+	int32 MaxSteps = 3;
 	if (Request.Specification->HasField(TEXT("max_steps")))
 	{
 		MaxSteps = static_cast<int32>(Request.Specification->GetNumberField(TEXT("max_steps")));

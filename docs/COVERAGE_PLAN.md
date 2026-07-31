@@ -707,24 +707,28 @@ retrofitted for:
 | `attach_weather` missing from III.3 | Required by III.10 | `AttachWeather` implemented |
 | `capture_effect_frames` Niagara-only | BACKLOG 3.2 | `CaptureWorldFrames` added on Validation toolset |
 | `UeremcpWorld` module name | Unassigned domain → WS-01 `UeremcpEnvironment` | superseded naming |
-| Audio / networking / WP | Thin registry; no goal-level wrap without inventing | audio/net: documented limitation; WP: `blocked_external` pending design |
+| Audio / networking / WP | Thin registry; goal ops added on `ws-01-remaining-domain-coverage` | `UeremcpSystems` SoundCue + validate_replication + WP inspect/repair; MetaSound graph + HLOD builders still blocked |
 | Schema fiction `world/level_design/pcg` | Confirmed bug | trimmed in `template.schema.json` |
-| GetStarted missing live | DLL exports present; multi-editor stale MCP session | registration smoke + clean restart required |
+| GetStarted missing live | Superseded by fresh single-editor deploy | `GetStarted`, `ResolveIntent`, `DescribeOperation` exact advertised names callable live 2026-07-30 |
 
 ## Capability ledger
 
 | ID | Capability | Final state | Evidence |
 |---|---|---|---|
-| CP-III.3-build | `build_environment` | `completed_and_verified` (compile+unit); live pending rebuild | Toolset + plan handler |
-| CP-III.3-landscape | `create_landscape` + `heightmap_hash` | `completed_and_verified` (unit hash determinism) | `GenerateHeightmap` CRC hash |
-| CP-III.3-water | `create_water_body` | `completed_and_verified` (API); live pending | `AWaterBodyRiver` |
-| CP-III.3-foliage | `scatter_foliage` + exclusion measure | `completed_and_verified` (code path) | HISMC + re-measure |
-| CP-III.3-weather | `attach_weather` | `completed_with_documented_limitation` | Actor spawn; PIE camera-follow needs rain asset + movement proof |
-| CP-III.3-structures | `place_structures` | `completed_and_verified` (API path) | GeometryScript AppendBox — plan III.5 "blocked" **superseded** |
-| CP-III.3-inspect | `inspect_environment` / `validate_environment` | `completed_and_verified` | Toolset |
+| CP-III.3-build | `build_environment` | `completed_and_verified` live `mrr-build-004` → `created_with_warnings` | seed=42 foliage=33 banks=6/27 saved+reloaded; WaterBrush hang fixed |
+| CP-III.3-landscape | `create_landscape` + `heightmap_hash` | `completed_and_verified` | unit hash + live `heightmap_hash=9dde558d` |
+| CP-III.3-water | `create_water_body` | `completed_and_verified` | live `AWaterBodyRiver` with `bAffectsLandscape=false` |
+| CP-III.3-foliage | `scatter_foliage` + exclusion measure | `completed_and_verified` | corridor-biased banks; exclusion=0; cubes approximated |
+| CP-III.3-weather | `attach_weather` | `completed_with_documented_limitation` | live PIE `weather_followed_10m=true`; rain particle visuals remain approximated because no Niagara rain asset exists |
+| CP-III.3-structures | `place_structures` | `completed_and_verified` | live `structures_placed=3` AppendBox |
+| CP-III.3-inspect | `inspect_environment` / `validate_environment` | `completed_and_verified` | live Validate gates passed |
 | CP-III.8-plan | ExecutePlan composition | `completed_and_verified` | `FUeremcpEnvironmentPlanHandlers` |
-| CP-III.10-capture | world capture | `completed_and_verified` | `CaptureWorldFrames` |
-| CP-audio | MetaSounds/cues goal tool | `completed_with_documented_limitation` | 1 Epic tool; no semantic wrap yet |
-| CP-net | replication goal tool | `completed_with_documented_limitation` | POC D proofs elsewhere; no new wrap |
-| CP-wp | world partition goal tool | `blocked_external` | Needs dedicated WP authoring design; 3 thin tools insufficient to claim |
+| CP-III.10-capture | world capture | `completed_and_verified` (structural+PNG reread) | retry-hardened reread live: `png_ok=true`, 1/1, 56,257 lit pixels; beauty still human |
+| CP-III.10-material-capture | material capture | `completed_with_documented_limitation` | `capture_material_frames`; live pending |
+| CP-III.10-animation-capture | animation capture | `completed_with_documented_limitation` | `capture_animation_frames`; live pending |
+| CP-III.10-world-acceptance | mountain-river-rain harness | `completed_with_documented_limitation` | structural live PASS; full PNG aesthetic checklist still human |
+| CP-III.10-eval-telemetry | semantic eval schema | `completed_and_verified` (unit) | `tests/schemas/semantic_eval_report.schema.json` |
+| CP-audio | SoundCue/attenuation goal tool | `completed_with_documented_limitation` | `create_audio_cue` / `inspect_audio`; MetaSound graph still blocked; router registration 2026-07-30 |
+| CP-net | replication goal tool | `completed_with_documented_limitation` | `validate_replication`; multi-client still WS-11 |
+| CP-wp | world partition inspect/repair | `completed_with_documented_limitation` | `inspect_world_partition` / `repair_world_partition`; HLOD commandlets blocked |
 

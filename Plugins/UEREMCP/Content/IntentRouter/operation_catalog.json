@@ -15,52 +15,76 @@
     },
     {
       "action": "create_water_body",
-      "depends_on_actions": ["create_landscape"],
+      "depends_on_actions": [
+        "create_landscape"
+      ],
       "why": "river usually conforms to terrain"
     },
     {
       "action": "scatter_foliage",
-      "depends_on_actions": ["create_landscape", "create_water_body"],
+      "depends_on_actions": [
+        "create_landscape",
+        "create_water_body"
+      ],
       "why": "bank forest needs terrain + river exclusion corridor"
     },
     {
       "action": "attach_weather",
-      "depends_on_actions": ["create_landscape"],
+      "depends_on_actions": [
+        "create_landscape"
+      ],
       "why": "weather follows after a world exists"
     },
     {
       "action": "place_structures",
-      "depends_on_actions": ["create_landscape"],
+      "depends_on_actions": [
+        "create_landscape"
+      ],
       "why": "structures sit on terrain / along river"
     },
     {
       "action": "capture_world_frames",
-      "depends_on_actions": ["build_environment", "create_landscape"],
+      "depends_on_actions": [
+        "build_environment",
+        "create_landscape"
+      ],
       "why": "world capture after environment exists"
     },
     {
       "action": "create_niagara_effect",
-      "depends_on_actions": ["create_vfx_material"],
+      "depends_on_actions": [
+        "create_vfx_material"
+      ],
       "why": "effects bind materials; create materials first when both are needed"
     },
     {
       "action": "capture_effect_frames",
-      "depends_on_actions": ["create_niagara_effect", "inspect_system"],
+      "depends_on_actions": [
+        "create_niagara_effect",
+        "inspect_system"
+      ],
       "why": "capture verifies an existing system; author or inspect first"
     },
     {
       "action": "create_spell",
-      "depends_on_actions": ["create_niagara_effect", "create_vfx_material"],
+      "depends_on_actions": [
+        "create_niagara_effect",
+        "create_vfx_material"
+      ],
       "why": "spell preflight often references VFX assets that should exist"
     },
     {
       "action": "instantiate_template",
-      "depends_on_actions": ["search_templates"],
+      "depends_on_actions": [
+        "search_templates"
+      ],
       "why": "prefer search to pick template_id before instantiate when unknown"
     },
     {
       "action": "submit_graph",
-      "depends_on_actions": ["read_graph"],
+      "depends_on_actions": [
+        "read_graph"
+      ],
       "why": "replace requires expected_revision from a prior read"
     },
     {
@@ -73,12 +97,23 @@
     {
       "qualified": "UeremcpCore.UeremcpReferenceToolset.GetStarted",
       "action": "get_started",
-      "use_when": ["first call", "bootstrap", "what tools", "start here", "how do I begin"],
-      "do_not_use_for": ["domain authoring", "asset mutation"],
+      "use_when": [
+        "first call",
+        "bootstrap",
+        "what tools",
+        "start here",
+        "how do I begin"
+      ],
+      "do_not_use_for": [
+        "domain authoring",
+        "asset mutation"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required"],
+      "expected_statuses": [
+        "no_change_required"
+      ],
       "recovery": "Call ResolveIntent with your plain-text goal next.",
       "example_request": {
         "protocol_version": "1.0",
@@ -90,12 +125,22 @@
     {
       "qualified": "UeremcpCore.UeremcpReferenceToolset.ResolveIntent",
       "action": "resolve_intent",
-      "use_when": ["route intent", "which tool", "plan my request", "how do I call"],
-      "do_not_use_for": ["executing mutations directly"],
+      "use_when": [
+        "route intent",
+        "which tool",
+        "plan my request",
+        "how do I call"
+      ],
+      "do_not_use_for": [
+        "executing mutations directly"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "rejected"],
+      "expected_statuses": [
+        "no_change_required",
+        "rejected"
+      ],
       "recovery": "If confidence is low/none, answer clarification_questions then call ResolveIntent again.",
       "example_request": {
         "protocol_version": "1.0",
@@ -110,12 +155,21 @@
     {
       "qualified": "UeremcpCore.UeremcpReferenceToolset.DescribeOperation",
       "action": "describe_operation",
-      "use_when": ["schema for one tool", "how to call CreateNiagaraEffect", "envelope example"],
-      "do_not_use_for": ["discovering which tool to pick — use ResolveIntent"],
+      "use_when": [
+        "schema for one tool",
+        "how to call CreateNiagaraEffect",
+        "envelope example"
+      ],
+      "do_not_use_for": [
+        "discovering which tool to pick \u2014 use ResolveIntent"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "rejected"],
+      "expected_statuses": [
+        "no_change_required",
+        "rejected"
+      ],
       "recovery": "If the name is unknown, call ResolveIntent or list_toolsets.",
       "example_request": {
         "protocol_version": "1.0",
@@ -129,277 +183,529 @@
     {
       "qualified": "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect",
       "action": "create_niagara_effect",
-      "use_when": ["create niagara", "spell effect", "projectile vfx", "particle effect", "helix", "beam", "explosion", "emitter"],
-      "do_not_use_for": ["Epic NiagaraToolsets module primitives", "material-only edits"],
+      "use_when": [
+        "create niagara",
+        "spell effect",
+        "projectile vfx",
+        "particle effect",
+        "helix",
+        "beam",
+        "explosion",
+        "emitter"
+      ],
+      "do_not_use_for": [
+        "Epic NiagaraToolsets module primitives",
+        "material-only edits"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["created_and_validated", "created_with_warnings", "partially_completed", "failed_validation"],
+      "expected_statuses": [
+        "created_and_validated",
+        "created_with_warnings",
+        "partially_completed",
+        "failed_validation"
+      ],
       "recovery": "On partially_completed poll GetJobResult; on failed_validation InspectSystem then fix.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_niagara_effect",
         "request_id": "nx-1",
-        "target": {"asset_path": "/Game/__UeremcpTests/NS_RouterScratch"},
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/NS_RouterScratch"
+        },
         "mode": "create_or_update",
-        "options": {"dry_run": true, "validate": true, "save": true},
+        "options": {
+          "dry_run": true,
+          "validate": true,
+          "save": true
+        },
         "idempotency_key": "router-niagara-scratch-1",
         "specification": {
           "effect_type": "projectile",
           "element": "fire",
-          "components": ["core", "ribbon_trail"]
+          "components": [
+            "core",
+            "ribbon_trail"
+          ]
         }
       }
     },
     {
       "qualified": "UeremcpNiagara.UeremcpNiagaraToolset.InspectSystem",
       "action": "inspect_system",
-      "use_when": ["inspect niagara", "read emitters", "niagara topology", "system summary"],
-      "do_not_use_for": ["creating effects"],
+      "use_when": [
+        "inspect niagara",
+        "read emitters",
+        "niagara topology",
+        "system summary"
+      ],
+      "do_not_use_for": [
+        "creating effects"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "partially_completed"],
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed"
+      ],
       "recovery": "If lossy stacks noted, prefer capability_notes over guessing.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "inspect_system",
         "request_id": "ni-1",
-        "target": {"asset_path": "/Game/__UeremcpTests/NS_RouterScratch"},
-        "options": {"response_detail": "complete"},
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/NS_RouterScratch"
+        },
+        "options": {
+          "response_detail": "complete"
+        },
         "specification": {}
       }
     },
     {
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateVfxMaterial",
       "action": "create_vfx_material",
-      "use_when": ["vfx material", "shader", "fresnel", "translucent material", "elemental material", "make material more orange"],
-      "do_not_use_for": ["MaterialTools expression graphs", "MaterialInstanceConstant authoring"],
+      "use_when": [
+        "vfx material",
+        "shader",
+        "fresnel",
+        "translucent material",
+        "elemental material",
+        "make material more orange"
+      ],
+      "do_not_use_for": [
+        "MaterialTools expression graphs",
+        "MaterialInstanceConstant authoring"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["created_and_validated", "modified_and_validated", "partially_completed", "failed_validation"],
+      "expected_statuses": [
+        "created_and_validated",
+        "modified_and_validated",
+        "partially_completed",
+        "failed_validation"
+      ],
       "recovery": "Re-run with validate=true; check parameters in response.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_vfx_material",
         "request_id": "mx-1",
-        "target": {"asset_path": "/Game/__UeremcpTests/M_RouterScratch"},
-        "options": {"dry_run": true, "validate": true},
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/M_RouterScratch"
+        },
+        "options": {
+          "dry_run": true,
+          "validate": true
+        },
         "idempotency_key": "router-mat-scratch-1",
-        "specification": {"element": "fire", "role": "core"}
+        "specification": {
+          "element": "fire",
+          "role": "core"
+        }
       }
     },
     {
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateProceduralTexture",
       "action": "create_procedural_texture",
-      "use_when": ["procedural texture", "noise texture", "dissolve mask", "tileable texture"],
-      "do_not_use_for": ["photograph import", "full material graphs"],
+      "use_when": [
+        "procedural texture",
+        "noise texture",
+        "dissolve mask",
+        "tileable texture"
+      ],
+      "do_not_use_for": [
+        "photograph import",
+        "full material graphs"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["created_and_validated", "partially_completed", "failed_validation"],
+      "expected_statuses": [
+        "created_and_validated",
+        "partially_completed",
+        "failed_validation"
+      ],
       "recovery": "Confirm asset under /Game/__UeremcpTests/.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_procedural_texture",
         "request_id": "tx-1",
-        "target": {"asset_path": "/Game/__UeremcpTests/T_RouterNoise"},
-        "options": {"dry_run": true},
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/T_RouterNoise"
+        },
+        "options": {
+          "dry_run": true
+        },
         "specification": {}
       }
     },
     {
       "qualified": "UeremcpBlueprint.UeremcpBlueprintToolset.ReadGraph",
       "action": "read_graph",
-      "use_when": ["read blueprint", "event graph", "blueprint logic", "inspect blueprint graph"],
-      "do_not_use_for": ["pin-by-pin BlueprintTools loops"],
+      "use_when": [
+        "read blueprint",
+        "event graph",
+        "blueprint logic",
+        "inspect blueprint graph"
+      ],
+      "do_not_use_for": [
+        "pin-by-pin BlueprintTools loops"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "partially_completed"],
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed"
+      ],
       "recovery": "Capture revision from response before SubmitGraph.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "read_graph",
         "request_id": "br-1",
-        "target": {"asset_path": "/Game/__UeremcpTests/BP_RouterScratch", "graph_id": "EventGraph"},
-        "options": {"response_detail": "complete"},
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/BP_RouterScratch",
+          "graph_id": "EventGraph"
+        },
+        "options": {
+          "response_detail": "complete"
+        },
         "specification": {}
       }
     },
     {
       "qualified": "UeremcpBlueprint.UeremcpBlueprintToolset.SubmitGraph",
       "action": "submit_graph",
-      "use_when": ["replace blueprint graph", "submit graph", "write blueprint logic", "when the spell hits"],
-      "do_not_use_for": ["create_node/connect_pins loops"],
+      "use_when": [
+        "replace blueprint graph",
+        "submit graph",
+        "write blueprint logic",
+        "when the spell hits"
+      ],
+      "do_not_use_for": [
+        "create_node/connect_pins loops"
+      ],
       "destructive": true,
       "idempotent": true,
       "requires_revision": true,
-      "expected_statuses": ["modified_and_validated", "no_change_required", "failed_validation", "rolled_back"],
+      "expected_statuses": [
+        "modified_and_validated",
+        "no_change_required",
+        "failed_validation",
+        "rolled_back"
+      ],
       "recovery": "On revision conflict re-read then resubmit with fresh expected_revision.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "submit_graph",
         "request_id": "bs-1",
         "mode": "replace",
-        "target": {"asset_path": "/Game/__UeremcpTests/BP_RouterScratch", "graph_id": "EventGraph"},
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/BP_RouterScratch",
+          "graph_id": "EventGraph"
+        },
         "expected_revision": "<from read_graph>",
-        "options": {"dry_run": true, "validate": true, "compile": true, "save": true},
+        "options": {
+          "dry_run": true,
+          "validate": true,
+          "compile": true,
+          "save": true
+        },
         "idempotency_key": "router-bp-submit-1",
-        "specification": {"graph": {"schema_version": "1.0", "nodes": [], "edges": []}}
+        "specification": {
+          "graph": {
+            "schema_version": "1.0",
+            "nodes": [],
+            "edges": []
+          }
+        }
       }
     },
     {
       "qualified": "UeremcpGameplay.UeremcpGameplayToolset.CreateSpell",
       "action": "create_spell",
-      "use_when": ["gameplay ability", "create spell", "GAS ability", "mana cost", "armor buff"],
-      "do_not_use_for": ["Niagara-only VFX without ability binding"],
+      "use_when": [
+        "gameplay ability",
+        "create spell",
+        "GAS ability",
+        "mana cost",
+        "armor buff"
+      ],
+      "do_not_use_for": [
+        "Niagara-only VFX without ability binding"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["partially_completed", "rejected"],
+      "expected_statuses": [
+        "partially_completed",
+        "rejected"
+      ],
       "recovery": "This tip is preflight-oriented; read capability_notes before claiming mutation.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_spell",
         "request_id": "sp-1",
-        "options": {"dry_run": true},
-        "specification": {"name": "IceBarrier", "element": "ice"}
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "name": "IceBarrier",
+          "element": "ice"
+        }
       }
     },
     {
       "qualified": "UeremcpAnimation.UeremcpAnimationToolset.InspectMontage",
       "action": "inspect_montage",
-      "use_when": ["inspect montage", "montage sections", "notify tracks"],
-      "do_not_use_for": ["montage authoring — UEREMCP does not author montages"],
+      "use_when": [
+        "inspect montage",
+        "montage sections",
+        "notify tracks"
+      ],
+      "do_not_use_for": [
+        "montage authoring \u2014 UEREMCP does not author montages"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "partially_completed"],
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed"
+      ],
       "recovery": "For authoring fall back to Sequencer/Anim tools; do not invent UEREMCP montage writers.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "inspect_montage",
         "request_id": "am-1",
-        "target": {"asset_path": "/Game/Animation/AM_Example"},
+        "target": {
+          "asset_path": "/Game/Animation/AM_Example"
+        },
         "specification": {}
       }
     },
     {
       "qualified": "UeremcpAnimation.UeremcpAnimationToolset.ReadAnimBp",
       "action": "read_anim_bp",
-      "use_when": ["read anim blueprint", "state machine", "ABP transitions"],
-      "do_not_use_for": ["AnimBP authoring"],
+      "use_when": [
+        "read anim blueprint",
+        "state machine",
+        "ABP transitions"
+      ],
+      "do_not_use_for": [
+        "AnimBP authoring"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "partially_completed"],
-      "recovery": "Authoring unsupported — use Epic animation tools if write is required.",
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed"
+      ],
+      "recovery": "Authoring unsupported \u2014 use Epic animation tools if write is required.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "read_anim_bp",
         "request_id": "ab-1",
-        "target": {"asset_path": "/Game/Characters/ABP_Example"},
+        "target": {
+          "asset_path": "/Game/Characters/ABP_Example"
+        },
         "specification": {}
       }
     },
     {
       "qualified": "UeremcpTemplates.UeremcpTemplatesToolset.SearchTemplates",
       "action": "search_templates",
-      "use_when": ["find template", "search templates", "reusable pattern", "known pattern"],
-      "do_not_use_for": ["direct asset creation when template_id already known — InstantiateTemplate"],
+      "use_when": [
+        "find template",
+        "search templates",
+        "reusable pattern",
+        "known pattern"
+      ],
+      "do_not_use_for": [
+        "direct asset creation when template_id already known \u2014 InstantiateTemplate"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "partially_completed"],
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed"
+      ],
       "recovery": "If no hits, call domain create tools directly.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "search_templates",
         "request_id": "ts-1",
-        "specification": {"query": "projectile fire"}
+        "specification": {
+          "query": "projectile fire"
+        }
       }
     },
     {
       "qualified": "UeremcpTemplates.UeremcpTemplatesToolset.InstantiateTemplate",
       "action": "instantiate_template",
-      "use_when": ["instantiate template", "apply template", "multi-asset from template"],
-      "do_not_use_for": ["prefer over ExecutePlan for known library patterns"],
+      "use_when": [
+        "instantiate template",
+        "apply template",
+        "multi-asset from template"
+      ],
+      "do_not_use_for": [
+        "prefer over ExecutePlan for known library patterns"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["created_and_validated", "partially_completed", "failed_validation"],
+      "expected_statuses": [
+        "created_and_validated",
+        "partially_completed",
+        "failed_validation"
+      ],
       "recovery": "On failure SearchTemplates again or use domain tools.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "instantiate_template",
         "request_id": "ti-1",
-        "target": {"asset_path": "/Game/__UeremcpTests/FromTemplate"},
-        "options": {"dry_run": true},
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/FromTemplate"
+        },
+        "options": {
+          "dry_run": true
+        },
         "idempotency_key": "router-tmpl-1",
-        "specification": {"template_id": "niagara.projectile.fire", "inputs": {"element": "fire"}}
+        "specification": {
+          "template_id": "niagara.projectile.fire",
+          "inputs": {
+            "element": "fire"
+          }
+        }
       }
     },
     {
       "qualified": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames",
       "action": "capture_effect_frames",
-      "use_when": ["show me what it looks like", "capture frames", "visual proof", "screenshot effect", "pixel evidence"],
-      "do_not_use_for": ["authoring Niagara or materials"],
+      "use_when": [
+        "show me what it looks like",
+        "capture frames",
+        "visual proof",
+        "screenshot effect",
+        "pixel evidence"
+      ],
+      "do_not_use_for": [
+        "authoring Niagara or materials"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "failed_validation", "partially_completed"],
+      "expected_statuses": [
+        "no_change_required",
+        "failed_validation",
+        "partially_completed"
+      ],
       "recovery": "Cold renderer may need one GetJobResult poll; second zero-pixel is failed_validation.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "capture_effect_frames",
         "request_id": "vc-1",
-        "target": {"asset_path": "/Game/__UeremcpTests/NS_RouterScratch"},
-        "options": {"validate": true},
-        "specification": {"frame_count": 6}
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/NS_RouterScratch"
+        },
+        "options": {
+          "validate": true
+        },
+        "specification": {
+          "frame_count": 6
+        }
       }
     },
     {
       "qualified": "UeremcpCore.UeremcpReferenceToolset.ExecutePlan",
       "action": "execute_plan",
-      "use_when": ["multi-step plan", "batched operations", "execute plan json"],
-      "do_not_use_for": ["first choice when InstantiateTemplate or a domain tool covers the goal"],
+      "use_when": [
+        "multi-step plan",
+        "batched operations",
+        "execute plan json"
+      ],
+      "do_not_use_for": [
+        "first choice when InstantiateTemplate or a domain tool covers the goal"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["created_and_validated", "partially_completed", "failed_validation", "rolled_back"],
+      "expected_statuses": [
+        "created_and_validated",
+        "partially_completed",
+        "failed_validation",
+        "rolled_back"
+      ],
       "recovery": "Prefer templates/domain tools; use ExecutePlan only for explicit multi-op plans.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "execute_plan",
         "request_id": "ep-1",
-        "options": {"dry_run": true},
-        "specification": {"operations": [{"id": "m1", "action": "create_vfx_material", "target": {"asset_path": "/Game/__UeremcpTests/M_Plan"}, "specification": {"element": "fire"}}]}
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "operations": [
+            {
+              "id": "m1",
+              "action": "create_vfx_material",
+              "target": {
+                "asset_path": "/Game/__UeremcpTests/M_Plan"
+              },
+              "specification": {
+                "element": "fire"
+              }
+            }
+          ]
+        }
       }
     },
     {
       "qualified": "UeremcpCore.UeremcpReferenceToolset.GetJobResult",
       "action": "get_job_result",
-      "use_when": ["poll job", "partially_completed", "job_id"],
-      "do_not_use_for": ["starting new domain work"],
+      "use_when": [
+        "poll job",
+        "partially_completed",
+        "job_id"
+      ],
+      "do_not_use_for": [
+        "starting new domain work"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["partially_completed", "created_and_validated", "failed_validation", "rolled_back"],
+      "expected_statuses": [
+        "partially_completed",
+        "created_and_validated",
+        "failed_validation",
+        "rolled_back"
+      ],
       "recovery": "Continue polling until terminal; CancelJob to stop.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "get_job_result",
         "request_id": "jr-1",
-        "specification": {"job_id": "<from prior response>"}
+        "specification": {
+          "job_id": "<from prior response>"
+        }
       }
     },
     {
       "qualified": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.capture_viewport_to_disk",
       "action": null,
-      "use_when": ["viewport screenshot", "capture viewport", "fallback visual capture"],
-      "do_not_use_for": ["prefer CaptureEffectFrames when UEREMCP validation toolset is registered"],
+      "use_when": [
+        "viewport screenshot",
+        "capture viewport",
+        "fallback visual capture"
+      ],
+      "do_not_use_for": [
+        "prefer CaptureEffectFrames when UEREMCP validation toolset is registered"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
@@ -418,7 +724,13 @@
       "destructive": true,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "created_with_warnings", "partially_completed", "failed_validation", "rejected"],
+      "expected_statuses": [
+        "no_change_required",
+        "created_with_warnings",
+        "partially_completed",
+        "failed_validation",
+        "rejected"
+      ],
       "recovery": "Dry-run first; then options.dry_run=false; ValidateEnvironment; CaptureWorldFrames.",
       "example_request": {
         "protocol_version": "1.0",
@@ -442,32 +754,659 @@
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateLandscape",
       "action": "create_landscape",
-      "use_when": ["heightmap", "terrain", "mountains", "valley"],
-      "do_not_use_for": ["sculpt brush strokes"],
+      "use_when": [
+        "heightmap",
+        "terrain",
+        "mountains",
+        "valley"
+      ],
+      "do_not_use_for": [
+        "sculpt brush strokes"
+      ],
       "destructive": true,
       "idempotent": true,
       "requires_revision": false,
-      "expected_statuses": ["no_change_required", "created_with_warnings", "rejected"],
+      "expected_statuses": [
+        "no_change_required",
+        "created_with_warnings",
+        "rejected"
+      ],
       "recovery": "Check heightmap_hash for determinism.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_landscape",
-        "target": {"asset_path": "/Game/__UeremcpPoc/MountainRiverRain"},
-        "options": {"dry_run": true},
-        "specification": {"seed": 4471}
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/MountainRiverRain"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "seed": 4471
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateWaterBody",
+      "action": "create_water_body",
+      "use_when": [
+        "river",
+        "lake",
+        "ocean",
+        "water spline"
+      ],
+      "do_not_use_for": [
+        "terrain creation"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "CreateLandscape first when water must conform to terrain.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_water_body",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Alpine"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "seed": 4471,
+          "river": {
+            "width": 1200
+          }
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ScatterFoliage",
+      "action": "scatter_foliage",
+      "use_when": [
+        "forest",
+        "foliage",
+        "trees",
+        "river bank exclusion"
+      ],
+      "do_not_use_for": [
+        "placing individual actors"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Create terrain and water first; require exclusion_violations=0.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "scatter_foliage",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Alpine"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "seed": 4471,
+          "biome": {
+            "mesh_path": "/Game/Meshes/SM_Pine",
+            "max_foliage_instances": 800
+          }
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.AttachWeather",
+      "action": "attach_weather",
+      "use_when": [
+        "rain",
+        "weather",
+        "fog",
+        "follow player camera"
+      ],
+      "do_not_use_for": [
+        "Niagara asset authoring"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "created_with_warnings",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "PIE camera-follow proof still requires movement validation.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "attach_weather",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Alpine"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "follow": "player_camera"
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.PlaceStructures",
+      "action": "place_structures",
+      "use_when": [
+        "procedural structures",
+        "village",
+        "buildings",
+        "props"
+      ],
+      "do_not_use_for": [
+        "claiming static kit placement is GeometryScript generation"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Confirm GeometryScripting is enabled and dry-run first.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "place_structures",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Alpine"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "seed": 4471,
+          "count": 6
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.InspectEnvironment",
+      "action": "inspect_environment",
+      "use_when": [
+        "inspect environment",
+        "world diagnostics",
+        "environment metrics"
+      ],
+      "do_not_use_for": [
+        "environment mutation"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Use ValidateEnvironment for acceptance gates.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "inspect_environment",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Alpine"
+        },
+        "specification": {}
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ValidateEnvironment",
+      "action": "validate_environment",
+      "use_when": [
+        "validate environment",
+        "structural world gates",
+        "river exclusion metrics"
+      ],
+      "do_not_use_for": [
+        "visual quality judgment"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "failed_validation",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Treat screenshots as review evidence, never the structural gate.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "validate_environment",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Alpine"
+        },
+        "specification": {}
+      }
+    },
+    {
+      "qualified": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames",
+      "action": "capture_world_frames",
+      "use_when": [
+        "world screenshot",
+        "viewport capture",
+        "environment visual review"
+      ],
+      "do_not_use_for": [
+        "claiming world quality or structural validation"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "failed_validation",
+        "partially_completed"
+      ],
+      "recovery": "Pair with domain structural validation.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "capture_world_frames",
+        "target": {
+          "asset_path": "/Game/Maps/Alpine"
+        },
+        "options": {
+          "validate": true
+        },
+        "specification": {
+          "frame_count": 1,
+          "warm_up_ticks": 30
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpGameplay.UeremcpGameplayToolset.CreateSpellVariation",
+      "action": "create_spell_variation",
+      "use_when": [
+        "spell variation",
+        "VFX-only ability variant",
+        "preserve gameplay fields"
+      ],
+      "do_not_use_for": [
+        "changing protected gameplay behavior"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_and_validated",
+        "partially_completed",
+        "failed_validation",
+        "rolled_back",
+        "rejected"
+      ],
+      "recovery": "Require protected_fields_equal evidence after re-read.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_spell_variation",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "source_binding": {
+            "ability_table": "/Game/Data/DT_Abilities",
+            "source_row": "FireBolt",
+            "vfx_phase": "projectile"
+          },
+          "target_row": "IceBoltVisual",
+          "presentation_asset": "/Game/VFX/NS_IceBolt",
+          "verification_mode": "protected_fields_equal"
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpTemplates.UeremcpTemplatesToolset.PromoteToTemplate",
+      "action": "promote_to_template",
+      "use_when": [
+        "promote successful asset",
+        "save reusable pattern",
+        "template preview"
+      ],
+      "do_not_use_for": [
+        "claiming a template was written while preview-only"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Read capability_notes; current implementation is preview-only.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "promote_to_template",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "source_asset": "/Game/__UeremcpTests/NS_Good",
+          "proposed_template_id": "niagara.projectile.good.v1"
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpCore.UeremcpReferenceToolset.CancelJob",
+      "action": "cancel_job",
+      "use_when": [
+        "cancel UEREMCP job",
+        "stop long operation",
+        "job_id"
+      ],
+      "do_not_use_for": [
+        "assuming MCP notifications/cancelled reaches AICallable jobs"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Poll GetJobResult to confirm terminal cancellation.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "cancel_job",
+        "specification": {
+          "job_id": "<prior job.job_id>"
+        }
       }
     },
     {
       "qualified": "EditorToolset.LogsToolset.GetLog",
       "action": null,
-      "use_when": ["editor log", "read log", "errors in log"],
-      "do_not_use_for": ["UEREMCP domain authoring"],
+      "use_when": [
+        "editor log",
+        "read log",
+        "errors in log"
+      ],
+      "do_not_use_for": [
+        "UEREMCP domain authoring"
+      ],
       "destructive": false,
       "idempotent": true,
       "requires_revision": false,
       "expected_statuses": [],
       "recovery": "If tool name differs in live registry, ResolveIntent will emit the live name only.",
       "example_request": null
+    },
+    {
+      "qualified": "UeremcpSystems.UeremcpSystemsToolset.CreateAudioCue",
+      "action": "create_audio_cue",
+      "use_when": [
+        "sound cue",
+        "audio cue",
+        "attenuation",
+        "cast audio",
+        "impact sound",
+        "SoundWave"
+      ],
+      "do_not_use_for": [
+        "MetaSound graph authoring",
+        "adaptive music layers"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "partially_completed",
+        "created_and_validated",
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Dry-run first; InspectAudio after create; MetaSound remains blocked.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_audio_cue",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Audio/SC_Cast"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "sound_waves": [
+            "/Game/Audio/SW_Cast"
+          ],
+          "create_attenuation": true
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpSystems.UeremcpSystemsToolset.InspectAudio",
+      "action": "inspect_audio",
+      "use_when": [
+        "inspect audio",
+        "sound cue wiring",
+        "attenuation binding"
+      ],
+      "do_not_use_for": [
+        "MetaSound graphs"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Provide a SoundCue/SoundWave/SoundAttenuation path.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "inspect_audio",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Audio/SC_Cast"
+        },
+        "specification": {
+          "include_wave_paths": true
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpSystems.UeremcpSystemsToolset.ValidateReplication",
+      "action": "validate_replication",
+      "use_when": [
+        "replication",
+        "replicated variable",
+        "RepNotify",
+        "Pattern B",
+        "networking audit"
+      ],
+      "do_not_use_for": [
+        "multi-client runtime proof",
+        "BlueprintTools get/set_variable_replication loops"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "modified_and_validated",
+        "partially_completed",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Dry-run audit first; apply_fixes only with dry_run=false.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "validate_replication",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/BP_Rep"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "networking": {
+            "pattern": "B",
+            "authority": "server",
+            "cast_path": "AuthorityCastAbility"
+          },
+          "variables": [
+            {
+              "name": "Health",
+              "replication": "REPLICATED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpSystems.UeremcpSystemsToolset.InspectWorldPartition",
+      "action": "inspect_world_partition",
+      "use_when": [
+        "world partition",
+        "is partitioned",
+        "streaming enabled",
+        "WP bounds"
+      ],
+      "do_not_use_for": [
+        "mutating world partition",
+        "HLOD build"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Omit target to inspect the editor world.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "inspect_world_partition",
+        "specification": {
+          "include_bounds": true
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpSystems.UeremcpSystemsToolset.RepairWorldPartition",
+      "action": "repair_world_partition",
+      "use_when": [
+        "repair world partition",
+        "enable world partition",
+        "CreateOrRepairWorldPartition"
+      ],
+      "do_not_use_for": [
+        "HLOD builders",
+        "mutate without dry_run=false"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "modified_and_validated",
+        "rejected"
+      ],
+      "recovery": "Defaults dry_run=true; mutate only with dry_run=false + allow_destructive.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "repair_world_partition",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "enable_streaming": true
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureMaterialFrames",
+      "action": "capture_material_frames",
+      "use_when": [
+        "material screenshot",
+        "visual proof of material",
+        "VFX material capture"
+      ],
+      "do_not_use_for": [
+        "authoring materials",
+        "beauty judgment"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "failed_validation",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Pair with create_vfx_material structural validation.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "capture_material_frames",
+        "target": {
+          "asset_path": "/Game/Materials/M_VFX"
+        },
+        "options": {
+          "validate": true
+        },
+        "specification": {
+          "frame_count": 1
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureAnimationFrames",
+      "action": "capture_animation_frames",
+      "use_when": [
+        "animation screenshot",
+        "montage visual proof",
+        "AnimSequence capture"
+      ],
+      "do_not_use_for": [
+        "authoring animation",
+        "beauty judgment"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "failed_validation",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "Provide specification.skeletal_mesh_path when sequence has no mesh.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "capture_animation_frames",
+        "target": {
+          "asset_path": "/Game/Anims/AS_Idle"
+        },
+        "options": {
+          "validate": true
+        },
+        "specification": {
+          "skeletal_mesh_path": "/Game/Characters/SK_Hero",
+          "frame_count": 4
+        }
+      }
     }
   ]
 }

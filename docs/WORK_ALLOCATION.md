@@ -21,7 +21,7 @@ Unowned path? It is WS-01's until assigned. Propose, do not squat.
 
 | WS | Role | Owns | Wave |
 |---|---|---|---|
-| **WS-01** | Lead Architect | `docs/adr/**`, `docs/GROUNDED_FACTS.md`, `docs/WHY.md`, `docs/WORK_ALLOCATION.md`, `docs/RESEARCH_PROTOCOL.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/POC_ACCEPTANCE.md`, `docs/CAPABILITY_CATALOG.md`, `docs/SWARM_LAUNCH.md`, `docs/BACKLOG.md`, `Scripts/**`, `schemas/common/**`, `schemas/envelope/**`, `schemas/graph/**`, `schemas/template-library/**`, `schemas/domains/environment/**`, `Plugins/UEREMCP/Source/UeremcpEnvironment/**`, `AGENTS.md`, `README.md` | 0 |
+| **WS-01** | Lead Architect | `docs/adr/**`, `docs/GROUNDED_FACTS.md`, `docs/WHY.md`, `docs/WORK_ALLOCATION.md`, `docs/RESEARCH_PROTOCOL.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/POC_ACCEPTANCE.md`, `docs/CAPABILITY_CATALOG.md`, `docs/SWARM_LAUNCH.md`, `docs/BACKLOG.md`, `docs/COVERAGE_PLAN.md`, `Scripts/**`, `schemas/common/**`, `schemas/envelope/**`, `schemas/graph/**`, `schemas/template-library/**`, `schemas/domains/audio/**`, `schemas/domains/networking/**`, `schemas/domains/world_partition/**`, `Plugins/UEREMCP/Source/UeremcpSystems/**`, `AGENTS.md`, `README.md` | 0 |
 | **WS-02** | Existing-System Auditor | `docs/audit/**` | 1 |
 | **WS-03** | Unreal Plugin Architect | `Plugins/UEREMCP/UEREMCP.uplugin`, `Plugins/UEREMCP/Source/UeremcpCore/**` | 1 |
 | **WS-04** | MCP Server / Transport | `Plugins/UEREMCP/Source/UeremcpTransport/**`, `docs/research/RB-04-*.md` | 1 |
@@ -36,6 +36,7 @@ Unowned path? It is WS-01's until assigned. Propose, do not squat.
 | **WS-13** | Documentation | `docs/guide/**` | 3 |
 | **WS-14** | Integration Critic | `docs/reviews/**` | continuous |
 | **WS-15** | Template & Pattern Library | `Plugins/UEREMCP/Source/UeremcpTemplates/**`, `templates/**`, `schemas/domains/templates/**` | 2 |
+| **WS-16** | Environment Coverage | `Plugins/UEREMCP/Source/UeremcpEnvironment/**`, `schemas/domains/environment/**` | 3 |
 
 Everyone additionally owns `docs/research/RB-<their-number>-*.md` and may write freely
 to `docs/proposals/<their-ws>-*.md`.

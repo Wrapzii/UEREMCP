@@ -1,8 +1,13 @@
-// WS-11 contract regressions for the agent-facing visual capture tool.
+// WS-11 contract regressions for general visual capture + Niagara fail-soft gate.
 #include "Dom/JsonObject.h"
+#include "HAL/FileManager.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "UeremcpNiagaraToolset.h"
+#include "UeremcpVisualCaptureCommon.h"
 #include "UeremcpVisualCaptureToolset.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -17,6 +22,37 @@ namespace UeremcpVisualCaptureTests
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpVisualCapturePngRereadTest,
+	"UEREMCP.Validation.VisualCapture.PngRereadHonesty",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpVisualCapturePngRereadTest::RunTest(const FString& Parameters)
+{
+	const FString Directory = FPaths::Combine(
+		FPaths::ProjectSavedDir(), TEXT("UEREMCP"), TEXT("Tests"));
+	IFileManager::Get().MakeDirectory(*Directory, true);
+	const FString ValidPath = FPaths::Combine(Directory, TEXT("valid-signature.png"));
+	const FString InvalidPath = FPaths::Combine(Directory, TEXT("invalid-signature.png"));
+	const TArray<uint8> ValidBytes = {
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
+	};
+	const TArray<uint8> InvalidBytes = {
+		0x89, 0x50, 0x4e, 0x46, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
+	};
+	TestTrue(TEXT("write valid fixture"),
+		FFileHelper::SaveArrayToFile(ValidBytes, *ValidPath));
+	TestTrue(TEXT("write invalid fixture"),
+		FFileHelper::SaveArrayToFile(InvalidBytes, *InvalidPath));
+	TestTrue(TEXT("valid PNG signature accepted"),
+		UeremcpVisualCapture::IsNonEmptyPng(ValidPath));
+	TestFalse(TEXT("invalid PNG signature rejected"),
+		UeremcpVisualCapture::IsNonEmptyPng(InvalidPath));
+	IFileManager::Get().Delete(*ValidPath);
+	IFileManager::Get().Delete(*InvalidPath);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpVisualCaptureDryRunTest,
 	"UEREMCP.Validation.VisualCapture.DryRunIsNonMutating",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -28,7 +64,7 @@ bool FUeremcpVisualCaptureDryRunTest::RunTest(const FString& Parameters)
 		"request_id":"visual-dry-run",
 		"action":"capture_effect_frames",
 		"target":{"asset_path":"/Game/__UeremcpPoc/NS_VisualProbe"},
-		"options":{"dry_run":true}
+		"options":{"dry_run":true,"validate":true}
 	})");
 	TSharedPtr<FJsonObject> Response;
 	TestTrue(TEXT("response parses"), UeremcpVisualCaptureTests::ParseResponse(
@@ -56,7 +92,8 @@ bool FUeremcpVisualCaptureRejectsWrongActionTest::RunTest(const FString& Paramet
 		"protocol_version":"1.0",
 		"request_id":"visual-wrong-action",
 		"action":"create_niagara_effect",
-		"target":{"asset_path":"/Game/__UeremcpPoc/NS_VisualProbe"}
+		"target":{"asset_path":"/Game/__UeremcpPoc/NS_VisualProbe"},
+		"options":{"validate":true}
 	})");
 	TSharedPtr<FJsonObject> Response;
 	TestTrue(TEXT("response parses"), UeremcpVisualCaptureTests::ParseResponse(
@@ -83,6 +120,7 @@ bool FUeremcpVisualCaptureRejectsUnsafeDimensionsTest::RunTest(
 		"request_id":"visual-invalid-size",
 		"action":"capture_effect_frames",
 		"target":{"asset_path":"/Game/__UeremcpPoc/NS_VisualProbe"},
+		"options":{"validate":true},
 		"specification":{"width":32000,"height":-1}
 	})");
 	TSharedPtr<FJsonObject> Response;
@@ -94,6 +132,121 @@ bool FUeremcpVisualCaptureRejectsUnsafeDimensionsTest::RunTest(
 	}
 	TestEqual(TEXT("unsafe dimensions rejected"),
 		Response->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpWorldCaptureDryRunTest,
+	"UEREMCP.Validation.VisualCapture.WorldDryRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpWorldCaptureDryRunTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"world-dry-run",
+		"action":"capture_world_frames",
+		"options":{"dry_run":true}
+	})");
+	TSharedPtr<FJsonObject> Response;
+	TestTrue(TEXT("response parses"), UeremcpVisualCaptureTests::ParseResponse(
+		UUeremcpVisualCaptureToolset::CaptureWorldFrames(Request), Response));
+	if (!Response.IsValid())
+	{
+		return false;
+	}
+	TestEqual(TEXT("dry run status"),
+		Response->GetStringField(TEXT("status")),
+		FString(TEXT("no_change_required")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpMaterialCaptureDryRunTest,
+	"UEREMCP.Validation.VisualCapture.MaterialDryRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpMaterialCaptureDryRunTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"material-dry-run",
+		"action":"capture_material_frames",
+		"target":{"asset_path":"/Engine/BasicShapes/BasicShapeMaterial"},
+		"options":{"dry_run":true}
+	})");
+	TSharedPtr<FJsonObject> Response;
+	TestTrue(TEXT("response parses"), UeremcpVisualCaptureTests::ParseResponse(
+		UUeremcpVisualCaptureToolset::CaptureMaterialFrames(Request), Response));
+	if (!Response.IsValid())
+	{
+		return false;
+	}
+	TestEqual(TEXT("dry run status"),
+		Response->GetStringField(TEXT("status")),
+		FString(TEXT("no_change_required")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpAnimationCaptureRejectsMissingMeshTest,
+	"UEREMCP.Validation.VisualCapture.AnimationRejectsMissingMesh",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpAnimationCaptureRejectsMissingMeshTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"anim-missing-mesh",
+		"action":"capture_animation_frames",
+		"target":{"asset_path":"/Game/__UeremcpTests/MissingAnim"},
+		"options":{"dry_run":false}
+	})");
+	TSharedPtr<FJsonObject> Response;
+	TestTrue(TEXT("response parses"), UeremcpVisualCaptureTests::ParseResponse(
+		UUeremcpVisualCaptureToolset::CaptureAnimationFrames(Request), Response));
+	if (!Response.IsValid())
+	{
+		return false;
+	}
+	TestEqual(TEXT("missing anim rejected or failed soft"),
+		Response->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraInspectMissingFailsSoftTest,
+	"UEREMCP.Validation.Niagara.GetSystemSummaryFailSoft.MissingAsset",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpNiagaraInspectMissingFailsSoftTest::RunTest(const FString& Parameters)
+{
+	// Regression for BACKLOG 3.3: inspect must fail soft (no editor crash) when
+	// GetSystemSummary would be unsafe / target is missing.
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"request_id":"ws11-inspect-missing",
+		"action":"inspect_system",
+		"target":{"asset_path":"/Game/__UeremcpTests/NS_DoesNotExist_WS11"},
+		"options":{"response_detail":"diagnostic"}
+	})");
+	TSharedPtr<FJsonObject> Response;
+	const FString Json = UUeremcpNiagaraToolset::InspectSystem(Request);
+	TestTrue(TEXT("inspect response parses"),
+		UeremcpVisualCaptureTests::ParseResponse(Json, Response));
+	if (!Response.IsValid())
+	{
+		return false;
+	}
+	const FString Status = Response->GetStringField(TEXT("status"));
+	TestTrue(
+		TEXT("missing asset fails soft (rejected/failed/error — never silent ok)"),
+		Status == TEXT("rejected")
+			|| Status == TEXT("failed_validation")
+			|| Status == TEXT("error")
+			|| Status == TEXT("partially_completed"));
+	TestFalse(TEXT("must not claim validated"),
+		Status.Contains(TEXT("validated")));
 	return true;
 }
 

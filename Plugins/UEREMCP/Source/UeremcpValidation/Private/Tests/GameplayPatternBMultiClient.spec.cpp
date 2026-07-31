@@ -1,6 +1,6 @@
 #include "Misc/AutomationTest.h"
 
-#if WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS && UEREMCP_WITH_RE
 
 #include "Editor/UnrealEdEngine.h"
 #include "Engine/Engine.h"
@@ -806,4 +806,4 @@ bool FUeremcpGameplayPatternBMultiClient::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif // WITH_DEV_AUTOMATION_TESTS
+#endif // WITH_DEV_AUTOMATION_TESTS && UEREMCP_WITH_RE

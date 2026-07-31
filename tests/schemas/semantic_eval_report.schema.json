@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/tests/schemas/semantic_eval_report.schema.json",
+  "title": "Semantic operation evaluation report",
+  "description": "WS-11 telemetry for offline evaluation of goal-level operations. Screenshots are supplemental.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "operation",
+    "overall",
+    "telemetry",
+    "gates",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "operation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Semantic action name, e.g. build_environment or capture_world_frames"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "overall": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "BLOCKED", "PASS_WITH_LIMITATIONS"]
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mcp_round_trips", "internal_operations", "call_count"],
+      "properties": {
+        "mcp_round_trips": { "type": "integer", "minimum": 0 },
+        "internal_operations": { "type": "integer", "minimum": 0 },
+        "call_count": { "type": "integer", "minimum": 0 },
+        "statuses": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "duration_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "gates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status"],
+        "properties": {
+          "name": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "BLOCKED"]
+          },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["structural", "visual"],
+      "properties": {
+        "structural": {
+          "type": "object",
+          "description": "Authoritative measurements / inventory / compile state"
+        },
+        "visual": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["supplemental_only"],
+          "properties": {
+            "supplemental_only": { "type": "boolean", "const": true },
+            "png_paths": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "notes": { "type": "string" }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -28,7 +28,7 @@ capability we do not cover removes it from the agent with no substitute --
 strictly worse than the fallback problem it solves.
 
     python tools/gen_focus_config.py            # print the ini stanza
-    python tools/gen_focus_config.py --write    # write the plugin config file
+    python tools/gen_focus_config.py --write    # gated refusal: global hides require explicit design approval
     python tools/gen_focus_config.py --check    # verify against registry snapshot
 """
 from __future__ import annotations
@@ -38,6 +38,13 @@ import json
 import os
 import re
 import sys
+
+from check_tool_names import (
+    check_domains,
+    check_snapshot_fresh,
+    check_source_descriptions,
+    discover_source_tools,
+)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -165,7 +172,10 @@ def check() -> int:
         snap = json.load(fh)
     names = list(snap.get("toolsets", {}).keys())
 
-    problems = 0
+    source_tools = discover_source_tools()
+    problems = check_snapshot_fresh(snap, source_tools)
+    problems += check_source_descriptions(source_tools)
+    problems += check_domains(snap)
     for pattern, replacement, intended in SUPERSEDED:
         hits = sorted(match(pattern, names))
 
@@ -207,7 +217,8 @@ def check() -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--write", action="store_true", help="write the plugin config file")
+    ap.add_argument("--write", action="store_true",
+                    help="run gates, then refuse unsafe global capability hiding")
     ap.add_argument("--check", action="store_true", help="validate against the registry snapshot")
     args = ap.parse_args()
 
@@ -216,11 +227,20 @@ def main() -> int:
 
     text = render_ini()
     if args.write:
-        os.makedirs(os.path.dirname(OUT_INI), exist_ok=True)
-        with open(OUT_INI, "w", encoding="utf-8") as fh:
-            fh.write(text)
-        print("wrote %s" % OUT_INI)
-        return 0
+        gate = check()
+        if gate:
+            print("refusing to write focus config: discoverability gates failed", file=sys.stderr)
+            return gate
+        print(
+            "refusing to write global BlockedNames by default: use ResolveIntent "
+            "demotion so safe Epic discovery remains reachable",
+            file=sys.stderr,
+        )
+        print(
+            "Review the generated stanza explicitly if a per-session focus mode is required.",
+            file=sys.stderr,
+        )
+        return 4
 
     print(text)
     return 0

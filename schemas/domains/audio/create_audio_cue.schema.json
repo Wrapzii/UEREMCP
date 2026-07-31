@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/audio/create_audio_cue.schema.json",
+  "title": "create_audio_cue specification",
+  "description": "Goal-level SoundCue creation from SoundWave paths with optional attenuation. MetaSound graph authoring is out of scope. Owned by WS-01 (UeremcpSystems).",
+  "type": "object",
+  "required": ["sound_waves"],
+  "additionalProperties": false,
+  "properties": {
+    "sound_waves": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Soft paths to USoundWave assets wired into the cue via USoundCueFactoryNew.InitialSoundWaves."
+    },
+    "volume_multiplier": { "type": "number", "minimum": 0, "default": 1.0 },
+    "pitch_multiplier": { "type": "number", "minimum": 0, "default": 1.0 },
+    "create_attenuation": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, create a SoundAttenuation via USoundAttenuationFactory and bind it."
+    },
+    "attenuation_asset_path": {
+      "type": "string",
+      "description": "Scratch path for a newly created attenuation asset. Defaults to target + _Attenuation."
+    },
+    "existing_attenuation_path": {
+      "type": "string",
+      "description": "Bind an existing SoundAttenuation instead of creating one."
+    }
+  }
+}

@@ -57,10 +57,6 @@ public class UeremcpValidation : ModuleRules
 			// E1 restart seed creates and validates POC C gameplay-bound variations.
 			"UeremcpTemplates",
 
-			// D5 genuine multi-client PIE proof exercises RE Pattern B directly.
-			// [VERIFIED: RECharacter.h:175-185; REPlayerVisualCombatComponent.h:252-269]
-			"RE",
-
 			// WS-06 MutatingDispatch adapter regression (skips until handoff header lands).
 			"UeremcpBlueprint",
 
@@ -69,5 +65,24 @@ public class UeremcpValidation : ModuleRules
 			"Kismet",
 			"KismetCompiler",
 		});
+
+		// D5 Pattern B proof needs the RE game module. BuildPlugin HostProject has no
+		// RE sources — keep Validation packable without the live RE project.
+		bool bHasRE = false;
+		if (Target.ProjectFile != null)
+		{
+			string reBuildCs = System.IO.Path.Combine(
+				Target.ProjectFile.Directory.FullName, "Source", "RE", "RE.Build.cs");
+			bHasRE = System.IO.File.Exists(reBuildCs);
+		}
+		if (bHasRE)
+		{
+			PrivateDependencyModuleNames.Add("RE");
+			PublicDefinitions.Add("UEREMCP_WITH_RE=1");
+		}
+		else
+		{
+			PublicDefinitions.Add("UEREMCP_WITH_RE=0");
+		}
 	}
 }
