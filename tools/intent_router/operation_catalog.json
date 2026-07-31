@@ -11,7 +11,14 @@
     {
       "action": "build_environment",
       "depends_on_actions": [],
-      "why": "composite environment; prefer over staging primitives when building a full biome"
+      "why": "composite environment; prefer over staging primitives when building a full biome",
+      "covers": [
+        "create_landscape",
+        "create_water_body",
+        "scatter_foliage",
+        "attach_weather"
+      ],
+      "covers_note": "One call that performs all four. If the intent enumerates the steps, the router must not silently substitute this composite: its failure modes and placeholder behaviour differ."
     },
     {
       "action": "create_water_body",

@@ -295,6 +295,123 @@ def action_order_rank(action: str | None, catalog: dict) -> tuple[int, str]:
     return r, why
 
 
+
+def assemble_batch(steps: list[dict], catalog: dict) -> dict | None:
+    """Turn recommended steps into ONE execute_plan body.
+
+    The router already knows the dependency graph -- action_order_rank reads
+    depends_on_actions out of the catalog to sort steps. It just never used it
+    to BUILD anything: it emitted N independently-callable steps, each with its
+    own request_json, and never mentioned that execute_plan exists.
+
+    That is why agents issue one call per domain. Nothing told them otherwise.
+    Cost is superlinear in call count (docs/WHY.md), so this is not a tidiness
+    fix -- for a five-domain goal it is the difference between 5 round trips and
+    2 (dry-run, then execute).
+
+    Returns None for a single-step plan, where a batch would be pure overhead.
+    """
+    actionable = [s for s in steps if (s.get("request_json") or {}).get("action")
+                  and s["request_json"]["action"] != "<see purpose>"]
+
+    # A composite performs its constituents. Including both does the work twice.
+    # When the intent enumerated the steps, keep the enumeration -- substituting
+    # a composite silently changes the failure modes and the placeholder
+    # behaviour the caller gets.
+    present = {s["request_json"]["action"] for s in actionable}
+    superseded, notes = set(), []
+    for e in (catalog.get("dependencies") or []):
+        covers = set(e.get("covers") or [])
+        if e.get("action") in present and len(covers & present) >= 2:
+            superseded.add(e["action"])
+            notes.append("%s omitted from the batch: it performs %s, which the "
+                         "intent named explicitly. Call it alone instead if you "
+                         "want the one-call composite."
+                         % (e["action"], ", ".join(sorted(covers & present))))
+    actionable = [s for s in actionable
+                  if s["request_json"]["action"] not in superseded]
+    if len(actionable) < 2:
+        return None
+
+    edges = {e["action"]: set(e.get("depends_on_actions") or [])
+             for e in (catalog.get("dependencies") or []) if e.get("action")}
+    why_of = {e["action"]: e.get("why") for e in (catalog.get("dependencies") or [])
+              if e.get("action")}
+
+    by_action = {}
+    for s in actionable:
+        by_action.setdefault(s["request_json"]["action"], "op%d_%s" % (
+            s["step"], s["request_json"]["action"]))
+
+    operations = []
+    for s in actionable:
+        req = s["request_json"]
+        action = req["action"]
+        # Only depend on prerequisites actually present in THIS plan. A
+        # depends_on naming an absent operation fails the whole plan.
+        deps = sorted(by_action[p] for p in edges.get(action, set()) if p in by_action)
+        op = {
+            "id": by_action[action],
+            "action": action,
+            "specification": req.get("specification") or {},
+        }
+        if req.get("target"):
+            op["target"] = req["target"]
+        if deps:
+            op["depends_on"] = deps
+        if why_of.get(action):
+            op["_why"] = why_of[action]
+        operations.append(op)
+
+    # Verification observes; it cannot precede what it observes. The catalog
+    # records no edges for it because it depends on everything.
+    VERIFY = ("validate_", "capture_", "inspect_")
+    build_ids = [o["id"] for o in operations if not o["action"].startswith(VERIFY)]
+    for o in operations:
+        if o["action"].startswith(VERIFY) and build_ids:
+            o["depends_on"] = build_ids
+            o["_why"] = "verification runs last, once there is something to observe"
+
+    # Emit in dependency order so a reader sees the build order directly.
+    resolved, remaining = [], list(operations)
+    while remaining:
+        ready = [o for o in remaining
+                 if all(d in {r["id"] for r in resolved} for d in o.get("depends_on") or [])]
+        if not ready:                      # cycle guard; emit rest as-is
+            resolved.extend(remaining)
+            break
+        ready.sort(key=lambda o: o["id"])
+        resolved.extend(ready)
+        remaining = [o for o in remaining if o not in ready]
+    operations = resolved
+
+    any_destructive = any(s.get("safety", {}).get("destructive") for s in actionable)
+    return {
+        "why": ("These operations are dependent. execute_plan runs them in one "
+                "transaction with rollback instead of %d separate calls."
+                % len(actionable)),
+        "round_trips": {"as_separate_calls": len(actionable), "as_one_plan": 1},
+        "request_json": {
+            "protocol_version": "1.0",
+            "action": "execute_plan",
+            "request_id": "batch-1",
+            "options": {"dry_run": True} if any_destructive else {},
+            "specification": {
+                "transaction": {"atomic": True, "rollback_on_failure": True,
+                                "compile_policy": "at_boundaries"},
+                "operations": operations,
+                "on_failure": "rollback_all",
+            },
+        },
+        "next": ("Dry-run this plan, read the per-operation statuses, then resend "
+                 "with options.dry_run=false." if any_destructive else
+                 "Send this plan as-is."),
+        "chaining": ('Reference an earlier result with {"$ref": "<op_id>.result.primary_asset"} '
+                     'or the short form "$<op_id>".'),
+        **({"omitted": notes} if notes else {}),
+    }
+
+
 def plan(
     query: str,
     docs,
@@ -343,7 +460,15 @@ def plan(
     for score, matched, m in hits:
         action = (m.get("catalog") or {}).get("action")
         rank, why = action_order_rank(action, catalog)
-        key = m["toolset"]
+        # Dedupe by ACTION when the catalog knows one, else by toolset.
+        #
+        # Keying on toolset alone is why multi-domain goals collapsed to a
+        # single step: every environment operation -- CreateLandscape,
+        # CreateWaterBody, ScatterFoliage, AttachWeather -- lives in
+        # UeremcpEnvironment.UeremcpEnvironmentToolset, so a five-operation
+        # build kept exactly one candidate. The toolset fallback still
+        # suppresses five near-identical uncatalogued primitives.
+        key = action or m["toolset"]
         if key not in best or score > best[key][0]:
             best[key] = (score, matched, m, why, rank)
 
@@ -404,10 +529,19 @@ def plan(
             "Confirm the primary domain (Niagara / Material / Blueprint / other).",
         ]
 
-    # Default cap 3 — single-domain intents must not emit five speculative steps.
-    for i, (score, matched, m, why, rank) in enumerate(
-        [c for c in chosen_gated if allowed_in_plan(c[2])][:3], 1
-    ):
+    # Default cap 3 — single-domain intents must not emit five speculative
+    # steps. But when the chosen actions are CONNECTED by catalog dependency
+    # edges, they are a build sequence rather than competing guesses, and
+    # truncating one costs a whole round trip. Widen only on that evidence.
+    plan_pool = [c for c in chosen_gated if allowed_in_plan(c[2])]
+    _dep_edges = {e["action"]: set(e.get("depends_on_actions") or [])
+                  for e in (catalog.get("dependencies") or []) if e.get("action")}
+    _pool_actions = {(c[2].get("catalog") or {}).get("action") for c in plan_pool}
+    _pool_actions.discard(None)
+    _linked = {a for a in _pool_actions if _dep_edges.get(a, set()) & _pool_actions}
+    plan_cap = 6 if len(_linked) >= 2 else 3
+
+    for i, (score, matched, m, why, rank) in enumerate(plan_pool[:plan_cap], 1):
         if m["qualified"] not in known:
             continue  # structural impossibility guard
         cat = m.get("catalog") or {}
@@ -478,6 +612,15 @@ def plan(
         })
         if len(out["alternatives"]) >= 5:
             break
+
+    # Assemble the batch. The single most consequential line in this file:
+    # without it the agent never learns that execute_plan applies to its goal.
+    batch = assemble_batch(out["plan"], catalog)
+    if batch:
+        out["batch"] = batch
+    elif len(out["plan"]) == 1:
+        out["batch_note"] = ("single-operation goal; a batch would add overhead. "
+                             "Multi-domain goals return a `batch` field.")
 
     # structural assert: no absent names
     for s in out["plan"]:
