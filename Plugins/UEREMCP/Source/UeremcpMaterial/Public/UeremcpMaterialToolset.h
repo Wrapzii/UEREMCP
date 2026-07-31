@@ -30,6 +30,8 @@ public:
 	 *
 	 * Use when: validating the Material module envelope path.
 	 * Do not use for: creating materials or textures.
+	 * Inputs: requestJson envelope; specification has no required keys.
+	 * Example: {"protocol_version":"1.0","action":"echo","specification":{}}
 	 *
 	 * @param RequestJson  Request envelope (schemas/envelope/request.schema.json).
 	 */
@@ -40,11 +42,12 @@ public:
 	 * Create or update a VFX material (elemental projectile core/trail, fresnel, color).
 	 *
 	 * Use when: make a VFX/shader material, change fireball color/orange tint, translucent FX mats.
-	 * Inputs: action=create_vfx_material, target.asset_path, specification element/role;
+	 * Inputs: action=create_vfx_material, target.asset_path, specification.purpose required;
 	 * prefer options.dry_run + validate=true; idempotency_key recommended.
 	 * Outputs: created/modified statuses with parameter re-read when validate=true.
 	 * Do not use for: MaterialTools expression graphs; MaterialInstanceConstant authoring gaps.
 	 * Next tool: CreateNiagaraEffect to bind the material into an effect.
+	 * Example: {"protocol_version":"1.0","action":"create_vfx_material","target":{"asset_path":"/Game/__UeremcpTests/M_FireCore"},"options":{"dry_run":true,"validate":true},"specification":{"purpose":"projectile_core","element":"fire"}}
 	 *
 	 * @param RequestJson  Request with action create_vfx_material and target.asset_path set.
 	 */
@@ -55,8 +58,10 @@ public:
 	 * Generate a procedural Texture2D (noise, dissolve masks) under /Game/__UeremcpTests/.
 	 *
 	 * Use when: tileable noise/mask textures for VFX materials.
+	 * Inputs: action=create_procedural_texture, target.asset_path, specification.generate required.
 	 * Do not use for: full material graphs — use CreateVfxMaterial.
 	 * Next tool: CreateVfxMaterial referencing the texture path.
+	 * Example: {"protocol_version":"1.0","action":"create_procedural_texture","target":{"asset_path":"/Game/__UeremcpTests/T_DissolveNoise"},"options":{"dry_run":true},"specification":{"generate":"noise","dimensions":[256,256],"seed":42}}
 	 *
 	 * @param RequestJson  Request with action create_procedural_texture and target.asset_path set.
 	 */

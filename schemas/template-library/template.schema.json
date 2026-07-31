@@ -17,23 +17,16 @@
 
     "domain": {
       "type": "string",
-      "description": "Only domains that ship a UEREMCP module/toolset (or are explicitly provisional). Fictional domains world/level_design/pcg were removed 2026-07-30 (BACKLOG 0.3). Use environment for procedural worlds.",
+      "description": "Only canonical domains with a shipping UEREMCP module/toolset. Unsupported/provisional capabilities are not advertised as template domains. Legacy world and level_design requests normalize to environment at intent-routing boundaries; stored templates use environment.",
       "enum": [
         "niagara",
         "materials",
         "blueprints",
         "gameplay",
-        "gameplay_abilities",
         "animation",
-        "control_rig",
         "templates",
         "validation",
-        "environment",
-        "audio",
-        "networking",
-        "world_partition",
-        "testing",
-        "assets"
+        "environment"
       ]
     },
 

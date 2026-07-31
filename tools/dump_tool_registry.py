@@ -23,6 +23,8 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
+from check_tool_names import discover_source_tools, source_surface_fingerprint
+
 URL = os.environ.get("UEREMCP_MCP_URL", "http://127.0.0.1:8000/mcp")
 HERE = os.path.dirname(os.path.abspath(__file__))
 SNAPSHOT = os.path.join(HERE, "registry_snapshot.json")
@@ -122,9 +124,26 @@ def main() -> int:
         }
         print("  [%d/%d] %-60s %d tools" % (i, len(names), name, len(tools)))
 
+    source_tools = discover_source_tools()
+    live_names = {
+        "%s.%s" % (toolset_name, tool_name)
+        for toolset_name, toolset in toolsets.items()
+        for tool_name in (toolset.get("tools") or {})
+    }
+    missing_source_tools = sorted(set(source_tools) - live_names)
+    if missing_source_tools:
+        print("\nrefusing to overwrite ground truth: live registry is missing %d source callable(s)"
+              % len(missing_source_tools), file=sys.stderr)
+        for missing in missing_source_tools:
+            print("  " + missing, file=sys.stderr)
+        print("Rebuild/redeploy, ensure one editor owns :8000, then dump again.", file=sys.stderr)
+        return 3
+
     snapshot = {
+        "snapshot_schema_version": 2,
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "live MCP registry via list_toolsets + describe_toolset",
+        "source_surface_fingerprint": source_surface_fingerprint(source_tools),
         "toolset_count": len(toolsets),
         "tool_count": sum(len(t.get("tools", {})) for t in toolsets.values()),
         "toolsets": toolsets,

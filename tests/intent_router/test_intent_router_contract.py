@@ -13,9 +13,11 @@ Rejects:
 from __future__ import annotations
 
 import json
+import io
 import os
 import sys
 import unittest
+from contextlib import redirect_stdout
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -32,8 +34,17 @@ from router import (  # noqa: E402
     load_catalog,
     plan,
     registry_hash,
+    resolve_tool_alias,
     search,
     validate_dependency_metadata,
+)
+from check_tool_names import (  # noqa: E402
+    DOMAIN_TOOLSET_HINTS,
+    check_snapshot_fresh,
+    check_source_descriptions,
+    discover_source_tools,
+    source_surface_fingerprint,
+    unknown_tool_references,
 )
 
 
@@ -58,15 +69,99 @@ class IntentRouterContractTests(unittest.TestCase):
         keys = list(ALIASES.keys())
         self.assertEqual(len(keys), len(set(keys)))
 
-    def test_catalog_ops_exist_or_documented_fallback(self):
-        missing = []
-        pending_ok = {
-            # Not yet in the frozen snapshot until after live redeploy + dump.
+    def test_callable_router_names_have_one_canonical_owner(self):
+        source = discover_source_tools()
+        expected = {
             "UeremcpCore.UeremcpReferenceToolset.GetStarted",
             "UeremcpCore.UeremcpReferenceToolset.ResolveIntent",
             "UeremcpCore.UeremcpReferenceToolset.DescribeOperation",
-            "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames",
         }
+        self.assertTrue(expected.issubset(source))
+        for leaf in ("GetStarted", "ResolveIntent", "DescribeOperation"):
+            matches = [name for name in source if name.endswith("." + leaf)]
+            self.assertEqual(matches, ["UeremcpCore.UeremcpReferenceToolset." + leaf])
+        catalog_names = [op.get("qualified") for op in self.catalog.get("operations") or []]
+        for name in expected:
+            self.assertEqual(catalog_names.count(name), 1)
+        probes = {
+            name for name in source
+            if name.endswith(".Ping") or name.endswith(".Echo")
+        }
+        self.assertTrue((set(source) - probes).issubset(set(catalog_names)))
+
+    def test_all_callable_descriptions_are_agent_callable(self):
+        source = discover_source_tools()
+        self.assertEqual(len(source), 35)
+        self.assertEqual(check_source_descriptions(source), 0)
+
+    def test_pascal_snake_kebab_aliases_normalize_without_dual_registration(self):
+        known = {
+            "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect",
+            "UeremcpMaterial.UeremcpMaterialToolset.CreateVfxMaterial",
+        }
+        canonical = "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect"
+        self.assertEqual(resolve_tool_alias("create_niagara_effect", known), canonical)
+        self.assertEqual(resolve_tool_alias("create-niagara-effect", known), canonical)
+        self.assertEqual(resolve_tool_alias(canonical.lower(), known), canonical)
+        self.assertIsNone(resolve_tool_alias("create", known))
+
+    def test_snapshot_freshness_fails_closed_on_missing_callable(self):
+        source = discover_source_tools()
+        toolsets = {}
+        for qualified in source:
+            toolset_name, tool_name = qualified.rsplit(".", 1)
+            toolsets.setdefault(toolset_name, {"tools": {}})["tools"][tool_name] = {
+                "qualified_name": qualified
+            }
+        synthetic = {
+            "source_surface_fingerprint": source_surface_fingerprint(source),
+            "toolsets": toolsets,
+        }
+        self.assertEqual(check_snapshot_fresh(synthetic, source), 0)
+        missing = "UeremcpCore.UeremcpReferenceToolset.ResolveIntent"
+        toolsets["UeremcpCore.UeremcpReferenceToolset"]["tools"].pop("ResolveIntent")
+        with redirect_stdout(io.StringIO()):
+            self.assertGreater(check_snapshot_fresh(synthetic, source), 0)
+        self.assertNotIn(missing, {
+            "%s.%s" % (ts, tool)
+            for ts, data in toolsets.items()
+            for tool in data["tools"]
+        })
+
+    def test_template_domain_enum_is_canonical_and_mapped(self):
+        path = os.path.join(ROOT, "schemas", "template-library", "template.schema.json")
+        with open(path, encoding="utf-8") as fh:
+            schema = json.load(fh)
+        domains = schema["properties"]["domain"]["enum"]
+        self.assertEqual(set(domains), set(DOMAIN_TOOLSET_HINTS))
+        self.assertEqual(len(domains), len(set(domains)))
+
+    def test_operator_scripts_are_in_mandatory_read_order(self):
+        with open(os.path.join(ROOT, "AGENTS.md"), encoding="utf-8") as fh:
+            contract = fh.read()
+        with open(os.path.join(ROOT, "Scripts", "README.md"), encoding="utf-8") as fh:
+            scripts_guide = fh.read()
+        self.assertIn("**`Scripts/`**", contract)
+        self.assertIn("operator-proven recipes", scripts_guide)
+
+    def test_bogus_qualified_tool_name_is_rejected_with_near_match(self):
+        text = (
+            "`UeremcpCore.UeremcpReferenceToolset.ExecutePlan`\n"
+            "`UeremcpCore.UeremcpReferenceToolset.ExecutePla`\n"
+        )
+        unknown = unknown_tool_references(text, self.snap)
+        self.assertEqual(len(unknown), 1)
+        self.assertEqual(
+            unknown[0][1],
+            "UeremcpCore.UeremcpReferenceToolset.ExecutePla",
+        )
+        self.assertIn("ExecutePlan", unknown[0][2])
+
+    def test_catalog_ops_exist_or_documented_fallback(self):
+        missing = []
+        # Source-declared names may be absent until the required live redeploy +
+        # fail-closed registry dump. They are not silently treated as live.
+        pending_ok = set(discover_source_tools()) - self.known
         for op in self.catalog.get("operations") or []:
             q = op.get("qualified")
             if not q:
@@ -128,8 +223,13 @@ class IntentRouterContractTests(unittest.TestCase):
             held = json.load(fh)
         report = evaluate_heldout(self.docs, self.meta, held, self.catalog, self.hash)
         self.assertEqual(report["n"], len(held))
-        # Deterministic contract: abstention cases must mostly abstain
-        self.assertGreaterEqual(report["abstention_accuracy"], 0.5)
+        # Deterministic floor from metrics_2026-07-30.json. This suite was
+        # authored independently of router tuning; regressions fail CI.
+        self.assertGreaterEqual(report["top1_rate"], 0.60)
+        self.assertGreaterEqual(report["top3_rate"], 0.80)
+        self.assertGreaterEqual(report["mrr"], 0.60)
+        self.assertLessEqual(report["confident_wrong"], 2)
+        self.assertEqual(report["abstention_accuracy"], 1.0)
 
     def test_helix_visual_prompt_emits_only_live_tools(self):
         result = plan(

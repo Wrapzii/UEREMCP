@@ -9,6 +9,36 @@
   ],
   "dependencies": [
     {
+      "action": "build_environment",
+      "depends_on_actions": [],
+      "why": "composite environment; prefer over staging primitives when building a full biome"
+    },
+    {
+      "action": "create_water_body",
+      "depends_on_actions": ["create_landscape"],
+      "why": "river usually conforms to terrain"
+    },
+    {
+      "action": "scatter_foliage",
+      "depends_on_actions": ["create_landscape", "create_water_body"],
+      "why": "bank forest needs terrain + river exclusion corridor"
+    },
+    {
+      "action": "attach_weather",
+      "depends_on_actions": ["create_landscape"],
+      "why": "weather follows after a world exists"
+    },
+    {
+      "action": "place_structures",
+      "depends_on_actions": ["create_landscape"],
+      "why": "structures sit on terrain / along river"
+    },
+    {
+      "action": "capture_world_frames",
+      "depends_on_actions": ["build_environment", "create_landscape"],
+      "why": "world capture after environment exists"
+    },
+    {
       "action": "create_niagara_effect",
       "depends_on_actions": ["create_vfx_material"],
       "why": "effects bind materials; create materials first when both are needed"
@@ -376,6 +406,163 @@
       "expected_statuses": [],
       "recovery": "Use when UeremcpVisualCaptureToolset is unavailable.",
       "example_request": null
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.BuildEnvironment",
+      "action": "build_environment",
+      "use_when": ["landscape", "mountains", "river", "forest", "rain", "environment", "new world", "biome"],
+      "do_not_use_for": ["Niagara VFX authoring", "Blueprint graphs"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "partially_completed", "failed_validation", "rejected"],
+      "recovery": "Dry-run first; then options.dry_run=false; ValidateEnvironment; CaptureWorldFrames.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "build_environment",
+        "request_id": "env-1",
+        "target": {"asset_path": "/Game/__UeremcpPoc/MountainRiverRain"},
+        "options": {"dry_run": true, "validate": true},
+        "specification": {"seed": 42}
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateLandscape",
+      "action": "create_landscape",
+      "use_when": ["heightmap", "terrain", "mountains", "valley"],
+      "do_not_use_for": ["sculpt brush strokes"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "rejected"],
+      "recovery": "Check heightmap_hash for determinism.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_landscape",
+        "target": {"asset_path": "/Game/__UeremcpPoc/MountainRiverRain"},
+        "options": {"dry_run": true},
+        "specification": {"seed": 4471}
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateWaterBody",
+      "action": "create_water_body",
+      "use_when": ["river", "lake", "ocean", "water spline"],
+      "do_not_use_for": ["terrain creation"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "failed_validation", "rejected"],
+      "recovery": "CreateLandscape first when water must conform to terrain.",
+      "example_request": {"protocol_version":"1.0","action":"create_water_body","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"options":{"dry_run":true},"specification":{"seed":4471,"river":{"width":1200}}}
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ScatterFoliage",
+      "action": "scatter_foliage",
+      "use_when": ["forest", "foliage", "trees", "river bank exclusion"],
+      "do_not_use_for": ["placing individual actors"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "failed_validation", "rejected"],
+      "recovery": "Create terrain and water first; require exclusion_violations=0.",
+      "example_request": {"protocol_version":"1.0","action":"scatter_foliage","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"options":{"dry_run":true},"specification":{"seed":4471,"biome":{"mesh_path":"/Game/Meshes/SM_Pine","max_foliage_instances":800}}}
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.AttachWeather",
+      "action": "attach_weather",
+      "use_when": ["rain", "weather", "fog", "follow player camera"],
+      "do_not_use_for": ["Niagara asset authoring"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "partially_completed", "rejected"],
+      "recovery": "PIE camera-follow proof still requires movement validation.",
+      "example_request": {"protocol_version":"1.0","action":"attach_weather","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"options":{"dry_run":true},"specification":{"follow":"player_camera"}}
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.PlaceStructures",
+      "action": "place_structures",
+      "use_when": ["procedural structures", "village", "buildings", "props"],
+      "do_not_use_for": ["claiming static kit placement is GeometryScript generation"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "created_with_warnings", "failed_validation", "rejected"],
+      "recovery": "Confirm GeometryScripting is enabled and dry-run first.",
+      "example_request": {"protocol_version":"1.0","action":"place_structures","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"options":{"dry_run":true},"specification":{"seed":4471,"count":6}}
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.InspectEnvironment",
+      "action": "inspect_environment",
+      "use_when": ["inspect environment", "world diagnostics", "environment metrics"],
+      "do_not_use_for": ["environment mutation"],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "partially_completed", "rejected"],
+      "recovery": "Use ValidateEnvironment for acceptance gates.",
+      "example_request": {"protocol_version":"1.0","action":"inspect_environment","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"specification":{}}
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ValidateEnvironment",
+      "action": "validate_environment",
+      "use_when": ["validate environment", "structural world gates", "river exclusion metrics"],
+      "do_not_use_for": ["visual quality judgment"],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "failed_validation", "partially_completed", "rejected"],
+      "recovery": "Treat screenshots as review evidence, never the structural gate.",
+      "example_request": {"protocol_version":"1.0","action":"validate_environment","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"specification":{}}
+    },
+    {
+      "qualified": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames",
+      "action": "capture_world_frames",
+      "use_when": ["world screenshot", "viewport capture", "environment visual review"],
+      "do_not_use_for": ["claiming world quality or structural validation"],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "failed_validation", "partially_completed"],
+      "recovery": "Pair with domain structural validation.",
+      "example_request": {"protocol_version":"1.0","action":"capture_world_frames","target":{"asset_path":"/Game/Maps/Alpine"},"options":{"validate":true},"specification":{"frame_count":1,"warm_up_ticks":30}}
+    },
+    {
+      "qualified": "UeremcpGameplay.UeremcpGameplayToolset.CreateSpellVariation",
+      "action": "create_spell_variation",
+      "use_when": ["spell variation", "VFX-only ability variant", "preserve gameplay fields"],
+      "do_not_use_for": ["changing protected gameplay behavior"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["created_and_validated", "partially_completed", "failed_validation", "rolled_back", "rejected"],
+      "recovery": "Require protected_fields_equal evidence after re-read.",
+      "example_request": {"protocol_version":"1.0","action":"create_spell_variation","options":{"dry_run":true},"specification":{"source_binding":{"ability_table":"/Game/Data/DT_Abilities","source_row":"FireBolt","vfx_phase":"projectile"},"target_row":"IceBoltVisual","presentation_asset":"/Game/VFX/NS_IceBolt","verification_mode":"protected_fields_equal"}}
+    },
+    {
+      "qualified": "UeremcpTemplates.UeremcpTemplatesToolset.PromoteToTemplate",
+      "action": "promote_to_template",
+      "use_when": ["promote successful asset", "save reusable pattern", "template preview"],
+      "do_not_use_for": ["claiming a template was written while preview-only"],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["partially_completed", "rejected"],
+      "recovery": "Read capability_notes; current implementation is preview-only.",
+      "example_request": {"protocol_version":"1.0","action":"promote_to_template","options":{"dry_run":true},"specification":{"source_asset":"/Game/__UeremcpTests/NS_Good","proposed_template_id":"niagara.projectile.good.v1"}}
+    },
+    {
+      "qualified": "UeremcpCore.UeremcpReferenceToolset.CancelJob",
+      "action": "cancel_job",
+      "use_when": ["cancel UEREMCP job", "stop long operation", "job_id"],
+      "do_not_use_for": ["assuming MCP notifications/cancelled reaches AICallable jobs"],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": ["no_change_required", "partially_completed", "rejected"],
+      "recovery": "Poll GetJobResult to confirm terminal cancellation.",
+      "example_request": {"protocol_version":"1.0","action":"cancel_job","specification":{"job_id":"<prior job.job_id>"}}
     },
     {
       "qualified": "EditorToolset.LogsToolset.GetLog",
