@@ -31,6 +31,9 @@ public:
 	 *   Prefer the staging primitives when the caller enumerated the steps, or when
 	 *   any stage needs its own parameters.
 	 * Inputs: action=build_environment; specification.seed REQUIRED. Optional blocks:
+	 *   options.on_unsupported = fail (default) | partial. Use partial when you want
+	 *   every supported part applied and the rest reported, rather than the whole
+	 *   request rejected because one block is unsupported.
 	 *   terrain.profile, hydrology.river, vegetation.mode, weather[], structures[].
 	 * Example: {"protocol_version":"1.0","action":"build_environment","target":{"asset_path":"/Game/__UeremcpPoc/Biome"},"options":{"dry_run":true},"specification":{"seed":42,"terrain":{"profile":"mountains"}}}
 	 *

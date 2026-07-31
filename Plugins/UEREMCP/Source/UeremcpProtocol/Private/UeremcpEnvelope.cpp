@@ -282,7 +282,8 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		static const TSet<FString> OptAllowed = {
 			TEXT("dry_run"), TEXT("atomic"), TEXT("rollback_on_failure"), TEXT("compile"),
 			TEXT("validate"), TEXT("save"), TEXT("response_detail"), TEXT("timeout_ms"),
-			TEXT("on_revision_conflict"), TEXT("continue_on_error"), TEXT("allow_destructive")
+			TEXT("on_revision_conflict"), TEXT("continue_on_error"), TEXT("allow_destructive"),
+			TEXT("on_unsupported")
 		};
 		for (const auto& Pair : Options->Values)
 		{
@@ -301,6 +302,19 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		SetBoolDefault(Options, TEXT("save"), true, OutRequest.bSave);
 		SetBoolDefault(Options, TEXT("continue_on_error"), false, OutRequest.bContinueOnError);
 		SetBoolDefault(Options, TEXT("allow_destructive"), false, OutRequest.bAllowDestructive);
+
+		if (Options->HasField(TEXT("on_unsupported")))
+		{
+			OutRequest.OnUnsupported = Options->GetStringField(TEXT("on_unsupported"));
+			if (!OutRequest.OnUnsupported.Equals(TEXT("fail"), ESearchCase::IgnoreCase)
+				&& !OutRequest.OnUnsupported.Equals(TEXT("partial"), ESearchCase::IgnoreCase))
+			{
+				OutError = FString::Printf(
+					TEXT("invalid on_unsupported '%s'; expected fail or partial"),
+					*OutRequest.OnUnsupported);
+				return false;
+			}
+		}
 
 		if (Options->HasField(TEXT("response_detail")))
 		{

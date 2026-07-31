@@ -4,6 +4,7 @@
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpSystemsToolset.h"
+#include "UeremcpSystemsPlanHandlers.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcpSystems, Log, All);
 
@@ -42,6 +43,17 @@ private:
 		else
 		{
 			UE_LOG(LogUeremcpSystems, Warning, TEXT("UUeremcpSystemsToolset registration failed at PostEngineInit."));
+		}
+
+		FString PlanError;
+		if (FUeremcpSystemsPlanHandlers::Register(PlanError))
+		{
+			UE_LOG(LogUeremcpSystems, Log, TEXT("Systems plan actions registered with ExecutePlan."));
+		}
+		else
+		{
+			UE_LOG(LogUeremcpSystems, Warning,
+				TEXT("Systems plan action registration failed: %s"), *PlanError);
 		}
 	}
 

@@ -82,7 +82,10 @@ ENVELOPE_HINT = (
     "UEREMCP tools take ONE string arg `requestJson`. Envelope top-level fields: "
     "protocol_version(req), action(req), request_id, target, specification, "
     "options, mode, project, expected_revision, idempotency_key. "
-    "dry_run is options.dry_run, NOT top-level."
+    "dry_run is options.dry_run, NOT top-level. "
+    "options.on_unsupported = fail (default) | partial: use partial for incremental "
+    "edits so supported parts are applied and the rest reported, instead of the whole "
+    "request being rejected because one piece is unsupported."
 )
 
 # Baseline EVAL — Opus original 7. Do not retarget aliases to force 7/7.

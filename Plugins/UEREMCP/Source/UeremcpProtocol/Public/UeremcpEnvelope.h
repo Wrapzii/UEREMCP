@@ -72,6 +72,29 @@ struct UEREMCPPROTOCOL_API FUeremcpRequest
 	bool bAllowDestructive = false;
 
 	/**
+	 * fail (default) | partial — what to do when part of a request is not
+	 * supported.
+	 *
+	 * `fail` rejects the whole request and changes nothing. That is the right
+	 * default: a caller who asked for three things and got two without noticing
+	 * is worse off than one who got none and was told why.
+	 *
+	 * `partial` applies every supported part, leaves the rest untouched, and
+	 * returns partially_completed with each refusal named in the response.
+	 *
+	 * Measured need: asked to thin foliage, shorten it, and add snow above the
+	 * treeline, an agent could do the first two but not the third, and did
+	 * NOTHING -- because all-or-nothing was the only contract available. The
+	 * refusal was honest and the outcome was still useless.
+	 */
+	FString OnUnsupported = TEXT("fail");
+
+	bool AllowsPartial() const
+	{
+		return OnUnsupported.Equals(TEXT("partial"), ESearchCase::IgnoreCase);
+	}
+
+	/**
 	 * ADR-0009: 0 / omitted → complete inline on MCP SSE.
 	 * > 0 → on expiry return partially_completed + job handle; poll get_job_result.
 	 * Long-op default when choosing a positive timeout: FUeremcpJobDefaults::DefaultTimeoutMs
