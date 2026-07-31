@@ -21,6 +21,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 
 from check_tool_names import discover_source_tools, source_surface_fingerprint
@@ -95,12 +96,26 @@ def main() -> int:
         listing = json.dumps(listing)
 
     # list_toolsets returns "- <name>: <description>" lines.
-    names = re.findall(r"^-\s+([A-Za-z0-9_.]+):", listing, flags=re.M)
+    # Toolset names are qualified. Requiring a dot avoids treating bullet lines
+    # inside a toolset description (for example "- FindNiagaraScripts:") as
+    # additional toolsets.
+    names = re.findall(
+        r"^-\s+([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+):",
+        listing,
+        flags=re.M,
+    )
     print("toolsets: %d" % len(names))
 
     toolsets = {}
     for i, name in enumerate(sorted(names), 1):
-        detail = client.call("describe_toolset", {"toolset_name": name})
+        detail = None
+        for attempt in range(5):
+            detail = client.call("describe_toolset", {"toolset_name": name})
+            if isinstance(detail, dict):
+                break
+            # The in-editor MCP adapter can acknowledge before its game-thread
+            # result is visible when many describes are issued back-to-back.
+            time.sleep(0.2 * (attempt + 1))
         if not isinstance(detail, dict):
             print("  [%d/%d] %-60s SKIP (no schema)" % (i, len(names), name))
             toolsets[name] = {"error": "describe_toolset returned no object"}

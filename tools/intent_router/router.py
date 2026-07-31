@@ -213,7 +213,6 @@ def build_index(snap: dict, catalog: dict | None = None):
                 tool.get("description") or "",
                 " ".join(tool.get("properties") or []),
                 extra,
-                " ".join(op.get("do_not_use_for") or []),
                 op.get("action") or "",
             ])
             docs.append(Counter(tokenize(text)))
