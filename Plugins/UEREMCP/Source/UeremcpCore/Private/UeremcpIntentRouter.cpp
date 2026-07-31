@@ -761,17 +761,38 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 	}
 	Hits.Sort([](const FHit& A, const FHit& B) { return A.Score > B.Score; });
 
-	TMap<FString, FHit> BestPerToolset;
+	// Dedupe by ACTION when the catalog knows one, else by toolset.
+	//
+	// Keying on toolset alone is why multi-domain goals collapsed to a single
+	// step: every environment operation -- CreateLandscape, CreateWaterBody,
+	// SubmitMeshOps, ScatterFoliage, AttachWeather -- lives in
+	// UeremcpEnvironment.UeremcpEnvironmentToolset, so a five-operation build
+	// kept exactly one candidate. Measured cold-start: an agent asking for a
+	// forest on a hillside got back ScatterFoliage alone, pointing at a mesh
+	// path that does not exist in an empty project.
+	//
+	// The toolset fallback still suppresses five near-identical uncatalogued
+	// primitives, which is what the original key was protecting against.
+	TMap<FString, FHit> BestPerKey;
 	for (const FHit& H : Hits)
 	{
-		const FString& Ts = Docs[H.DocIndex].Toolset;
-		if (!BestPerToolset.Contains(Ts) || BestPerToolset[Ts].Score < H.Score)
+		const FToolDoc& D = Docs[H.DocIndex];
+		FString Key;
+		if (D.CatalogOp.IsValid())
 		{
-			BestPerToolset.Add(Ts, H);
+			D.CatalogOp->TryGetStringField(TEXT("action"), Key);
+		}
+		if (Key.IsEmpty())
+		{
+			Key = D.Toolset;
+		}
+		if (!BestPerKey.Contains(Key) || BestPerKey[Key].Score < H.Score)
+		{
+			BestPerKey.Add(Key, H);
 		}
 	}
 	TArray<FHit> Chosen;
-	BestPerToolset.GenerateValueArray(Chosen);
+	BestPerKey.GenerateValueArray(Chosen);
 	// Score-primary ordering: dependsOn ranks only break near-ties. Declared domain
 	// order used to force weakly matched toolsets into the plan (BACKLOG 1.3d).
 	Chosen.Sort([](const FHit& A, const FHit& B)
@@ -854,7 +875,37 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 
 	TArray<TSharedPtr<FJsonValue>> PlanArr;
 	// Default cap 3: single-domain intents must not emit five speculative steps (1.3d).
-	const int32 Cap = FMath::Clamp(MaxSteps > 0 ? MaxSteps : 3, 1, 12);
+	//
+	// But when the surviving candidates are CONNECTED by catalog dependency
+	// edges they are a build sequence, not competing guesses, and truncating one
+	// costs a whole round trip. Widen to 6 only on that evidence.
+	int32 DefaultCap = 3;
+	{
+		TSet<FString> PoolActions;
+		for (const FHit& H : Chosen)
+		{
+			const FToolDoc& D = Docs[H.DocIndex];
+			if (!D.CatalogOp.IsValid()) continue;
+			FString A;
+			if (D.CatalogOp->TryGetStringField(TEXT("action"), A) && !A.IsEmpty())
+			{
+				PoolActions.Add(A);
+			}
+		}
+		int32 Linked = 0;
+		for (const FString& A : PoolActions)
+		{
+			if (const TArray<FString>* Preds = Catalog.DependsOn.Find(A))
+			{
+				for (const FString& P : *Preds)
+				{
+					if (PoolActions.Contains(P)) { ++Linked; break; }
+				}
+			}
+		}
+		if (Linked >= 2) DefaultCap = 6;
+	}
+	const int32 Cap = FMath::Clamp(MaxSteps > 0 ? MaxSteps : DefaultCap, 1, 12);
 	if (!bAbstain)
 	{
 		int32 Step = 1;
