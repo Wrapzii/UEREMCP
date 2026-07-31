@@ -8,16 +8,22 @@
 #include "Engine/DirectionalLight.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Engine/SkyLight.h"
+#include "Camera/CameraActor.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/PlayerStart.h"
 #include "Landscape.h"
 #include "LandscapeInfo.h"
 #include "LandscapeProxy.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Misc/Paths.h"
 #include "Misc/Crc.h"
+#include "Misc/PackageName.h"
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
@@ -34,6 +40,9 @@
 #include "GeometryScript/MeshPrimitiveFunctions.h"
 #include "GeometryScript/GeometryScriptTypes.h"
 #include "Kismet/GameplayStatics.h"
+#include "FileHelpers.h"
+#include "ScopedTransaction.h"
+#include "UeremcpWeatherFollower.h"
 
 #define UEREMCP_HAS_WATER 1
 
@@ -69,6 +78,115 @@ namespace
 		const float Clamped = FMath::Clamp(Normalized01, 0.f, 1.f);
 		return uint16(FMath::RoundToInt(Clamped * 65535.f));
 	}
+
+	FString NormalizeMapPath(const FString& RequestedPath)
+	{
+		FString Result = RequestedPath;
+		if (Result.EndsWith(TEXT("/")))
+		{
+			Result.LeftChopInline(1);
+			const FString Leaf = FPaths::GetCleanFilename(Result);
+			Result += TEXT("/") + Leaf;
+		}
+		return Result;
+	}
+
+	FString ReadEnvironmentTag(UWorld* World, const FString& Prefix)
+	{
+		if (!World)
+		{
+			return FString();
+		}
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel() != TEXT("UEREMCP_Metadata"))
+			{
+				continue;
+			}
+			for (const FName& Tag : It->Tags)
+			{
+				const FString Value = Tag.ToString();
+				if (Value.StartsWith(Prefix))
+				{
+					return Value.RightChop(Prefix.Len());
+				}
+			}
+		}
+		return FString();
+	}
+
+	FString ReadEnvironmentRevision(UWorld* World)
+	{
+		return ReadEnvironmentTag(World, TEXT("UEREMCP_REV="));
+	}
+
+	int32 DestroyOwnedEnvironmentActors(UWorld* World)
+	{
+		TArray<AActor*> ToDestroy;
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel().StartsWith(TEXT("UEREMCP_")))
+			{
+				ToDestroy.Add(*It);
+			}
+		}
+		for (AActor* Actor : ToDestroy)
+		{
+			World->DestroyActor(Actor);
+		}
+		return ToDestroy.Num();
+	}
+
+	float SampleNormalizedHeight(
+		const TArray<uint16>& Heights,
+		const FUeremcpEnvironmentBuildSpec& Spec,
+		float LocalX,
+		float LocalY)
+	{
+		const float GridX = FMath::Clamp(LocalX / Spec.ScaleXY, 0.f, float(Spec.SizeX - 1));
+		const float GridY = FMath::Clamp(LocalY / Spec.ScaleXY, 0.f, float(Spec.SizeY - 1));
+		const int32 X0 = FMath::FloorToInt(GridX);
+		const int32 Y0 = FMath::FloorToInt(GridY);
+		const int32 X1 = FMath::Min(X0 + 1, Spec.SizeX - 1);
+		const int32 Y1 = FMath::Min(Y0 + 1, Spec.SizeY - 1);
+		const float Fx = GridX - X0;
+		const float Fy = GridY - Y0;
+		auto H = [&](int32 X, int32 Y)
+		{
+			return float(Heights[Y * Spec.SizeX + X]) / 65535.f;
+		};
+		return FMath::Lerp(
+			FMath::Lerp(H(X0, Y0), H(X1, Y0), Fx),
+			FMath::Lerp(H(X0, Y1), H(X1, Y1), Fx),
+			Fy);
+	}
+
+	float NormalizedToWorldHeight(float Normalized, float ScaleZ)
+	{
+		// [VERIFIED: LandscapeDataAccess.h:26-32] local=(height-32768)*LANDSCAPE_ZSCALE.
+		return ((Normalized * 65535.f) - 32768.f) * (1.f / 128.f) * ScaleZ;
+	}
+
+	float SampleSlopeDegrees(
+		const TArray<uint16>& Heights,
+		const FUeremcpEnvironmentBuildSpec& Spec,
+		float LocalX,
+		float LocalY)
+	{
+		const float Step = Spec.ScaleXY;
+		const float Hx0 = NormalizedToWorldHeight(
+			SampleNormalizedHeight(Heights, Spec, LocalX - Step, LocalY), Spec.ScaleZ);
+		const float Hx1 = NormalizedToWorldHeight(
+			SampleNormalizedHeight(Heights, Spec, LocalX + Step, LocalY), Spec.ScaleZ);
+		const float Hy0 = NormalizedToWorldHeight(
+			SampleNormalizedHeight(Heights, Spec, LocalX, LocalY - Step), Spec.ScaleZ);
+		const float Hy1 = NormalizedToWorldHeight(
+			SampleNormalizedHeight(Heights, Spec, LocalX, LocalY + Step), Spec.ScaleZ);
+		const float Gradient = FVector2D(
+			(Hx1 - Hx0) / (2.f * Step),
+			(Hy1 - Hy0) / (2.f * Step)).Size();
+		return FMath::RadiansToDegrees(FMath::Atan(Gradient));
+	}
 }
 
 bool FUeremcpEnvironmentService::ParseBuildSpec(
@@ -94,6 +212,7 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 
 	auto ReadObjNumber = [&](const FString& Obj, const FString& Key, double& InOut)
 	{
+		InOut = -1.0;
 		const TSharedPtr<FJsonObject>* Child = nullptr;
 		if (Spec->TryGetObjectField(Obj, Child) && Child && (*Child)->HasField(Key))
 		{
@@ -121,6 +240,9 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	ReadObjNumber(TEXT("river"), TEXT("width"), Tmp); if (Tmp > 0) Out.RiverWidth = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("forest_bank_width"), Tmp); if (Tmp > 0) Out.ForestBankWidth = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("max_foliage_instances"), Tmp); if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
+	ReadObjNumber(TEXT("biome"), TEXT("slope_limit_deg"), Tmp); if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
+	ReadObjNumber(TEXT("biome"), TEXT("min_normalized_height"), Tmp); if (Tmp >= 0) Out.FoliageMinNormalizedHeight = float(Tmp);
+	ReadObjNumber(TEXT("biome"), TEXT("max_normalized_height"), Tmp); if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
 
 	const TSharedPtr<FJsonObject>* Biome = nullptr;
 	if (Spec->TryGetObjectField(TEXT("biome"), Biome) && Biome)
@@ -131,6 +253,12 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	if (Spec->TryGetObjectField(TEXT("weather"), Weather) && Weather)
 	{
 		(*Weather)->TryGetStringField(TEXT("rain_system_path"), Out.RainSystemPath);
+		(*Weather)->TryGetStringField(TEXT("follow"), Out.WeatherFollow);
+		double StreakCount = 0;
+		if ((*Weather)->TryGetNumberField(TEXT("streak_count"), StreakCount) && StreakCount > 0)
+		{
+			Out.RainStreakCount = int32(StreakCount);
+		}
 	}
 
 	Spec->TryGetStringField(TEXT("fallback_policy"), Out.FallbackPolicy);
@@ -172,6 +300,16 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		}
 	}
 
+	if (Out.FoliageMinNormalizedHeight > Out.FoliageMaxNormalizedHeight)
+	{
+		OutError = TEXT("biome.min_normalized_height must be <= max_normalized_height");
+		return false;
+	}
+	if (Out.WeatherFollow != TEXT("player_camera") && Out.WeatherFollow != TEXT("player_pawn"))
+	{
+		OutError = TEXT("weather.follow must be player_camera or player_pawn");
+		return false;
+	}
 	return true;
 }
 
@@ -253,6 +391,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	{
 		Dest = Request.TargetAssetPath;
 	}
+	Dest = NormalizeMapPath(Dest);
 	if (Dest.IsEmpty())
 	{
 		Result.Status = TEXT("rejected");
@@ -280,6 +419,10 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	const FBox Extents(
 		FVector(0, 0, 0),
 		FVector(float(Spec.SizeX - 1) * Spec.ScaleXY, float(Spec.SizeY - 1) * Spec.ScaleXY, 0));
+	const FVector LandscapeOffset(
+		-float(Spec.SizeX - 1) * Spec.ScaleXY * 0.5f,
+		-float(Spec.SizeY - 1) * Spec.ScaleXY * 0.5f,
+		0.f);
 	const FUeremcpSplinePath River = UeremcpSpline::MakeRiverAcross(Spec.Seed, Extents, 12, Spec.RiverWidth);
 	const FUeremcpSplinePath Exclusion = UeremcpSpline::MakeExclusionFrom(River, Spec.RiverWidth * 0.35f);
 
@@ -287,6 +430,19 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	TSharedPtr<FJsonObject> HeightMetrics;
 	GenerateHeightmap(Spec, River, Heights, HeightMetrics);
 	Result.StructuralMetrics = HeightMetrics;
+	const FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+	const uint32 RevisionCrc = FCrc::StrCrc32(*FString::Printf(
+		TEXT("env-impl-3|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d"),
+		*HeightmapHash,
+		Spec.Seed,
+		Spec.SizeX,
+		Spec.SizeY,
+		Spec.MountainAmplitude,
+		Spec.ValleyDepth,
+		Spec.RiverWidth,
+		Spec.ForestBankWidth,
+		Spec.MaxFoliageInstances));
+	Result.Revision = FString::Printf(TEXT("env:%08x"), RevisionCrc);
 	Result.InternalOperations += 1;
 
 	if (bDryRun)
@@ -322,6 +478,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
 		Result.ChangeManifest->SetNumberField(TEXT("seed"), double(Spec.Seed));
 		Result.ChangeManifest->SetBoolField(TEXT("dry_run"), true);
+		Result.ChangeManifest->SetStringField(TEXT("revision"), Result.Revision);
 		Result.Status = TEXT("no_change_required");
 		Result.Summary = FString::Printf(
 			TEXT("Dry-run build_environment seed=%llu destination=%s — height_range=%.3f non_flat=%s river_len=%.0f"),
@@ -343,6 +500,34 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	}
 
 	UWorld* World = GEditor->GetEditorWorldContext().World();
+	const bool bOwnsMapLifecycle = Request.Action == TEXT("build_environment");
+	if (bOwnsMapLifecycle)
+	{
+		const FString CurrentPackage = World ? World->GetOutermost()->GetName() : FString();
+		if (CurrentPackage != Dest)
+		{
+			if (World && World->GetOutermost()->IsDirty())
+			{
+				Result.Status = TEXT("rejected");
+				Result.Summary = FString::Printf(
+					TEXT("Current map %s has unsaved changes; refusing to switch maps and risk user content"),
+					*CurrentPackage);
+				Result.CapabilityNotes.Add(TEXT("Save or discard the current map explicitly, then retry BuildEnvironment."));
+				return Result;
+			}
+
+			// [VERIFIED: PackageName.h:450] DoesPackageExist
+			// [VERIFIED: FileHelpers.h:45,64] NewBlankMap / LoadMap
+			if (FPackageName::DoesPackageExist(Dest))
+			{
+				World = UEditorLoadingAndSavingUtils::LoadMap(Dest);
+			}
+			else
+			{
+				World = UEditorLoadingAndSavingUtils::NewBlankMap(false);
+			}
+		}
+	}
 	if (!World)
 	{
 		Result.Status = TEXT("failed_validation");
@@ -350,21 +535,55 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		return Result;
 	}
 
+	const FString ExistingRevision = ReadEnvironmentRevision(World);
+	if (Request.bHasExpectedRevision && Request.ExpectedRevision != ExistingRevision)
+	{
+		Result.Status = TEXT("rejected");
+		Result.Summary = FString::Printf(
+			TEXT("expected_revision conflict: expected '%s', current '%s'"),
+			*Request.ExpectedRevision,
+			ExistingRevision.IsEmpty() ? TEXT("<none>") : *ExistingRevision);
+		Result.CapabilityNotes.Add(TEXT("InspectEnvironment and retry with the returned revision."));
+		return Result;
+	}
+	if (!ExistingRevision.IsEmpty() && ExistingRevision == Result.Revision)
+	{
+		Result.Status = TEXT("no_change_required");
+		Result.Summary = FString::Printf(
+			TEXT("Environment already matches revision %s at %s"),
+			*Result.Revision,
+			*Dest);
+		Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
+		Result.ChangeManifest->SetStringField(TEXT("revision"), Result.Revision);
+		Result.ChangeManifest->SetBoolField(TEXT("dry_run"), false);
+		Result.CapabilityNotes.Add(TEXT("Idempotency gate matched saved environment metadata; no actors were changed."));
+		return Result;
+	}
+
+	const FScopedTransaction Transaction(
+		NSLOCTEXT("UEREMCP", "BuildEnvironmentTransaction", "UEREMCP Build Environment"),
+		Request.bAtomic);
+	const int32 ReplacedActorCount = DestroyOwnedEnvironmentActors(World);
+	Result.ChangeManifest->SetNumberField(TEXT("replaced_owned_actors"), ReplacedActorCount);
+
 	TArray<FString> CreatedLabels;
+	bool bRiverCreated = false;
+	bool bRainCreated = false;
+	bool bSaved = false;
+	bool bReloaded = false;
 
 	if (Spec.bIncludeTerrain)
 	{
-		const FVector Offset(
-			-float(Spec.SizeX - 1) * Spec.ScaleXY * 0.5f,
-			-float(Spec.SizeY - 1) * Spec.ScaleXY * 0.5f,
-			0.f);
-		ALandscape* Landscape = World->SpawnActor<ALandscape>(Offset, FRotator::ZeroRotator);
+		ALandscape* Landscape = World->SpawnActor<ALandscape>(
+			LandscapeOffset, FRotator::ZeroRotator);
 		if (!Landscape)
 		{
-			Result.Status = TEXT("failed_validation");
-			Result.Summary = TEXT("Failed to spawn ALandscape");
+			DestroyOwnedEnvironmentActors(World);
+			Result.Status = TEXT("rolled_back");
+			Result.Summary = TEXT("Failed to spawn ALandscape; removed UEREMCP-owned actors");
 			return Result;
 		}
+		Landscape->SetFlags(RF_Transactional);
 		Landscape->SetActorLabel(TEXT("UEREMCP_Landscape"));
 		Landscape->SetActorRelativeScale3D(FVector(Spec.ScaleXY, Spec.ScaleXY, Spec.ScaleZ));
 
@@ -399,28 +618,35 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	if (Spec.bIncludeRiver)
 	{
 #if UEREMCP_HAS_WATER
-		// Deferred spawn so we can clear bAffectsLandscape before OnLevelActorAddedToWorld
-		// auto-spawns AWaterBrushManager. SetupDefaultMaterials + brush rebuild deadlocks the
-		// game thread when invoked under a sync MCP tools/call
+		// Clear bAffectsLandscape in CustomPreSpawnInitialization, before
+		// OnLevelActorAddedToWorld sees the actor. Deferred spawn alone is too late:
+		// the actor-added delegate fires from SpawnActor before FinishSpawningActor.
+		// SetupDefaultMaterials + brush rebuild deadlocks the game thread when invoked
+		// under a synchronous MCP tools/call.
 		// [VERIFIED-RUNTIME: BuildEnvironment hung at WaterBrushManager spawn 2026-07-30]
 		// [VERIFIED: WaterBodyComponent.h:630] bAffectsLandscape
 		// [VERIFIED: WaterEditorModule.cpp:190] AffectsLandscape() gates brush spawn
-		// [VERIFIED: World.h:3851] SpawnActorDeferred
-		const FTransform RiverXform(River.Points[0].Location);
-		AWaterBodyRiver* RiverActor = World->SpawnActorDeferred<AWaterBodyRiver>(
+		// [VERIFIED: World.h:517] CustomPreSpawnInitialization
+		const FTransform RiverXform(River.Points[0].Location + LandscapeOffset);
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParameters.CustomPreSpawnInitialization = [](AActor* SpawnedActor)
+		{
+			if (AWaterBodyRiver* SpawnedRiver = Cast<AWaterBodyRiver>(SpawnedActor))
+			{
+				if (UWaterBodyComponent* WaterComp = SpawnedRiver->GetWaterBodyComponent())
+				{
+					WaterComp->bAffectsLandscape = false;
+				}
+			}
+		};
+		AWaterBodyRiver* RiverActor = World->SpawnActor<AWaterBodyRiver>(
 			AWaterBodyRiver::StaticClass(),
 			RiverXform,
-			nullptr,
-			nullptr,
-			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+			SpawnParameters);
 		if (RiverActor)
 		{
-			if (UWaterBodyComponent* WaterComp = RiverActor->GetWaterBodyComponent())
-			{
-				// Valley already carved into the heightmap; skip landmass brush.
-				WaterComp->bAffectsLandscape = false;
-			}
-			UGameplayStatics::FinishSpawningActor(RiverActor, RiverXform);
 			RiverActor->SetActorLabel(TEXT("UEREMCP_River"));
 			// [VERIFIED: WaterBodyActor.h:103] GetWaterSpline
 			if (UWaterSplineComponent* Spline = RiverActor->GetWaterSpline())
@@ -428,15 +654,19 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				Spline->ClearSplinePoints(false);
 				for (int32 I = 0; I < River.Points.Num(); ++I)
 				{
-					Spline->AddSplinePoint(River.Points[I].Location, ESplineCoordinateSpace::World, false);
+					Spline->AddSplinePoint(
+						River.Points[I].Location + LandscapeOffset,
+						ESplineCoordinateSpace::World,
+						false);
 				}
 				Spline->UpdateSpline();
 			}
 			CreatedLabels.Add(TEXT("UEREMCP_River"));
+			bRiverCreated = true;
 			Tech.Add(MakeTech(
 				TEXT("water_river"),
 				TEXT("real"),
-				TEXT("AWaterBodyRiver deferred spawn, bAffectsLandscape=false, spline set [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyComponent.h:630]")));
+				TEXT("AWaterBodyRiver pre-spawn bAffectsLandscape=false, spline set [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyComponent.h:630]")));
 			Result.CapabilityNotes.Add(
 				TEXT("River uses visible water mesh without landscape water brush (heightmap valley is authoritative)."));
 			Result.InternalOperations += 2;
@@ -454,6 +684,10 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 
 	int32 FoliageCount = 0;
 	int32 ExclusionViolations = 0;
+	int32 LeftBankCount = 0;
+	int32 RightBankCount = 0;
+	int32 SlopeRejected = 0;
+	int32 HeightRejected = 0;
 	if (Spec.bIncludeForest)
 	{
 		UStaticMesh* Mesh = nullptr;
@@ -516,14 +750,37 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				{
 					continue;
 				}
+				const float NormalizedHeight = SampleNormalizedHeight(
+					Heights, Spec, Local.X, Local.Y);
+				if (NormalizedHeight < Spec.FoliageMinNormalizedHeight
+					|| NormalizedHeight > Spec.FoliageMaxNormalizedHeight)
+				{
+					++HeightRejected;
+					continue;
+				}
+				const float SlopeDegrees = SampleSlopeDegrees(
+					Heights, Spec, Local.X, Local.Y);
+				if (SlopeDegrees > Spec.FoliageSlopeLimitDegrees)
+				{
+					++SlopeRejected;
+					continue;
+				}
 				const FVector WorldPos(
 					Local.X - float(Spec.SizeX - 1) * Spec.ScaleXY * 0.5f,
 					Local.Y - float(Spec.SizeY - 1) * Spec.ScaleXY * 0.5f,
-					50.f);
+					NormalizedToWorldHeight(NormalizedHeight, Spec.ScaleZ) + 50.f);
 				FTransform Xf;
 				Xf.SetLocation(WorldPos);
 				Xf.SetScale3D(FVector(0.4f + Density * 0.8f));
 				Hism->AddInstance(Xf);
+				if (River.SignedSideToClosestXY(Local) >= 0.f)
+				{
+					++LeftBankCount;
+				}
+				else
+				{
+					++RightBankCount;
+				}
 				++FoliageCount;
 			}
 			// Re-measure exclusion corridor (COVERAGE_PLAN III.11.3) — not by eye.
@@ -549,6 +806,14 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.StructuralMetrics->SetBoolField(TEXT("forest_bounded"), FoliageCount <= Spec.MaxFoliageInstances);
 	Result.StructuralMetrics->SetNumberField(TEXT("exclusion_violations"), ExclusionViolations);
 	Result.StructuralMetrics->SetBoolField(TEXT("exclusion_respected"), ExclusionViolations == 0);
+	Result.StructuralMetrics->SetNumberField(TEXT("left_bank_instances"), LeftBankCount);
+	Result.StructuralMetrics->SetNumberField(TEXT("right_bank_instances"), RightBankCount);
+	Result.StructuralMetrics->SetBoolField(
+		TEXT("both_banks_populated"), LeftBankCount > 0 && RightBankCount > 0);
+	Result.StructuralMetrics->SetNumberField(TEXT("slope_rejected_candidates"), SlopeRejected);
+	Result.StructuralMetrics->SetNumberField(TEXT("height_rejected_candidates"), HeightRejected);
+	Result.StructuralMetrics->SetNumberField(
+		TEXT("slope_limit_degrees"), Spec.FoliageSlopeLimitDegrees);
 
 	if (Spec.bIncludeLighting)
 	{
@@ -556,22 +821,52 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		if (Sun)
 		{
 			Sun->SetActorLabel(TEXT("UEREMCP_Sun"));
+			// [VERIFIED: LightComponent.h:286,296]
+			Sun->GetLightComponent()->SetIntensity(4.0f);
+			Sun->GetLightComponent()->SetLightColor(FLinearColor(0.56f, 0.64f, 0.78f));
 			CreatedLabels.Add(TEXT("UEREMCP_Sun"));
 		}
 		ASkyLight* Sky = World->SpawnActor<ASkyLight>(FVector::ZeroVector, FRotator::ZeroRotator);
 		if (Sky)
 		{
 			Sky->SetActorLabel(TEXT("UEREMCP_SkyLight"));
+			// [VERIFIED: SkyLightComponent.h:235,265]
+			Sky->GetLightComponent()->SetIntensity(0.65f);
+			Sky->GetLightComponent()->SetLowerHemisphereColor(
+				FLinearColor(0.04f, 0.06f, 0.09f));
 			CreatedLabels.Add(TEXT("UEREMCP_SkyLight"));
 		}
 		AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>(FVector::ZeroVector, FRotator::ZeroRotator);
 		if (Fog)
 		{
 			Fog->SetActorLabel(TEXT("UEREMCP_RainFog"));
+			// [VERIFIED: ExponentialHeightFogComponent.h:251,257,287]
+			Fog->GetComponent()->SetFogDensity(0.025f);
+			Fog->GetComponent()->SetFogHeightFalloff(0.12f);
+			Fog->GetComponent()->SetFogInscatteringColor(
+				FLinearColor(0.19f, 0.24f, 0.31f));
 			CreatedLabels.Add(TEXT("UEREMCP_RainFog"));
 		}
+		const FVector ViewLocation(
+			-float(Spec.SizeX - 1) * Spec.ScaleXY * 0.36f,
+			-float(Spec.SizeY - 1) * Spec.ScaleXY * 0.36f,
+			6500.f);
+		const FRotator ViewRotation = (FVector::ZeroVector - ViewLocation).Rotation();
+		if (ACameraActor* Camera = World->SpawnActor<ACameraActor>(ViewLocation, ViewRotation))
+		{
+			Camera->SetActorLabel(TEXT("UEREMCP_RainyViewpoint"));
+			CreatedLabels.Add(TEXT("UEREMCP_RainyViewpoint"));
+		}
+		if (APlayerStart* Start = World->SpawnActor<APlayerStart>(
+			ViewLocation + FVector(0.f, 0.f, -500.f), ViewRotation))
+		{
+			Start->SetActorLabel(TEXT("UEREMCP_PlayerStart"));
+			CreatedLabels.Add(TEXT("UEREMCP_PlayerStart"));
+		}
 		Tech.Add(MakeTech(TEXT("lighting"), TEXT("real"), TEXT("DirectionalLight + SkyLight + ExponentialHeightFog")));
-		Result.InternalOperations += 3;
+		Result.StructuralMetrics->SetStringField(TEXT("lighting_preset"), TEXT("rainy_overcast"));
+		Result.StructuralMetrics->SetStringField(TEXT("viewpoint"), TEXT("UEREMCP_RainyViewpoint"));
+		Result.InternalOperations += 5;
 	}
 
 	if (Spec.bIncludeRain)
@@ -581,30 +876,38 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		{
 			RainSys = LoadObject<UNiagaraSystem>(nullptr, *Spec.RainSystemPath);
 		}
-		ANiagaraActor* RainActor = World->SpawnActor<ANiagaraActor>(FVector(0, 0, 400), FRotator::ZeroRotator);
+		AUeremcpWeatherFollower* RainActor = World->SpawnActor<AUeremcpWeatherFollower>(
+			FVector(0, 0, 400), FRotator::ZeroRotator);
 		if (RainActor)
 		{
 			RainActor->SetActorLabel(TEXT("UEREMCP_Rain"));
-			if (UNiagaraComponent* Comp = RainActor->GetNiagaraComponent())
+			if (RainSys)
 			{
-				if (RainSys)
-				{
-					Comp->SetAsset(RainSys);
-					Tech.Add(MakeTech(
-						TEXT("rain_camera_follow"),
-						TEXT("real"),
-						TEXT("Niagara rain actor spawned; attach to PIE camera in follow-up if needed")));
-				}
-				else
-				{
-					Tech.Add(MakeTech(
-						TEXT("rain_camera_follow"),
-						TEXT("approximated"),
-						TEXT("Rain actor spawned without system asset — supply weather.rain_system_path")));
-					Result.Warnings.Add(TEXT("rain_system_path missing — Niagara component has no asset"));
-				}
+				RainActor->NiagaraRain->SetAsset(RainSys);
+				RainActor->FallbackRain->SetVisibility(false);
+				Tech.Add(MakeTech(
+					TEXT("rain_camera_follow"),
+					TEXT("real"),
+					TEXT("AUeremcpWeatherFollower ticks to player camera with supplied Niagara rain")));
+			}
+			else
+			{
+				RainActor->NiagaraRain->SetVisibility(false);
+				RainActor->ConfigureFallbackRain(int32(Spec.Seed), Spec.RainStreakCount);
+				Tech.Add(MakeTech(
+					TEXT("rain_camera_follow"),
+					TEXT("approximated"),
+					TEXT("Camera-follow transform is real; visible rain uses bounded instanced streak fallback")));
+				Result.Warnings.Add(
+					TEXT("rain_system_path missing — using visible instanced-streak rain fallback"));
 			}
 			CreatedLabels.Add(TEXT("UEREMCP_Rain"));
+			bRainCreated = true;
+			Result.StructuralMetrics->SetStringField(TEXT("weather_follow"), Spec.WeatherFollow);
+			Result.StructuralMetrics->SetBoolField(TEXT("weather_follower_tick_enabled"), true);
+			Result.StructuralMetrics->SetNumberField(
+				TEXT("fallback_rain_streaks"),
+				RainSys ? 0 : RainActor->FallbackRain->GetInstanceCount());
 			Result.InternalOperations += 1;
 		}
 	}
@@ -618,6 +921,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		for (int32 I = 0; I < Count && I < River.Points.Num(); ++I)
 		{
 			const FVector Loc = River.Points[I].Location
+				+ LandscapeOffset
 				+ FVector(River.Points[I].Width * 0.75f, 0.f, 100.f);
 			ADynamicMeshActor* Structure = World->SpawnActor<ADynamicMeshActor>(Loc, FRotator::ZeroRotator);
 			if (!Structure)
@@ -667,6 +971,17 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.InternalOperations += 1;
 	}
 
+	if (AActor* Metadata = World->SpawnActor<AActor>(FVector::ZeroVector, FRotator::ZeroRotator))
+	{
+		Metadata->SetActorLabel(TEXT("UEREMCP_Metadata"));
+		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_REV=%s"), *Result.Revision)));
+		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_SEED=%llu"), Spec.Seed)));
+		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_RIVER_WIDTH=%.3f"), Spec.RiverWidth)));
+		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_HEIGHTMAP_HASH=%s"), *HeightmapHash)));
+		CreatedLabels.Add(TEXT("UEREMCP_Metadata"));
+		++Result.InternalOperations;
+	}
+
 	AddTechArray(Result.RealVsApproximated, TEXT("technologies"), Tech);
 	TArray<TSharedPtr<FJsonValue>> Labels;
 	for (const FString& L : CreatedLabels)
@@ -677,24 +992,77 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
 	Result.ChangeManifest->SetNumberField(TEXT("seed"), double(Spec.Seed));
 	Result.ChangeManifest->SetBoolField(TEXT("dry_run"), false);
+	Result.ChangeManifest->SetStringField(TEXT("revision"), Result.Revision);
 
 	const bool bNonFlat = Result.StructuralMetrics->GetBoolField(TEXT("non_flat"));
 	const bool bForestOk = !Spec.bIncludeForest || FoliageCount > 0;
-	if (bNonFlat && bForestOk)
+	const bool bBothBanks = !Spec.bIncludeForest || (LeftBankCount > 0 && RightBankCount > 0);
+	const bool bOpenChannel = !Spec.bIncludeForest || ExclusionViolations == 0;
+	const bool bRiverOk = !Spec.bIncludeRiver || bRiverCreated;
+	const bool bWeatherOk = !Spec.bIncludeRain || bRainCreated;
+
+	if (bOwnsMapLifecycle && Request.bSave)
 	{
-		Result.Status = TEXT("created_with_warnings");
+		// [VERIFIED: FileHelpers.h:67-75] SaveMap
+		bSaved = UEditorLoadingAndSavingUtils::SaveMap(World, Dest);
+		Result.InternalOperations += 1;
+		if (!bSaved)
+		{
+			DestroyOwnedEnvironmentActors(World);
+			Result.Status = TEXT("rolled_back");
+			Result.Summary = FString::Printf(
+				TEXT("Failed to save generated map %s; removed UEREMCP-owned actors"),
+				*Dest);
+			Result.StructuralMetrics->SetBoolField(TEXT("saved"), false);
+			return Result;
+		}
+		if (Request.bValidate)
+		{
+			UWorld* ReloadedWorld = UEditorLoadingAndSavingUtils::LoadMap(Dest);
+			bReloaded = ReloadedWorld != nullptr
+				&& ReadEnvironmentRevision(ReloadedWorld) == Result.Revision;
+			Result.InternalOperations += 1;
+		}
+	}
+	Result.StructuralMetrics->SetBoolField(TEXT("saved"), bSaved);
+	Result.StructuralMetrics->SetBoolField(TEXT("reloaded"), bReloaded);
+	Result.StructuralMetrics->SetBoolField(TEXT("compile_not_applicable"), true);
+	Result.StructuralMetrics->SetBoolField(TEXT("river_continuous"), bRiverOk);
+	Result.ChangeManifest->SetBoolField(TEXT("saved"), bSaved);
+	Result.ChangeManifest->SetBoolField(TEXT("reloaded"), bReloaded);
+
+	const bool bPersistenceOk = !bOwnsMapLifecycle
+		|| !Request.bSave
+		|| (bSaved && (!Request.bValidate || bReloaded));
+	if (bNonFlat && bForestOk && bBothBanks && bOpenChannel
+		&& bRiverOk && bWeatherOk && bPersistenceOk)
+	{
+		Result.Status = Result.Warnings.IsEmpty()
+			? TEXT("created_and_validated")
+			: TEXT("created_with_warnings");
 		Result.Summary = FString::Printf(
-			TEXT("Built environment seed=%llu actors=%d foliage=%d height_range=%.3f"),
+			TEXT("Built environment seed=%llu actors=%d foliage=%d banks=%d/%d height_range=%.3f saved=%s reloaded=%s"),
 			Spec.Seed, CreatedLabels.Num(), FoliageCount,
-			Result.StructuralMetrics->GetNumberField(TEXT("height_range")));
+			LeftBankCount, RightBankCount,
+			Result.StructuralMetrics->GetNumberField(TEXT("height_range")),
+			bSaved ? TEXT("true") : TEXT("false"),
+			bReloaded ? TEXT("true") : TEXT("false"));
 	}
 	else
 	{
 		Result.Status = TEXT("failed_validation");
-		Result.Summary = TEXT("Environment built but structural gates failed (flat terrain and/or zero foliage)");
+		Result.Summary = FString::Printf(
+			TEXT("Environment structural gates failed: non_flat=%s forest=%s both_banks=%s open_channel=%s river=%s weather=%s persistence=%s"),
+			bNonFlat ? TEXT("true") : TEXT("false"),
+			bForestOk ? TEXT("true") : TEXT("false"),
+			bBothBanks ? TEXT("true") : TEXT("false"),
+			bOpenChannel ? TEXT("true") : TEXT("false"),
+			bRiverOk ? TEXT("true") : TEXT("false"),
+			bWeatherOk ? TEXT("true") : TEXT("false"),
+			bPersistenceOk ? TEXT("true") : TEXT("false"));
 	}
 	Result.CapabilityNotes.Add(TEXT("World verification leans on structural metrics + human review; screenshots are not a gate (BACKLOG 5.8)."));
-	Result.CapabilityNotes.Add(TEXT("Save the current level under the scratch destination if persistence is required."));
+	Result.CapabilityNotes.Add(TEXT("CaptureWorldFrames is the general world capture hook; BuildEnvironment capture is supplementary only."));
 	return Result;
 }
 
@@ -708,7 +1076,9 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 		Result.Summary = TEXT("GEditor unavailable");
 		return Result;
 	}
-	UWorld* World = GEditor->GetEditorWorldContext().World();
+	UWorld* World = GEditor->PlayWorld
+		? GEditor->PlayWorld.Get()
+		: GEditor->GetEditorWorldContext().World();
 	if (!World)
 	{
 		Result.Status = TEXT("failed_validation");
@@ -720,6 +1090,9 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 	int32 Rivers = 0;
 	int32 Rain = 0;
 	int32 FoliageActors = 0;
+	int32 FoliageInstances = 0;
+	int32 WeatherFollowSamples = 0;
+	float WeatherFollowDistance = 0.f;
 	for (TActorIterator<AActor> It(World); It; ++It)
 	{
 		const FString Label = It->GetActorLabel();
@@ -731,19 +1104,42 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 		{
 			++Rivers;
 		}
-		if (Label.Contains(TEXT("UEREMCP_Rain")))
+		if (Label == TEXT("UEREMCP_Rain"))
 		{
 			++Rain;
+			if (const AUeremcpWeatherFollower* Follower =
+				Cast<AUeremcpWeatherFollower>(*It))
+			{
+				WeatherFollowSamples = Follower->FollowSamples;
+				WeatherFollowDistance = FVector::Distance(
+					Follower->FirstTrackedLocation,
+					Follower->LastTrackedLocation);
+			}
 		}
 		if (Label.Contains(TEXT("UEREMCP_Forest")))
 		{
 			++FoliageActors;
+			if (const UHierarchicalInstancedStaticMeshComponent* Hism =
+				It->FindComponentByClass<UHierarchicalInstancedStaticMeshComponent>())
+			{
+				FoliageInstances += Hism->GetInstanceCount();
+			}
 		}
 	}
 	Result.StructuralMetrics->SetNumberField(TEXT("landscape_actors"), Landscapes);
 	Result.StructuralMetrics->SetNumberField(TEXT("river_actors"), Rivers);
 	Result.StructuralMetrics->SetNumberField(TEXT("rain_actors"), Rain);
 	Result.StructuralMetrics->SetNumberField(TEXT("forest_actors"), FoliageActors);
+	Result.StructuralMetrics->SetNumberField(TEXT("foliage_instances"), FoliageInstances);
+	Result.StructuralMetrics->SetNumberField(TEXT("weather_follow_samples"), WeatherFollowSamples);
+	Result.StructuralMetrics->SetNumberField(TEXT("weather_follow_distance_cm"), WeatherFollowDistance);
+	Result.StructuralMetrics->SetBoolField(TEXT("weather_followed_10m"), WeatherFollowDistance >= 1000.f);
+	Result.StructuralMetrics->SetStringField(
+		TEXT("world_type"),
+		GEditor->PlayWorld ? TEXT("PIE") : TEXT("Editor"));
+	Result.Revision = ReadEnvironmentRevision(World);
+	Result.StructuralMetrics->SetStringField(TEXT("revision"), Result.Revision);
+	Result.StructuralMetrics->SetStringField(TEXT("loaded_package"), World->GetOutermost()->GetName());
 	Result.StructuralMetrics->SetStringField(TEXT("query_path"), LevelOrPackagePath);
 	Result.Status = TEXT("no_change_required");
 	Result.Summary = FString::Printf(
@@ -756,31 +1152,138 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Validate(
 	const FString& LevelOrPackagePath,
 	const TSharedPtr<FJsonObject>& Gates)
 {
+	const double StartSeconds = FPlatformTime::Seconds();
 	FUeremcpEnvironmentBuildResult Inspected = Inspect(LevelOrPackagePath);
 	TSharedPtr<FJsonObject> GateResult = MakeShared<FJsonObject>();
 	const bool bHasLandscape = Inspected.StructuralMetrics->GetNumberField(TEXT("landscape_actors")) > 0;
 	const bool bHasRiver = Inspected.StructuralMetrics->GetNumberField(TEXT("river_actors")) > 0;
 	const bool bHasForest = Inspected.StructuralMetrics->GetNumberField(TEXT("forest_actors")) > 0;
 	const bool bHasRain = Inspected.StructuralMetrics->GetNumberField(TEXT("rain_actors")) > 0;
+	const int32 FoliageInstances = int32(
+		Inspected.StructuralMetrics->GetNumberField(TEXT("foliage_instances")));
+
+	UWorld* World = GEditor && GEditor->PlayWorld
+		? GEditor->PlayWorld.Get()
+		: (GEditor ? GEditor->GetEditorWorldContext().World() : nullptr);
+	ALandscape* Landscape = nullptr;
+	UWaterSplineComponent* RiverSpline = nullptr;
+	UHierarchicalInstancedStaticMeshComponent* ForestHism = nullptr;
+	if (World)
+	{
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (!Landscape)
+			{
+				Landscape = Cast<ALandscape>(*It);
+			}
+			if (It->GetActorLabel() == TEXT("UEREMCP_River"))
+			{
+				if (AWaterBodyRiver* River = Cast<AWaterBodyRiver>(*It))
+				{
+					RiverSpline = River->GetWaterSpline();
+				}
+			}
+			if (It->GetActorLabel() == TEXT("UEREMCP_Forest"))
+			{
+				ForestHism = It->FindComponentByClass<UHierarchicalInstancedStaticMeshComponent>();
+			}
+		}
+	}
+
+	bool bNonFlat = false;
+	float ReloadedHeightRange = 0.f;
+	if (Landscape)
+	{
+		int32 SizeX = 0;
+		int32 SizeY = 0;
+		TArray<float> Values;
+		// [VERIFIED: LandscapeProxy.h:1105] GetHeightValues
+		Landscape->GetHeightValues(SizeX, SizeY, Values);
+		if (!Values.IsEmpty())
+		{
+			float MinHeight = TNumericLimits<float>::Max();
+			float MaxHeight = TNumericLimits<float>::Lowest();
+			for (float Height : Values)
+			{
+				MinHeight = FMath::Min(MinHeight, Height);
+				MaxHeight = FMath::Max(MaxHeight, Height);
+			}
+			ReloadedHeightRange = MaxHeight - MinHeight;
+			bNonFlat = ReloadedHeightRange > 100.f;
+		}
+	}
+
+	int32 LeftBank = 0;
+	int32 RightBank = 0;
+	int32 ExclusionViolations = 0;
+	const float RiverWidth = World
+		? FCString::Atof(*ReadEnvironmentTag(World, TEXT("UEREMCP_RIVER_WIDTH=")))
+		: 0.f;
+	const float ExclusionDistance = FMath::Max(1.f, RiverWidth * 0.55f);
+	if (RiverSpline && ForestHism)
+	{
+		for (int32 Index = 0; Index < ForestHism->GetInstanceCount(); ++Index)
+		{
+			FTransform Transform;
+			if (!ForestHism->GetInstanceTransform(Index, Transform, true))
+			{
+				continue;
+			}
+			const FVector Position = Transform.GetLocation();
+			// [VERIFIED: SplineComponent.h:841,849]
+			const FVector Closest = RiverSpline->FindLocationClosestToWorldLocation(
+				Position, ESplineCoordinateSpace::World);
+			const FVector Tangent = RiverSpline->FindTangentClosestToWorldLocation(
+				Position, ESplineCoordinateSpace::World);
+			if (FVector2D::Distance(FVector2D(Position), FVector2D(Closest)) < ExclusionDistance)
+			{
+				++ExclusionViolations;
+			}
+			const FVector2D Delta(Position.X - Closest.X, Position.Y - Closest.Y);
+			const float Side = Tangent.X * Delta.Y - Tangent.Y * Delta.X;
+			Side >= 0.f ? ++LeftBank : ++RightBank;
+		}
+	}
+
+	const bool bRiverContinuous = RiverSpline
+		&& RiverSpline->GetNumberOfSplinePoints() >= 4
+		&& RiverSpline->GetSplineLength() > 1000.f;
+	const bool bBothBanks = LeftBank > 0 && RightBank > 0;
+	const bool bOpenChannel = ExclusionViolations == 0;
+	bool bRequireWeatherFollow = false;
+	if (Gates.IsValid())
+	{
+		Gates->TryGetBoolField(TEXT("require_weather_follow_10m"), bRequireWeatherFollow);
+	}
+	const bool bWeatherFollowed = Inspected.StructuralMetrics->GetBoolField(
+		TEXT("weather_followed_10m"));
 	GateResult->SetBoolField(TEXT("has_landscape"), bHasLandscape);
 	GateResult->SetBoolField(TEXT("has_river"), bHasRiver);
 	GateResult->SetBoolField(TEXT("has_forest"), bHasForest);
 	GateResult->SetBoolField(TEXT("has_rain"), bHasRain);
+	GateResult->SetBoolField(TEXT("non_flat"), bNonFlat);
+	GateResult->SetNumberField(TEXT("reloaded_height_range_cm"), ReloadedHeightRange);
+	GateResult->SetBoolField(TEXT("river_continuous"), bRiverContinuous);
+	GateResult->SetNumberField(TEXT("left_bank_instances"), LeftBank);
+	GateResult->SetNumberField(TEXT("right_bank_instances"), RightBank);
+	GateResult->SetBoolField(TEXT("both_banks_populated"), bBothBanks);
+	GateResult->SetNumberField(TEXT("exclusion_violations"), ExclusionViolations);
+	GateResult->SetBoolField(TEXT("open_channel"), bOpenChannel);
+	GateResult->SetBoolField(TEXT("weather_followed_10m"), bWeatherFollowed);
+	GateResult->SetNumberField(TEXT("foliage_instances"), FoliageInstances);
 	Inspected.StructuralMetrics->SetObjectField(TEXT("gates"), GateResult);
+	Inspected.StructuralMetrics->SetNumberField(
+		TEXT("validation_elapsed_ms"),
+		(FPlatformTime::Seconds() - StartSeconds) * 1000.0);
 
-	const bool bOk = bHasLandscape && bHasForest;
+	const bool bOk = bHasLandscape && bHasRiver && bHasForest && bHasRain
+		&& bNonFlat && bRiverContinuous && bBothBanks && bOpenChannel
+		&& FoliageInstances > 0
+		&& (!bRequireWeatherFollow || bWeatherFollowed);
 	Inspected.Status = bOk ? TEXT("no_change_required") : TEXT("failed_validation");
 	Inspected.Summary = bOk
-		? TEXT("ValidateEnvironment: core gates passed (landscape+forest). River/rain reported honestly.")
-		: TEXT("ValidateEnvironment: failed core gates");
-	if (!bHasRiver)
-	{
-		Inspected.Warnings.Add(TEXT("River gate soft-fail — Water body may be approximated"));
-	}
-	if (!bHasRain)
-	{
-		Inspected.Warnings.Add(TEXT("Rain gate soft-fail"));
-	}
+		? TEXT("ValidateEnvironment: non-flat landscape, continuous river, both-bank forest, open channel, rain gates passed.")
+		: TEXT("ValidateEnvironment: one or more structural/PIE gates failed; inspect structural_metrics.gates.");
 	Inspected.CapabilityNotes.Add(TEXT("Screenshot/human review still required for 'looks good' (BACKLOG 5.8)."));
 	return Inspected;
 }

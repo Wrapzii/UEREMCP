@@ -124,5 +124,46 @@ bool FUeremcpEnvironmentParseAliasesTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("structures include"), Spec.bIncludeStructures);
 	TestEqual(TEXT("structure count"), Spec.StructureCount, 4);
 	TestFalse(TEXT("capture off"), Spec.bCaptureScreenshot);
+	TestEqual(TEXT("missing river width keeps default"), Spec.RiverWidth, 600.f);
+	TestEqual(TEXT("missing forest width keeps default"), Spec.ForestBankWidth, 3500.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentSplineBankSideTest,
+	"UEREMCP.Environment.Spline.OppositeBanks",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentSplineBankSideTest::RunTest(const FString& Parameters)
+{
+	FUeremcpSplinePath Path;
+	Path.Points.Add({ FVector(0, 0, 0), 500.f });
+	Path.Points.Add({ FVector(1000, 0, 0), 500.f });
+	const float SideA = Path.SignedSideToClosestXY(FVector(500, 250, 0));
+	const float SideB = Path.SignedSideToClosestXY(FVector(500, -250, 0));
+	TestTrue(TEXT("positive bank"), SideA > 0.f);
+	TestTrue(TEXT("negative bank"), SideB < 0.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentReadOnlyNoSeedTest,
+	"UEREMCP.Environment.Inspect.DoesNotRequireSeed",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentReadOnlyNoSeedTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"inspect_environment",
+		"request_id":"env-inspect-1",
+		"target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain/MountainRiverRain"},
+		"specification":{}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::InspectEnvironment(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	TestNotEqual(TEXT("not rejected for absent seed"), Root->GetStringField(TEXT("status")), FString(TEXT("rejected")));
 	return true;
 }

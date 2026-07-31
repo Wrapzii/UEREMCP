@@ -13,6 +13,7 @@ namespace
 		Response.Status = Result.Status;
 		Response.Summary = Result.Summary;
 		Response.CapabilityNotes = Result.CapabilityNotes;
+		Response.Revision = Result.Revision;
 		for (const FString& W : Result.Warnings)
 		{
 			Response.CapabilityNotes.Add(FString::Printf(TEXT("warning: %s"), *W));
@@ -133,9 +134,12 @@ namespace
 					*ExpectedAction, *Request.Action, *ExpectedAction));
 		}
 
+		const bool bReadOnly = ExpectedAction.Equals(TEXT("inspect_environment"))
+			|| ExpectedAction.Equals(TEXT("validate_environment"));
 		FUeremcpEnvironmentBuildSpec Spec;
 		FString SpecError;
-		if (!FUeremcpEnvironmentService::ParseBuildSpec(Request.Specification, Spec, SpecError))
+		if (!bReadOnly
+			&& !FUeremcpEnvironmentService::ParseBuildSpec(Request.Specification, Spec, SpecError))
 		{
 			return FUeremcpEnvelope::MakeRejection(Request.RequestId, SpecError);
 		}
@@ -148,8 +152,6 @@ namespace
 			ApplyStageIncludes(Spec, Stage);
 		}
 
-		const bool bReadOnly = ExpectedAction.Equals(TEXT("inspect_environment"))
-			|| ExpectedAction.Equals(TEXT("validate_environment"));
 		FUeremcpMutatingDispatch Dispatch;
 		FString Blocked;
 		if (!Dispatch.TryBegin(RequestJson, bReadOnly, 0, bReadOnly, Blocked))

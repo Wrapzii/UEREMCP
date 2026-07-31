@@ -20,8 +20,13 @@ struct FUeremcpEnvironmentBuildSpec
 	float RiverWidth = 600.f;
 	float ForestBankWidth = 3500.f;
 	int32 MaxFoliageInstances = 800;
+	float FoliageSlopeLimitDegrees = 32.f;
+	float FoliageMinNormalizedHeight = 0.02f;
+	float FoliageMaxNormalizedHeight = 0.90f;
 	FString MeshPath; // optional static mesh for foliage; empty → skip instances, report gap
-	FString RainSystemPath; // optional Niagara; empty → spawn directional particle approx note
+	FString RainSystemPath; // optional Niagara; empty → visible instanced-rain fallback
+	FString WeatherFollow = TEXT("player_camera");
+	int32 RainStreakCount = 256;
 	bool bIncludeTerrain = true;
 	bool bIncludeRiver = true;
 	bool bIncludeForest = true;
@@ -44,6 +49,7 @@ struct FUeremcpEnvironmentBuildResult
 	TSharedPtr<FJsonObject> StructuralMetrics;
 	TSharedPtr<FJsonObject> ChangeManifest;
 	TArray<FString> ScreenshotPaths;
+	FString Revision;
 	int32 InternalOperations = 0;
 };
 
