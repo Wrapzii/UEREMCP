@@ -122,9 +122,19 @@ names below are the semantic actions; notes map to the live tool surface.
 | `create_gameplay_effect` | gameplay_abilities | WS-09 | research | RB-12 |
 | `create_player_ability` | gameplay | WS-09 | planned | RB-12 |
 | `create_gameplay_system` | gameplay | WS-09 | planned | RB-12 |
-| `configure_replication` | networking | WS-09 | planned | RB-12 |
+| `configure_replication` | networking | WS-09 | superseded | Prefer WS-01 `validate_replication` (`UeremcpSystems`) for goal-level audit/configure; multi-client remains WS-11 |
 | `create_actor` / `create_component` | assets | WS-09 | planned | |
 | `create_data_asset` | data_assets | WS-09 | planned | |
+
+### Audio / networking / world partition (remaining coverage)
+
+| Action | Domain | WS | Status | Brief |
+|---|---|---|---|---|
+| `create_audio_cue` | audio | WS-01 | partial | SoundCue + optional attenuation via factories; MetaSound graph blocked; live handoff pending |
+| `inspect_audio` | audio | WS-01 | partial | SoundCue/Wave/Attenuation re-read |
+| `validate_replication` | networking | WS-01 | partial | Pattern B + Blueprint variable audit/configure in one call; no multi-client claim |
+| `inspect_world_partition` | world_partition | WS-01 | partial | Read-only WP/streaming state |
+| `repair_world_partition` | world_partition | WS-01 | partial | `CreateOrRepairWorldPartition`; dry_run default; HLOD builders blocked |
 
 ### Animation
 
@@ -149,7 +159,7 @@ Designed for, not scheduled. Adding these must require **no protocol change** �
 does, the architecture failed (`docs/ROADMAP.md`).
 
 `create_behavior_tree` · `create_state_tree` · `create_pcg_system` ·
-`create_level_sequence` · world building · level design · UI · audio · source control
+`create_level_sequence` · UI · source control · MetaSound graph authoring · WP HLOD builders
 
 ## Reference toolset
 

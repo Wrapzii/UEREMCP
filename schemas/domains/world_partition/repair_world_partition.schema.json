@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/world_partition/repair_world_partition.schema.json",
+  "title": "repair_world_partition specification",
+  "description": "Create-or-repair World Partition via UWorldPartition::CreateOrRepairWorldPartition. Defaults to dry_run. HLOD builder commandlets are blocked. Owned by WS-01.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enable_streaming": {
+      "type": "boolean",
+      "default": true,
+      "description": "Passed to UWorldPartition::SetEnableStreaming after create/repair."
+    }
+  }
+}

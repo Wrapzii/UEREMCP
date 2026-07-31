@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/world_partition/inspect_world_partition.schema.json",
+  "title": "inspect_world_partition specification",
+  "description": "Optional filters. Omit target.asset_path to inspect the current editor world. Owned by WS-01.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "include_bounds": { "type": "boolean", "default": true }
+  }
+}
