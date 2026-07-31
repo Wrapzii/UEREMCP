@@ -71,7 +71,9 @@ public:
 	/**
 	 * Create a RIVER WaterBody from spline points.
 	 *
-	 * Use when: add a river through a valley; ExecutePlan water stage after landscape.
+	 * Use when: a RIVER through a valley. Rivers are the only implemented body.
+	 * Do not use for: lakes or oceans. Spawn AWaterBodyLake / AWaterBodyOcean via
+	 *   SceneTools.add_to_scene_from_class instead, until body_type is honoured.
 	 * Inputs: action=create_water_body; specification.seed REQUIRED; river.width.
 	 *   body_type accepts "river" only.
 	 * Outputs: river actor label + spline length. Real AWaterBodyRiver when Water plugin loaded.
@@ -167,6 +169,37 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString SubmitMeshOps(const FString& RequestJson);
+
+	/**
+	 * Snap actors down onto the LANDSCAPE surface, ignoring foliage.
+	 *
+	 * Use when: buildings, props or roads sit above or below the terrain after a
+	 *   rebuild or an import. This is the fix for floating actors.
+	 * Inputs: action=snap_actors_to_landscape; specification.label_prefixes is an
+	 *   optional array (default ["UEREMCP_"]); specification.z_offset_cm optional.
+	 * Do not use for: foliage instances -- rescatter those instead.
+	 * Why it exists: a generic downward trace stops on the first blocker, which in
+	 *   a forest is a tree, which is how buildings ended up resting on canopy.
+	 *   This traces ALandscapeProxy only. An actor with no landscape beneath it is
+	 *   NAMED and left alone rather than dropped into the void.
+	 * Example: {"protocol_version":"1.0","action":"snap_actors_to_landscape","options":{"dry_run":true},"specification":{"label_prefixes":["UEREMCP_Structure","Castle"],"z_offset_cm":0}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString SnapActorsToLandscape(const FString& RequestJson);
+
+	/**
+	 * Remove instanced-foliage instances inside world-space boxes.
+	 *
+	 * Use when: clearing a building footprint, a road corridor or a courtyard so
+	 *   trees stop growing through walls.
+	 * Inputs: action=clear_foliage_in_volumes; specification.volumes REQUIRED --
+	 *   a non-empty array of {"center":[x,y,z],"extent":[x,y,z]} in world space.
+	 * Do not use for: WaterBodyExclusionVolume is NOT a foliage cull. It excludes
+	 *   water. Placing one and expecting trees to disappear is why they did not.
+	 * Example: {"protocol_version":"1.0","action":"clear_foliage_in_volumes","options":{"dry_run":true},"specification":{"volumes":[{"center":[1800,-2000,9000],"extent":[1500,1500,4000]}]}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString ClearFoliageInVolumes(const FString& RequestJson);
 
 	/**
 	 * Read-only inspect of environment actors/metrics in the current editor world.

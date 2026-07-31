@@ -38,6 +38,8 @@ namespace
 			TEXT("inspect_environment"),
 			TEXT("validate_environment"),
 			TEXT("submit_mesh_ops"),
+			TEXT("snap_actors_to_landscape"),
+			TEXT("clear_foliage_in_volumes"),
 		};
 		return Names;
 	}
@@ -74,6 +76,8 @@ bool FUeremcpEnvironmentPlanHandlers::Register(FString& OutError)
 	// this line execute_plan rejects the whole batch with "no handler for
 	// submit_mesh_ops" and the agent falls back to one call per mesh.
 	if (!Bind(TEXT("submit_mesh_ops"), &UUeremcpEnvironmentToolset::SubmitMeshOps)) return false;
+	if (!Bind(TEXT("snap_actors_to_landscape"), &UUeremcpEnvironmentToolset::SnapActorsToLandscape)) return false;
+	if (!Bind(TEXT("clear_foliage_in_volumes"), &UUeremcpEnvironmentToolset::ClearFoliageInVolumes)) return false;
 	OutError.Reset();
 	return true;
 }

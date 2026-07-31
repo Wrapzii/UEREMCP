@@ -125,6 +125,20 @@
         "create_procedural_texture"
       ],
       "why": "layers may sample textures; author or import them first"
+    },
+    {
+      "action": "snap_actors_to_landscape",
+      "depends_on_actions": [
+        "create_landscape"
+      ],
+      "why": "there must be a landscape to snap onto"
+    },
+    {
+      "action": "clear_foliage_in_volumes",
+      "depends_on_actions": [
+        "scatter_foliage"
+      ],
+      "why": "clears instances that scattering placed"
     }
   ],
   "operations": [
@@ -682,7 +696,8 @@
         "specification": {
           "frame_count": 6
         }
-      }
+      },
+      "capture_preference": "For Niagara effects specifically. For a level view use capture_world_frames."
     },
     {
       "qualified": "UeremcpCore.UeremcpReferenceToolset.ExecutePlan",
@@ -927,13 +942,15 @@
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateWaterBody",
       "action": "create_water_body",
       "use_when": [
-        "river",
-        "lake",
-        "ocean",
-        "water spline"
+        "river through a valley",
+        "stream",
+        "water channel",
+        "creek"
       ],
       "do_not_use_for": [
-        "terrain creation"
+        "lakes \u2014 AWaterBodyLake is not implemented",
+        "oceans \u2014 AWaterBodyOcean is not implemented",
+        "any still water; only flowing river splines exist"
       ],
       "destructive": true,
       "idempotent": true,
@@ -944,7 +961,7 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "CreateLandscape first when water must conform to terrain.",
+      "recovery": "RIVER ONLY. body_type is never read, so lake and ocean silently yield a river. For still water spawn AWaterBodyLake/AWaterBodyOcean via SceneTools.add_to_scene_from_class until this tool honours body_type.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_water_body",
@@ -1016,10 +1033,15 @@
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.AttachWeather",
       "action": "attach_weather",
       "use_when": [
-        "rain",
-        "weather",
+        "add weather",
         "fog",
-        "follow player camera"
+        "follow player camera",
+        "make it rain",
+        "one-shot weather",
+        "rain",
+        "rain on the player",
+        "storm",
+        "weather"
       ],
       "do_not_use_for": [
         "Niagara asset authoring"
@@ -1178,7 +1200,8 @@
           "frame_count": 1,
           "warm_up_ticks": 30
         }
-      }
+      },
+      "capture_preference": "PREFERRED for 'show me the level'. Use CaptureViewport only for a quick annotated single shot; do not use both for the same check."
     },
     {
       "qualified": "UeremcpGameplay.UeremcpGameplayToolset.CreateSpellVariation",
@@ -1885,6 +1908,91 @@
               ],
               "roughness": 0.6,
               "min_height_m": 1100
+            }
+          ]
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SnapActorsToLandscape",
+      "action": "snap_actors_to_landscape",
+      "use_when": [
+        "floating actors",
+        "snap to ground",
+        "buildings in the air",
+        "sit on terrain",
+        "re-snap after rebuild"
+      ],
+      "do_not_use_for": [
+        "foliage instances \u2014 rescatter those instead"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "Traces ALandscapeProxy only, so canopy cannot catch it. Actors with no landscape beneath are named, not dropped.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "snap_actors_to_landscape",
+        "request_id": "snap_a-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "label_prefixes": [
+            "UEREMCP_Structure"
+          ],
+          "z_offset_cm": 0
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ClearFoliageInVolumes",
+      "action": "clear_foliage_in_volumes",
+      "use_when": [
+        "trees inside the castle",
+        "clear a road corridor",
+        "clear a building footprint",
+        "cull foliage in an area"
+      ],
+      "do_not_use_for": [
+        "WaterBodyExclusionVolume \u2014 that excludes water, not foliage"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "Removes instanced foliage inside world-space boxes. Then snap_actors_to_landscape if anything moved.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "clear_foliage_in_volumes",
+        "request_id": "clear_-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "volumes": [
+            {
+              "center": [
+                1800,
+                -2000,
+                9000
+              ],
+              "extent": [
+                1500,
+                1500,
+                4000
+              ]
             }
           ]
         }
