@@ -114,6 +114,47 @@ struct FUeremcpSplinePath
 		}
 		return BestSide;
 	}
+
+	/**
+	 * Sample a point along the polyline at normalized arc length T in [0,1],
+	 * returning world XY and a unit perpendicular (left of travel direction).
+	 */
+	bool SampleAlongXY(float T, FVector2D& OutPoint, FVector2D& OutPerp) const
+	{
+		if (Points.Num() < 2)
+		{
+			return false;
+		}
+		const float Total = ApproximateLength();
+		if (Total <= KINDA_SMALL_NUMBER)
+		{
+			OutPoint = FVector2D(Points[0].Location.X, Points[0].Location.Y);
+			OutPerp = FVector2D(1.f, 0.f);
+			return true;
+		}
+		float Remaining = FMath::Clamp(T, 0.f, 1.f) * Total;
+		for (int32 I = 1; I < Points.Num(); ++I)
+		{
+			const FVector2D A(Points[I - 1].Location.X, Points[I - 1].Location.Y);
+			const FVector2D B(Points[I].Location.X, Points[I].Location.Y);
+			const FVector2D AB = B - A;
+			const float SegLen = AB.Size();
+			if (SegLen <= KINDA_SMALL_NUMBER)
+			{
+				continue;
+			}
+			if (Remaining <= SegLen || I == Points.Num() - 1)
+			{
+				const float U = FMath::Clamp(Remaining / SegLen, 0.f, 1.f);
+				OutPoint = A + AB * U;
+				const FVector2D Dir = AB / SegLen;
+				OutPerp = FVector2D(-Dir.Y, Dir.X);
+				return true;
+			}
+			Remaining -= SegLen;
+		}
+		return false;
+	}
 };
 
 namespace UeremcpSpline

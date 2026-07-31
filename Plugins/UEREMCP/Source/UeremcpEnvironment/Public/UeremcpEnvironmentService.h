@@ -20,7 +20,7 @@ struct FUeremcpEnvironmentBuildSpec
 	float RiverWidth = 600.f;
 	float ForestBankWidth = 3500.f;
 	int32 MaxFoliageInstances = 800;
-	float FoliageSlopeLimitDegrees = 32.f;
+	float FoliageSlopeLimitDegrees = 55.f; // valley shoulders exceed 32° with default carve
 	float FoliageMinNormalizedHeight = 0.02f;
 	float FoliageMaxNormalizedHeight = 0.90f;
 	FString MeshPath; // optional static mesh for foliage; empty → skip instances, report gap
