@@ -73,6 +73,58 @@ namespace
 		Root->SetArrayField(Field, Arr);
 	}
 
+	bool AllowsApproximation(const FString& Policy)
+	{
+		return Policy.Equals(TEXT("allow_approximate"), ESearchCase::IgnoreCase);
+	}
+
+	bool WouldUseFoliageApproximation(const FUeremcpEnvironmentBuildSpec& Spec)
+	{
+		if (!Spec.bIncludeForest)
+		{
+			return false;
+		}
+		if (Spec.MeshPath.IsEmpty())
+		{
+			return true;
+		}
+		return LoadObject<UStaticMesh>(nullptr, *Spec.MeshPath) == nullptr;
+	}
+
+	bool WouldUseRainApproximation(const FUeremcpEnvironmentBuildSpec& Spec)
+	{
+		if (!Spec.bIncludeRain)
+		{
+			return false;
+		}
+		if (Spec.RainSystemPath.IsEmpty())
+		{
+			return true;
+		}
+		return LoadObject<UNiagaraSystem>(nullptr, *Spec.RainSystemPath) == nullptr;
+	}
+
+	FString CheckFallbackPolicy(const FUeremcpEnvironmentBuildSpec& Spec)
+	{
+		if (AllowsApproximation(Spec.FallbackPolicy))
+		{
+			return FString();
+		}
+		if (WouldUseFoliageApproximation(Spec))
+		{
+			return Spec.MeshPath.IsEmpty()
+				? TEXT("fallback_policy=prefer_real requires biome.mesh_path when forest is included")
+				: TEXT("fallback_policy=prefer_real requires loadable biome.mesh_path when forest is included");
+		}
+		if (WouldUseRainApproximation(Spec))
+		{
+			return Spec.RainSystemPath.IsEmpty()
+				? TEXT("fallback_policy=prefer_real requires weather.rain_system_path when rain is included")
+				: TEXT("fallback_policy=prefer_real requires loadable weather.rain_system_path when rain is included");
+		}
+		return FString();
+	}
+
 	uint16 HeightToUint16(float Normalized01)
 	{
 		const float Clamped = FMath::Clamp(Normalized01, 0.f, 1.f);
@@ -261,7 +313,22 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		}
 	}
 
-	Spec->TryGetStringField(TEXT("fallback_policy"), Out.FallbackPolicy);
+	if (Spec->HasField(TEXT("fallback_policy")))
+	{
+		FString Policy;
+		if (!Spec->TryGetStringField(TEXT("fallback_policy"), Policy))
+		{
+			OutError = TEXT("fallback_policy must be a string");
+			return false;
+		}
+		Out.FallbackPolicy = Policy;
+	}
+	if (!Out.FallbackPolicy.Equals(TEXT("prefer_real"), ESearchCase::IgnoreCase)
+		&& !Out.FallbackPolicy.Equals(TEXT("allow_approximate"), ESearchCase::IgnoreCase))
+	{
+		OutError = TEXT("fallback_policy must be prefer_real or allow_approximate");
+		return false;
+	}
 	Spec->TryGetStringField(TEXT("destination_level_path"), Out.DestinationLevelPath);
 
 	if (Spec->HasField(TEXT("include")))
@@ -445,6 +512,15 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.Revision = FString::Printf(TEXT("env:%08x"), RevisionCrc);
 	Result.InternalOperations += 1;
 
+	if (const FString FallbackError = CheckFallbackPolicy(Spec); !FallbackError.IsEmpty())
+	{
+		Result.Status = TEXT("rejected");
+		Result.Summary = FallbackError;
+		Result.CapabilityNotes.Add(
+			TEXT("Set fallback_policy=allow_approximate to permit cube foliage or instanced-streak rain fallbacks."));
+		return Result;
+	}
+
 	if (bDryRun)
 	{
 		Tech.Add(MakeTech(
@@ -464,17 +540,23 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 #endif
 		Tech.Add(MakeTech(
 			TEXT("foliage_scatter"),
-			Spec.MeshPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
+			WouldUseFoliageApproximation(Spec) ? FString(TEXT("approximated")) : FString(TEXT("real")),
 			TEXT("Seeded HISMC / InstancedFoliageActor scatter with exclusion corridor")));
 		Tech.Add(MakeTech(
 			TEXT("rain_camera_follow"),
-			Spec.RainSystemPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
+			WouldUseRainApproximation(Spec) ? FString(TEXT("approximated")) : FString(TEXT("real")),
 			TEXT("Niagara component attach to viewport/player camera when system path provided")));
 		Tech.Add(MakeTech(
 			TEXT("structures_geometryscript"),
 			TEXT("real"),
 			TEXT("GeometryScript AppendBox available [VERIFIED: MeshPrimitiveFunctions.h:168] [VERIFIED-RUNTIME: GeometryScripting enabled]")));
 		AddTechArray(Result.RealVsApproximated, TEXT("technologies"), Tech);
+		if (AllowsApproximation(Spec.FallbackPolicy)
+			&& (WouldUseFoliageApproximation(Spec) || WouldUseRainApproximation(Spec)))
+		{
+			Result.bApproximated = true;
+			Result.RealVsApproximated->SetBoolField(TEXT("approximated"), true);
+		}
 		Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
 		Result.ChangeManifest->SetNumberField(TEXT("seed"), double(Spec.Seed));
 		Result.ChangeManifest->SetBoolField(TEXT("dry_run"), true);
@@ -569,6 +651,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	TArray<FString> CreatedLabels;
 	bool bRiverCreated = false;
 	bool bRainCreated = false;
+	bool bUsedApproximation = false;
 	bool bSaved = false;
 	bool bReloaded = false;
 
@@ -699,6 +782,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		{
 			// Engine default cube as last-resort visible marker when no tree mesh supplied.
 			Mesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+			bUsedApproximation = true;
 			Result.Warnings.Add(TEXT("biome.mesh_path missing/unloadable — using /Engine/BasicShapes/Cube as foliage placeholder"));
 			Tech.Add(MakeTech(
 				TEXT("foliage_scatter"),
@@ -904,6 +988,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			{
 				RainActor->NiagaraRain->SetVisibility(false);
 				RainActor->ConfigureFallbackRain(int32(Spec.Seed), Spec.RainStreakCount);
+				bUsedApproximation = true;
 				Tech.Add(MakeTech(
 					TEXT("rain_camera_follow"),
 					TEXT("approximated"),
@@ -1073,6 +1158,11 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	}
 	Result.CapabilityNotes.Add(TEXT("World verification leans on structural metrics + human review; screenshots are not a gate (BACKLOG 5.8)."));
 	Result.CapabilityNotes.Add(TEXT("CaptureWorldFrames is the general world capture hook; BuildEnvironment capture is supplementary only."));
+	if (bUsedApproximation && AllowsApproximation(Spec.FallbackPolicy))
+	{
+		Result.bApproximated = true;
+		Result.RealVsApproximated->SetBoolField(TEXT("approximated"), true);
+	}
 	return Result;
 }
 

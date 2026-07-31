@@ -126,6 +126,83 @@ bool FUeremcpEnvironmentParseAliasesTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("capture off"), Spec.bCaptureScreenshot);
 	TestEqual(TEXT("missing river width keeps default"), Spec.RiverWidth, 600.f);
 	TestEqual(TEXT("missing forest width keeps default"), Spec.ForestBankWidth, 3500.f);
+	TestEqual(TEXT("default fallback policy"), Spec.FallbackPolicy, FString(TEXT("prefer_real")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentFallbackPolicyParseTest,
+	"UEREMCP.Environment.Spec.FallbackPolicyValidation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentFallbackPolicyParseTest::RunTest(const FString& Parameters)
+{
+	const FString SpecJson = TEXT(R"({"seed":1,"fallback_policy":"allow_approximate"})");
+	TSharedPtr<FJsonObject> SpecObj;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SpecJson);
+	TestTrue(TEXT("parse spec"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	FUeremcpEnvironmentBuildSpec Spec;
+	FString Err;
+	TestTrue(TEXT("valid policy"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestEqual(TEXT("policy stored"), Spec.FallbackPolicy, FString(TEXT("allow_approximate")));
+
+	const FString BadJson = TEXT(R"({"seed":1,"fallback_policy":"silent_ok"})");
+	TSharedPtr<FJsonObject> BadObj;
+	const TSharedRef<TJsonReader<>> BadReader = TJsonReaderFactory<>::Create(BadJson);
+	TestTrue(TEXT("parse bad"), FJsonSerializer::Deserialize(BadReader, BadObj) && BadObj.IsValid());
+	TestFalse(TEXT("reject unknown policy"), FUeremcpEnvironmentService::ParseBuildSpec(BadObj, Spec, Err));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentPreferRealRejectsFallbackDryRunTest,
+	"UEREMCP.Environment.Build.RejectsPreferRealFallbackDryRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentPreferRealRejectsFallbackDryRunTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"build_environment",
+		"request_id":"env-fallback-1",
+		"target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain"},
+		"options":{"dry_run":true,"validate":true},
+		"specification":{"seed":42,"fallback_policy":"prefer_real","include":{"terrain":true,"river":true,"forest":true,"rain":true,"lighting":false,"capture":false}}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::BuildEnvironment(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("rejected")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentAllowApproximateFlagsDryRunTest,
+	"UEREMCP.Environment.Build.AllowApproximateFlagsDryRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentAllowApproximateFlagsDryRunTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"build_environment",
+		"request_id":"env-fallback-2",
+		"target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain"},
+		"options":{"dry_run":true,"validate":true},
+		"specification":{"seed":42,"fallback_policy":"allow_approximate","include":{"terrain":true,"river":true,"forest":true,"rain":true,"lighting":false,"capture":false}}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::BuildEnvironment(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("no_change_required")));
+	TestTrue(TEXT("approximated flagged"), Root->GetBoolField(TEXT("approximated")));
+	const TSharedPtr<FJsonObject>* RealVsApprox = nullptr;
+	TestTrue(TEXT("real_vs_approximated"),
+		Root->TryGetObjectField(TEXT("real_vs_approximated"), RealVsApprox)
+			&& RealVsApprox && RealVsApprox->IsValid());
+	TestTrue(TEXT("real_vs_approximated.approximated"), (*RealVsApprox)->GetBoolField(TEXT("approximated")));
 	return true;
 }
 

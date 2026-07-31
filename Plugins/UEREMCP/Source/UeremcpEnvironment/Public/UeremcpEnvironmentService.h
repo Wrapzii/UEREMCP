@@ -51,6 +51,7 @@ struct FUeremcpEnvironmentBuildResult
 	TArray<FString> ScreenshotPaths;
 	FString Revision;
 	int32 InternalOperations = 0;
+	bool bApproximated = false;
 };
 
 namespace FUeremcpEnvironmentService
