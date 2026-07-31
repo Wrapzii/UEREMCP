@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/audio/inspect_audio.schema.json",
+  "title": "inspect_audio specification",
+  "description": "Optional filters for inspect_audio. Target path is on the envelope. Owned by WS-01.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "include_wave_paths": { "type": "boolean", "default": true }
+  }
+}

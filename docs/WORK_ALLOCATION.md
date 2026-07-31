@@ -21,7 +21,7 @@ Unowned path? It is WS-01's until assigned. Propose, do not squat.
 
 | WS | Role | Owns | Wave |
 |---|---|---|---|
-| **WS-01** | Lead Architect | `docs/adr/**`, `docs/GROUNDED_FACTS.md`, `docs/WHY.md`, `docs/WORK_ALLOCATION.md`, `docs/RESEARCH_PROTOCOL.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/POC_ACCEPTANCE.md`, `docs/CAPABILITY_CATALOG.md`, `docs/SWARM_LAUNCH.md`, `docs/BACKLOG.md`, `Scripts/**`, `schemas/common/**`, `schemas/envelope/**`, `schemas/graph/**`, `schemas/template-library/**`, `schemas/domains/environment/**`, `Plugins/UEREMCP/Source/UeremcpEnvironment/**`, `AGENTS.md`, `README.md` | 0 |
+| **WS-01** | Lead Architect | `docs/adr/**`, `docs/GROUNDED_FACTS.md`, `docs/WHY.md`, `docs/WORK_ALLOCATION.md`, `docs/RESEARCH_PROTOCOL.md`, `docs/ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/POC_ACCEPTANCE.md`, `docs/CAPABILITY_CATALOG.md`, `docs/SWARM_LAUNCH.md`, `docs/BACKLOG.md`, `docs/COVERAGE_PLAN.md`, `Scripts/**`, `schemas/common/**`, `schemas/envelope/**`, `schemas/graph/**`, `schemas/template-library/**`, `schemas/domains/environment/**`, `schemas/domains/audio/**`, `schemas/domains/networking/**`, `schemas/domains/world_partition/**`, `Plugins/UEREMCP/Source/UeremcpEnvironment/**`, `Plugins/UEREMCP/Source/UeremcpSystems/**`, `AGENTS.md`, `README.md` | 0 |
 | **WS-02** | Existing-System Auditor | `docs/audit/**` | 1 |
 | **WS-03** | Unreal Plugin Architect | `Plugins/UEREMCP/UEREMCP.uplugin`, `Plugins/UEREMCP/Source/UeremcpCore/**` | 1 |
 | **WS-04** | MCP Server / Transport | `Plugins/UEREMCP/Source/UeremcpTransport/**`, `docs/research/RB-04-*.md` | 1 |

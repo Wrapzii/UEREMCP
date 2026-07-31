@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/networking/validate_replication.schema.json",
+  "title": "validate_replication specification",
+  "description": "Goal-level Blueprint replication audit and optional configure. Does not claim multi-client proof (WS-11/RB-14). Owned by WS-01; Pattern B aligns with WS-09 create_spell.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "networking": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pattern": { "type": "string", "const": "B" },
+        "authority": { "type": "string", "const": "server" },
+        "cast_path": { "type": "string", "const": "AuthorityCastAbility" }
+      },
+      "required": ["pattern", "authority", "cast_path"]
+    },
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "replication"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "replication": {
+            "type": "string",
+            "enum": ["NONE", "REPLICATED", "REP_NOTIFY"]
+          }
+        }
+      }
+    },
+    "apply_fixes": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true and dry_run=false, set Blueprint variable replication flags to match expectations then re-read."
+    }
+  },
+  "anyOf": [
+    { "required": ["networking"] },
+    { "required": ["variables"] }
+  ]
+}

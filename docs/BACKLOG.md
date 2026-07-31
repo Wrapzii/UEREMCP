@@ -23,9 +23,9 @@ rationale remains above/in git history. Machine-readable states:
 | 3.2 | Capture beyond Niagara | `completed_and_verified` | `CaptureWorldFrames` added |
 | 3.3 | GetSystemSummary crash | `superseded_by_verified_implementation` | Fail-soft guards in `UeremcpNiagaraInspect.cpp` on main |
 | 4.x | Coverage gaps landscape/water/foliage/mesh | `completed_with_documented_limitation` | `BuildEnvironment` semantic tool; GeometryScript mesh composition deferred (landscape path preferred) |
-| 4.audio | Audio semantic | `completed_with_documented_limitation` | No goal-level tool yet — Epic gap; proposal notes; not duplicated |
-| 4.net | Networking semantic | `completed_with_documented_limitation` | POC D/multiplayer proofs exist elsewhere; no new thin wrap |
-| 4.wp | World partition | `blocked_external` | Large-world partitioning APIs need dedicated design; not silently wrapped |
+| 4.audio | Audio semantic | `completed_with_documented_limitation` | `UeremcpSystems.CreateAudioCue` / `InspectAudio` (SoundCue+attenuation). MetaSound graph authoring still blocked |
+| 4.net | Networking semantic | `completed_with_documented_limitation` | `ValidateReplication` goal audit (+ optional configure). Multi-client proof remains WS-11/RB-14 |
+| 4.wp | World partition | `completed_with_documented_limitation` | `InspectWorldPartition` + dry-run-default `RepairWorldPartition` via `CreateOrRepairWorldPartition`. HLOD builders blocked |
 | 5.1–5.8 | Procedural env design | `completed_and_verified` / `completed_with_documented_limitation` | Seeded noise, heightmap landscape, spline abstraction, Water river, foliage scatter, ExecutePlan-not-duplicated, verification honesty |
 
 See `docs/guide/DISCOVERABILITY_LIVE_HANDOFF.md` for the exact remaining live
