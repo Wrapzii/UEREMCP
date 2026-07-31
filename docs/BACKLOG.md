@@ -264,6 +264,8 @@ above needs a test asserting the number of MCP round trips, per
 | # | Item | State |
 |---|---|---|
 | 2.1 | `tools/dump_tool_registry.py` — generated ground truth | **V**, working |
+| 2.1b | Registry snapshot freshness gate | **V** | After any new `AICallable` in `Plugins/UEREMCP/**`: `python tools/dump_tool_registry.py` (editor + MCP on :8000), then `python tools/check_tool_names.py`. Fails when `ueremcp_tool_count` or `source_surface_fingerprint` lags source. |
+| 2.1c | `tools/check_operation_catalog.py` — catalog ↔ registry coupling | **V** | Validates `operation_catalog.json` `qualified` tools exist in `registry_snapshot.json`. Run in CI beside `check_tool_names.py`. |
 | 2.2 | `tools/check_tool_names.py` — CI check, self-tested | **V**, 0 problems, catches bogus names |
 | 2.3 | `tools/gen_focus_config.py` + plugin ini — hide superseded primitives | **V**, validated, **not enabled** |
 | 2.4 | `tools/route_prototype.py` + [`TOOL_ROUTER.md`](TOOL_ROUTER.md) | **V** prototype, blocked on 1.1 |

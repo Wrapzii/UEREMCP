@@ -159,6 +159,7 @@ def main() -> int:
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "source": "live MCP registry via list_toolsets + describe_toolset",
         "source_surface_fingerprint": source_surface_fingerprint(source_tools),
+        "ueremcp_tool_count": len(source_tools),
         "toolset_count": len(toolsets),
         "tool_count": sum(len(t.get("tools", {})) for t in toolsets.values()),
         "toolsets": toolsets,

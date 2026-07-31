@@ -1138,7 +1138,7 @@
       }
     },
     {
-      "qualified": "EditorToolset.LogsToolset.GetLog",
+      "qualified": "EditorToolset.LogsToolset.GetLogEntries",
       "action": null,
       "use_when": [
         "editor log",
