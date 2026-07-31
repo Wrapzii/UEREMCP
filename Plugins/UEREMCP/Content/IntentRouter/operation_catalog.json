@@ -256,7 +256,16 @@
             "ribbon_trail"
           ]
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "capture_effect_frames",
+          "why": "deterministic frames are the only proof it renders",
+          "specification_hint": {
+            "frame_count": 8
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpNiagara.UeremcpNiagaraToolset.InspectSystem",
@@ -332,7 +341,14 @@
           "element": "fire",
           "role": "core"
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "create_niagara_effect",
+          "why": "bind this material into an effect",
+          "specification_hint": {}
+        }
+      ]
     },
     {
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateProceduralTexture",
@@ -367,7 +383,18 @@
           "dry_run": true
         },
         "specification": {}
-      }
+      },
+      "next_actions": [
+        {
+          "action": "create_master_material",
+          "why": "wire this texture into a master material before anything wears it",
+          "specification_hint": {
+            "features": [
+              "dynamic_color"
+            ]
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpBlueprint.UeremcpBlueprintToolset.ReadGraph",
@@ -815,7 +842,21 @@
             "preset": "blizzard"
           }
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "validate_environment",
+          "why": "check the structural gates",
+          "specification_hint": {}
+        },
+        {
+          "action": "capture_world_frames",
+          "why": "look at it",
+          "specification_hint": {
+            "frame_count": 1
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateLandscape",
@@ -850,7 +891,23 @@
         "specification": {
           "seed": 4471
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "vegetate the terrain",
+          "specification_hint": {
+            "seed": 42
+          }
+        },
+        {
+          "action": "create_water_body",
+          "why": "add a river that conforms to this terrain",
+          "specification_hint": {
+            "seed": 42
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateWaterBody",
@@ -929,7 +986,16 @@
             "max_foliage_instances": 800
           }
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "capture_world_frames",
+          "why": "look at it -- instance counts do not prove it reads as foliage",
+          "specification_hint": {
+            "frame_count": 1
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.AttachWeather",
@@ -1516,7 +1582,30 @@
             "dynamic_color"
           ]
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "submit_mesh_ops",
+          "why": "author the geometry that wears this material",
+          "specification_hint": {
+            "ops": [
+              {
+                "op": "box",
+                "size": [
+                  100,
+                  100,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "action": "create_vfx_material",
+          "why": "instance this master with per-effect parameters",
+          "specification_hint": {}
+        }
+      ]
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SubmitMeshOps",
@@ -1578,7 +1667,26 @@
             }
           ]
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "place the mesh you just authored -- pass primary_asset as biome.mesh_path",
+          "specification_hint": {
+            "seed": 42,
+            "biome": {
+              "mesh_path": "<primary_asset>"
+            }
+          }
+        },
+        {
+          "action": "place_structures",
+          "why": "place it as a structure kit instead",
+          "specification_hint": {
+            "seed": 42
+          }
+        }
+      ]
     },
     {
       "qualified": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
@@ -1616,7 +1724,19 @@
       "example_request": {
         "source_file": "C:/assets/SM_Pine.fbx",
         "destination_path": "/Game/__UeremcpPoc/Meshes"
-      }
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "place the imported mesh -- pass its path as biome.mesh_path",
+          "specification_hint": {
+            "seed": 42,
+            "biome": {
+              "mesh_path": "<primary_asset>"
+            }
+          }
+        }
+      ]
     },
     {
       "qualified": "editor_toolset.toolsets.texture.TextureTools.import_file",

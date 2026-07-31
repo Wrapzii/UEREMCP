@@ -149,11 +149,37 @@ struct UEREMCPPROTOCOL_API FUeremcpResponse
 
 	TArray<FString> CapabilityNotes;
 
+	/**
+	 * What to call next, served WITH the result.
+	 *
+	 * Left empty by domains; SerializeResponse fills it from the registered
+	 * provider. An agent that finished a call otherwise has two options -- spend
+	 * a whole round trip re-asking the router what it already knows, or guess.
+	 * Cost is superlinear in call count, so that round trip is among the most
+	 * expensive things the protocol can spend one on.
+	 */
+	TArray<TSharedPtr<FJsonObject>> NextActions;
+
 	/** Raw extensions kept for fields not yet modelled (validation, changes, …).
 	 *  Prefer typed fields above; this exists so Serialize can round-trip extras
 	 *  without inventing envelope fields. */
 	TSharedPtr<FJsonObject> ExtraFields;
 };
+
+/**
+ * Supplies next-step suggestions for a completed action.
+ *
+ * A delegate rather than a direct call so UeremcpProtocol keeps depending on
+ * neither ToolsetRegistry nor the catalog and stays unit-testable outside the
+ * editor (Plugins/UEREMCP/README.md). UeremcpCore registers the real
+ * implementation at startup; unregistered simply means no suggestions.
+ */
+DECLARE_DELEGATE_RetVal_ThreeParams(
+	TArray<TSharedPtr<FJsonObject>>,
+	FUeremcpNextActionsProvider,
+	const FString& /*CompletedAction*/,
+	const FString& /*PrimaryAsset*/,
+	const FString& /*Status*/);
 
 /** Envelope parse / serialise / validate. */
 class UEREMCPPROTOCOL_API FUeremcpEnvelope
@@ -199,6 +225,10 @@ public:
 
 	/** Allowed status values from schemas/common/defs.schema.json#/$defs/status. */
 	static bool IsValidStatus(const FString& Status);
+
+	/** UeremcpCore installs this at startup. Safe to leave unset. */
+	static void SetNextActionsProvider(FUeremcpNextActionsProvider Provider);
+	static void ClearNextActionsProvider();
 
 	/** Allowed response_detail values. */
 	static bool IsValidResponseDetail(const FString& Detail);

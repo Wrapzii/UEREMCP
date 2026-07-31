@@ -420,6 +420,25 @@ bool FUeremcpEnvelope::ValidateResponse(const FUeremcpResponse& Response, FStrin
 	return true;
 }
 
+namespace
+{
+	FUeremcpNextActionsProvider& NextActionsProvider()
+	{
+		static FUeremcpNextActionsProvider Provider;
+		return Provider;
+	}
+}
+
+void FUeremcpEnvelope::SetNextActionsProvider(FUeremcpNextActionsProvider Provider)
+{
+	NextActionsProvider() = MoveTemp(Provider);
+}
+
+void FUeremcpEnvelope::ClearNextActionsProvider()
+{
+	NextActionsProvider().Unbind();
+}
+
 FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 {
 	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
@@ -543,6 +562,27 @@ FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 			Notes.Add(MakeShared<FJsonValueString>(Note));
 		}
 		Root->SetArrayField(TEXT("capability_notes"), Notes);
+	}
+
+	{
+		// Serve the next step with the result. Domains do not populate this;
+		// asking every domain to know the whole graph is how the graph goes
+		// stale in nine places at once.
+		TArray<TSharedPtr<FJsonObject>> Suggestions = Response.NextActions;
+		if (Suggestions.Num() == 0 && NextActionsProvider().IsBound())
+		{
+			Suggestions = NextActionsProvider().Execute(
+				Response.UnderstoodAction, Response.PrimaryAsset, Response.Status);
+		}
+		if (Suggestions.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> Arr;
+			for (const TSharedPtr<FJsonObject>& S : Suggestions)
+			{
+				if (S.IsValid()) Arr.Add(MakeShared<FJsonValueObject>(S));
+			}
+			Root->SetArrayField(TEXT("next_actions"), Arr);
+		}
 	}
 
 	if (Response.ExtraFields.IsValid())

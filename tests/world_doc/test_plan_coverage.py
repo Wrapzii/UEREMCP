@@ -200,5 +200,117 @@ class TestOnUnsupportedOption(unittest.TestCase):
         self.assertIn("on_unsupported", m.group(1))
 
 
+class TestNextActionsChain(unittest.TestCase):
+    """Serve the next step WITH the result.
+
+    An agent finishing a call had two options: spend a whole round trip
+    re-asking the router something the server already knew, or guess. Cost is
+    superlinear in call count, so that round trip is among the most expensive
+    things the protocol can spend one on.
+
+    The catalog declares the forward chain; the envelope serves it with this
+    response's primary_asset already substituted, so the suggested request is
+    ready to send rather than something to fill in.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.catalog = catalog()
+        cls.by_action = {o.get("action"): o for o in cls.catalog["operations"]}
+
+    def test_authoring_actions_declare_a_next_step(self):
+        for action in ("create_procedural_texture", "create_master_material",
+                       "submit_mesh_ops", "create_landscape", "create_niagara_effect"):
+            op = self.by_action.get(action)
+            self.assertIsNotNone(op, action)
+            self.assertTrue(op.get("next_actions"),
+                            "%s leaves the agent with nothing to do next" % action)
+
+    def test_next_actions_name_real_catalog_actions(self):
+        known = set(self.by_action)
+        for action, op in self.by_action.items():
+            for nxt in op.get("next_actions") or []:
+                self.assertIn(nxt["action"], known,
+                              "%s suggests %s, which is not a catalog action"
+                              % (action, nxt["action"]))
+
+    def test_each_suggestion_states_why(self):
+        for op in self.by_action.values():
+            for nxt in op.get("next_actions") or []:
+                self.assertTrue((nxt.get("why") or "").strip(),
+                                "%s -> %s has no reason" % (op["action"], nxt["action"]))
+
+    def test_mesh_chain_carries_the_asset_forward(self):
+        """The substitution is the whole value: a suggestion the agent must
+        still fill in is a suggestion it has to think about."""
+        op = self.by_action["submit_mesh_ops"]
+        scatter = next(n for n in op["next_actions"] if n["action"] == "scatter_foliage")
+        self.assertEqual(scatter["specification_hint"]["biome"]["mesh_path"],
+                         "<primary_asset>")
+
+    def test_chain_terminates(self):
+        """A cycle would suggest work forever."""
+        for start in self.by_action:
+            seen, cur = set(), start
+            while cur and cur not in seen:
+                seen.add(cur)
+                nxt = (self.by_action.get(cur) or {}).get("next_actions") or []
+                cur = nxt[0]["action"] if nxt else None
+            self.assertIsNone(cur, "next_actions cycle reachable from %s" % start)
+
+    def test_authoring_chains_reach_a_verification_step(self):
+        """Instance counts do not prove something reads as foliage. Every
+        authoring chain should end at looking at the result."""
+        for start in ("submit_mesh_ops", "create_landscape", "create_niagara_effect"):
+            seen, cur, reached = set(), start, False
+            while cur and cur not in seen:
+                seen.add(cur)
+                if cur.startswith(("capture_", "validate_")):
+                    reached = True
+                    break
+                nxt = (self.by_action.get(cur) or {}).get("next_actions") or []
+                cur = nxt[0]["action"] if nxt else None
+            self.assertTrue(reached, "%s chain never reaches verification" % start)
+
+
+class TestNextActionsWiring(unittest.TestCase):
+    """The C++ half: declared in the schema, populated centrally, and suppressed
+    on failure."""
+
+    def test_schema_declares_next_actions(self):
+        with io.open(os.path.join(REPO, "schemas", "envelope",
+                                  "response.schema.json"), encoding="utf-8") as fh:
+            schema = json.load(fh)
+        item = schema["properties"]["next_actions"]["items"]
+        self.assertEqual(sorted(item["required"]), ["action", "request_json", "why"])
+
+    def test_envelope_populates_centrally(self):
+        """Asking every domain to know the whole graph is how the graph goes
+        stale in nine places at once."""
+        body = read(ENVELOPE_CPP)
+        self.assertIn("next_actions", body)
+        self.assertIn("NextActionsProvider", body)
+
+    def test_suppressed_on_terminal_failure(self):
+        """'You succeeded, now do X' is actively misleading when nothing was
+        produced."""
+        body = read(os.path.join(SOURCE, "UeremcpCore", "Private",
+                                 "UeremcpNextActions.cpp"))
+        self.assertIn("TerminalFailures", body)
+        for status in ("rejected", "failed_validation", "rolled_back", "error"):
+            self.assertIn('TEXT("%s")' % status, body)
+
+    def test_provider_is_unregistered_on_shutdown(self):
+        """A stale static delegate dispatches into freed code after a reload."""
+        body = read(os.path.join(SOURCE, "UeremcpCore", "Private",
+                                 "UeremcpCoreModule.cpp"))
+        self.assertIn("SetNextActionsProvider", body)
+        self.assertIn("ClearNextActionsProvider", body)
+
+    def test_reads_the_shipped_catalog_not_the_tools_copy(self):
+        body = read(os.path.join(SOURCE, "UeremcpCore", "Private",
+                                 "UeremcpNextActions.cpp"))
+        self.assertIn("Content/IntentRouter/operation_catalog.json", body)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
