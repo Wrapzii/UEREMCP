@@ -1,9 +1,9 @@
 {
- "generated_utc": "2026-07-31T05:11:20+00:00",
+ "generated_utc": "2026-07-31T05:45:59+00:00",
  "snapshot_schema_version": 2,
  "source": "live MCP registry via list_toolsets + describe_toolset",
  "source_surface_fingerprint": "3599f8b6f1d5c8fdb74a99d80efcbb8c87afe05aa8109553dd2fc9cca5709fdb",
- "tool_count": 936,
+ "tool_count": 938,
  "toolset_count": 77,
  "toolsets": {
   "AutomationTestToolset.AutomationTestToolset": {
@@ -3382,7 +3382,7 @@
      ]
     },
     "BuildEnvironment": {
-     "description": "Build a seeded environment with composable v2 blocks or legacy include.* flags.\n\nUse when: one call for a whole biome (terrain + water + foliage + weather).\n  Prefer the staging primitives when the caller enumerated the steps, or when\n  any stage needs its own parameters.\nInputs: action=build_environment; specification.seed REQUIRED. Optional blocks:\n  terrain.profile, hydrology.river, vegetation.mode, weather[], structures[].\nExample: {\"protocol_version\":\"1.0\",\"action\":\"build_environment\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"},\"options\":{\"dry_run\":true},\"specification\":{\"seed\":42,\"terrain\":{\"profile\":\"mountains\"}}}\n\nv2 (presence-based): terrain.profile, hydrology.river, vegetation.mode, weather[],\nstructures[], lighting.preset \u2014 each block activates its subsystem.\nLegacy: include.* all default false (418374c opt-in contract preserved).\n\nMulti-weather: snow+hail each get CreateNiagaraEffect precipitation assets; no streak fake.\nStructures: ice_wall_ring places GeometryScript boxes around terrain bounds.\n\nExample (snow/ice/hail): see docs/research/RB-16-environment-coverage.md \u00a7 Snow acceptance\nExample (legacy MRR): include.terrain/river/forest/rain true with biome + river blocks.\nNext: ValidateEnvironment; CaptureWorldFrames; or GetJobResult if partially_completed.",
+     "description": "Build a seeded environment with composable v2 blocks or legacy include.* flags.\n\nUse when: one call for a whole biome (terrain + water + foliage + weather).\n  Prefer the staging primitives when the caller enumerated the steps, or when\n  any stage needs its own parameters.\nInputs: action=build_environment; specification.seed REQUIRED. Optional blocks:\n  options.on_unsupported = fail (default) | partial. Use partial when you want\n  every supported part applied and the rest reported, rather than the whole\n  request rejected because one block is unsupported.\n  terrain.profile, hydrology.river, vegetation.mode, weather[], structures[].\nExample: {\"protocol_version\":\"1.0\",\"action\":\"build_environment\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"},\"options\":{\"dry_run\":true},\"specification\":{\"seed\":42,\"terrain\":{\"profile\":\"mountains\"}}}\n\nv2 (presence-based): terrain.profile, hydrology.river, vegetation.mode, weather[],\nstructures[], lighting.preset \u2014 each block activates its subsystem.\nLegacy: include.* all default false (418374c opt-in contract preserved).\n\nMulti-weather: snow+hail each get CreateNiagaraEffect precipitation assets; no streak fake.\nStructures: ice_wall_ring places GeometryScript boxes around terrain bounds.\n\nExample (snow/ice/hail): see docs/research/RB-16-environment-coverage.md \u00a7 Snow acceptance\nExample (legacy MRR): include.terrain/river/forest/rain true with biome + river blocks.\nNext: ValidateEnvironment; CaptureWorldFrames; or GetJobResult if partially_completed.",
      "properties": [
       "action",
       "expected_revision",
@@ -11018,6 +11018,23 @@
   "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools": {
    "description": "RE composite capture: disk path + optional downscale/JPEG \u2014 never return base64.",
    "tools": {
+    "capture_viewport_gif": {
+     "description": "Capture the active editor viewport over time and write Saved/GIFs/*.gif.\n\n        Uses the same viewport capture path as capture_viewport_to_disk (SceneCapture / HighResShot).\n        Move the camera or play PIE between frames for motion. Returns a project-relative GIF path.\n        duration_ms: per-frame display time in the GIF (0 = use capture_interval_ms).",
+     "properties": [
+      "capture_interval_ms",
+      "duration_ms",
+      "filename",
+      "frame_count",
+      "height",
+      "loop",
+      "max_dimension",
+      "width"
+     ],
+     "qualified_name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.capture_viewport_gif",
+     "required": [
+      "filename"
+     ]
+    },
     "capture_viewport_to_disk": {
      "description": "Capture level viewport to Saved/Screenshots and return path/size only.\n\n        jpeg_quality: 0 = keep PNG; 1\u2013100 = write JPEG and delete PNG.\n        max_dimension: downscale longest edge after capture (0 = skip).",
      "properties": [
@@ -11040,6 +11057,22 @@
      ],
      "qualified_name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.get_recent_log_entries_compact",
      "required": []
+    },
+    "make_gif_from_frames": {
+     "description": "Build an animated GIF under Saved/GIFs from ordered frame paths or a directory scan.\n\n        Returns a project-relative path (Saved/GIFs/...) for CursorDesk phone preview.\n        frame_paths_json: JSON array of image paths, e.g. [\"Saved/FXShots/view/a.jpg\", ...]\n        from_dir: optional directory to scan when frame_paths_json is empty",
+     "properties": [
+      "duration_ms",
+      "filename",
+      "frame_paths_json",
+      "from_dir",
+      "loop",
+      "pattern"
+     ],
+     "qualified_name": "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools.make_gif_from_frames",
+     "required": [
+      "from_dir",
+      "filename"
+     ]
     },
     "pie_cast_and_capture": {
      "description": "PIE: CastAbility on player REVisualCombat, wait, capture framed shot to disk.\n\n        aim_dir_json: optional JSON [pitch,yaw,roll] degrees OR unit direction [x,y,z].\n        Requires PIE (or start_pie_if_needed=true). Returns screenshot path only.",
