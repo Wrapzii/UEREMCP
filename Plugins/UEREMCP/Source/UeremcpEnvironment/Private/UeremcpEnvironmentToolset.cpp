@@ -52,6 +52,10 @@ namespace
 			}
 			Extra->SetArrayField(TEXT("warnings"), Warns);
 		}
+		if (Result.bApproximated)
+		{
+			Extra->SetBoolField(TEXT("approximated"), true);
+		}
 		Response.ExtraFields = Extra;
 	}
 

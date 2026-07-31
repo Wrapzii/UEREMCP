@@ -104,6 +104,17 @@ def check_snapshot_fresh(snap: dict, source_tools: dict[str, dict[str, str]] | N
         print("STALE SNAPSHOT missing source callable: %s" % name)
         problems += 1
 
+    ueremcp_snapshot = sum(
+        len(ts.get("tools") or {})
+        for ts_name, ts in (snap.get("toolsets") or {}).items()
+        if ts_name.startswith("Ueremcp")
+    )
+    source_count = len(source_tools)
+    if ueremcp_snapshot < source_count:
+        print("STALE SNAPSHOT ueremcp tool count %d < source callable count %d"
+              % (ueremcp_snapshot, source_count))
+        problems += 1
+
     recorded = snap.get("source_surface_fingerprint")
     current = source_surface_fingerprint(source_tools)
     if not recorded:
