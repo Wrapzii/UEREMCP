@@ -348,7 +348,8 @@
           "why": "bind this material into an effect",
           "specification_hint": {}
         }
-      ]
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateProceduralTexture",
@@ -394,7 +395,8 @@
             ]
           }
         }
-      ]
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpBlueprint.UeremcpBlueprintToolset.ReadGraph",
@@ -800,7 +802,7 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Dry-run first; then options.dry_run=false; ValidateEnvironment; CaptureWorldFrames.",
+      "recovery": "terrain.scale_z must be set; the default of 100 gives vertical needles. Sane range 2-5, start at 3. Dry-run first; then options.dry_run=false; ValidateEnvironment; CaptureWorldFrames.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "build_environment",
@@ -817,7 +819,8 @@
           "seed": 8801,
           "terrain": {
             "profile": "mountains",
-            "mountain_amplitude": 0.62
+            "mountain_amplitude": 0.62,
+            "scale_z": 3
           },
           "weather": [
             {
@@ -878,7 +881,7 @@
         "created_with_warnings",
         "rejected"
       ],
-      "recovery": "Check heightmap_hash for determinism.",
+      "recovery": "terrain.scale_z must be set; the default of 100 gives vertical needles. Sane range 2-5, start at 3. Check heightmap_hash for determinism.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_landscape",
@@ -889,7 +892,11 @@
           "dry_run": true
         },
         "specification": {
-          "seed": 4471
+          "seed": 4471,
+          "terrain": {
+            "profile": "mountains",
+            "scale_z": 3
+          }
         }
       },
       "next_actions": [
@@ -995,7 +1002,8 @@
             "frame_count": 1
           }
         }
-      ]
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.AttachWeather",
@@ -1068,7 +1076,8 @@
           "seed": 4471,
           "count": 6
         }
-      }
+      },
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.InspectEnvironment",
@@ -1544,15 +1553,14 @@
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateMasterMaterial",
       "action": "create_master_material",
       "use_when": [
-        "material from scratch",
-        "no assets yet",
-        "author a master material",
-        "empty project",
-        "need a material before anything else"
+        "vfx master material",
+        "particle shader",
+        "effect material from scratch",
+        "fresnel or erosion or flipbook features"
       ],
       "do_not_use_for": [
-        "material instances with preset defaults",
-        "texture generation"
+        "terrain or prop SURFACES (snow, rock, grass, sand, stone) -- the feature vocabulary is VFX-only and produces an empty shell",
+        "material instances with preset defaults"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1564,7 +1572,7 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Check skipped_features; then CreateVfxMaterial with master_template set to primary_asset.",
+      "recovery": "VFX only. For a surface material use editor_toolset MaterialTools (create_material, add_expression, connect_to_output) or import one. This action has no base_color/roughness/normal and will hand back a named shell if you ask it for snow.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_master_material",
@@ -1605,7 +1613,8 @@
           "why": "instance this master with per-effect parameters",
           "specification_hint": {}
         }
-      ]
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SubmitMeshOps",
@@ -1686,7 +1695,8 @@
             "seed": 42
           }
         }
-      ]
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",

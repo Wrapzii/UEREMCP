@@ -69,7 +69,16 @@ public:
 	static FString CreateProceduralTexture(const FString& RequestJson);
 
 	/**
-	 * Author a master material directly from a feature list. No template library.
+	 * Author a VFX master material from a feature list. No template library.
+	 *
+	 * VFX ONLY. The feature vocabulary is radial_falloff, animated_noise, fresnel,
+	 *   erosion, depth_fade, distortion, panning_textures, flow_maps, flipbook_subuv,
+	 *   dynamic_color, dynamic_intensity. There is NO base_color, roughness, metallic,
+	 *   normal or tiling, so this CANNOT express a surface material. Asked for snow,
+	 *   rock or grass it produces a named shell with nothing in it -- measured.
+	 *   For terrain and prop surfaces use editor_toolset MaterialTools
+	 *   (create_material + add_expression + connect_to_output), or import a real
+	 *   material. A goal-level surface action does not exist yet.
 	 *
 	 * Use when: you need a material from scratch in an empty project, or a master
 	 *   whose feature set no preset covers. This is the material PRIMITIVE FLOOR:

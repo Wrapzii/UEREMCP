@@ -353,5 +353,128 @@ class TestNextActionsWiring(unittest.TestCase):
                                  "UeremcpNextActions.cpp"))
         self.assertIn("Content/IntentRouter/operation_catalog.json", body)
 
+
+class TestFanOut(unittest.TestCase):
+    """One action, many targets, one round trip.
+
+    Measured: an agent issued six separate create_master_material calls and five
+    separate submit_mesh_ops calls. Not because fan-out was unsupported -- both
+    plan.schema.json and the executor key operations by ID, so repeated actions
+    have always been legal -- but because every example it had ever seen showed
+    one operation per action. Capability nobody demonstrates is capability
+    nobody uses.
+    """
+
+    def test_plan_schema_ships_a_fanout_example(self):
+        with io.open(os.path.join(REPO, "schemas", "batch",
+                                  "plan.schema.json"), encoding="utf-8") as fh:
+            schema = json.load(fh)
+        found = False
+        for ex in schema.get("examples") or []:
+            actions = [o["action"] for o in ex["operations"]]
+            if len(actions) != len(set(actions)):
+                found = True
+                self.assertGreaterEqual(len(actions), 3)
+                self.assertEqual(len({o["id"] for o in ex["operations"]}), len(actions),
+                                 "fan-out example must give every operation a unique id")
+        self.assertTrue(found, "no example demonstrates repeating one action")
+
+    def test_fanout_example_does_not_share_fate(self):
+        """Four materials are not a transaction. rollback_all would discard
+        three good assets because the fourth failed -- which is what destroyed
+        already-authored meshes in a live run."""
+        with io.open(os.path.join(REPO, "schemas", "batch",
+                                  "plan.schema.json"), encoding="utf-8") as fh:
+            schema = json.load(fh)
+        for ex in schema.get("examples") or []:
+            actions = [o["action"] for o in ex["operations"]]
+            if len(actions) == len(set(actions)):
+                continue
+            self.assertEqual(ex["on_failure"], "continue_independent")
+            self.assertFalse(ex["transaction"]["atomic"])
+
+    def test_id_description_states_actions_may_repeat(self):
+        with io.open(os.path.join(REPO, "schemas", "batch",
+                                  "plan.schema.json"), encoding="utf-8") as fh:
+            schema = json.load(fh)
+        desc = schema["$defs"]["operation"]["properties"]["id"]["description"].lower()
+        self.assertIn("actions are not", desc)
+
+    def test_bulk_actions_carry_a_batch_hint(self):
+        for action in ("create_master_material", "submit_mesh_ops",
+                       "create_procedural_texture"):
+            op = next(o for o in catalog()["operations"] if o.get("action") == action)
+            self.assertIn("batch_hint", op,
+                          "%s is routinely needed several at a time and says nothing "
+                          "about batching" % action)
+            self.assertIn("execute_plan", op["batch_hint"])
+
+
+class TestMaterialScopeHonesty(unittest.TestCase):
+    """create_master_material is VFX-only and was catalogued as the material floor.
+
+    Its whole vocabulary is radial_falloff / animated_noise / fresnel / erosion /
+    depth_fade / flipbook_subuv / flow_maps / panning_textures / dynamic_color /
+    dynamic_intensity. There is no base_color, roughness, metallic, normal or
+    tiling, so it cannot express a surface. Asked for snow, rock and grass it
+    produced named shells with nothing in them -- the correct output of the tool,
+    and the wrong tool for the job.
+    """
+
+    def test_catalog_warns_against_surface_use(self):
+        op = next(o for o in catalog()["operations"]
+                  if o.get("action") == "create_master_material")
+        blob = (" ".join(op["do_not_use_for"]) + " " + op["recovery"]).lower()
+        self.assertIn("surface", blob)
+        self.assertIn("materialtools", blob.replace(" ", ""))
+
+    def test_header_states_the_missing_parameters(self):
+        body = read(os.path.join(SOURCE, "UeremcpMaterial", "Public",
+                                 "UeremcpMaterialToolset.h"))
+        for missing in ("base_color", "roughness", "normal"):
+            self.assertIn(missing, body,
+                          "the description never says %s is absent" % missing)
+
+    def test_not_advertised_as_a_general_material_tool(self):
+        op = next(o for o in catalog()["operations"]
+                  if o.get("action") == "create_master_material")
+        for term in op["use_when"]:
+            self.assertNotIn("from scratch in an empty project", term.lower())
+
+
+class TestScaleZGuidance(unittest.TestCase):
+    """The default is wrong and the examples must not repeat it.
+
+    scale_z defaults to 100 and produces vertical needles rather than mountains
+    [VERIFIED-RUNTIME: three separate builds]. Sane range is 2-5. An agent copies
+    the example, so the example is the recommendation -- the same lesson as the
+    cone tree.
+    """
+
+    def test_examples_set_a_sane_scale_z(self):
+        for op in catalog()["operations"]:
+            if op.get("action") not in ("create_landscape", "build_environment"):
+                continue
+            terrain = (op["example_request"].get("specification") or {}).get("terrain") or {}
+            self.assertIn("scale_z", terrain,
+                          "%s example omits scale_z, so the agent inherits the "
+                          "broken default of 100" % op["action"])
+            self.assertLessEqual(terrain["scale_z"], 5, op["action"])
+            self.assertGreaterEqual(terrain["scale_z"], 2, op["action"])
+
+    def test_recovery_text_names_the_bad_default(self):
+        for op in catalog()["operations"]:
+            if op.get("action") not in ("create_landscape", "build_environment"):
+                continue
+            self.assertIn("100", op["recovery"])
+            self.assertIn("scale_z", op["recovery"])
+
+    def test_header_does_not_claim_100_is_normal(self):
+        body = read(os.path.join(SOURCE, "UeremcpEnvironment", "Public",
+                                 "UeremcpEnvironmentToolset.h"))
+        self.assertNotIn("100 is normal relief", body,
+                         "the header still recommends the value that produces spikes")
+        self.assertIn("2-5", body)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

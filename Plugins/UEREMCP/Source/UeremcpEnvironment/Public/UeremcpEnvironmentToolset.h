@@ -35,7 +35,7 @@ public:
 	 *   every supported part applied and the rest reported, rather than the whole
 	 *   request rejected because one block is unsupported.
 	 *   terrain.profile, hydrology.river, vegetation.mode, weather[], structures[].
-	 * Example: {"protocol_version":"1.0","action":"build_environment","target":{"asset_path":"/Game/__UeremcpPoc/Biome"},"options":{"dry_run":true},"specification":{"seed":42,"terrain":{"profile":"mountains"}}}
+	 * Example: {"protocol_version":"1.0","action":"build_environment","target":{"asset_path":"/Game/__UeremcpPoc/Biome"},"options":{"dry_run":true},"specification":{"seed":42,"terrain":{"profile":"mountains","scale_z":3}}}
 	 *
 	 * v2 (presence-based): terrain.profile, hydrology.river, vegetation.mode, weather[],
 	 * structures[], lighting.preset — each block activates its subsystem.
@@ -56,13 +56,14 @@ public:
 	 *
 	 * Use when: generate mountains/valley heightmap only; ExecutePlan terrain stage.
 	 * Inputs: action=create_landscape; specification.seed REQUIRED; terrain.* optional.
-	 *   terrain.scale_z defaults to 100 and is a PERCENTAGE of the default height
-	 *   range, not a metre value. 100 is normal relief. Values above ~150 produce
-	 *   vertical needles rather than mountains — a measured failure, twice. To make
-	 *   peaks higher, raise terrain.max_altitude_m and leave scale_z alone.
+	 *   terrain.scale_z: SET THIS. Sane range is 2-5. The default of 100 produces
+	 *   vertical needles, not mountains [VERIFIED-RUNTIME: three separate builds].
+	 *   It is a Z multiplier, not a metre value, and the default is wrong for every
+	 *   terrain profile shipped. Start at 3. To make peaks higher raise
+	 *   terrain.max_altitude_m; raising scale_z past ~5 gives spikes.
 	 * Outputs: heightmap_hash (determinism gate), structural_metrics.
 	 * Do not use for: AlphaBrush sculpting — unavailable [VERIFIED-RUNTIME: COVERAGE_PLAN III.1].
-	 * Example: {"protocol_version":"1.0","action":"create_landscape", "target":{"asset_path":"/Game/__UeremcpPoc/Biome"}, "options":{"dry_run":true},"specification":{"seed":42, "terrain":{"profile":"mountains","max_altitude_m":1800}}}
+	 * Example: {"protocol_version":"1.0","action":"create_landscape", "target":{"asset_path":"/Game/__UeremcpPoc/Biome"}, "options":{"dry_run":true},"specification":{"seed":42, "terrain":{"profile":"mountains","scale_z":3,"max_altitude_m":1800}}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString CreateLandscape(const FString& RequestJson);
