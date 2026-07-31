@@ -165,7 +165,7 @@
         "create_landscape",
         "create_landscape_material"
       ],
-      "why": "needs landscape + layer infos from the material"
+      "why": "needs landscape; paint auto-creates LayerInfos and optional material_path assigns the blend"
     }
   ],
   "operations": [
@@ -1883,7 +1883,7 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Assign the material to the landscape, then paint_landscape_layers for height/slope weights, then CaptureWorldFrames. Layer names become paint layers.",
+      "recovery": "Call paint_landscape_layers with matching layer names (auto-creates LayerInfos); pass specification.material_path to assign this material. Then CaptureWorldFrames.",
       "batch_hint": "FAN-OUT: ids are unique, actions are not. Author several materials in ONE execute_plan with atomic=false and on_failure=continue_independent.",
       "next_actions": [
         {
@@ -2228,7 +2228,7 @@
         "no_change_required",
         "rejected"
       ],
-      "recovery": "LayerInfo objects must exist on the landscape. Exactly one rule with fallback=true. Reads live landscape height — never recomputes.",
+      "recovery": "Auto-creates/assigns LayerInfo under /Game/__UeremcpPoc/LandscapeLayers. Optional material_path assigns the blend material. Exactly one rule with fallback=true. Reads live landscape height — never recomputes.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "paint_landscape_layers",

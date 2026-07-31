@@ -24,6 +24,8 @@
 #include "LandscapeDataAccess.h"
 #include "LandscapeEdit.h"
 #include "LandscapeProxy.h"
+#include "LandscapeUtils.h"
+#include "Materials/MaterialInterface.h"
 #include "Dom/JsonObject.h"
 
 namespace
@@ -98,6 +100,78 @@ namespace
 			}
 		}
 		return Fallback;
+	}
+
+	// MCP-004 close-the-loop: CreateLandscapeMaterial names layers but never
+	// creates/assigns ULandscapeLayerInfoObject assets, so paint hit LAYER_NOT_FOUND.
+	// [VERIFIED: LandscapeUtils.h CreateTargetLayerInfo]
+	// [VERIFIED: LandscapeInfo.h CreateTargetLayerSettingsFor / UpdateLayerInfoMap]
+	// [VERIFIED: LandscapeProxy.h AddTargetLayer / UpdateTargetLayer]
+	ULandscapeLayerInfoObject* EnsureLandscapeLayerInfo(
+		ALandscape* Landscape,
+		ULandscapeInfo* Info,
+		const FName LayerName,
+		FString& OutError)
+	{
+		if (!Landscape || !Info || LayerName.IsNone())
+		{
+			OutError = TEXT("EnsureLandscapeLayerInfo: missing landscape/info/name.");
+			return nullptr;
+		}
+
+		if (ULandscapeLayerInfoObject* Existing = Info->GetLayerInfoByName(LayerName, Landscape))
+		{
+			return Existing;
+		}
+		if (ULandscapeLayerInfoObject* Existing = Info->GetLayerInfoByName(LayerName))
+		{
+			Info->CreateTargetLayerSettingsFor(Existing);
+			Info->UpdateLayerInfoMap(Landscape);
+			return Existing;
+		}
+
+		if (Landscape->HasTargetLayer(LayerName))
+		{
+			const FLandscapeTargetLayerSettings* Settings = Landscape->GetTargetLayers().Find(LayerName);
+			if (Settings && Settings->LayerInfoObj)
+			{
+				Info->UpdateLayerInfoMap(Landscape);
+				if (ULandscapeLayerInfoObject* Resolved = Info->GetLayerInfoByName(LayerName, Landscape))
+				{
+					return Resolved;
+				}
+				return Settings->LayerInfoObj;
+			}
+		}
+
+		const FString PackageDir = TEXT("/Game/__UeremcpPoc/LandscapeLayers");
+		ULandscapeLayerInfoObject* Created =
+			UE::Landscape::CreateTargetLayerInfo(LayerName, PackageDir);
+		if (!Created)
+		{
+			OutError = FString::Printf(
+				TEXT("CreateTargetLayerInfo failed for layer '%s' under %s."),
+				*LayerName.ToString(), *PackageDir);
+			return nullptr;
+		}
+
+		Info->CreateTargetLayerSettingsFor(Created);
+		Info->UpdateLayerInfoMap(Landscape);
+
+		ULandscapeLayerInfoObject* Resolved = Info->GetLayerInfoByName(LayerName, Landscape);
+		if (!Resolved)
+		{
+			Resolved = Info->GetLayerInfoByName(LayerName);
+		}
+		if (!Resolved)
+		{
+			OutError = FString::Printf(
+				TEXT("Created LayerInfo for '%s' but GetLayerInfoByName still failed after "
+					 "CreateTargetLayerSettingsFor/UpdateLayerInfoMap."),
+				*LayerName.ToString());
+			return nullptr;
+		}
+		return Resolved;
 	}
 }
 
@@ -179,38 +253,6 @@ FString UUeremcpEnvironmentToolset::PaintLandscapeLayers(const FString& RequestJ
 			Request.RequestId, TEXT("Landscape has no ULandscapeInfo."));
 	}
 
-	TArray<ULandscapeLayerInfoObject*> LayerInfos;
-	TArray<FString> Missing;
-	for (const FPaintRule& Rule : Rules)
-	{
-		ULandscapeLayerInfoObject* LayerInfo = Info->GetLayerInfoByName(FName(*Rule.Layer));
-		if (!LayerInfo)
-		{
-			Missing.Add(Rule.Layer);
-			LayerInfos.Add(nullptr);
-		}
-		else
-		{
-			LayerInfos.Add(LayerInfo);
-		}
-	}
-	if (Missing.Num() > 0)
-	{
-		TSharedPtr<FJsonObject> NextArgs = MakeShared<FJsonObject>();
-		NextArgs->SetStringField(
-			TEXT("recovery"),
-			TEXT("Assign create_landscape_material layers on the landscape (or create LayerInfo "
-				 "objects) so GetLayerInfoByName resolves each rule.layer."));
-		return FUeremcpEnvelope::MakeRejection(
-			Request.RequestId,
-			FString::Printf(
-				TEXT("Unknown landscape paint layer(s): %s. Valid LayerInfo names must exist "
-					 "on the landscape before painting."),
-				*FString::Join(Missing, TEXT(", "))),
-			TEXT("LAYER_NOT_FOUND"),
-			NextArgs);
-	}
-
 	int32 MinX = MAX_int32, MinY = MAX_int32, MaxX = MIN_int32, MaxY = MIN_int32;
 	if (!Info->GetLandscapeExtent(MinX, MinY, MaxX, MaxY))
 	{
@@ -226,6 +268,12 @@ FString UUeremcpEnvironmentToolset::PaintLandscapeLayers(const FString& RequestJ
 			Request.RequestId, TEXT("Landscape extent is empty or unreasonably large."));
 	}
 
+	FString MaterialPath;
+	if (Request.Specification.IsValid())
+	{
+		Request.Specification->TryGetStringField(TEXT("material_path"), MaterialPath);
+	}
+
 	if (Request.bDryRun)
 	{
 		FUeremcpResponse Response;
@@ -233,10 +281,73 @@ FString UUeremcpEnvironmentToolset::PaintLandscapeLayers(const FString& RequestJ
 		Response.UnderstoodAction = Request.Action;
 		Response.Status = TEXT("no_change_required");
 		Response.Summary = FString::Printf(
-			TEXT("Dry run: would paint %d layer rule(s) across %dx%d landscape verts from LIVE height data."),
-			Rules.Num(), SizeX, SizeY);
+			TEXT("Dry run: would ensure LayerInfo + paint %d layer rule(s) across %dx%d "
+				 "landscape verts from LIVE height data%s."),
+			Rules.Num(), SizeX, SizeY,
+			MaterialPath.IsEmpty() ? TEXT("") : TEXT(" (and assign material_path)"));
 		Response.Metrics.McpRoundTrips = 1;
 		return FUeremcpEnvelope::SerializeResponse(Response);
+	}
+
+	// Optional: assign landscape material so layer blend names match paint rules.
+	FString MaterialAssignNote;
+	if (!MaterialPath.IsEmpty())
+	{
+		if (UMaterialInterface* Mat = LoadObject<UMaterialInterface>(nullptr, *MaterialPath))
+		{
+			Landscape->Modify();
+			Landscape->LandscapeMaterial = Mat;
+			Landscape->PostEditChange();
+			MaterialAssignNote = FString::Printf(TEXT("Assigned landscape material %s."), *MaterialPath);
+		}
+		else
+		{
+			return FUeremcpEnvelope::MakeRejection(
+				Request.RequestId,
+				FString::Printf(
+					TEXT("specification.material_path '%s' did not load as a MaterialInterface."),
+					*MaterialPath));
+		}
+	}
+
+	TArray<ULandscapeLayerInfoObject*> LayerInfos;
+	TArray<FString> CreatedLayerInfos;
+	TArray<FString> Failed;
+	for (const FPaintRule& Rule : Rules)
+	{
+		FString EnsureError;
+		const bool bHad =
+			Info->GetLayerInfoByName(FName(*Rule.Layer), Landscape) != nullptr
+			|| Info->GetLayerInfoByName(FName(*Rule.Layer)) != nullptr;
+		ULandscapeLayerInfoObject* LayerInfo =
+			EnsureLandscapeLayerInfo(Landscape, Info, FName(*Rule.Layer), EnsureError);
+		if (!LayerInfo)
+		{
+			Failed.Add(Rule.Layer);
+			LayerInfos.Add(nullptr);
+			continue;
+		}
+		if (!bHad)
+		{
+			CreatedLayerInfos.Add(Rule.Layer);
+		}
+		LayerInfos.Add(LayerInfo);
+	}
+	if (Failed.Num() > 0)
+	{
+		TSharedPtr<FJsonObject> NextArgs = MakeShared<FJsonObject>();
+		NextArgs->SetStringField(
+			TEXT("recovery"),
+			TEXT("paint_landscape_layers auto-creates LayerInfo under "
+				 "/Game/__UeremcpPoc/LandscapeLayers; retry after create_landscape exists. "
+				 "Optional specification.material_path assigns the blend material."));
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Could not ensure landscape LayerInfo(s): %s."),
+				*FString::Join(Failed, TEXT(", "))),
+			TEXT("LAYER_NOT_FOUND"),
+			NextArgs);
 	}
 
 	// [VERIFIED: LandscapeEdit.h] read live heights — never a recomputed surface.
@@ -366,6 +477,16 @@ FString UUeremcpEnvironmentToolset::PaintLandscapeLayers(const FString& RequestJ
 	Response.CapabilityNotes.Add(
 		TEXT("Weights read the live landscape heightmap — never a recomputed surface "
 			 "(MCP-006). Exactly one fallback layer took the remainder so weights sum to 1."));
+	if (CreatedLayerInfos.Num() > 0)
+	{
+		Response.CapabilityNotes.Add(FString::Printf(
+			TEXT("Auto-created/assigned LayerInfo for: %s (under /Game/__UeremcpPoc/LandscapeLayers)."),
+			*FString::Join(CreatedLayerInfos, TEXT(", "))));
+	}
+	if (!MaterialAssignNote.IsEmpty())
+	{
+		Response.CapabilityNotes.Add(MaterialAssignNote);
+	}
 
 	TArray<TSharedPtr<FJsonValue>> Painted;
 	for (int32 i = 0; i < Rules.Num(); ++i)
@@ -379,6 +500,15 @@ FString UUeremcpEnvironmentToolset::PaintLandscapeLayers(const FString& RequestJ
 	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
 	Result->SetArrayField(TEXT("painted_layers"), Painted);
 	Result->SetStringField(TEXT("landscape"), Landscape->GetActorLabel());
+	if (CreatedLayerInfos.Num() > 0)
+	{
+		TArray<TSharedPtr<FJsonValue>> Ensured;
+		for (const FString& Name : CreatedLayerInfos)
+		{
+			Ensured.Add(MakeShared<FJsonValueString>(Name));
+		}
+		Result->SetArrayField(TEXT("ensured_layer_infos"), Ensured);
+	}
 	Response.ExtraFields = MakeShared<FJsonObject>();
 	Response.ExtraFields->SetObjectField(TEXT("result"), Result);
 	return FUeremcpEnvelope::SerializeResponse(Response);

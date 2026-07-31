@@ -130,6 +130,7 @@ class TestImportAndPaint(unittest.TestCase):
         self.assertIn("MESH_BOUNDS_MISMATCH", body)
         self.assertIn("expected_bounds_m", body)
         self.assertIn("CTF_UseComplexAsSimple", body)
+        self.assertIn("DeleteObjectsUnchecked", body)
 
     def test_paint_reads_live_landscape(self):
         body = read(PAINT)
@@ -137,6 +138,33 @@ class TestImportAndPaint(unittest.TestCase):
         self.assertIn("SetAlphaData", body)
         self.assertIn("fallback", body)
         self.assertNotIn("GenerateHeightmap", body)
+
+    def test_paint_ensures_layer_infos(self):
+        body = read(PAINT)
+        self.assertIn("EnsureLandscapeLayerInfo", body)
+        self.assertIn("CreateTargetLayerInfo", body)
+        self.assertIn("CreateTargetLayerSettingsFor", body)
+        self.assertIn("material_path", body)
+        self.assertIn("/Game/__UeremcpPoc/LandscapeLayers", body)
+
+
+class TestAdditiveStagingIdempotency(unittest.TestCase):
+    def test_revision_gate_requires_stage_actors(self):
+        body = read(ENV_SERVICE)
+        self.assertIn("RequestedStagesAlreadyPresent", body)
+        self.assertIn("HasOwnedActorWithPrefix", body)
+        self.assertIn("replace_owned stage create", body)
+        self.assertIn("requested stage actors are missing", body)
+
+    def test_nonuniform_next_args_are_uniform(self):
+        body = read(ENV_SERVICE)
+        self.assertIn("SafeUniform", body)
+        self.assertIn("NeedleCap", body)
+        # Hardcoded (100, 3) recovery was still nonuniform and failed on merge.
+        self.assertNotIn(
+            'Terrain->SetNumberField(TEXT("scale_xy"), 100.0);\n'
+            '\t\tTerrain->SetNumberField(TEXT("scale_z"), 3.0);',
+            body)
 
 
 class TestNewActionsPlanRegistered(unittest.TestCase):

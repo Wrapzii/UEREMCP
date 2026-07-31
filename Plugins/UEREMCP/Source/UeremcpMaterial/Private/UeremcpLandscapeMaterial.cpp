@@ -369,7 +369,8 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 			*FString::Join(UnconnectedLayers, TEXT(", "))));
 	}
 	Response.InterpretationNotes.Add(FString::Printf(
-		TEXT("paint layers created: %s — assign these on the landscape to see the blend"),
+		TEXT("paint layers created: %s — call paint_landscape_layers (auto-creates/assigns "
+			 "LayerInfo) to write height/slope weights"),
 		*FString::Join(WiredLayers, TEXT(", "))));
 	Response.CapabilityNotes.Add(
 		TEXT("MATUSAGE_StaticLighting set (the only usage flag landscape tests); LandscapeLayerBlend "
@@ -377,8 +378,9 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 			 "[VERIFIED: MaterialInterface.h EMaterialUsage]."));
 	Response.CapabilityNotes.Add(
 		TEXT("Height and slope bands are recorded as paint-layer names. Call "
-			 "paint_landscape_layers next to write live height/slope weights — without that "
-			 "the terrain stays the first layer (the white-landscape failure)."));
+			 "paint_landscape_layers next — it ensures LayerInfo assets and writes live "
+			 "height/slope weights (without that the terrain stays the first layer). "
+			 "Pass specification.material_path on paint to assign this material."));
 	Response.Metrics.InternalOperations = Ops;
 	Response.Metrics.AssetsAffected = 1;
 

@@ -18,6 +18,7 @@
 #include "Engine/StaticMesh.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "BodySetupEnums.h" // PhysicsCore — not under PhysicsEngine/
+#include "ObjectTools.h"
 #include "ToolsetRegistry/ToolCallAsyncResultString.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "HAL/PlatformProcess.h"
@@ -282,11 +283,16 @@ FString UUeremcpEnvironmentToolset::ImportMeshForWorld(const FString& RequestJso
 			&& FMath::Abs(Ratio.Z - 1.f) <= 0.20f;
 		if (!bOk)
 		{
+			// Reject after import leaves a silently unusable asset unless we delete it.
+			TArray<UObject*> ToDelete;
+			ToDelete.Add(Mesh);
+			ObjectTools::DeleteObjectsUnchecked(ToDelete);
+
 			TSharedPtr<FJsonObject> NextArgs = MakeShared<FJsonObject>();
 			TSharedPtr<FJsonObject> Spec = MakeShared<FJsonObject>();
 			Spec->SetStringField(
 				TEXT("hint"),
-				TEXT("Re-export with correct units (UE wants cm) or omit expected_bounds_m after verifying the numbers below."));
+				TEXT("Re-export with correct units (UE wants cm) or omit expected_bounds_m after verifying the numbers below. Rejected mesh asset was deleted."));
 			NextArgs->SetObjectField(TEXT("specification"), Spec);
 			FUeremcpResponse Response;
 			Response.RequestId = Request.RequestId;
@@ -295,14 +301,17 @@ FString UUeremcpEnvironmentToolset::ImportMeshForWorld(const FString& RequestJso
 			Response.ErrorCode = TEXT("MESH_BOUNDS_MISMATCH");
 			Response.Summary = FString::Printf(
 				TEXT("Imported bounds_m [%.2f, %.2f, %.2f] differ from expected_bounds_m "
-					 "[%.2f, %.2f, %.2f] by more than 20%%. Refusing a silently unusable mesh."),
+					 "[%.2f, %.2f, %.2f] by more than 20%%. Refusing a silently unusable mesh "
+					 "(deleted the imported asset)."),
 				ExtentM.X, ExtentM.Y, ExtentM.Z,
 				Expected.X, Expected.Y, Expected.Z);
 			Response.NextArgs = NextArgs;
-			Response.PrimaryAsset = Mesh->GetPathName();
 			Response.Metrics.McpRoundTrips = 1;
 			Response.ExtraFields = MakeShared<FJsonObject>();
 			Response.ExtraFields->SetObjectField(TEXT("structural_metrics"), Metrics);
+			Response.CapabilityNotes.Add(
+				TEXT("MESH_BOUNDS_MISMATCH deletes the just-imported asset so a bad FBX does "
+					 "not linger under target.asset_path."));
 			return FUeremcpEnvelope::SerializeResponse(Response);
 		}
 	}

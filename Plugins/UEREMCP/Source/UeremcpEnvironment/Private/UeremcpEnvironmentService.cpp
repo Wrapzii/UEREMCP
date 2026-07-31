@@ -553,6 +553,53 @@ namespace
 		return ToDestroy.Num();
 	}
 
+	bool HasOwnedActorWithPrefix(UWorld* World, const FString& LabelPrefix)
+	{
+		if (!World || LabelPrefix.IsEmpty())
+		{
+			return false;
+		}
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel().StartsWith(LabelPrefix))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// True only when every stage THIS request would build already has owned actors.
+	// Matching env revision alone must not block additive create_water_body /
+	// scatter_foliage after create_landscape (same seed) — that was the P0 hole.
+	bool RequestedStagesAlreadyPresent(UWorld* World, const FUeremcpEnvironmentBuildSpec& Spec)
+	{
+		if (Spec.bIncludeTerrain && !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_Landscape")))
+		{
+			return false;
+		}
+		if (Spec.bIncludeRiver && !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_River")))
+		{
+			return false;
+		}
+		if (Spec.WantsVegetation() && !HasOwnedActorWithPrefix(World, Spec.FoliageActorLabel()))
+		{
+			return false;
+		}
+		if (Spec.HasAnyWeatherPhenomenon() && !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_Weather")))
+		{
+			return false;
+		}
+		if ((Spec.bIncludeStructures || Spec.Structures.Num() > 0)
+			&& !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_Structure")))
+		{
+			return false;
+		}
+		const bool bAnyStage = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+			|| Spec.HasAnyWeatherPhenomenon() || Spec.bIncludeStructures || Spec.Structures.Num() > 0;
+		return bAnyStage;
+	}
+
 	float SampleNormalizedHeight(
 		const TArray<uint16>& Heights,
 		const FUeremcpEnvironmentBuildSpec& Spec,
@@ -1038,8 +1085,13 @@ bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
 		OutRejection.NextArgs = MakeShared<FJsonObject>();
 		TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
 		TSharedPtr<FJsonObject> Terrain = MakeShared<FJsonObject>();
-		Terrain->SetNumberField(TEXT("scale_xy"), 100.0);
-		Terrain->SetNumberField(TEXT("scale_z"), 3.0);
+		// Mergeable recovery must still pass ValidateScaleAndQuality: match axes
+		// AND keep scale_z under the needle threshold (default 5).
+		constexpr float NeedleCap = 5.f;
+		const float Matched = FMath::Min(Spec.ScaleXY, Spec.ScaleZ);
+		const float SafeUniform = Matched > NeedleCap ? 3.f : Matched;
+		Terrain->SetNumberField(TEXT("scale_xy"), SafeUniform);
+		Terrain->SetNumberField(TEXT("scale_z"), SafeUniform);
 		SpecPatch->SetObjectField(TEXT("terrain"), Terrain);
 		OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
 		return false;
@@ -1554,7 +1606,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.CapabilityNotes.Add(TEXT("InspectEnvironment and retry with the returned revision."));
 		return Result;
 	}
-	if (!ExistingRevision.IsEmpty() && ExistingRevision == Result.Revision)
+	if (!ExistingRevision.IsEmpty() && ExistingRevision == Result.Revision
+		&& RequestedStagesAlreadyPresent(World, Spec))
 	{
 		Result.Status = TEXT("no_change_required");
 		Result.Summary = FString::Printf(
@@ -1564,8 +1617,16 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
 		Result.ChangeManifest->SetStringField(TEXT("revision"), Result.Revision);
 		Result.ChangeManifest->SetBoolField(TEXT("dry_run"), false);
-		Result.CapabilityNotes.Add(TEXT("Idempotency gate matched saved environment metadata; no actors were changed."));
+		Result.CapabilityNotes.Add(
+			TEXT("Idempotency gate matched saved environment metadata AND requested stage "
+				 "actors are already present; no actors were changed."));
 		return Result;
+	}
+	if (!ExistingRevision.IsEmpty() && ExistingRevision == Result.Revision)
+	{
+		Result.CapabilityNotes.Add(
+			TEXT("Revision matched but requested stage actors are missing — proceeding with "
+				 "replace_owned stage create (additive landscape→water→foliage)."));
 	}
 
 	const FScopedTransaction Transaction(
