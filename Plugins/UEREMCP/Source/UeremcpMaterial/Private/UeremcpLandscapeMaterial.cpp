@@ -15,14 +15,34 @@
 // This is the goal-level surface action: declare layers with height and slope
 // bands, get one landscape material with the blend already wired.
 //
-// COMPILE NOTES — signatures NOT read; expect these to need correction:
-//   [UNVERIFIED] UMaterialEditingLibrary::CreateMaterialExpression /
-//     ConnectMaterialProperty / ConnectMaterialExpressions / RecompileMaterial
-//   [UNVERIFIED] UMaterialExpressionLandscapeLayerBlend and its LayerBlend
-//     array element type FLayerBlendInput
-//   [VERIFIED: UeremcpMaterialMasterBuilder.cpp:42] the create-and-save pattern
-//     this mirrors (NewObject<UMaterial> + asset registration)
-// Each expression kind is built in its own helper so a mismatch is a local fix.
+// API SURFACE — all read, none recalled:
+//   [VERIFIED: Editor/MaterialEditor/Public/MaterialEditingLibrary.h:168]
+//     CreateMaterialExpression(UMaterial*, TSubclassOf<UMaterialExpression>,
+//                              int32 NodePosX=0, int32 NodePosY=0)
+//   [VERIFIED: MaterialEditingLibrary.h:232]
+//     ConnectMaterialProperty(UMaterialExpression*, FString FromOutputName,
+//                             EMaterialProperty)
+//   [VERIFIED: MaterialEditingLibrary.h:242]
+//     ConnectMaterialExpressions(UMaterialExpression*, FString FromOutputName,
+//                                UMaterialExpression*, FString ToInputName)
+//   [VERIFIED: MaterialEditingLibrary.h:267] RecompileMaterial -> TArray<FString>
+//   [VERIFIED: Runtime/Landscape/Classes/Materials/
+//     MaterialExpressionLandscapeLayerBlend.h:27] FLayerBlendInput
+//     { FName LayerName; TEnumAsByte<ELandscapeLayerBlendType> BlendType;
+//       FExpressionInput LayerInput; FExpressionInput HeightInput;
+//       float PreviewWeight; FVector ConstLayerInput; }
+//     LB_WeightBlend at :21.
+//   [VERIFIED: Runtime/Landscape/Private/Materials/
+//     MaterialExpressionLandscapeLayerBlend.cpp:108] input pins are named
+//     "Layer <LayerName>", NOT "<LayerName>".
+//   [VERIFIED: Runtime/Landscape/Private/LandscapeRender.cpp:1692]
+//     MATUSAGE_StaticLighting is the only usage flag landscape tests.
+//   [VERIFIED: UeremcpMaterialMasterBuilder.cpp:42] the create-and-save pattern.
+//
+// Reading them found a real bug the compiler would NOT have caught: the pin
+// name. Bare layer names find no input, ConnectMaterialExpressions returns
+// false, and every layer ships unconnected -- correct name, correct layer list,
+// nothing wired. It compiles perfectly.
 
 #include "UeremcpLandscapeMaterial.h"
 
@@ -228,6 +248,7 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 
 	TArray<FString> WiredLayers;
 	TArray<FString> SkippedTextures;
+	TArray<FString> UnconnectedLayers;
 	int32 Ops = 0;
 	int32 Row = 0;
 	for (const FLayerSpec& Layer : Layers)
@@ -281,8 +302,23 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 		Blend->Layers.Add(Input);
 		if (Source)
 		{
-			UMaterialEditingLibrary::ConnectMaterialExpressions(
-				Source, TEXT(""), Blend, Layer.Name);
+			// The pin is "Layer <name>", NOT "<name>":
+			//   return *FString::Printf(TEXT("Layer %s"), *Layers[i].LayerName.ToString());
+			// [VERIFIED: Runtime/Landscape/Private/Materials/
+			//  MaterialExpressionLandscapeLayerBlend.cpp:108]
+			//
+			// Passing the bare layer name finds no input, ConnectMaterialExpressions
+			// returns false, and every layer ends up unconnected -- a material with
+			// the right name, the right layers listed, and nothing wired. That is
+			// the empty-shell symptom this tool exists to end, and it would have
+			// shipped silently.
+			const FString PinName = FString::Printf(TEXT("Layer %s"), *Layer.Name);
+			if (!UMaterialEditingLibrary::ConnectMaterialExpressions(
+					Source, TEXT(""), Blend, PinName))
+			{
+				// Report it. A layer that did not connect is not a layer.
+				UnconnectedLayers.Add(Layer.Name);
+			}
 			++Ops;
 		}
 		WiredLayers.Add(Layer.Name);
@@ -309,7 +345,7 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 
 	// Never *_validated: the graph is wired and compiled, but nothing here proves
 	// it renders or that the landscape accepts it (AGENTS.md rule 6).
-	Response.Status = SkippedTextures.Num() > 0
+	Response.Status = (SkippedTextures.Num() > 0 || UnconnectedLayers.Num() > 0)
 		? TEXT("partially_completed")
 		: TEXT("created_with_warnings");
 	Response.Summary = FString::Printf(
@@ -325,6 +361,12 @@ FString UUeremcpMaterialToolset::CreateLandscapeMaterial(const FString& RequestJ
 	for (const FString& Note : SkippedTextures)
 	{
 		Response.InterpretationNotes.Add(Note);
+	}
+	if (UnconnectedLayers.Num() > 0)
+	{
+		Response.InterpretationNotes.Add(FString::Printf(
+			TEXT("layers listed but NOT connected (they will render as nothing): %s"),
+			*FString::Join(UnconnectedLayers, TEXT(", "))));
 	}
 	Response.InterpretationNotes.Add(FString::Printf(
 		TEXT("paint layers created: %s — assign these on the landscape to see the blend"),
