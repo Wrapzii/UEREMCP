@@ -40,6 +40,7 @@ public class UeremcpEnvironment : ModuleRules
 			"UeremcpSecurity",
 			"ToolsetRegistry",
 			"UeremcpProtocol",
+			"UeremcpNiagara",
 		});
 
 		// Water is optional at compile time when the plugin is present.

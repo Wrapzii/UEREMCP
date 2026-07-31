@@ -122,7 +122,7 @@ bool FUeremcpEnvironmentParseAliasesTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("z_scale alias"), Spec.ScaleZ, 250.f);
 	TestEqual(TEXT("mountain_weight alias"), Spec.MountainAmplitude, 0.4f);
 	TestTrue(TEXT("structures include"), Spec.bIncludeStructures);
-	TestEqual(TEXT("structure count"), Spec.StructureCount, 4);
+	TestEqual(TEXT("legacy structure count"), Spec.Structures[0].Count, 4);
 	TestFalse(TEXT("capture off"), Spec.bCaptureScreenshot);
 	TestFalse(TEXT("terrain opt-in default"), Spec.bIncludeTerrain);
 	TestFalse(TEXT("river opt-in default"), Spec.bIncludeRiver);
@@ -131,6 +131,79 @@ bool FUeremcpEnvironmentParseAliasesTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("lighting opt-in default"), Spec.bIncludeLighting);
 	TestEqual(TEXT("missing river width keeps default"), Spec.RiverWidth, 600.f);
 	TestEqual(TEXT("missing forest width keeps default"), Spec.ForestBankWidth, 3500.f);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentV2SnowIceHailParseTest,
+	"UEREMCP.Environment.Spec.V2SnowIceHail",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentV2SnowIceHailParseTest::RunTest(const FString& Parameters)
+{
+	const FString SpecJson = TEXT(R"({
+		"schema_version":2,
+		"seed":8801,
+		"terrain":{"profile":"mountains","mountain_amplitude":0.62},
+		"weather":[
+			{"phenomenon":"snow","intensity":0.75,"follow_player":true},
+			{"phenomenon":"hail","intensity":0.35}
+		],
+		"structures":[{"kind":"ice_wall_ring","count":28,"height":900}],
+		"lighting":{"preset":"blizzard"}
+	})");
+	TSharedPtr<FJsonObject> SpecObj;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SpecJson);
+	TestTrue(TEXT("parse spec"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	FUeremcpEnvironmentBuildSpec Spec;
+	FString Err;
+	TestTrue(TEXT("ParseBuildSpec v2"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestTrue(TEXT("terrain presence"), Spec.bIncludeTerrain);
+	TestEqual(TEXT("terrain profile"), Spec.TerrainProfile, EUeremcpTerrainProfile::Mountains);
+	TestEqual(TEXT("weather count"), Spec.WeatherPhenomena.Num(), 2);
+	TestEqual(TEXT("snow phenomenon"), Spec.WeatherPhenomena[0].Phenomenon, FString(TEXT("snow")));
+	TestEqual(TEXT("hail phenomenon"), Spec.WeatherPhenomena[1].Phenomenon, FString(TEXT("hail")));
+	TestEqual(TEXT("structures count"), Spec.Structures.Num(), 1);
+	TestEqual(TEXT("ice wall kind"), Spec.Structures[0].Kind, FString(TEXT("ice_wall_ring")));
+	TestTrue(TEXT("lighting presence"), Spec.bIncludeLighting);
+	TestEqual(TEXT("blizzard preset"), Spec.LightingPreset, FString(TEXT("blizzard")));
+	TestFalse(TEXT("river not implied"), Spec.bIncludeRiver);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentV2SnowDryRunTest,
+	"UEREMCP.Environment.Build.V2SnowIceHailDryRun",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentV2SnowDryRunTest::RunTest(const FString& Parameters)
+{
+	const FString Request = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"build_environment",
+		"request_id":"env-snow-1",
+		"target":{"asset_path":"/Game/__UeremcpPoc/SnowIceHail"},
+		"options":{"dry_run":true,"validate":true},
+		"specification":{
+			"schema_version":2,
+			"seed":8801,
+			"terrain":{"profile":"mountains","mountain_amplitude":0.62},
+			"weather":[
+				{"phenomenon":"snow","intensity":0.75},
+				{"phenomenon":"hail","intensity":0.35}
+			],
+			"structures":[{"kind":"ice_wall_ring","count":12,"height":600}],
+			"lighting":{"preset":"blizzard"}
+		}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::BuildEnvironment(Request);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(JsonReader, Root) && Root.IsValid());
+	TestEqual(TEXT("status"), Root->GetStringField(TEXT("status")), FString(TEXT("no_change_required")));
+	const TSharedPtr<FJsonObject>* Metrics = nullptr;
+	TestTrue(TEXT("metrics"), Root->TryGetObjectField(TEXT("structural_metrics"), Metrics) && Metrics);
+	TestTrue(TEXT("non_flat planned"), (*Metrics)->GetBoolField(TEXT("non_flat")));
 	return true;
 }
 
@@ -235,15 +308,16 @@ bool FUeremcpEnvironmentIncludeDependencyTest::RunTest(const FString& Parameters
 	FUeremcpEnvironmentBuildSpec Spec;
 	FString Err;
 	TestFalse(TEXT("forest without river rejected"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
-	TestTrue(TEXT("error mentions river"), Err.Contains(TEXT("include.river")));
+	TestTrue(TEXT("error mentions river"), Err.Contains(TEXT("river")));
 
 	const FString RainPreferReal = TEXT(R"({"seed":1,"include":{"rain":true}})");
 	Reader = TJsonReaderFactory<>::Create(RainPreferReal);
 	SpecObj.Reset();
 	TestTrue(TEXT("parse rain"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
 	Err.Reset();
-	TestFalse(TEXT("rain prefer_real without path rejected"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
-	TestTrue(TEXT("error mentions rain_system_path"), Err.Contains(TEXT("rain_system_path")));
+	TestTrue(TEXT("rain prefer_real parses (CreateNiagaraEffect at build)"),
+		FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestEqual(TEXT("rain phenomenon added"), Spec.WeatherPhenomena.Num(), 1);
 	return true;
 }
 

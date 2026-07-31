@@ -43,11 +43,356 @@
 #include "FileHelpers.h"
 #include "ScopedTransaction.h"
 #include "UeremcpWeatherFollower.h"
+#include "UeremcpNiagaraToolset.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 #define UEREMCP_HAS_WATER 1
 
 namespace
 {
+	bool AllowApproximateFallback(const FUeremcpEnvironmentBuildSpec& Spec)
+	{
+		return Spec.FallbackPolicy.Equals(TEXT("allow_approximate"), ESearchCase::IgnoreCase);
+	}
+
+	FString DefaultNiagaraPathForDestination(const FString& Dest, const FString& Phenomenon)
+	{
+		FString Folder = Dest;
+		while (Folder.EndsWith(TEXT("/")))
+		{
+			Folder.LeftChopInline(1);
+		}
+		const FString Key = Phenomenon.ToLower();
+		if (Key == TEXT("snow"))
+		{
+			return Folder / TEXT("NS_EnvSnow");
+		}
+		if (Key == TEXT("hail"))
+		{
+			return Folder / TEXT("NS_EnvHail");
+		}
+		if (Key == TEXT("fog"))
+		{
+			return Folder / TEXT("NS_EnvFog");
+		}
+		return Folder / TEXT("NS_EnvRain");
+	}
+
+	TSharedPtr<FJsonObject> MakeElementCoreMaterialCreateSpec(const FString& Element)
+	{
+		TSharedPtr<FJsonObject> CreateSpec = MakeShared<FJsonObject>();
+		CreateSpec->SetStringField(TEXT("purpose"), TEXT("elemental_projectile_core"));
+		CreateSpec->SetStringField(TEXT("element"), Element);
+		TArray<TSharedPtr<FJsonValue>> Features;
+		Features.Add(MakeShared<FJsonValueString>(TEXT("radial_falloff")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("animated_noise")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("fresnel")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_color")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_intensity")));
+		CreateSpec->SetArrayField(TEXT("features"), Features);
+		return CreateSpec;
+	}
+
+	bool EnsurePrecipitationNiagaraSystem(
+		const FUeremcpWeatherPhenomenonSpec& PhenomenonSpec,
+		const FUeremcpEnvironmentBuildSpec& EnvSpec,
+		const FString& Dest,
+		const FString& RequestId,
+		bool bDryRun,
+		FString& OutSystemPath,
+		FString& OutCreateStatus,
+		FString& OutError,
+		int32& InOutOps,
+		TArray<FString>& OutNotes)
+	{
+		OutError.Reset();
+		OutCreateStatus.Reset();
+		const FString Key = PhenomenonSpec.Phenomenon.ToLower();
+		OutSystemPath = PhenomenonSpec.AssetPathOverride;
+		if (OutSystemPath.IsEmpty())
+		{
+			OutSystemPath = DefaultNiagaraPathForDestination(Dest, Key);
+		}
+
+		if (!OutSystemPath.StartsWith(TEXT("/Game/__UeremcpPoc/"))
+			&& !OutSystemPath.StartsWith(TEXT("/Game/__UeremcpTests/")))
+		{
+			OutError = FString::Printf(
+				TEXT("weather.%s asset_path '%s' must be under /Game/__UeremcpPoc/ or /Game/__UeremcpTests/."),
+				*Key,
+				*OutSystemPath);
+			return false;
+		}
+
+		if (!PhenomenonSpec.AssetPathOverride.IsEmpty() && !bDryRun)
+		{
+			if (LoadObject<UNiagaraSystem>(nullptr, *OutSystemPath))
+			{
+				OutCreateStatus = TEXT("reused_existing");
+				OutNotes.Add(FString::Printf(
+					TEXT("Using caller-supplied %s Niagara at %s."), *Key, *OutSystemPath));
+				return true;
+			}
+			OutError = FString::Printf(
+				TEXT("weather asset_path '%s' could not be loaded as UNiagaraSystem."),
+				*OutSystemPath);
+			return false;
+		}
+
+		FString Element = TEXT("water");
+		TArray<FString> ComponentRoles;
+		TArray<TSharedPtr<FJsonValue>> PrimaryColor;
+		float Scale = 1.25f;
+		float Intensity = FMath::Clamp(PhenomenonSpec.Intensity, 0.f, 1.f) * 8.f + 1.f;
+		if (Key == TEXT("snow"))
+		{
+			Element = TEXT("ice");
+			ComponentRoles = { TEXT("rain"), TEXT("mist") };
+			PrimaryColor = {
+				MakeShared<FJsonValueNumber>(0.92),
+				MakeShared<FJsonValueNumber>(0.95),
+				MakeShared<FJsonValueNumber>(1.0),
+				MakeShared<FJsonValueNumber>(0.75)
+			};
+			Scale = 1.4f;
+		}
+		else if (Key == TEXT("hail"))
+		{
+			Element = TEXT("ice");
+			ComponentRoles = { TEXT("sparks") };
+			PrimaryColor = {
+				MakeShared<FJsonValueNumber>(0.85),
+				MakeShared<FJsonValueNumber>(0.92),
+				MakeShared<FJsonValueNumber>(1.0),
+				MakeShared<FJsonValueNumber>(0.9)
+			};
+			Scale = 0.9f;
+			Intensity *= 1.4f;
+		}
+		else if (Key == TEXT("fog"))
+		{
+			Element = TEXT("water");
+			ComponentRoles = { TEXT("mist") };
+			PrimaryColor = {
+				MakeShared<FJsonValueNumber>(0.7),
+				MakeShared<FJsonValueNumber>(0.75),
+				MakeShared<FJsonValueNumber>(0.8),
+				MakeShared<FJsonValueNumber>(0.5)
+			};
+			Scale = 2.0f;
+			Intensity *= 0.6f;
+		}
+		else
+		{
+			ComponentRoles = { TEXT("rain"), TEXT("mist") };
+			PrimaryColor = {
+				MakeShared<FJsonValueNumber>(0.55),
+				MakeShared<FJsonValueNumber>(0.70),
+				MakeShared<FJsonValueNumber>(0.85),
+				MakeShared<FJsonValueNumber>(0.65)
+			};
+		}
+
+		TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+		Root->SetStringField(TEXT("protocol_version"), TEXT("1.0"));
+		Root->SetStringField(TEXT("action"), TEXT("create_niagara_effect"));
+		Root->SetStringField(
+			TEXT("request_id"),
+			FString::Printf(TEXT("%s-%s"), *RequestId, *Key));
+		Root->SetStringField(TEXT("mode"), TEXT("replace"));
+		Root->SetStringField(
+			TEXT("idempotency_key"),
+			FString::Printf(TEXT("env-%s-%s"), *Key, *OutSystemPath));
+
+		TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
+		Target->SetStringField(TEXT("asset_path"), OutSystemPath);
+		Root->SetObjectField(TEXT("target"), Target);
+
+		TSharedPtr<FJsonObject> Options = MakeShared<FJsonObject>();
+		Options->SetBoolField(TEXT("dry_run"), bDryRun);
+		Options->SetBoolField(TEXT("compile"), true);
+		Options->SetBoolField(TEXT("validate"), true);
+		Options->SetBoolField(TEXT("save"), true);
+		Root->SetObjectField(TEXT("options"), Options);
+
+		TSharedPtr<FJsonObject> Specification = MakeShared<FJsonObject>();
+		Specification->SetStringField(TEXT("effect_type"), TEXT("precipitation"));
+		Specification->SetStringField(TEXT("element"), Element);
+		Specification->SetStringField(
+			TEXT("name"),
+			FString::Printf(
+				TEXT("NS_Env%s"),
+				*FString(Key.Left(1).ToUpper() + Key.Mid(1)));
+
+		TArray<TSharedPtr<FJsonValue>> Components;
+		for (const FString& Role : ComponentRoles)
+		{
+			Components.Add(MakeShared<FJsonValueString>(Role));
+		}
+		Specification->SetArrayField(TEXT("components"), Components);
+
+		TSharedPtr<FJsonObject> Parameters = MakeShared<FJsonObject>();
+		Parameters->SetArrayField(TEXT("primary_color"), PrimaryColor);
+		Parameters->SetNumberField(TEXT("scale"), Scale);
+		Parameters->SetNumberField(TEXT("intensity"), Intensity);
+		Specification->SetObjectField(TEXT("parameters"), Parameters);
+
+		TSharedPtr<FJsonObject> Materials = MakeShared<FJsonObject>();
+		for (const FString& Role : ComponentRoles)
+		{
+			TSharedPtr<FJsonObject> RoleMat = MakeShared<FJsonObject>();
+			RoleMat->SetObjectField(TEXT("create_spec"), MakeElementCoreMaterialCreateSpec(Element));
+			RoleMat->SetBoolField(TEXT("reuse_if_present"), true);
+			Materials->SetObjectField(Role, RoleMat);
+		}
+		Specification->SetObjectField(TEXT("materials"), Materials);
+		Root->SetObjectField(TEXT("specification"), Specification);
+
+		FString RequestJson;
+		{
+			TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestJson);
+			FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
+		}
+
+		const FString ResponseJson = UUeremcpNiagaraToolset::CreateNiagaraEffect(RequestJson);
+		++InOutOps;
+
+		TSharedPtr<FJsonObject> ResponseRoot;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
+		if (!FJsonSerializer::Deserialize(Reader, ResponseRoot) || !ResponseRoot.IsValid())
+		{
+			OutError = FString::Printf(
+				TEXT("CreateNiagaraEffect returned unparseable JSON for %s."), *Key);
+			return false;
+		}
+
+		OutCreateStatus = ResponseRoot->GetStringField(TEXT("status"));
+		const FString Summary = ResponseRoot->GetStringField(TEXT("summary"));
+		OutNotes.Add(FString::Printf(
+			TEXT("CreateNiagaraEffect(%s) status=%s — %s"),
+			*Key,
+			*OutCreateStatus,
+			*Summary));
+
+		if (bDryRun)
+		{
+			return OutCreateStatus != TEXT("rejected")
+				&& OutCreateStatus != TEXT("failed_validation");
+		}
+
+		const bool bStatusOk =
+			OutCreateStatus == TEXT("created_and_validated")
+			|| OutCreateStatus == TEXT("modified_and_validated")
+			|| OutCreateStatus == TEXT("created_with_warnings")
+			|| OutCreateStatus == TEXT("partially_completed")
+			|| OutCreateStatus == TEXT("no_change_required");
+		if (!bStatusOk)
+		{
+			OutError = FString::Printf(
+				TEXT("CreateNiagaraEffect failed for %s (%s): %s"),
+				*Key,
+				*OutCreateStatus,
+				*Summary);
+			return false;
+		}
+
+		UNiagaraSystem* Created = LoadObject<UNiagaraSystem>(nullptr, *OutSystemPath);
+		if (!Created)
+		{
+			const FString ObjectPath = FString::Printf(
+				TEXT("%s.%s"),
+				*OutSystemPath,
+				*FPackageName::GetLongPackageAssetName(OutSystemPath));
+			Created = LoadObject<UNiagaraSystem>(nullptr, *ObjectPath);
+		}
+		if (!Created)
+		{
+			OutError = FString::Printf(
+				TEXT("CreateNiagaraEffect reported %s but UNiagaraSystem missing at '%s'."),
+				*OutCreateStatus,
+				*OutSystemPath);
+			return false;
+		}
+		return true;
+	}
+
+	int32 PlaceIceWallRing(
+		UWorld* World,
+		const FUeremcpEnvironmentBuildSpec& Spec,
+		const FUeremcpStructurePlacementSpec& Placement,
+		const FVector& LandscapeOffset,
+		const FBox& Extents,
+		TArray<FString>& CreatedLabels)
+	{
+		const int32 Count = FMath::Clamp(Placement.Count, 4, 128);
+		const float HalfX = Extents.GetExtent().X;
+		const float HalfY = Extents.GetExtent().Y;
+		const float Perimeter = 2.f * (HalfX + HalfY) * Spec.ScaleXY;
+		const float Step = Perimeter / float(Count);
+		int32 Placed = 0;
+
+		for (int32 I = 0; I < Count; ++I)
+		{
+			const float Dist = Step * float(I);
+			float LocalX = 0.f;
+			float LocalY = 0.f;
+			if (Dist < HalfX * 2.f * Spec.ScaleXY)
+			{
+				LocalX = Dist;
+				LocalY = 0.f;
+			}
+			else if (Dist < (HalfX * 2.f + HalfY * 2.f) * Spec.ScaleXY)
+			{
+				LocalX = HalfX * 2.f * Spec.ScaleXY;
+				LocalY = Dist - HalfX * 2.f * Spec.ScaleXY;
+			}
+			else if (Dist < (HalfX * 4.f + HalfY * 2.f) * Spec.ScaleXY)
+			{
+				LocalX = HalfX * 2.f * Spec.ScaleXY - (Dist - (HalfX * 2.f + HalfY * 2.f) * Spec.ScaleXY);
+				LocalY = HalfY * 2.f * Spec.ScaleXY;
+			}
+			else
+			{
+				LocalX = 0.f;
+				LocalY = HalfY * 2.f * Spec.ScaleXY - (Dist - (HalfX * 4.f + HalfY * 2.f) * Spec.ScaleXY);
+			}
+
+			const FVector Loc = LandscapeOffset + FVector(
+				LocalX - HalfX * Spec.ScaleXY,
+				LocalY - HalfY * Spec.ScaleXY,
+				100.f);
+			ADynamicMeshActor* Structure = World->SpawnActor<ADynamicMeshActor>(Loc, FRotator::ZeroRotator);
+			if (!Structure)
+			{
+				continue;
+			}
+			Structure->SetActorLabel(FString::Printf(TEXT("UEREMCP_IceWall_%d"), I));
+			if (UDynamicMeshComponent* DMC = Structure->GetDynamicMeshComponent())
+			{
+				if (UDynamicMesh* Mesh = DMC->GetDynamicMesh())
+				{
+					FGeometryScriptPrimitiveOptions Opts;
+					UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendBox(
+						Mesh,
+						Opts,
+						FTransform::Identity,
+						Placement.Thickness,
+						Placement.Width,
+						Placement.Height,
+						0, 0, 0,
+						EGeometryScriptPrimitiveOriginMode::Base,
+						nullptr);
+					DMC->NotifyMeshUpdated();
+					++Placed;
+					CreatedLabels.Add(Structure->GetActorLabel());
+				}
+			}
+		}
+		return Placed;
+	}
+
 	bool PathIsScratch(const FString& Path)
 	{
 		return Path.StartsWith(TEXT("/Game/__UeremcpPoc/"))
@@ -210,9 +555,14 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		return false;
 	}
 
+	double SchemaVersion = 2.0;
+	if (Spec->TryGetNumberField(TEXT("schema_version"), SchemaVersion))
+	{
+		Out.SchemaVersion = int32(SchemaVersion);
+	}
+
 	auto ReadObjNumber = [&](const FString& Obj, const FString& Key, double& InOut)
 	{
-		InOut = -1.0;
 		const TSharedPtr<FJsonObject>* Child = nullptr;
 		if (Spec->TryGetObjectField(Obj, Child) && Child && (*Child)->HasField(Key))
 		{
@@ -221,15 +571,25 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	};
 
 	double Tmp = 0;
+	const TSharedPtr<FJsonObject>* Terrain = nullptr;
+	if (Spec->TryGetObjectField(TEXT("terrain"), Terrain) && Terrain)
+	{
+		FString Profile;
+		if ((*Terrain)->TryGetStringField(TEXT("profile"), Profile))
+		{
+			if (!ParseTerrainProfile(Profile, Out.TerrainProfile))
+			{
+				OutError = FString::Printf(
+					TEXT("terrain.profile '%s' unsupported; use mountains|plateau|canyon|flat_with_mountains_ring"),
+					*Profile);
+				return false;
+			}
+		}
+	}
 	ReadObjNumber(TEXT("terrain"), TEXT("size_x"), Tmp); if (Tmp > 0) Out.SizeX = int32(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("size_y"), Tmp); if (Tmp > 0) Out.SizeY = int32(Tmp);
-	// Alias: terrain.size → square SizeX/SizeY (COVERAGE_PLAN / agent examples).
 	ReadObjNumber(TEXT("terrain"), TEXT("size"), Tmp);
-	if (Tmp > 0)
-	{
-		Out.SizeX = int32(Tmp);
-		Out.SizeY = int32(Tmp);
-	}
+	if (Tmp > 0) { Out.SizeX = int32(Tmp); Out.SizeY = int32(Tmp); }
 	ReadObjNumber(TEXT("terrain"), TEXT("mountain_amplitude"), Tmp); if (Tmp > 0) Out.MountainAmplitude = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("mountain_weight"), Tmp); if (Tmp > 0) Out.MountainAmplitude = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("valley_depth"), Tmp); if (Tmp > 0) Out.ValleyDepth = float(Tmp);
@@ -237,34 +597,200 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	ReadObjNumber(TEXT("terrain"), TEXT("scale_z"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("z_scale"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
 
+	const TSharedPtr<FJsonObject>* Hydrology = nullptr;
+	if (Spec->TryGetObjectField(TEXT("hydrology"), Hydrology) && Hydrology)
+	{
+		const TSharedPtr<FJsonObject>* RiverObj = nullptr;
+		if ((*Hydrology)->TryGetObjectField(TEXT("river"), RiverObj) && RiverObj)
+		{
+			Out.bIncludeRiver = true;
+			if ((*RiverObj)->TryGetNumberField(TEXT("width"), Tmp) && Tmp > 0)
+			{
+				Out.RiverWidth = float(Tmp);
+			}
+		}
+	}
 	ReadObjNumber(TEXT("river"), TEXT("width"), Tmp); if (Tmp > 0) Out.RiverWidth = float(Tmp);
+
+	const TSharedPtr<FJsonObject>* Vegetation = nullptr;
+	if (Spec->TryGetObjectField(TEXT("vegetation"), Vegetation) && Vegetation)
+	{
+		(*Vegetation)->TryGetStringField(TEXT("mode"), Out.VegetationMode);
+		ReadObjNumber(TEXT("vegetation"), TEXT("forest_bank_width"), Tmp);
+		if (Tmp > 0) Out.ForestBankWidth = float(Tmp);
+		ReadObjNumber(TEXT("vegetation"), TEXT("max_foliage_instances"), Tmp);
+		if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
+		ReadObjNumber(TEXT("vegetation"), TEXT("slope_limit_deg"), Tmp);
+		if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
+		ReadObjNumber(TEXT("vegetation"), TEXT("min_normalized_height"), Tmp);
+		if (Tmp >= 0) Out.FoliageMinNormalizedHeight = float(Tmp);
+		ReadObjNumber(TEXT("vegetation"), TEXT("max_normalized_height"), Tmp);
+		if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
+		(*Vegetation)->TryGetStringField(TEXT("mesh_path"), Out.MeshPath);
+	}
+
 	ReadObjNumber(TEXT("biome"), TEXT("forest_bank_width"), Tmp); if (Tmp > 0) Out.ForestBankWidth = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("max_foliage_instances"), Tmp); if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("slope_limit_deg"), Tmp); if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("min_normalized_height"), Tmp); if (Tmp >= 0) Out.FoliageMinNormalizedHeight = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("max_normalized_height"), Tmp); if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
-
 	const TSharedPtr<FJsonObject>* Biome = nullptr;
 	if (Spec->TryGetObjectField(TEXT("biome"), Biome) && Biome)
 	{
 		(*Biome)->TryGetStringField(TEXT("mesh_path"), Out.MeshPath);
 	}
-	const TSharedPtr<FJsonObject>* Weather = nullptr;
-	if (Spec->TryGetObjectField(TEXT("weather"), Weather) && Weather)
+
+	const TArray<TSharedPtr<FJsonValue>>* WeatherArray = nullptr;
+	if (Spec->TryGetArrayField(TEXT("weather"), WeatherArray) && WeatherArray)
 	{
-		(*Weather)->TryGetStringField(TEXT("rain_system_path"), Out.RainSystemPath);
-		(*Weather)->TryGetStringField(TEXT("follow"), Out.WeatherFollow);
-		double StreakCount = 0;
-		if ((*Weather)->TryGetNumberField(TEXT("streak_count"), StreakCount) && StreakCount > 0)
+		for (const TSharedPtr<FJsonValue>& Value : *WeatherArray)
 		{
-			Out.RainStreakCount = int32(StreakCount);
+			const TSharedPtr<FJsonObject>* PhenomenonObj = nullptr;
+			if (!Value->TryGetObject(PhenomenonObj) || !PhenomenonObj)
+			{
+				continue;
+			}
+			FUeremcpWeatherPhenomenonSpec Phenomenon;
+			if (!(*PhenomenonObj)->TryGetStringField(TEXT("phenomenon"), Phenomenon.Phenomenon))
+			{
+				OutError = TEXT("weather[] entries require phenomenon (rain|snow|hail|fog)");
+				return false;
+			}
+			if (!IsSupportedWeatherPhenomenon(Phenomenon.Phenomenon))
+			{
+				OutError = FString::Printf(
+					TEXT("weather phenomenon '%s' is not supported; use rain|snow|hail|fog"),
+					*Phenomenon.Phenomenon);
+				return false;
+			}
+			double Intensity = 0.5;
+			if ((*PhenomenonObj)->TryGetNumberField(TEXT("intensity"), Intensity))
+			{
+				Phenomenon.Intensity = float(Intensity);
+			}
+			bool bFollow = true;
+			if ((*PhenomenonObj)->TryGetBoolField(TEXT("follow_player"), bFollow))
+			{
+				Phenomenon.bFollowPlayer = bFollow;
+			}
+			(*PhenomenonObj)->TryGetStringField(TEXT("follow"), Phenomenon.FollowTarget);
+			(*PhenomenonObj)->TryGetStringField(TEXT("asset_path"), Phenomenon.AssetPathOverride);
+			const TArray<TSharedPtr<FJsonValue>>* Hints = nullptr;
+			if ((*PhenomenonObj)->TryGetArrayField(TEXT("material_hints"), Hints) && Hints)
+			{
+				for (const TSharedPtr<FJsonValue>& Hint : *Hints)
+				{
+					FString HintStr;
+					if (Hint->TryGetString(HintStr))
+					{
+						Phenomenon.MaterialHints.Add(HintStr);
+					}
+				}
+			}
+			Out.WeatherPhenomena.Add(Phenomenon);
 		}
+	}
+	else
+	{
+		const TSharedPtr<FJsonObject>* WeatherObj = nullptr;
+		if (Spec->TryGetObjectField(TEXT("weather"), WeatherObj) && WeatherObj)
+		{
+			FUeremcpWeatherPhenomenonSpec Rain;
+			Rain.Phenomenon = TEXT("rain");
+			(*WeatherObj)->TryGetStringField(TEXT("rain_system_path"), Rain.AssetPathOverride);
+			Out.RainSystemPath = Rain.AssetPathOverride;
+			(*WeatherObj)->TryGetStringField(TEXT("follow"), Rain.FollowTarget);
+			Out.WeatherFollow = Rain.FollowTarget;
+			double StreakCount = 0;
+			if ((*WeatherObj)->TryGetNumberField(TEXT("streak_count"), StreakCount) && StreakCount > 0)
+			{
+				Out.RainStreakCount = int32(StreakCount);
+			}
+			Out.WeatherPhenomena.Add(Rain);
+		}
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* StructuresArray = nullptr;
+	if (Spec->TryGetArrayField(TEXT("structures"), StructuresArray) && StructuresArray)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : *StructuresArray)
+		{
+			const TSharedPtr<FJsonObject>* StructObj = nullptr;
+			if (!Value->TryGetObject(StructObj) || !StructObj)
+			{
+				continue;
+			}
+			FUeremcpStructurePlacementSpec Placement;
+			if (!(*StructObj)->TryGetStringField(TEXT("kind"), Placement.Kind))
+			{
+				OutError = TEXT("structures[] entries require kind");
+				return false;
+			}
+			if (!IsSupportedStructureKind(Placement.Kind))
+			{
+				OutError = FString::Printf(
+					TEXT("structure kind '%s' unsupported; use ice_wall_ring|barrier_wall|box_along_river"),
+					*Placement.Kind);
+				return false;
+			}
+			double Count = Placement.Count;
+			if ((*StructObj)->TryGetNumberField(TEXT("count"), Count) && Count > 0)
+			{
+				Placement.Count = int32(Count);
+			}
+			double Height = Placement.Height;
+			if ((*StructObj)->TryGetNumberField(TEXT("height"), Height) && Height > 0)
+			{
+				Placement.Height = float(Height);
+			}
+			double Thickness = Placement.Thickness;
+			if ((*StructObj)->TryGetNumberField(TEXT("thickness"), Thickness) && Thickness > 0)
+			{
+				Placement.Thickness = float(Thickness);
+			}
+			double Width = Placement.Width;
+			if ((*StructObj)->TryGetNumberField(TEXT("width"), Width) && Width > 0)
+			{
+				Placement.Width = float(Width);
+			}
+			(*StructObj)->TryGetStringField(TEXT("placement"), Placement.Placement);
+			(*StructObj)->TryGetStringField(TEXT("material_path"), Placement.MaterialPath);
+			Out.Structures.Add(Placement);
+		}
+	}
+	else
+	{
+		const TSharedPtr<FJsonObject>* LegacyStructures = nullptr;
+		if (Spec->TryGetObjectField(TEXT("structures"), LegacyStructures) && LegacyStructures)
+		{
+			FUeremcpStructurePlacementSpec Placement;
+			Placement.Kind = TEXT("box_along_river");
+			double Count = 0;
+			if ((*LegacyStructures)->TryGetNumberField(TEXT("count"), Count) && Count > 0)
+			{
+				Placement.Count = int32(Count);
+			}
+			Out.Structures.Add(Placement);
+		}
+	}
+
+	const TSharedPtr<FJsonObject>* Lighting = nullptr;
+	if (Spec->TryGetObjectField(TEXT("lighting"), Lighting) && Lighting)
+	{
+		(*Lighting)->TryGetStringField(TEXT("preset"), Out.LightingPreset);
+	}
+
+	const TSharedPtr<FJsonObject>* Viewpoint = nullptr;
+	if (Spec->TryGetObjectField(TEXT("viewpoint"), Viewpoint) && Viewpoint)
+	{
+		(*Viewpoint)->TryGetStringField(TEXT("mode"), Out.ViewpointMode);
 	}
 
 	Spec->TryGetStringField(TEXT("fallback_policy"), Out.FallbackPolicy);
 	Spec->TryGetStringField(TEXT("destination_level_path"), Out.DestinationLevelPath);
 
-	if (Spec->HasField(TEXT("include")))
+	const bool bHasIncludeBlock = Spec->HasField(TEXT("include"));
+	if (bHasIncludeBlock)
 	{
 		const TSharedPtr<FJsonObject>* Inc = nullptr;
 		if (Spec->TryGetObjectField(TEXT("include"), Inc) && Inc)
@@ -277,17 +803,50 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 			(*Inc)->TryGetBoolField(TEXT("capture"), Out.bCaptureScreenshot);
 			(*Inc)->TryGetBoolField(TEXT("structures"), Out.bIncludeStructures);
 		}
+		if (Out.bIncludeRain && Out.WeatherPhenomena.Num() == 0)
+		{
+			FUeremcpWeatherPhenomenonSpec Rain;
+			Rain.Phenomenon = TEXT("rain");
+			Rain.AssetPathOverride = Out.RainSystemPath;
+			Rain.FollowTarget = Out.WeatherFollow;
+			Out.WeatherPhenomena.Add(Rain);
+		}
+	}
+	else
+	{
+		if (Terrain && (*Terrain)->HasField(TEXT("profile")))
+		{
+			Out.bIncludeTerrain = true;
+		}
+		if (Spec->HasField(TEXT("hydrology")) || Spec->HasField(TEXT("river")))
+		{
+			Out.bIncludeRiver = true;
+		}
+		if (Spec->HasField(TEXT("vegetation")))
+		{
+			Out.bIncludeForest = !Out.VegetationMode.Equals(TEXT("none"), ESearchCase::IgnoreCase);
+		}
+		if (Out.WeatherPhenomena.Num() > 0)
+		{
+			Out.bIncludeRain = Out.WeatherPhenomena.ContainsByPredicate(
+				[](const FUeremcpWeatherPhenomenonSpec& P)
+				{
+					return P.Phenomenon.Equals(TEXT("rain"), ESearchCase::IgnoreCase);
+				});
+		}
+		if (Spec->HasField(TEXT("lighting")))
+		{
+			Out.bIncludeLighting = true;
+		}
+		if (Out.Structures.Num() > 0)
+		{
+			Out.bIncludeStructures = true;
+		}
 	}
 
-	const TSharedPtr<FJsonObject>* Structures = nullptr;
-	if (Spec->TryGetObjectField(TEXT("structures"), Structures) && Structures)
+	if (Spec->HasField(TEXT("biome")) && bHasIncludeBlock && Out.bIncludeForest)
 	{
-		Out.bIncludeStructures = true;
-		double Count = 0;
-		if ((*Structures)->TryGetNumberField(TEXT("count"), Count) && Count > 0)
-		{
-			Out.StructureCount = int32(Count);
-		}
+		Out.VegetationMode = TEXT("forest");
 	}
 
 	const TSharedPtr<FJsonObject>* Capture = nullptr;
@@ -302,10 +861,22 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 
 	if (Out.FoliageMinNormalizedHeight > Out.FoliageMaxNormalizedHeight)
 	{
-		OutError = TEXT("biome.min_normalized_height must be <= max_normalized_height");
+		OutError = TEXT("vegetation/biome min_normalized_height must be <= max_normalized_height");
 		return false;
 	}
-	if (Out.WeatherFollow != TEXT("player_camera") && Out.WeatherFollow != TEXT("player_pawn"))
+	if (!Out.WeatherPhenomena.IsEmpty())
+	{
+		for (const FUeremcpWeatherPhenomenonSpec& Phenomenon : Out.WeatherPhenomena)
+		{
+			if (Phenomenon.FollowTarget != TEXT("player_camera")
+				&& Phenomenon.FollowTarget != TEXT("player_pawn"))
+			{
+				OutError = TEXT("weather.follow must be player_camera or player_pawn");
+				return false;
+			}
+		}
+	}
+	else if (Out.WeatherFollow != TEXT("player_camera") && Out.WeatherFollow != TEXT("player_pawn"))
 	{
 		OutError = TEXT("weather.follow must be player_camera or player_pawn");
 		return false;
@@ -317,25 +888,45 @@ bool FUeremcpEnvironmentService::ValidateIncludeDependencies(
 	const FUeremcpEnvironmentBuildSpec& Spec,
 	FString& OutError)
 {
-	if (Spec.bIncludeForest && !Spec.bIncludeRiver)
+	if (Spec.WantsVegetation() && !Spec.bIncludeRiver)
 	{
 		OutError = TEXT(
-			"include.forest requires include.river: true (bank scatter needs a river exclusion corridor; add river or set forest false)");
+			"vegetation/forest bank scatter requires hydrology.river or include.river: true "
+			"(bank scatter needs a river exclusion corridor; use vegetation.mode=none or add river)");
 		return false;
 	}
-	if (Spec.bIncludeStructures && !Spec.bIncludeRiver)
+	for (const FUeremcpStructurePlacementSpec& Placement : Spec.Structures)
 	{
-		OutError = TEXT(
-			"include.structures requires include.river: true (structures are placed along the river spline)");
-		return false;
+		if (Placement.Kind.Equals(TEXT("box_along_river"), ESearchCase::IgnoreCase) && !Spec.bIncludeRiver)
+		{
+			OutError = TEXT(
+				"structures box_along_river requires hydrology.river or include.river: true");
+			return false;
+		}
 	}
-	if (Spec.bIncludeRain && Spec.RainSystemPath.IsEmpty()
+	for (const FUeremcpWeatherPhenomenonSpec& Phenomenon : Spec.WeatherPhenomena)
+	{
+		const bool bRain = Phenomenon.Phenomenon.Equals(TEXT("rain"), ESearchCase::IgnoreCase);
+		const bool bNeedsAsset = Phenomenon.AssetPathOverride.IsEmpty();
+		if (bRain && bNeedsAsset && AllowApproximateFallback(Spec))
+		{
+			continue;
+		}
+		if ((bRain || Phenomenon.Phenomenon.Equals(TEXT("snow"), ESearchCase::IgnoreCase)
+			|| Phenomenon.Phenomenon.Equals(TEXT("hail"), ESearchCase::IgnoreCase)
+			|| Phenomenon.Phenomenon.Equals(TEXT("fog"), ESearchCase::IgnoreCase))
+			&& Spec.FallbackPolicy.Equals(TEXT("prefer_real"), ESearchCase::CaseSensitive)
+			&& bNeedsAsset)
+		{
+			// CreateNiagaraEffect will run at build time — no path required upfront.
+			continue;
+		}
+	}
+	if (Spec.bIncludeRain && Spec.WeatherPhenomena.Num() == 0
+		&& Spec.RainSystemPath.IsEmpty()
 		&& Spec.FallbackPolicy.Equals(TEXT("prefer_real"), ESearchCase::CaseSensitive))
 	{
-		OutError = TEXT(
-			"include.rain with fallback_policy=prefer_real requires weather.rain_system_path "
-			"(set fallback_policy=allow_approximate for visible streak fallback, or omit include.rain)");
-		return false;
+		// include.rain legacy: CreateNiagaraEffect at build time is acceptable.
 	}
 	return true;
 }
@@ -363,7 +954,31 @@ void FUeremcpEnvironmentService::GenerateHeightmap(
 			const float Nx = float(X) / float(FMath::Max(1, Spec.SizeX - 1));
 			const float Ny = float(Y) / float(FMath::Max(1, Spec.SizeY - 1));
 			float H = UeremcpNoise::FBm2D(Spec.Seed, Nx * 6.f, Ny * 6.f, 5, 2.1f, 0.5f);
-			H = 0.45f + (H - 0.5f) * 2.f * Spec.MountainAmplitude;
+			float Amplitude = Spec.MountainAmplitude;
+			float Base = 0.45f;
+			switch (Spec.TerrainProfile)
+			{
+			case EUeremcpTerrainProfile::Plateau:
+				Amplitude *= 0.35f;
+				Base = 0.55f;
+				break;
+			case EUeremcpTerrainProfile::Canyon:
+				Amplitude *= 1.1f;
+				Base = 0.35f;
+				break;
+			case EUeremcpTerrainProfile::FlatWithMountainsRing:
+			{
+				const float Dx = FMath::Abs(Nx - 0.5f) * 2.f;
+				const float Dy = FMath::Abs(Ny - 0.5f) * 2.f;
+				const float Edge = FMath::Max(Dx, Dy);
+				Amplitude *= FMath::Clamp((Edge - 0.35f) / 0.65f, 0.f, 1.f);
+				Base = 0.42f;
+				break;
+			}
+			default:
+				break;
+			}
+			H = Base + (H - 0.5f) * 2.f * Amplitude;
 
 			const FVector World(float(X) * Spec.ScaleXY, float(Y) * Spec.ScaleXY, 0);
 			const float Dist = River.DistanceToXY(World);
@@ -371,7 +986,8 @@ void FUeremcpEnvironmentService::GenerateHeightmap(
 			if (Dist < HalfW)
 			{
 				const float T = Dist / FMath::Max(1.f, HalfW);
-				H -= Spec.ValleyDepth * (1.f - T * T);
+				const float ValleyScale = Spec.TerrainProfile == EUeremcpTerrainProfile::Canyon ? 1.35f : 1.f;
+				H -= Spec.ValleyDepth * ValleyScale * (1.f - T * T);
 				++ValleySamples;
 			}
 
@@ -394,6 +1010,7 @@ void FUeremcpEnvironmentService::GenerateHeightmap(
 	OutMetrics->SetBoolField(TEXT("non_flat"), (MaxH - MinH) > 0.08);
 	OutMetrics->SetNumberField(TEXT("river_length"), River.ApproximateLength());
 	OutMetrics->SetNumberField(TEXT("river_points"), River.Points.Num());
+	OutMetrics->SetStringField(TEXT("terrain_profile"), TerrainProfileToString(Spec.TerrainProfile));
 
 	// Determinism gate (COVERAGE_PLAN III.4 / III.6 / III.11.2).
 	const uint32 Hash = FCrc::MemCrc32(OutHeights.GetData(), OutHeights.Num() * sizeof(uint16));
@@ -459,7 +1076,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.StructuralMetrics = HeightMetrics;
 	const FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
 	const uint32 RevisionCrc = FCrc::StrCrc32(*FString::Printf(
-		TEXT("env-impl-3|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d"),
+		TEXT("env-v2-1|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d|%s|%d|%d"),
 		*HeightmapHash,
 		Spec.Seed,
 		Spec.SizeX,
@@ -468,13 +1085,16 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Spec.ValleyDepth,
 		Spec.RiverWidth,
 		Spec.ForestBankWidth,
-		Spec.MaxFoliageInstances));
+		Spec.MaxFoliageInstances,
+		*TerrainProfileToString(Spec.TerrainProfile),
+		Spec.WeatherPhenomena.Num(),
+		Spec.Structures.Num()));
 	Result.Revision = FString::Printf(TEXT("env:%08x"), RevisionCrc);
 	Result.InternalOperations += 1;
 
-	const bool bAnyStage = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.bIncludeForest
-		|| Spec.bIncludeRain || Spec.bIncludeLighting || Spec.bCaptureScreenshot
-		|| Spec.bIncludeStructures;
+	const bool bAnyStage = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+		|| Spec.WeatherPhenomena.Num() > 0 || Spec.bIncludeLighting || Spec.bCaptureScreenshot
+		|| Spec.bIncludeStructures || Spec.Structures.Num() > 0;
 
 	if (bDryRun)
 	{
@@ -502,22 +1122,25 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				TEXT("Water headers unavailable at compile time")));
 		}
 #endif
-		if (Spec.bIncludeForest)
+		if (Spec.WantsVegetation())
 		{
 			Tech.Add(MakeTech(
 				TEXT("foliage_scatter"),
 				Spec.MeshPath.IsEmpty() ? FString(TEXT("approximated")) : FString(TEXT("real")),
 				TEXT("Seeded HISMC / InstancedFoliageActor scatter with exclusion corridor")));
 		}
-		if (Spec.bIncludeRain)
+		for (const FUeremcpWeatherPhenomenonSpec& Phenomenon : Spec.WeatherPhenomena)
 		{
-			const bool bRainReal = !Spec.RainSystemPath.IsEmpty();
+			const bool bRain = Phenomenon.Phenomenon.Equals(TEXT("rain"), ESearchCase::IgnoreCase);
+			const bool bCanApprox = bRain && AllowApproximateFallback(Spec);
 			Tech.Add(MakeTech(
-				TEXT("rain_camera_follow"),
-				bRainReal ? FString(TEXT("real")) : FString(TEXT("approximated")),
-				bRainReal
-					? TEXT("Niagara component attach to viewport/player camera when system path provided")
-					: TEXT("Visible instanced-streak fallback (fallback_policy=allow_approximate)")));
+				FString::Printf(TEXT("weather_%s"), *Phenomenon.Phenomenon.ToLower()),
+				(bCanApprox && Phenomenon.AssetPathOverride.IsEmpty())
+					? FString(TEXT("approximated"))
+					: FString(TEXT("real")),
+				FString::Printf(
+					TEXT("CreateNiagaraEffect precipitation (%s) + AUeremcpWeatherFollower"),
+					*Phenomenon.Phenomenon.ToLower())));
 		}
 		if (Spec.bIncludeLighting)
 		{
@@ -526,12 +1149,12 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				TEXT("real"),
 				TEXT("DirectionalLight + SkyLight + ExponentialHeightFog")));
 		}
-		if (Spec.bIncludeStructures)
+		if (Spec.bIncludeStructures || Spec.Structures.Num() > 0)
 		{
 			Tech.Add(MakeTech(
 				TEXT("structures_geometryscript"),
 				TEXT("real"),
-				TEXT("GeometryScript AppendBox available [VERIFIED: MeshPrimitiveFunctions.h:168] [VERIFIED-RUNTIME: GeometryScripting enabled]")));
+				TEXT("GeometryScript AppendBox — ice_wall_ring / barrier_wall [VERIFIED: MeshPrimitiveFunctions.h:168]")));
 		}
 		AddTechArray(Result.RealVsApproximated, TEXT("technologies"), Tech);
 		Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
@@ -646,7 +1269,6 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 
 	TArray<FString> CreatedLabels;
 	bool bRiverCreated = false;
-	bool bRainCreated = false;
 	bool bSaved = false;
 	bool bReloaded = false;
 
@@ -766,7 +1388,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	int32 RightBankCount = 0;
 	int32 SlopeRejected = 0;
 	int32 HeightRejected = 0;
-	if (Spec.bIncludeForest)
+	if (Spec.WantsVegetation())
 	{
 		UStaticMesh* Mesh = nullptr;
 		if (!Spec.MeshPath.IsEmpty())
@@ -895,35 +1517,60 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 
 	if (Spec.bIncludeLighting)
 	{
+		const FString Preset = Spec.LightingPreset.ToLower();
+		float SunIntensity = 4.0f;
+		FLinearColor SunColor(0.56f, 0.64f, 0.78f);
+		float SkyIntensity = 0.65f;
+		FLinearColor LowerHemisphere(0.04f, 0.06f, 0.09f);
+		float FogDensity = 0.025f;
+		FLinearColor FogColor(0.19f, 0.24f, 0.31f);
+		if (Preset == TEXT("clear"))
+		{
+			SunIntensity = 6.5f;
+			SunColor = FLinearColor(1.f, 0.95f, 0.85f);
+			SkyIntensity = 1.1f;
+			FogDensity = 0.005f;
+			FogColor = FLinearColor(0.55f, 0.65f, 0.8f);
+		}
+		else if (Preset == TEXT("blizzard"))
+		{
+			SunIntensity = 2.8f;
+			SunColor = FLinearColor(0.82f, 0.88f, 0.95f);
+			SkyIntensity = 0.9f;
+			LowerHemisphere = FLinearColor(0.15f, 0.18f, 0.22f);
+			FogDensity = 0.045f;
+			FogColor = FLinearColor(0.75f, 0.8f, 0.88f);
+		}
+		else if (Preset == TEXT("rainy_overcast"))
+		{
+			SunIntensity = 3.5f;
+			FogDensity = 0.03f;
+		}
+
 		ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector(0, 0, 500), FRotator(-50.f, 30.f, 0.f));
 		if (Sun)
 		{
 			Sun->SetActorLabel(TEXT("UEREMCP_Sun"));
-			// [VERIFIED: LightComponent.h:286,296]
-			Sun->GetLightComponent()->SetIntensity(4.0f);
-			Sun->GetLightComponent()->SetLightColor(FLinearColor(0.56f, 0.64f, 0.78f));
+			Sun->GetLightComponent()->SetIntensity(SunIntensity);
+			Sun->GetLightComponent()->SetLightColor(SunColor);
 			CreatedLabels.Add(TEXT("UEREMCP_Sun"));
 		}
 		ASkyLight* Sky = World->SpawnActor<ASkyLight>(FVector::ZeroVector, FRotator::ZeroRotator);
 		if (Sky)
 		{
 			Sky->SetActorLabel(TEXT("UEREMCP_SkyLight"));
-			// [VERIFIED: SkyLightComponent.h:235,265]
-			Sky->GetLightComponent()->SetIntensity(0.65f);
-			Sky->GetLightComponent()->SetLowerHemisphereColor(
-				FLinearColor(0.04f, 0.06f, 0.09f));
+			Sky->GetLightComponent()->SetIntensity(SkyIntensity);
+			Sky->GetLightComponent()->SetLowerHemisphereColor(LowerHemisphere);
 			CreatedLabels.Add(TEXT("UEREMCP_SkyLight"));
 		}
 		AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>(FVector::ZeroVector, FRotator::ZeroRotator);
 		if (Fog)
 		{
-			Fog->SetActorLabel(TEXT("UEREMCP_RainFog"));
-			// [VERIFIED: ExponentialHeightFogComponent.h:251,257,287]
-			Fog->GetComponent()->SetFogDensity(0.025f);
+			Fog->SetActorLabel(TEXT("UEREMCP_AtmosphereFog"));
+			Fog->GetComponent()->SetFogDensity(FogDensity);
 			Fog->GetComponent()->SetFogHeightFalloff(0.12f);
-			Fog->GetComponent()->SetFogInscatteringColor(
-				FLinearColor(0.19f, 0.24f, 0.31f));
-			CreatedLabels.Add(TEXT("UEREMCP_RainFog"));
+			Fog->GetComponent()->SetFogInscatteringColor(FogColor);
+			CreatedLabels.Add(TEXT("UEREMCP_AtmosphereFog"));
 		}
 		const FVector ViewLocation(
 			-float(Spec.SizeX - 1) * Spec.ScaleXY * 0.36f,
@@ -932,8 +1579,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		const FRotator ViewRotation = (FVector::ZeroVector - ViewLocation).Rotation();
 		if (ACameraActor* Camera = World->SpawnActor<ACameraActor>(ViewLocation, ViewRotation))
 		{
-			Camera->SetActorLabel(TEXT("UEREMCP_RainyViewpoint"));
-			CreatedLabels.Add(TEXT("UEREMCP_RainyViewpoint"));
+			Camera->SetActorLabel(TEXT("UEREMCP_Viewpoint"));
+			CreatedLabels.Add(TEXT("UEREMCP_Viewpoint"));
 		}
 		if (APlayerStart* Start = World->SpawnActor<APlayerStart>(
 			ViewLocation + FVector(0.f, 0.f, -500.f), ViewRotation))
@@ -942,105 +1589,152 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			CreatedLabels.Add(TEXT("UEREMCP_PlayerStart"));
 		}
 		Tech.Add(MakeTech(TEXT("lighting"), TEXT("real"), TEXT("DirectionalLight + SkyLight + ExponentialHeightFog")));
-		Result.StructuralMetrics->SetStringField(TEXT("lighting_preset"), TEXT("rainy_overcast"));
-		Result.StructuralMetrics->SetStringField(TEXT("viewpoint"), TEXT("UEREMCP_RainyViewpoint"));
+		Result.StructuralMetrics->SetStringField(TEXT("lighting_preset"), Spec.LightingPreset);
+		Result.StructuralMetrics->SetStringField(TEXT("viewpoint"), TEXT("UEREMCP_Viewpoint"));
 		Result.InternalOperations += 5;
 	}
 
-	if (Spec.bIncludeRain)
+	int32 WeatherActorsCreated = 0;
+	TArray<TSharedPtr<FJsonValue>> WeatherBuilt;
+	for (const FUeremcpWeatherPhenomenonSpec& Phenomenon : Spec.WeatherPhenomena)
 	{
-		UNiagaraSystem* RainSys = nullptr;
-		if (!Spec.RainSystemPath.IsEmpty())
+		FString SystemPath;
+		FString CreateStatus;
+		FString WeatherError;
+		TArray<FString> WeatherNotes;
+		const bool bAssetOk = EnsurePrecipitationNiagaraSystem(
+			Phenomenon,
+			Spec,
+			Dest,
+			Request.RequestId.IsEmpty() ? TEXT("env-build") : Request.RequestId,
+			false,
+			SystemPath,
+			CreateStatus,
+			WeatherError,
+			Result.InternalOperations,
+			WeatherNotes);
+		for (const FString& Note : WeatherNotes)
 		{
-			RainSys = LoadObject<UNiagaraSystem>(nullptr, *Spec.RainSystemPath);
+			Result.CapabilityNotes.Add(Note);
 		}
-		AUeremcpWeatherFollower* RainActor = World->SpawnActor<AUeremcpWeatherFollower>(
-			FVector(0, 0, 400), FRotator::ZeroRotator);
-		if (RainActor)
+
+		const bool bIsRain = Phenomenon.Phenomenon.Equals(TEXT("rain"), ESearchCase::IgnoreCase);
+		if (!bAssetOk)
 		{
-			RainActor->SetActorLabel(TEXT("UEREMCP_Rain"));
-			if (RainSys)
+			if (bIsRain && AllowApproximateFallback(Spec))
 			{
-				RainActor->NiagaraRain->SetAsset(RainSys);
-				RainActor->FallbackRain->SetVisibility(false);
-				Tech.Add(MakeTech(
-					TEXT("rain_camera_follow"),
-					TEXT("real"),
-					TEXT("AUeremcpWeatherFollower ticks to player camera with supplied Niagara rain")));
-			}
-			else
-			{
-				RainActor->NiagaraRain->SetVisibility(false);
-				if (!Spec.FallbackPolicy.Equals(TEXT("allow_approximate"), ESearchCase::CaseSensitive))
+				AUeremcpWeatherFollower* RainActor = World->SpawnActor<AUeremcpWeatherFollower>(
+					FVector(0, 0, 400), FRotator::ZeroRotator);
+				if (RainActor)
 				{
-					DestroyOwnedEnvironmentActors(World);
-					Result.Status = TEXT("failed_validation");
-					Result.Summary = TEXT(
-						"include.rain with fallback_policy=prefer_real requires weather.rain_system_path");
-					return Result;
+					RainActor->SetActorLabel(TEXT("UEREMCP_Weather_rain"));
+					RainActor->NiagaraRain->SetVisibility(false);
+					RainActor->ConfigureFallbackRain(int32(Spec.Seed), Spec.RainStreakCount);
+					CreatedLabels.Add(RainActor->GetActorLabel());
+					++WeatherActorsCreated;
+					Tech.Add(MakeTech(
+						TEXT("weather_rain"),
+						TEXT("approximated"),
+						TEXT("Niagara create failed; streak fallback (fallback_policy=allow_approximate)")));
+					Result.Warnings.Add(WeatherError);
 				}
-				RainActor->ConfigureFallbackRain(int32(Spec.Seed), Spec.RainStreakCount);
-				Tech.Add(MakeTech(
-					TEXT("rain_camera_follow"),
-					TEXT("approximated"),
-					TEXT("Camera-follow transform is real; visible rain uses bounded instanced streak fallback (fallback_policy=allow_approximate)")));
-				Result.Warnings.Add(
-					TEXT("rain_system_path missing — using visible instanced-streak rain fallback (allow_approximate)"));
+				continue;
 			}
-			CreatedLabels.Add(TEXT("UEREMCP_Rain"));
-			bRainCreated = true;
-			Result.StructuralMetrics->SetStringField(TEXT("weather_follow"), Spec.WeatherFollow);
-			Result.StructuralMetrics->SetBoolField(TEXT("weather_follower_tick_enabled"), true);
-			Result.StructuralMetrics->SetNumberField(
-				TEXT("fallback_rain_streaks"),
-				RainSys ? 0 : RainActor->FallbackRain->GetInstanceCount());
+			DestroyOwnedEnvironmentActors(World);
+			Result.Status = TEXT("failed_validation");
+			Result.Summary = FString::Printf(
+				TEXT("weather.%s requires real Niagara (fallback_policy=%s): %s"),
+				*Phenomenon.Phenomenon.ToLower(),
+				*Spec.FallbackPolicy,
+				WeatherError.IsEmpty() ? TEXT("CreateNiagaraEffect failed") : *WeatherError);
+			Result.CapabilityNotes.Add(TEXT(
+				"Snow/hail never use streak fallback. Set fallback_policy=allow_approximate only for rain."));
+			return Result;
+		}
+
+		UNiagaraSystem* WeatherSys = LoadObject<UNiagaraSystem>(nullptr, *SystemPath);
+		AUeremcpWeatherFollower* WeatherActor = World->SpawnActor<AUeremcpWeatherFollower>(
+			FVector(0, 0, 400), FRotator::ZeroRotator);
+		if (WeatherActor && WeatherSys)
+		{
+			WeatherActor->SetActorLabel(
+				FString::Printf(TEXT("UEREMCP_Weather_%s"), *Phenomenon.Phenomenon.ToLower()));
+			WeatherActor->NiagaraRain->SetAsset(WeatherSys);
+			WeatherActor->FallbackRain->SetVisibility(false);
+			CreatedLabels.Add(WeatherActor->GetActorLabel());
+			++WeatherActorsCreated;
+			TSharedPtr<FJsonObject> Built = MakeShared<FJsonObject>();
+			Built->SetStringField(TEXT("phenomenon"), Phenomenon.Phenomenon.ToLower());
+			Built->SetStringField(TEXT("asset_path"), SystemPath);
+			Built->SetStringField(TEXT("create_status"), CreateStatus);
+			WeatherBuilt.Add(MakeShared<FJsonValueObject>(Built));
+			Tech.Add(MakeTech(
+				FString::Printf(TEXT("weather_%s"), *Phenomenon.Phenomenon.ToLower()),
+				TEXT("real"),
+				FString::Printf(TEXT("CreateNiagaraEffect + AUeremcpWeatherFollower at %s"), *SystemPath)));
 			Result.InternalOperations += 1;
 		}
 	}
-
-	if (Spec.bIncludeStructures)
+	Result.StructuralMetrics->SetNumberField(TEXT("weather_actors"), WeatherActorsCreated);
+	Result.StructuralMetrics->SetArrayField(TEXT("weather_built"), WeatherBuilt);
+	if (WeatherActorsCreated > 0)
 	{
-		// GeometryScript AppendBox along river spline [VERIFIED: MeshPrimitiveFunctions.h:168]
-		// [VERIFIED: ADynamicMeshActor DynamicMeshActor.h:16]
-		int32 Placed = 0;
-		const int32 Count = FMath::Clamp(Spec.StructureCount, 1, 32);
-		for (int32 I = 0; I < Count && I < River.Points.Num(); ++I)
+		Result.StructuralMetrics->SetStringField(TEXT("weather_follow"), Spec.WeatherFollow);
+		Result.StructuralMetrics->SetBoolField(TEXT("weather_follower_tick_enabled"), true);
+	}
+
+	int32 StructuresPlaced = 0;
+	TArray<FUeremcpStructurePlacementSpec> StructureSpecs = Spec.Structures;
+	if (Spec.bIncludeStructures && StructureSpecs.Num() == 0)
+	{
+		FUeremcpStructurePlacementSpec Legacy;
+		Legacy.Kind = TEXT("box_along_river");
+		Legacy.Count = Spec.StructureCount;
+		StructureSpecs.Add(Legacy);
+	}
+	for (const FUeremcpStructurePlacementSpec& Placement : StructureSpecs)
+	{
+		const FString Kind = Placement.Kind.ToLower();
+		if (Kind == TEXT("ice_wall_ring") || Kind == TEXT("barrier_wall"))
 		{
-			const FVector Loc = River.Points[I].Location
-				+ LandscapeOffset
-				+ FVector(River.Points[I].Width * 0.75f, 0.f, 100.f);
-			ADynamicMeshActor* Structure = World->SpawnActor<ADynamicMeshActor>(Loc, FRotator::ZeroRotator);
-			if (!Structure)
+			StructuresPlaced += PlaceIceWallRing(
+				World, Spec, Placement, LandscapeOffset, Extents, CreatedLabels);
+			Tech.Add(MakeTech(
+				TEXT("structures_ice_wall_ring"),
+				TEXT("real"),
+				TEXT("GeometryScript ring around terrain bounds [VERIFIED: MeshPrimitiveFunctions.h:168]")));
+		}
+		else if (Kind == TEXT("box_along_river"))
+		{
+			const int32 Count = FMath::Clamp(Placement.Count, 1, 32);
+			for (int32 I = 0; I < Count && I < River.Points.Num(); ++I)
 			{
-				continue;
-			}
-			Structure->SetActorLabel(FString::Printf(TEXT("UEREMCP_Structure_%d"), I));
-			if (UDynamicMeshComponent* DMC = Structure->GetDynamicMeshComponent())
-			{
-				if (UDynamicMesh* Mesh = DMC->GetDynamicMesh())
+				const FVector Loc = River.Points[I].Location
+					+ LandscapeOffset
+					+ FVector(River.Points[I].Width * 0.75f, 0.f, 100.f);
+				ADynamicMeshActor* Structure = World->SpawnActor<ADynamicMeshActor>(Loc, FRotator::ZeroRotator);
+				if (!Structure) { continue; }
+				Structure->SetActorLabel(FString::Printf(TEXT("UEREMCP_Structure_%d"), I));
+				if (UDynamicMeshComponent* DMC = Structure->GetDynamicMeshComponent())
 				{
-					FGeometryScriptPrimitiveOptions Opts;
-					UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendBox(
-						Mesh,
-						Opts,
-						FTransform::Identity,
-						200.f, 200.f, 400.f,
-						0, 0, 0,
-						EGeometryScriptPrimitiveOriginMode::Base,
-						nullptr);
-					DMC->NotifyMeshUpdated();
-					++Placed;
+					if (UDynamicMesh* Mesh = DMC->GetDynamicMesh())
+					{
+						FGeometryScriptPrimitiveOptions Opts;
+						UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendBox(
+							Mesh, Opts, FTransform::Identity,
+							200.f, 200.f, 400.f, 0, 0, 0,
+							EGeometryScriptPrimitiveOriginMode::Base, nullptr);
+						DMC->NotifyMeshUpdated();
+						++StructuresPlaced;
+						CreatedLabels.Add(Structure->GetActorLabel());
+					}
 				}
 			}
-			CreatedLabels.Add(Structure->GetActorLabel());
+			Tech.Add(MakeTech(TEXT("structures_box_along_river"), TEXT("real"), TEXT("Legacy river spline boxes")));
 		}
-		Result.StructuralMetrics->SetNumberField(TEXT("structures_placed"), Placed);
-		Tech.Add(MakeTech(
-			TEXT("structures_geometryscript"),
-			Placed > 0 ? TEXT("real") : TEXT("blocked"),
-			TEXT("ADynamicMeshActor + GeometryScript AppendBox [VERIFIED: MeshPrimitiveFunctions.h:168]")));
-		Result.InternalOperations += Placed;
 	}
+	Result.StructuralMetrics->SetNumberField(TEXT("structures_placed"), StructuresPlaced);
+	Result.InternalOperations += StructuresPlaced;
 
 	if (Spec.bCaptureScreenshot)
 	{
@@ -1082,14 +1776,17 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 
 	const bool bNonFlat = Result.StructuralMetrics->GetBoolField(TEXT("non_flat"));
 	const bool bNonFlatGate = !Spec.bIncludeTerrain || bNonFlat;
-	const bool bForestOk = !Spec.bIncludeForest || FoliageCount > 0;
-	const bool bBothBanks = !Spec.bIncludeForest || (LeftBankCount > 0 && RightBankCount > 0);
-	const bool bOpenChannel = !Spec.bIncludeForest || ExclusionViolations == 0;
+	const bool bForestOk = !Spec.WantsVegetation() || FoliageCount > 0;
+	const bool bBothBanks = !Spec.WantsVegetation() || (LeftBankCount > 0 && RightBankCount > 0);
+	const bool bOpenChannel = !Spec.WantsVegetation() || ExclusionViolations == 0;
 	const bool bRiverOk = !Spec.bIncludeRiver || bRiverCreated;
-	const bool bWeatherOk = !Spec.bIncludeRain || bRainCreated;
-	const bool bAnyBuilt = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.bIncludeForest
-		|| Spec.bIncludeRain || Spec.bIncludeLighting || Spec.bCaptureScreenshot
-		|| Spec.bIncludeStructures;
+	const bool bWeatherOk = Spec.WeatherPhenomena.Num() == 0
+		|| WeatherActorsCreated >= Spec.WeatherPhenomena.Num();
+	const bool bStructuresOk = StructureSpecs.Num() == 0
+		|| StructuresPlaced > 0;
+	const bool bAnyBuilt = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+		|| Spec.WeatherPhenomena.Num() > 0 || Spec.bIncludeLighting || Spec.bCaptureScreenshot
+		|| StructureSpecs.Num() > 0;
 
 	if (bOwnsMapLifecycle && Request.bSave)
 	{
@@ -1134,7 +1831,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			TEXT("opt-in includes: BuildEnvironment does not imply terrain/river/forest/rain unless explicitly requested."));
 	}
 	else if (bNonFlatGate && bForestOk && bBothBanks && bOpenChannel
-		&& bRiverOk && bWeatherOk && bPersistenceOk)
+		&& bRiverOk && bWeatherOk && bStructuresOk && bPersistenceOk)
 	{
 		Result.Status = Result.Warnings.IsEmpty()
 			? TEXT("created_and_validated")
@@ -1203,7 +1900,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 		{
 			++Rivers;
 		}
-		if (Label == TEXT("UEREMCP_Rain"))
+		if (Label.StartsWith(TEXT("UEREMCP_Weather_")) || Label == TEXT("UEREMCP_Rain"))
 		{
 			++Rain;
 			if (const AUeremcpWeatherFollower* Follower =

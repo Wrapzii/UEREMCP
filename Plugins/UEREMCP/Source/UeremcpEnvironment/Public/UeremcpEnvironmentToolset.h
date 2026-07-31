@@ -22,17 +22,20 @@ class UEREMCPENVIRONMENT_API UUeremcpEnvironmentToolset : public UToolsetDefinit
 	GENERATED_BODY()
 
 public:
-	virtual FString GetToolsetVersion() const override { return TEXT("0.3.0-environment-acceptance"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.4.0-environment-v2"); }
 
 	/**
-	 * Build a seeded environment with opt-in subsystems (include.* all default false).
+	 * Build a seeded environment with composable v2 blocks or legacy include.* flags.
 	 *
-	 * Use when: full mountain/river/forest/rain scene — set each include.* true explicitly.
-	 * Rain-only: include.rain true; supply weather.rain_system_path or fallback_policy=allow_approximate.
-	 * Inputs: action=build_environment; target under /Game/__UeremcpPoc/; specification.seed REQUIRED;
-	 * options.dry_run must be true for preflight; false creates, saves, reloads, and structurally validates.
-	 * Example (full scene): {"protocol_version":"1.0","action":"build_environment","request_id":"env-1","target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain/"},"options":{"dry_run":true,"validate":true,"save":true},"specification":{"seed":4471,"include":{"terrain":true,"river":true,"forest":true,"rain":true,"lighting":true},"terrain":{"size_x":127,"size_y":127,"mountain_amplitude":0.6,"valley_depth":0.18},"river":{"width":900},"biome":{"max_foliage_instances":1000,"slope_limit_deg":32},"weather":{"follow":"player_camera"},"fallback_policy":"allow_approximate"}}
-	 * Example (rain on camera only): {"protocol_version":"1.0","action":"build_environment","request_id":"env-rain","target":{"asset_path":"/Game/__UeremcpPoc/RainOnly"},"options":{"dry_run":true},"specification":{"seed":99,"include":{"rain":true},"weather":{"follow":"player_camera"},"fallback_policy":"allow_approximate"}}
+	 * v2 (presence-based): terrain.profile, hydrology.river, vegetation.mode, weather[],
+	 * structures[], lighting.preset — each block activates its subsystem.
+	 * Legacy: include.* all default false (418374c opt-in contract preserved).
+	 *
+	 * Multi-weather: snow+hail each get CreateNiagaraEffect precipitation assets; no streak fake.
+	 * Structures: ice_wall_ring places GeometryScript boxes around terrain bounds.
+	 *
+	 * Example (snow/ice/hail): see docs/research/RB-16-environment-coverage.md § Snow acceptance
+	 * Example (legacy MRR): include.terrain/river/forest/rain true with biome + river blocks.
 	 * Next: ValidateEnvironment; CaptureWorldFrames; or GetJobResult if partially_completed.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")

@@ -63,3 +63,21 @@ hundreds of placement/sculpt primitives or a second batch executor.
 - Screenshots: `tests/visual/mountain_river_rain/world_frame_00.png` and
   `world_frame_01.png`. Full call table:
   `tests/visual/MOUNTAIN_RIVER_RAIN_ACCEPTANCE.md`.
+
+## Snow / ice wall / hail acceptance (v2 composable spec)
+
+**Map:** `/Game/__UeremcpPoc/SnowIceHail`  
+**Status:** unit-tested (parse + dry-run); live mutate pending editor session.
+
+Gates after `options.dry_run=false`:
+
+| Gate | Expected |
+|---|---|
+| `structural_metrics.non_flat` | `true` |
+| `structural_metrics.structures_placed` | `> 0` |
+| `structural_metrics.weather_actors` | `2` |
+| Niagara assets | `NS_EnvSnow`, `NS_EnvHail` under scratch folder |
+| Status | `created_and_validated` or `created_with_warnings` |
+
+Router intent: *"snow map with ice walls, mountains, snow and hail"* →
+`BuildEnvironment` (see `operation_catalog.json` v2 example).

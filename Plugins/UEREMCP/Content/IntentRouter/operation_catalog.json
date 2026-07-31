@@ -410,7 +410,10 @@
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.BuildEnvironment",
       "action": "build_environment",
-      "use_when": ["landscape", "mountains", "river", "forest", "rain", "environment", "new world", "biome"],
+      "use_when": [
+        "landscape", "mountains", "river", "forest", "rain", "snow", "hail", "ice wall",
+        "blizzard", "winter biome", "environment", "new world", "biome", "weather"
+      ],
       "do_not_use_for": ["Niagara VFX authoring", "Blueprint graphs"],
       "destructive": true,
       "idempotent": true,
@@ -420,17 +423,19 @@
       "example_request": {
         "protocol_version": "1.0",
         "action": "build_environment",
-        "request_id": "env-1",
-        "target": {"asset_path": "/Game/__UeremcpPoc/MountainRiverRain"},
+        "request_id": "env-snow-ice",
+        "target": {"asset_path": "/Game/__UeremcpPoc/SnowIceHail"},
         "options": {"dry_run": true, "validate": true},
         "specification": {
-          "seed": 42,
-          "include": {"terrain": true, "river": true, "forest": true, "rain": true, "lighting": true},
-          "terrain": {"mountain_amplitude": 0.55, "valley_depth": 0.12},
-          "river": {"width": 600},
-          "biome": {"forest_bank_width": 3500, "max_foliage_instances": 800},
-          "weather": {"follow": "player_camera"},
-          "fallback_policy": "allow_approximate"
+          "schema_version": 2,
+          "seed": 8801,
+          "terrain": {"profile": "mountains", "mountain_amplitude": 0.62},
+          "weather": [
+            {"phenomenon": "snow", "intensity": 0.75, "follow_player": true},
+            {"phenomenon": "hail", "intensity": 0.35, "follow_player": true}
+          ],
+          "structures": [{"kind": "ice_wall_ring", "count": 28, "height": 900}],
+          "lighting": {"preset": "blizzard"}
         }
       }
     },

@@ -1,20 +1,23 @@
-// UEREMCP — environment build service (WS-01).
+// UEREMCP — environment build service (WS-01 / WS-16 v2).
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "UeremcpEnvelope.h"
 #include "UeremcpSpline.h"
+#include "UeremcpEnvironmentSpecTypes.h"
 
 struct FUeremcpEnvironmentBuildSpec
 {
+	int32 SchemaVersion = 2;
 	uint64 Seed = 1;
-	int32 SizeX = 127; // verts = quads+1; 2 components * 63 quads = 126 → 127 verts
+	int32 SizeX = 127;
 	int32 SizeY = 127;
 	int32 SectionsPerComponent = 1;
 	int32 QuadsPerSection = 63;
 	float ScaleXY = 100.f;
 	float ScaleZ = 100.f;
+	EUeremcpTerrainProfile TerrainProfile = EUeremcpTerrainProfile::Mountains;
 	float MountainAmplitude = 0.55f;
 	float ValleyDepth = 0.12f;
 	float RiverWidth = 600.f;
@@ -23,8 +26,8 @@ struct FUeremcpEnvironmentBuildSpec
 	float FoliageSlopeLimitDegrees = 32.f;
 	float FoliageMinNormalizedHeight = 0.02f;
 	float FoliageMaxNormalizedHeight = 0.90f;
-	FString MeshPath; // optional static mesh for foliage; empty → skip instances, report gap
-	FString RainSystemPath; // optional Niagara; empty → visible instanced-rain fallback
+	FString VegetationMode = TEXT("none");
+	FString MeshPath;
 	FString WeatherFollow = TEXT("player_camera");
 	int32 RainStreakCount = 256;
 	bool bIncludeTerrain = false;
@@ -32,11 +35,30 @@ struct FUeremcpEnvironmentBuildSpec
 	bool bIncludeForest = false;
 	bool bIncludeRain = false;
 	bool bIncludeLighting = false;
-	bool bCaptureScreenshot = false; // opt-in; prefer CaptureWorldFrames (avoids MCP hang)
+	bool bCaptureScreenshot = false;
 	bool bIncludeStructures = false;
 	int32 StructureCount = 6;
-	FString DestinationLevelPath; // /Game/__UeremcpPoc/MountainRiverRain
-	FString FallbackPolicy = TEXT("prefer_real"); // prefer_real | allow_approximate
+	FString DestinationLevelPath;
+	FString FallbackPolicy = TEXT("prefer_real");
+	FString LightingPreset = TEXT("overcast");
+	FString ViewpointMode = TEXT("auto");
+	TArray<FUeremcpWeatherPhenomenonSpec> WeatherPhenomena;
+	TArray<FUeremcpStructurePlacementSpec> Structures;
+
+	/** Legacy single-path rain override (v1 weather object). */
+	FString RainSystemPath;
+
+	bool HasAnyWeatherPhenomenon() const
+	{
+		return WeatherPhenomena.Num() > 0 || bIncludeRain;
+	}
+
+	bool WantsVegetation() const
+	{
+		return bIncludeForest
+			|| VegetationMode.Equals(TEXT("forest"), ESearchCase::IgnoreCase)
+			|| VegetationMode.Equals(TEXT("sparse"), ESearchCase::IgnoreCase);
+	}
 };
 
 struct FUeremcpEnvironmentBuildResult
@@ -57,10 +79,8 @@ namespace FUeremcpEnvironmentService
 {
 	bool ParseBuildSpec(const TSharedPtr<FJsonObject>& Spec, FUeremcpEnvironmentBuildSpec& Out, FString& OutError);
 
-	/** Reject impossible include combinations before mutating the world. */
 	bool ValidateIncludeDependencies(const FUeremcpEnvironmentBuildSpec& Spec, FString& OutError);
 
-	/** Pure heightmap generation — unit-testable without editor world. */
 	void GenerateHeightmap(
 		const FUeremcpEnvironmentBuildSpec& Spec,
 		const FUeremcpSplinePath& River,

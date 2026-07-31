@@ -2,15 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/environment/build_environment.schema.json",
   "title": "UEREMCP build_environment specification",
-  "description": "Goal-level seeded environment build (BACKLOG Tier 4–5). Extends specification only (ADR-0003). Subsystems are opt-in: set include.* true for each stage to build. Omitting include builds a level shell only (metadata). Rain is rain-only when include.rain is true and other includes are false or absent. Snow is not implemented; weather.type enum is future work (see docs/proposals/ws-16-weather-type-enum.md).",
+  "description": "Composable goal-level environment build (v2). Subsystems activate by presence (terrain.profile, hydrology.*, vegetation.mode, weather[], structures[], lighting.preset) OR legacy include.* flags (all default false). Rain/snow/hail each become real Niagara systems via CreateNiagaraEffect unless asset_path override is supplied. Streak fallback only when fallback_policy=allow_approximate and only for rain.",
   "type": "object",
   "required": ["seed"],
   "additionalProperties": true,
   "properties": {
+    "schema_version": {
+      "type": "integer",
+      "enum": [1, 2],
+      "default": 2,
+      "description": "v2 = composable blocks. v1/legacy uses include.* opt-in flags."
+    },
     "seed": {
       "type": "integer",
       "minimum": 0,
-      "description": "Mandatory determinism seed (BACKLOG 5.4). Pure function of (seed, parameters)."
+      "description": "Mandatory determinism seed (BACKLOG 5.4)."
     },
     "destination_level_path": {
       "type": "string",
@@ -20,48 +26,165 @@
       "type": "string",
       "enum": ["prefer_real", "allow_approximate"],
       "default": "prefer_real",
-      "description": "When include.rain is true: prefer_real requires weather.rain_system_path (Niagara). allow_approximate permits visible instanced-streak fallback when no system path is supplied."
+      "description": "prefer_real: CreateNiagaraEffect for rain/snow/hail or fail. allow_approximate: rain may use instanced-streak fallback when Niagara create/load fails; snow/hail never streak-fake."
     },
     "terrain": {
       "type": "object",
+      "description": "Presence of profile (v2) or include.terrain=true (legacy) builds landscape.",
       "properties": {
-        "size_x": { "type": "integer", "minimum": 2, "description": "Heightmap verts X; must be N*QuadsPerComponent+1" },
+        "profile": {
+          "type": "string",
+          "enum": ["mountains", "plateau", "canyon", "flat_with_mountains_ring"],
+          "default": "mountains"
+        },
+        "size_x": { "type": "integer", "minimum": 2 },
         "size_y": { "type": "integer", "minimum": 2 },
+        "size": { "type": "integer", "minimum": 2, "description": "Alias: square heightmap verts" },
         "mountain_amplitude": { "type": "number", "minimum": 0 },
+        "mountain_weight": { "type": "number", "minimum": 0, "description": "Alias for mountain_amplitude" },
         "valley_depth": { "type": "number", "minimum": 0 },
         "scale_xy": { "type": "number", "minimum": 1 },
-        "scale_z": { "type": "number", "minimum": 1 }
+        "scale_z": { "type": "number", "minimum": 1 },
+        "z_scale": { "type": "number", "minimum": 1, "description": "Alias for scale_z" },
+        "heightmap_recipe": {
+          "type": "object",
+          "description": "Phase 2: seeded heightmap recipe override",
+          "properties": {
+            "noise_type": { "type": "string" },
+            "octaves": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "hydrology": {
+      "type": "object",
+      "description": "Optional water bodies. Presence of river/lake/ocean block builds that body.",
+      "properties": {
+        "river": {
+          "type": "object",
+          "properties": {
+            "width": { "type": "number", "minimum": 1 },
+            "spline_points": {
+              "type": "array",
+              "items": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+            }
+          }
+        },
+        "lake": { "type": "object", "additionalProperties": true, "description": "Phase 2" },
+        "ocean": { "type": "object", "additionalProperties": true, "description": "Phase 2" }
       }
     },
     "river": {
       "type": "object",
+      "description": "DEPRECATED: use hydrology.river. Still accepted for backward compatibility.",
       "properties": {
         "width": { "type": "number", "minimum": 1 }
       }
     },
+    "vegetation": {
+      "type": "object",
+      "description": "v2 scatter rules. mode=none skips foliage.",
+      "properties": {
+        "mode": { "type": "string", "enum": ["forest", "sparse", "none"], "default": "sparse" },
+        "forest_bank_width": { "type": "number", "minimum": 1 },
+        "max_foliage_instances": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "slope_limit_deg": { "type": "number", "exclusiveMinimum": 0, "maximum": 90 },
+        "min_normalized_height": { "type": "number", "minimum": 0, "maximum": 1 },
+        "max_normalized_height": { "type": "number", "minimum": 0, "maximum": 1 },
+        "mesh_path": { "type": "string" },
+        "mask": { "type": "string", "description": "Phase 2: bank_mask | slope_mask | custom" }
+      }
+    },
     "biome": {
       "type": "object",
+      "description": "DEPRECATED: alias for vegetation (legacy MountainRiverRain).",
       "properties": {
         "forest_bank_width": { "type": "number", "minimum": 1 },
         "max_foliage_instances": { "type": "integer", "minimum": 0, "maximum": 20000 },
         "slope_limit_deg": { "type": "number", "exclusiveMinimum": 0, "maximum": 90 },
         "min_normalized_height": { "type": "number", "minimum": 0, "maximum": 1 },
         "max_normalized_height": { "type": "number", "minimum": 0, "maximum": 1 },
-        "mesh_path": { "type": "string", "description": "Static mesh for foliage instances" }
+        "mesh_path": { "type": "string" }
       }
     },
     "weather": {
+      "oneOf": [
+        {
+          "type": "array",
+          "description": "v2: multiple simultaneous phenomena (snow + hail + rain).",
+          "items": {
+            "type": "object",
+            "required": ["phenomenon"],
+            "properties": {
+              "phenomenon": { "type": "string", "enum": ["rain", "snow", "hail", "fog"] },
+              "intensity": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 },
+              "follow_player": { "type": "boolean", "default": true },
+              "follow": { "type": "string", "enum": ["player_camera", "player_pawn"], "default": "player_camera" },
+              "asset_path": { "type": "string", "description": "Override UNiagaraSystem path" },
+              "material_hints": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "DEPRECATED v1 rain-only object.",
+          "properties": {
+            "rain_system_path": { "type": "string" },
+            "follow": { "type": "string", "enum": ["player_camera", "player_pawn"], "default": "player_camera" },
+            "streak_count": { "type": "integer", "minimum": 32, "maximum": 512, "default": 256 }
+          }
+        }
+      ]
+    },
+    "structures": {
+      "oneOf": [
+        {
+          "type": "array",
+          "description": "v2 declarative structure list.",
+          "items": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["ice_wall_ring", "barrier_wall", "box_along_river"] },
+              "count": { "type": "integer", "minimum": 1, "maximum": 128, "default": 24 },
+              "height": { "type": "number", "minimum": 50, "default": 400 },
+              "thickness": { "type": "number", "minimum": 10, "default": 200 },
+              "width": { "type": "number", "minimum": 10, "default": 200 },
+              "placement": { "type": "string", "enum": ["terrain_bounds", "spline", "river"], "default": "terrain_bounds" },
+              "material_path": { "type": "string" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "DEPRECATED v1 single-structure block.",
+          "properties": {
+            "count": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "lighting": {
       "type": "object",
-      "description": "Rain-only weather today. Snow and weather.type selection are not implemented.",
       "properties": {
-        "rain_system_path": { "type": "string", "description": "Niagara system for rain. Required when include.rain is true and fallback_policy=prefer_real (default)." },
-        "follow": { "type": "string", "enum": ["player_camera", "player_pawn"], "default": "player_camera" },
-        "streak_count": { "type": "integer", "minimum": 32, "maximum": 512, "default": 256, "description": "Instanced-streak count when fallback_policy=allow_approximate and rain_system_path is absent." }
+        "preset": {
+          "type": "string",
+          "enum": ["overcast", "blizzard", "clear", "rainy_overcast"],
+          "default": "overcast"
+        },
+        "fog_density": { "type": "number", "minimum": 0 },
+        "sun_intensity": { "type": "number", "minimum": 0 }
+      }
+    },
+    "viewpoint": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["auto", "three_quarter", "top_down"], "default": "auto" }
       }
     },
     "include": {
       "type": "object",
-      "description": "Opt-in subsystem flags. All default false — only stages set true are built.",
+      "description": "Legacy opt-in flags. All default false when include block is present.",
       "properties": {
         "terrain": { "type": "boolean", "default": false },
         "river": { "type": "boolean", "default": false },
@@ -81,6 +204,20 @@
   },
   "examples": [
     {
+      "schema_version": 2,
+      "seed": 8801,
+      "destination_level_path": "/Game/__UeremcpPoc/SnowIceHail",
+      "terrain": { "profile": "mountains", "mountain_amplitude": 0.62, "scale_z": 120 },
+      "weather": [
+        { "phenomenon": "snow", "intensity": 0.75, "follow_player": true },
+        { "phenomenon": "hail", "intensity": 0.35, "follow_player": true }
+      ],
+      "structures": [
+        { "kind": "ice_wall_ring", "count": 28, "height": 900, "thickness": 250, "placement": "terrain_bounds" }
+      ],
+      "lighting": { "preset": "blizzard" }
+    },
+    {
       "seed": 99,
       "destination_level_path": "/Game/__UeremcpPoc/RainOnly",
       "include": { "rain": true },
@@ -93,9 +230,7 @@
       "terrain": { "mountain_amplitude": 0.55, "valley_depth": 0.12 },
       "river": { "width": 600 },
       "biome": { "forest_bank_width": 3500, "max_foliage_instances": 800 },
-      "weather": { "follow": "player_camera" },
-      "fallback_policy": "allow_approximate",
-      "include": { "terrain": true, "river": true, "forest": true, "rain": true, "lighting": true, "capture": false }
+      "include": { "terrain": true, "river": true, "forest": true, "rain": true, "lighting": true }
     }
   ]
 }
