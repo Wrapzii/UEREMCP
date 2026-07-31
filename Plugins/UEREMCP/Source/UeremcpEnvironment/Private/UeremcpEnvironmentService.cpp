@@ -224,7 +224,7 @@ namespace
 			TEXT("name"),
 			FString::Printf(
 				TEXT("NS_Env%s"),
-				*FString(Key.Left(1).ToUpper() + Key.Mid(1)));
+				*FString(Key.Left(1).ToUpper() + Key.Mid(1))));
 
 		TArray<TSharedPtr<FJsonValue>> Components;
 		for (const FString& Role : ComponentRoles)
