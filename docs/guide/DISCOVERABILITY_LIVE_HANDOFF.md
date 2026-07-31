@@ -63,4 +63,3 @@ Epic discovery (logs, assets, scene/object inspection, Niagara info/assets,
 material instances, capture fallback, and ProgrammaticToolset recovery).
 `gen_focus_config.py --write` therefore runs all gates and then refuses the
 unsafe global write.
-
