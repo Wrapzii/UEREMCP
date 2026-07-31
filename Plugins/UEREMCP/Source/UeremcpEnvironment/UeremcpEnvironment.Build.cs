@@ -40,6 +40,8 @@ public class UeremcpEnvironment : ModuleRules
 			"UeremcpSecurity",
 			"ToolsetRegistry",
 			"UeremcpProtocol",
+			// Compose CreateNiagaraEffect for real rain systems (no silent streak fallback).
+			"UeremcpNiagara",
 		});
 
 		// Water is optional at compile time when the plugin is present.

@@ -131,6 +131,61 @@ bool FUeremcpEnvironmentParseAliasesTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("lighting opt-in default"), Spec.bIncludeLighting);
 	TestEqual(TEXT("missing river width keeps default"), Spec.RiverWidth, 600.f);
 	TestEqual(TEXT("missing forest width keeps default"), Spec.ForestBankWidth, 3500.f);
+	TestEqual(TEXT("default fallback prefer_real"), Spec.FallbackPolicy, FString(TEXT("prefer_real")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpEnvironmentRainFallbackPolicyParseTest,
+	"UEREMCP.Environment.Spec.RainFallbackPolicy",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FUeremcpEnvironmentRainFallbackPolicyParseTest::RunTest(const FString& Parameters)
+{
+	const FString SpecJson = TEXT(R"({
+		"seed":7,
+		"fallback_policy":"allow_approximate",
+		"weather":{"follow":"player_camera","streak_count":128},
+		"include":{"rain":true,"terrain":false,"river":false,"forest":false,"lighting":false}
+	})");
+	TSharedPtr<FJsonObject> SpecObj;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SpecJson);
+	TestTrue(TEXT("parse"), FJsonSerializer::Deserialize(Reader, SpecObj) && SpecObj.IsValid());
+	FUeremcpEnvironmentBuildSpec Spec;
+	FString Err;
+	TestTrue(TEXT("ParseBuildSpec"), FUeremcpEnvironmentService::ParseBuildSpec(SpecObj, Spec, Err));
+	TestEqual(TEXT("opt-in approximate"), Spec.FallbackPolicy, FString(TEXT("allow_approximate")));
+	TestEqual(TEXT("streak count"), Spec.RainStreakCount, 128);
+	TestTrue(TEXT("rain included"), Spec.bIncludeRain);
+	TestFalse(TEXT("terrain excluded"), Spec.bIncludeTerrain);
+
+	const FString Dry = TEXT(R"({
+		"protocol_version":"1.0",
+		"action":"build_environment",
+		"request_id":"env-rain-dry-1",
+		"target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain"},
+		"options":{"dry_run":true,"validate":true},
+		"specification":{"seed":42,"include":{"capture":false},"fallback_policy":"prefer_real","weather":{"follow":"player_camera"}}
+	})");
+	const FString Json = UUeremcpEnvironmentToolset::BuildEnvironment(Dry);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> OutReader = TJsonReaderFactory<>::Create(Json);
+	TestTrue(TEXT("parse dry"), FJsonSerializer::Deserialize(OutReader, Root) && Root.IsValid());
+	TestEqual(TEXT("dry status"), Root->GetStringField(TEXT("status")), FString(TEXT("no_change_required")));
+	const TSharedPtr<FJsonObject>* Extra = nullptr;
+	TestTrue(TEXT("extra"), Root->TryGetObjectField(TEXT("extra"), Extra) || Root->TryGetObjectField(TEXT("structural_metrics"), Extra));
+	// Envelope puts structural_metrics under extra when present.
+	const TSharedPtr<FJsonObject>* Metrics = nullptr;
+	if (Root->TryGetObjectField(TEXT("extra"), Extra) && Extra && (*Extra)->TryGetObjectField(TEXT("structural_metrics"), Metrics))
+	{
+		TestTrue(
+			TEXT("dry rain path planned"),
+			(*Metrics)->HasField(TEXT("rain_niagara_path")));
+		TestFalse(
+			TEXT("dry rain not approximated by default"),
+			(*Metrics)->HasField(TEXT("rain_approximated"))
+				&& (*Metrics)->GetBoolField(TEXT("rain_approximated")));
+	}
 	return true;
 }
 

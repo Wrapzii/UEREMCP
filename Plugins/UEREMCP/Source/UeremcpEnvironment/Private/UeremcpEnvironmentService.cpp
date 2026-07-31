@@ -43,11 +43,218 @@
 #include "FileHelpers.h"
 #include "ScopedTransaction.h"
 #include "UeremcpWeatherFollower.h"
+#include "UeremcpNiagaraToolset.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 
 #define UEREMCP_HAS_WATER 1
 
 namespace
 {
+	bool AllowApproximateFallback(const FUeremcpEnvironmentBuildSpec& Spec)
+	{
+		return Spec.FallbackPolicy.Equals(TEXT("allow_approximate"), ESearchCase::IgnoreCase);
+	}
+
+	FString DefaultRainSystemPathForDestination(const FString& Dest)
+	{
+		FString Folder = Dest;
+		while (Folder.EndsWith(TEXT("/")))
+		{
+			Folder.LeftChopInline(1);
+		}
+		return Folder / TEXT("NS_EnvRain");
+	}
+
+	TSharedPtr<FJsonObject> MakeWaterCoreMaterialCreateSpec()
+	{
+		TSharedPtr<FJsonObject> CreateSpec = MakeShared<FJsonObject>();
+		CreateSpec->SetStringField(TEXT("purpose"), TEXT("elemental_projectile_core"));
+		CreateSpec->SetStringField(TEXT("element"), TEXT("water"));
+		TArray<TSharedPtr<FJsonValue>> Features;
+		Features.Add(MakeShared<FJsonValueString>(TEXT("radial_falloff")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("animated_noise")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("fresnel")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_color")));
+		Features.Add(MakeShared<FJsonValueString>(TEXT("dynamic_intensity")));
+		CreateSpec->SetArrayField(TEXT("features"), Features);
+		return CreateSpec;
+	}
+
+	/**
+	 * Create (or reuse) a real UNiagaraSystem for rain via UeremcpNiagara.CreateNiagaraEffect.
+	 * [VERIFIED: composes UNiagaraExternalEditUtilities through WS-07 toolset]
+	 */
+	bool EnsureRainNiagaraSystem(
+		const FUeremcpEnvironmentBuildSpec& Spec,
+		const FString& Dest,
+		const FString& RequestId,
+		bool bDryRun,
+		FString& OutSystemPath,
+		FString& OutCreateStatus,
+		FString& OutError,
+		int32& InOutOps,
+		TArray<FString>& OutNotes)
+	{
+		OutError.Reset();
+		OutCreateStatus.Reset();
+		OutSystemPath = Spec.RainSystemPath;
+		if (OutSystemPath.IsEmpty())
+		{
+			OutSystemPath = DefaultRainSystemPathForDestination(Dest);
+		}
+
+		if (!OutSystemPath.StartsWith(TEXT("/Game/__UeremcpPoc/"))
+			&& !OutSystemPath.StartsWith(TEXT("/Game/__UeremcpTests/")))
+		{
+			OutError = FString::Printf(
+				TEXT("Rain Niagara path '%s' must be under /Game/__UeremcpPoc/ or /Game/__UeremcpTests/."),
+				*OutSystemPath);
+			return false;
+		}
+
+		if (!Spec.RainSystemPath.IsEmpty() && !bDryRun)
+		{
+			if (LoadObject<UNiagaraSystem>(nullptr, *OutSystemPath))
+			{
+				OutCreateStatus = TEXT("reused_existing");
+				OutNotes.Add(FString::Printf(
+					TEXT("Using caller-supplied rain Niagara at %s."), *OutSystemPath));
+				return true;
+			}
+			OutError = FString::Printf(
+				TEXT("weather.rain_system_path '%s' could not be loaded as UNiagaraSystem."),
+				*OutSystemPath);
+			return false;
+		}
+
+		TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+		Root->SetStringField(TEXT("protocol_version"), TEXT("1.0"));
+		Root->SetStringField(TEXT("action"), TEXT("create_niagara_effect"));
+		Root->SetStringField(
+			TEXT("request_id"),
+			FString::Printf(TEXT("%s-rain"), *RequestId));
+		Root->SetStringField(TEXT("mode"), TEXT("replace"));
+		Root->SetStringField(
+			TEXT("idempotency_key"),
+			FString::Printf(TEXT("env-rain-%s"), *OutSystemPath));
+
+		TSharedPtr<FJsonObject> Target = MakeShared<FJsonObject>();
+		Target->SetStringField(TEXT("asset_path"), OutSystemPath);
+		Root->SetObjectField(TEXT("target"), Target);
+
+		TSharedPtr<FJsonObject> Options = MakeShared<FJsonObject>();
+		Options->SetBoolField(TEXT("dry_run"), bDryRun);
+		Options->SetBoolField(TEXT("compile"), true);
+		Options->SetBoolField(TEXT("validate"), true);
+		Options->SetBoolField(TEXT("save"), true);
+		Root->SetObjectField(TEXT("options"), Options);
+
+		TSharedPtr<FJsonObject> Specification = MakeShared<FJsonObject>();
+		Specification->SetStringField(TEXT("effect_type"), TEXT("precipitation"));
+		Specification->SetStringField(TEXT("element"), TEXT("water"));
+		Specification->SetStringField(TEXT("name"), TEXT("NS_EnvRain"));
+
+		// Matches UeremcpNiagaraRoles::DefaultPrecipitationComponentRoles (rain+mist).
+		TArray<TSharedPtr<FJsonValue>> Components;
+		Components.Add(MakeShared<FJsonValueString>(TEXT("rain")));
+		Components.Add(MakeShared<FJsonValueString>(TEXT("mist")));
+		Specification->SetArrayField(TEXT("components"), Components);
+
+		TSharedPtr<FJsonObject> Parameters = MakeShared<FJsonObject>();
+		TArray<TSharedPtr<FJsonValue>> PrimaryColor;
+		PrimaryColor.Add(MakeShared<FJsonValueNumber>(0.55));
+		PrimaryColor.Add(MakeShared<FJsonValueNumber>(0.70));
+		PrimaryColor.Add(MakeShared<FJsonValueNumber>(0.85));
+		PrimaryColor.Add(MakeShared<FJsonValueNumber>(0.65));
+		Parameters->SetArrayField(TEXT("primary_color"), PrimaryColor);
+		Parameters->SetNumberField(TEXT("scale"), 1.25);
+		Parameters->SetNumberField(TEXT("intensity"), 5.0);
+		Specification->SetObjectField(TEXT("parameters"), Parameters);
+
+		TSharedPtr<FJsonObject> Materials = MakeShared<FJsonObject>();
+		for (const TCHAR* Role : { TEXT("rain"), TEXT("mist") })
+		{
+			TSharedPtr<FJsonObject> RoleMat = MakeShared<FJsonObject>();
+			RoleMat->SetObjectField(TEXT("create_spec"), MakeWaterCoreMaterialCreateSpec());
+			RoleMat->SetBoolField(TEXT("reuse_if_present"), true);
+			Materials->SetObjectField(Role, RoleMat);
+		}
+		Specification->SetObjectField(TEXT("materials"), Materials);
+		Root->SetObjectField(TEXT("specification"), Specification);
+
+		FString RequestJson;
+		{
+			TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&RequestJson);
+			FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
+		}
+
+		const FString ResponseJson = UUeremcpNiagaraToolset::CreateNiagaraEffect(RequestJson);
+		++InOutOps;
+
+		TSharedPtr<FJsonObject> ResponseRoot;
+		const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseJson);
+		if (!FJsonSerializer::Deserialize(Reader, ResponseRoot) || !ResponseRoot.IsValid())
+		{
+			OutError = TEXT("CreateNiagaraEffect returned unparseable JSON for rain.");
+			return false;
+		}
+
+		OutCreateStatus = ResponseRoot->GetStringField(TEXT("status"));
+		const FString Summary = ResponseRoot->GetStringField(TEXT("summary"));
+		OutNotes.Add(FString::Printf(
+			TEXT("CreateNiagaraEffect(precipitation) status=%s — %s"),
+			*OutCreateStatus,
+			*Summary));
+
+		if (bDryRun)
+		{
+			return OutCreateStatus != TEXT("rejected")
+				&& OutCreateStatus != TEXT("failed_validation");
+		}
+
+		const bool bStatusOk =
+			OutCreateStatus == TEXT("created_and_validated")
+			|| OutCreateStatus == TEXT("modified_and_validated")
+			|| OutCreateStatus == TEXT("created_with_warnings")
+			|| OutCreateStatus == TEXT("partially_completed")
+			|| OutCreateStatus == TEXT("no_change_required");
+		if (!bStatusOk)
+		{
+			OutError = FString::Printf(
+				TEXT("CreateNiagaraEffect failed for rain (%s): %s"),
+				*OutCreateStatus,
+				*Summary);
+			return false;
+		}
+
+		UNiagaraSystem* Created = LoadObject<UNiagaraSystem>(nullptr, *OutSystemPath);
+		if (!Created)
+		{
+			const FString ObjectPath = FString::Printf(
+				TEXT("%s.%s"),
+				*OutSystemPath,
+				*FPackageName::GetLongPackageAssetName(OutSystemPath));
+			Created = LoadObject<UNiagaraSystem>(nullptr, *ObjectPath);
+		}
+		if (!Created)
+		{
+			OutError = FString::Printf(
+				TEXT("CreateNiagaraEffect reported %s but UNiagaraSystem missing at '%s'."),
+				*OutCreateStatus,
+				*OutSystemPath);
+			return false;
+		}
+
+		if (OutCreateStatus == TEXT("partially_completed"))
+		{
+			OutNotes.Add(TEXT(
+				"Rain Niagara asset exists and loaded; CreateNiagaraEffect stayed partially_completed "
+				"(POC B six-role validated status not required for precipitation)."));
+		}
+		return true;
+	}
 	bool PathIsScratch(const FString& Path)
 	{
 		return Path.StartsWith(TEXT("/Game/__UeremcpPoc/"))
@@ -459,7 +666,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.StructuralMetrics = HeightMetrics;
 	const FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
 	const uint32 RevisionCrc = FCrc::StrCrc32(*FString::Printf(
-		TEXT("env-impl-3|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d"),
+		TEXT("env-rain-niagara-v1|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d"),
 		*HeightmapHash,
 		Spec.Seed,
 		Spec.SizeX,
@@ -511,13 +718,55 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		}
 		if (Spec.bIncludeRain)
 		{
-			const bool bRainReal = !Spec.RainSystemPath.IsEmpty();
-			Tech.Add(MakeTech(
-				TEXT("rain_camera_follow"),
-				bRainReal ? FString(TEXT("real")) : FString(TEXT("approximated")),
-				bRainReal
-					? TEXT("Niagara component attach to viewport/player camera when system path provided")
-					: TEXT("Visible instanced-streak fallback (fallback_policy=allow_approximate)")));
+			FString PlannedRainPath;
+			FString RainCreateStatus;
+			FString RainError;
+			TArray<FString> RainNotes;
+			const bool bRainPlanOk = EnsureRainNiagaraSystem(
+				Spec,
+				Dest,
+				Request.RequestId.IsEmpty() ? TEXT("env-dry") : Request.RequestId,
+				true,
+				PlannedRainPath,
+				RainCreateStatus,
+				RainError,
+				Result.InternalOperations,
+				RainNotes);
+			for (const FString& Note : RainNotes)
+			{
+				Result.CapabilityNotes.Add(Note);
+			}
+			if (bRainPlanOk)
+			{
+				Tech.Add(MakeTech(
+					TEXT("rain_camera_follow"),
+					TEXT("real"),
+					FString::Printf(
+						TEXT("CreateNiagaraEffect precipitation → %s; AUeremcpWeatherFollower camera follow"),
+						*PlannedRainPath)));
+				Result.StructuralMetrics->SetStringField(TEXT("rain_niagara_path"), PlannedRainPath);
+				Result.StructuralMetrics->SetBoolField(TEXT("rain_approximated"), false);
+			}
+			else if (AllowApproximateFallback(Spec))
+			{
+				Tech.Add(MakeTech(
+					TEXT("rain_camera_follow"),
+					TEXT("approximated"),
+					TEXT("fallback_policy=allow_approximate: streak fallback planned (opt-in only)")));
+				Result.StructuralMetrics->SetBoolField(TEXT("rain_approximated"), true);
+				Result.Warnings.Add(FString::Printf(
+					TEXT("Rain Niagara dry-run plan failed (%s); streak fallback opted in via fallback_policy."),
+					*RainError));
+			}
+			else
+			{
+				Tech.Add(MakeTech(
+					TEXT("rain_camera_follow"),
+					TEXT("blocked"),
+					FString::Printf(TEXT("Rain Niagara create required; dry-run plan error: %s"), *RainError)));
+				Result.StructuralMetrics->SetBoolField(TEXT("rain_approximated"), false);
+				Result.CapabilityNotes.Add(RainError);
+			}
 		}
 		if (Spec.bIncludeLighting)
 		{
@@ -959,52 +1208,116 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 
 	if (Spec.bIncludeRain)
 	{
-		UNiagaraSystem* RainSys = nullptr;
-		if (!Spec.RainSystemPath.IsEmpty())
+		FString RainPath;
+		FString RainCreateStatus;
+		FString RainError;
+		TArray<FString> RainNotes;
+		const bool bRainAssetOk = EnsureRainNiagaraSystem(
+			Spec,
+			Dest,
+			Request.RequestId.IsEmpty() ? TEXT("env-build") : Request.RequestId,
+			false,
+			RainPath,
+			RainCreateStatus,
+			RainError,
+			Result.InternalOperations,
+			RainNotes);
+		for (const FString& Note : RainNotes)
 		{
-			RainSys = LoadObject<UNiagaraSystem>(nullptr, *Spec.RainSystemPath);
+			Result.CapabilityNotes.Add(Note);
 		}
-		AUeremcpWeatherFollower* RainActor = World->SpawnActor<AUeremcpWeatherFollower>(
-			FVector(0, 0, 400), FRotator::ZeroRotator);
-		if (RainActor)
+
+		UNiagaraSystem* RainSys = nullptr;
+		if (bRainAssetOk)
 		{
-			RainActor->SetActorLabel(TEXT("UEREMCP_Rain"));
-			if (RainSys)
+			RainSys = LoadObject<UNiagaraSystem>(nullptr, *RainPath);
+			if (!RainSys)
 			{
-				RainActor->NiagaraRain->SetAsset(RainSys);
-				RainActor->FallbackRain->SetVisibility(false);
-				Tech.Add(MakeTech(
-					TEXT("rain_camera_follow"),
-					TEXT("real"),
-					TEXT("AUeremcpWeatherFollower ticks to player camera with supplied Niagara rain")));
+				const FString ObjectPath = FString::Printf(
+					TEXT("%s.%s"),
+					*RainPath,
+					*FPackageName::GetLongPackageAssetName(RainPath));
+				RainSys = LoadObject<UNiagaraSystem>(nullptr, *ObjectPath);
 			}
-			else
+		}
+
+		const bool bUseStreakFallback = !RainSys && AllowApproximateFallback(Spec);
+		if (!RainSys && !bUseStreakFallback)
+		{
+			Tech.Add(MakeTech(
+				TEXT("rain_camera_follow"),
+				TEXT("blocked"),
+				FString::Printf(
+					TEXT("Real Niagara rain required (fallback_policy=%s); %s"),
+					*Spec.FallbackPolicy,
+					RainError.IsEmpty() ? TEXT("CreateNiagaraEffect/load failed") : *RainError)));
+			Result.StructuralMetrics->SetBoolField(TEXT("rain_approximated"), false);
+			Result.StructuralMetrics->SetBoolField(TEXT("rain_niagara_created"), false);
+			Result.CapabilityNotes.Add(TEXT(
+				"Core requested rain must be a real UNiagaraSystem. Streak fallback is opt-in only via "
+				"specification.fallback_policy=allow_approximate."));
+			if (!RainError.IsEmpty())
 			{
-				RainActor->NiagaraRain->SetVisibility(false);
-				if (!Spec.FallbackPolicy.Equals(TEXT("allow_approximate"), ESearchCase::CaseSensitive))
+				Result.CapabilityNotes.Add(RainError);
+			}
+			// bRainCreated stays false → failed_validation at structural gate.
+		}
+		else
+		{
+			AUeremcpWeatherFollower* RainActor = World->SpawnActor<AUeremcpWeatherFollower>(
+				FVector(0, 0, 400), FRotator::ZeroRotator);
+			if (RainActor)
+			{
+				RainActor->SetActorLabel(TEXT("UEREMCP_Rain"));
+				if (RainSys)
 				{
-					DestroyOwnedEnvironmentActors(World);
-					Result.Status = TEXT("failed_validation");
-					Result.Summary = TEXT(
-						"include.rain with fallback_policy=prefer_real requires weather.rain_system_path");
-					return Result;
+					RainActor->NiagaraRain->SetAsset(RainSys);
+					RainActor->NiagaraRain->SetVisibility(true);
+					RainActor->NiagaraRain->Activate(true);
+					RainActor->FallbackRain->SetVisibility(false);
+					RainActor->bRainApproximated = false;
+					RainActor->BoundRainSystemPath = RainPath;
+					RainActor->Tags.Add(FName(TEXT("UEREMCP_RAIN_TECH=real")));
+					Tech.Add(MakeTech(
+						TEXT("rain_camera_follow"),
+						TEXT("real"),
+						FString::Printf(
+							TEXT("AUeremcpWeatherFollower + UNiagaraSystem %s (create_status=%s)"),
+							*RainPath,
+							*RainCreateStatus)));
+					Result.StructuralMetrics->SetStringField(TEXT("rain_niagara_path"), RainPath);
+					Result.StructuralMetrics->SetStringField(TEXT("rain_create_status"), RainCreateStatus);
+					Result.StructuralMetrics->SetBoolField(TEXT("rain_approximated"), false);
+					Result.StructuralMetrics->SetBoolField(TEXT("rain_niagara_created"), true);
+					Result.ChangeManifest->SetStringField(TEXT("rain_niagara_path"), RainPath);
 				}
-				RainActor->ConfigureFallbackRain(int32(Spec.Seed), Spec.RainStreakCount);
-				Tech.Add(MakeTech(
-					TEXT("rain_camera_follow"),
-					TEXT("approximated"),
-					TEXT("Camera-follow transform is real; visible rain uses bounded instanced streak fallback (fallback_policy=allow_approximate)")));
-				Result.Warnings.Add(
-					TEXT("rain_system_path missing — using visible instanced-streak rain fallback (allow_approximate)"));
+				else
+				{
+					RainActor->NiagaraRain->SetVisibility(false);
+					RainActor->ConfigureFallbackRain(int32(Spec.Seed), Spec.RainStreakCount);
+					RainActor->bRainApproximated = true;
+					RainActor->BoundRainSystemPath.Reset();
+					RainActor->Tags.Add(FName(TEXT("UEREMCP_RAIN_TECH=approximated")));
+					Tech.Add(MakeTech(
+						TEXT("rain_camera_follow"),
+						TEXT("approximated"),
+						TEXT("fallback_policy=allow_approximate: camera-follow real; HISMC streak visuals")));
+					Result.Warnings.Add(FString::Printf(
+						TEXT("approximated=true: rain Niagara unavailable (%s); streak fallback opted in."),
+						RainError.IsEmpty() ? TEXT("unknown") : *RainError));
+					Result.StructuralMetrics->SetBoolField(TEXT("rain_approximated"), true);
+					Result.StructuralMetrics->SetBoolField(TEXT("rain_niagara_created"), false);
+					Result.StructuralMetrics->SetBoolField(TEXT("approximated"), true);
+				}
+				CreatedLabels.Add(TEXT("UEREMCP_Rain"));
+				bRainCreated = true;
+				Result.StructuralMetrics->SetStringField(TEXT("weather_follow"), Spec.WeatherFollow);
+				Result.StructuralMetrics->SetBoolField(TEXT("weather_follower_tick_enabled"), true);
+				Result.StructuralMetrics->SetNumberField(
+					TEXT("fallback_rain_streaks"),
+					RainSys ? 0 : RainActor->FallbackRain->GetInstanceCount());
+				Result.InternalOperations += 1;
 			}
-			CreatedLabels.Add(TEXT("UEREMCP_Rain"));
-			bRainCreated = true;
-			Result.StructuralMetrics->SetStringField(TEXT("weather_follow"), Spec.WeatherFollow);
-			Result.StructuralMetrics->SetBoolField(TEXT("weather_follower_tick_enabled"), true);
-			Result.StructuralMetrics->SetNumberField(
-				TEXT("fallback_rain_streaks"),
-				RainSys ? 0 : RainActor->FallbackRain->GetInstanceCount());
-			Result.InternalOperations += 1;
 		}
 	}
 
@@ -1223,6 +1536,14 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 				WeatherFollowDistance = FVector::Distance(
 					Follower->FirstTrackedLocation,
 					Follower->LastTrackedLocation);
+				Result.StructuralMetrics->SetBoolField(
+					TEXT("rain_approximated"), Follower->bRainApproximated);
+				Result.StructuralMetrics->SetStringField(
+					TEXT("rain_niagara_path"), Follower->BoundRainSystemPath);
+				const bool bHasNiagaraAsset =
+					Follower->NiagaraRain
+					&& Follower->NiagaraRain->GetAsset() != nullptr;
+				Result.StructuralMetrics->SetBoolField(TEXT("rain_niagara_bound"), bHasNiagaraAsset);
 			}
 		}
 		if (Label.Contains(TEXT("UEREMCP_Forest")))
@@ -1360,16 +1681,31 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Validate(
 	const bool bBothBanks = LeftBank > 0 && RightBank > 0;
 	const bool bOpenChannel = ExclusionViolations == 0;
 	bool bRequireWeatherFollow = false;
+	bool bAllowApproximatedRain = false;
+	bool bRequireRealRain = true;
 	if (Gates.IsValid())
 	{
 		Gates->TryGetBoolField(TEXT("require_weather_follow_10m"), bRequireWeatherFollow);
+		Gates->TryGetBoolField(TEXT("allow_approximated_rain"), bAllowApproximatedRain);
+		Gates->TryGetBoolField(TEXT("require_real_rain"), bRequireRealRain);
 	}
 	const bool bWeatherFollowed = Inspected.StructuralMetrics->GetBoolField(
 		TEXT("weather_followed_10m"));
+	const bool bRainApproximated = Inspected.StructuralMetrics->HasField(TEXT("rain_approximated"))
+		&& Inspected.StructuralMetrics->GetBoolField(TEXT("rain_approximated"));
+	const bool bRainNiagaraBound = Inspected.StructuralMetrics->HasField(TEXT("rain_niagara_bound"))
+		&& Inspected.StructuralMetrics->GetBoolField(TEXT("rain_niagara_bound"));
+	const bool bRainRealOk = !bHasRain
+		|| bAllowApproximatedRain
+		|| !bRequireRealRain
+		|| (bRainNiagaraBound && !bRainApproximated);
 	GateResult->SetBoolField(TEXT("has_landscape"), bHasLandscape);
 	GateResult->SetBoolField(TEXT("has_river"), bHasRiver);
 	GateResult->SetBoolField(TEXT("has_forest"), bHasForest);
 	GateResult->SetBoolField(TEXT("has_rain"), bHasRain);
+	GateResult->SetBoolField(TEXT("rain_approximated"), bRainApproximated);
+	GateResult->SetBoolField(TEXT("rain_niagara_bound"), bRainNiagaraBound);
+	GateResult->SetBoolField(TEXT("rain_real_ok"), bRainRealOk);
 	GateResult->SetBoolField(TEXT("non_flat"), bNonFlat);
 	GateResult->SetNumberField(TEXT("reloaded_height_range_cm"), ReloadedHeightRange);
 	GateResult->SetBoolField(TEXT("river_continuous"), bRiverContinuous);
@@ -1388,11 +1724,17 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Validate(
 	const bool bOk = bHasLandscape && bHasRiver && bHasForest && bHasRain
 		&& bNonFlat && bRiverContinuous && bBothBanks && bOpenChannel
 		&& FoliageInstances > 0
+		&& bRainRealOk
 		&& (!bRequireWeatherFollow || bWeatherFollowed);
 	Inspected.Status = bOk ? TEXT("no_change_required") : TEXT("failed_validation");
 	Inspected.Summary = bOk
-		? TEXT("ValidateEnvironment: non-flat landscape, continuous river, both-bank forest, open channel, rain gates passed.")
+		? TEXT("ValidateEnvironment: non-flat landscape, continuous river, both-bank forest, open channel, real Niagara rain gates passed.")
 		: TEXT("ValidateEnvironment: one or more structural/PIE gates failed; inspect structural_metrics.gates.");
+	if (!bRainRealOk)
+	{
+		Inspected.CapabilityNotes.Add(TEXT(
+			"Rain gate failed: streak/HISMC approximation is not valid unless gates.allow_approximated_rain=true."));
+	}
 	Inspected.CapabilityNotes.Add(TEXT("Screenshot/human review still required for 'looks good' (BACKLOG 5.8)."));
 	return Inspected;
 }

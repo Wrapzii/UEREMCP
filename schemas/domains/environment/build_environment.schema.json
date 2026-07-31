@@ -20,7 +20,7 @@
       "type": "string",
       "enum": ["prefer_real", "allow_approximate"],
       "default": "prefer_real",
-      "description": "When include.rain is true: prefer_real requires weather.rain_system_path (Niagara). allow_approximate permits visible instanced-streak fallback when no system path is supplied."
+      "description": "When include.rain is true: prefer_real creates/loads real Niagara rain (or requires weather.rain_system_path). allow_approximate permits visible instanced-streak fallback when Niagara create/load fails."
     },
     "terrain": {
       "type": "object",
@@ -54,9 +54,18 @@
       "type": "object",
       "description": "Rain-only weather today. Snow and weather.type selection are not implemented.",
       "properties": {
-        "rain_system_path": { "type": "string", "description": "Niagara system for rain. Required when include.rain is true and fallback_policy=prefer_real (default)." },
+        "rain_system_path": {
+          "type": "string",
+          "description": "Optional existing UNiagaraSystem path under /Game/__UeremcpPoc/ or /Game/__UeremcpTests/. When omitted and include.rain is true, BuildEnvironment creates /.../NS_EnvRain via CreateNiagaraEffect(precipitation)."
+        },
         "follow": { "type": "string", "enum": ["player_camera", "player_pawn"], "default": "player_camera" },
-        "streak_count": { "type": "integer", "minimum": 32, "maximum": 512, "default": 256, "description": "Instanced-streak count when fallback_policy=allow_approximate and rain_system_path is absent." }
+        "streak_count": {
+          "type": "integer",
+          "minimum": 32,
+          "maximum": 512,
+          "default": 256,
+          "description": "Only used when fallback_policy=allow_approximate and Niagara create/load fails."
+        }
       }
     },
     "include": {

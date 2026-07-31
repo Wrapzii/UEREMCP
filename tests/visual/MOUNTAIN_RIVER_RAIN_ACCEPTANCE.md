@@ -1,11 +1,19 @@
 # MountainRiverRain live acceptance (WS-16)
 
 Date: 2026-07-30  
-Branch: `ws-16-environment-coverage`  
+Branch: `ws-16-rain-niagara-create`  
 Map: `/Game/__UeremcpPoc/MountainRiverRain/MountainRiverRain`  
-Revision: `env:f49a66b5`  
-Seed: `4471`  
-Request id: `ws16-build-final-3`
+Rain asset: `/Game/__UeremcpPoc/MountainRiverRain/NS_EnvRain`  
+Seed: `4471`
+
+## Status behavior (before → after)
+
+| Condition | Before (`1e9574f` / deploy `7745d3b`) | After |
+|---|---|---|
+| Rain requested, no `rain_system_path` | Silent HISMC streak fallback; `created_with_warnings`; `approximated` tech | Creates real `UNiagaraSystem` via `CreateNiagaraEffect(precipitation)`; bind to `AUeremcpWeatherFollower` |
+| Niagara create/load fails, `fallback_policy=prefer_real` (default) | N/A (always fell back) | `failed_validation` / weather gate fail — **no** silent streak |
+| Niagara create/load fails, `fallback_policy=allow_approximate` | N/A | Streak allowed; `approximated: true` + explicit warning |
+| ValidateEnvironment | `has_rain` only (streak counted) | Also requires `rain_niagara_bound` unless `gates.allow_approximated_rain=true` |
 
 ## Call telemetry (acceptance path)
 
@@ -19,53 +27,29 @@ acceptance uses:
 
 | # | Toolset.tool | Role | Result |
 |---|---|---|---|
-| 1 | `UeremcpIntent.UeremcpIntentToolset.ResolveIntent` | router | top-1 `BuildEnvironment` (extra noisy steps also returned) |
-| 2 | `UeremcpEnvironment.UeremcpEnvironmentToolset.BuildEnvironment` | mutate | `created_with_warnings` |
-| 3 | `UeremcpEnvironment.UeremcpEnvironmentToolset.ValidateEnvironment` | structural | `no_change_required` |
-| 4 | `UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames` | screenshots | WS-16 run wrote PNGs but reported `png_ok:false`; superseded on integration by live `png_ok:true` after bounded reread fix |
-| 5 | `EditorToolset.EditorAppToolset.StartPIE` | PIE | started |
-| 6 | `UeremcpEnvironment.UeremcpEnvironmentToolset.InspectEnvironment` | PIE metrics | `weather_followed_10m=true` (~91 m tracked) |
-| 7 | `editor_toolset.toolsets.actor.ActorTools.set_actor_transform` | move pawn | true |
-| 8 | `UeremcpEnvironment.UeremcpEnvironmentToolset.ValidateEnvironment` (`require_weather_follow_10m`) | PIE gate | `no_change_required` |
-| 9 | `EditorToolset.EditorAppToolset.StopPIE` | cleanup | ok |
+| 1 | `UeremcpEnvironment.BuildEnvironment` | mutate | expect `created_and_validated` or `created_with_warnings` (secondary only); **not** streak-only success |
+| 2 | `UeremcpEnvironment.ValidateEnvironment` | structural | `no_change_required` with `rain_real_ok=true` |
+| 3 | `UeremcpValidation.CaptureWorldFrames` / `CaptureEffectFrames` | screenshots | rain pixels when rendering available |
+| 4 | PIE + move ≥10m + Validate (`require_weather_follow_10m`) | follow gate | `weather_followed_10m=true` |
 
-**Semantic mutate calls for world creation: 1** (`BuildEnvironment`).  
-**Agent-facing environment round-trips for create+validate: 2**.
-
-## Structural gates (PIE validate)
-
-- non_flat: true (height range ≈ 8315 cm)
-- continuous river: true
-- both banks populated: 43 / 30
-- open channel: true (`exclusion_violations=0`)
-- rain present: true
-- weather_followed_10m: true (`weather_follow_distance_cm≈9246`)
-- validation_elapsed_ms: ~0.34
-
-## Technology honesty
+## Technology honesty (target)
 
 | Capability | Mode |
 |---|---|
 | Landscape heightmap import | real |
-| WaterBodyRiver | real (`bAffectsLandscape=false`; valley from heightmap) |
+| WaterBodyRiver | real |
 | Seeded forest HISMC | real |
 | Rainy lighting + viewpoint | real |
 | Rain camera follow transform | real (`AUeremcpWeatherFollower`) |
-| Rain particle visuals | approximated (streak fallback; Niagara path missing) |
+| Rain particle visuals | **real** (`NS_EnvRain` Niagara; RecycleParticlesInView + HangingParticulates) |
 
-## Screenshots
+## Residual limits
 
-Copied from RE `Saved/UEREMCP/WorldCapture/`:
+1. CreateNiagaraEffect for precipitation typically returns `partially_completed` (POC B six-role validated status not applicable); Environment accepts loaded `UNiagaraSystem` as real rain.
+2. Precipitation uses engine emitter templates (not a bespoke meteorological rain graph). Particles must spawn; trajectory aesthetics are secondary to "real Niagara asset".
+3. CaptureWorldFrames PNG honesty mismatch remains WS-11-owned when present.
+4. Live verification evidence for this revision is recorded after RE rebuild + MCP run on this branch.
 
-- `tests/visual/mountain_river_rain/world_frame_00.png`
-- `tests/visual/mountain_river_rain/world_frame_01.png`
+## Prior run (superseded)
 
-## Blockers / notes
-
-1. WS-16 not yet in `docs/WORK_ALLOCATION.md` → `check_ownership.py --ws WS-16` fails until WS-01/02 accept proposal.
-2. **Resolved on integration:** CaptureWorldFrames live rerun returned
-   `no_change_required`, `png_ok:true`, `png_files_reread:true`, and
-   `stage_teardown_complete:true`.
-3. Router extra steps beyond BuildEnvironment: score-gate landed on tip (1.3d);
-   live re-proof after Core rebuild; offline plan is already 1-step BuildEnvironment.
-4. No Niagara rain asset in RE → streak fallback with honest `approximated` technology note.
+Previous acceptance on `ws-16-environment-coverage` @ `1e9574f` reported `created_with_warnings` because "rain Niagara path missing → streak fallback". That disposition is **invalid** under current requirements and is replaced by the table above.

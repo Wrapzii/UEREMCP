@@ -24,7 +24,7 @@ struct FUeremcpEnvironmentBuildSpec
 	float FoliageMinNormalizedHeight = 0.02f;
 	float FoliageMaxNormalizedHeight = 0.90f;
 	FString MeshPath; // optional static mesh for foliage; empty → skip instances, report gap
-	FString RainSystemPath; // optional Niagara; empty → visible instanced-rain fallback
+	FString RainSystemPath; // optional Niagara; empty → BuildEnvironment creates NS_EnvRain via CreateNiagaraEffect
 	FString WeatherFollow = TEXT("player_camera");
 	int32 RainStreakCount = 256;
 	bool bIncludeTerrain = false;
@@ -36,6 +36,7 @@ struct FUeremcpEnvironmentBuildSpec
 	bool bIncludeStructures = false;
 	int32 StructureCount = 6;
 	FString DestinationLevelPath; // /Game/__UeremcpPoc/MountainRiverRain
+	/** prefer_real (default): create real Niagara rain or fail. allow_approximate: streak only when opted in. */
 	FString FallbackPolicy = TEXT("prefer_real"); // prefer_real | allow_approximate
 };
 

@@ -44,9 +44,13 @@ hundreds of placement/sculpt primitives or a second batch executor.
 
 ## Limitations
 
-- Without `weather.rain_system_path`, rain rendering uses bounded instanced
-  streaks. Camera/pawn following remains real and PIE-measured; the visual
-  technology is reported as `approximated`.
+- Rain defaults to a real `UNiagaraSystem` created via
+  `UeremcpNiagara.CreateNiagaraEffect` (`effect_type=precipitation`, roles
+  `rain`+`mist`) at `<destination>/NS_EnvRain`. Streak/HISMC approximation is
+  **opt-in only** via `fallback_policy=allow_approximate`, and responses must
+  mark `approximated: true` with an explicit warning.
+- If Niagara create/load fails under `prefer_real`, BuildEnvironment fails
+  weather validation (`failed_validation`) instead of silently approximating.
 - Screenshots are human-review evidence, never the structural success gate.
 - PCG graphs remain available for bespoke authoring; WS-16 uses bounded HISMC
   scatter because the cross-domain river-distance constraint is solved inside the
@@ -54,12 +58,10 @@ hundreds of placement/sculpt primitives or a second batch executor.
 
 ## Live MountainRiverRain result
 
-- Built `/Game/__UeremcpPoc/MountainRiverRain/MountainRiverRain` via
-  ResolveIntent→BuildEnvironment (seed `4471`, revision `env:f49a66b5`).
-  `[VERIFIED-RUNTIME: UEREMCP Environment MCP calls, 2026-07-30]`
-- ValidateEnvironment (editor + PIE with `require_weather_follow_10m`) returned
-  `no_change_required` with non-flat valley (~8315 cm), continuous river,
-  both-bank forest (43/30), open channel, and `weather_followed_10m=true`.
+- Prior closeout (`1e9574f`) used streak fallback — **superseded**. See
+  `tests/visual/MOUNTAIN_RIVER_RAIN_ACCEPTANCE.md` on `ws-16-rain-niagara-create`
+  for the real-Niagara acceptance path (`/Game/__UeremcpPoc/MountainRiverRain/NS_EnvRain`).
+- ValidateEnvironment now gates `rain_real_ok` (Niagara bound, not approximated)
+  unless `gates.allow_approximated_rain=true`.
 - Screenshots: `tests/visual/mountain_river_rain/world_frame_00.png` and
-  `world_frame_01.png`. Full call table:
-  `tests/visual/MOUNTAIN_RIVER_RAIN_ACCEPTANCE.md`.
+  `world_frame_01.png` (refresh after live re-verify).

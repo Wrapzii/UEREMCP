@@ -22,7 +22,7 @@ class UEREMCPENVIRONMENT_API UUeremcpEnvironmentToolset : public UToolsetDefinit
 	GENERATED_BODY()
 
 public:
-	virtual FString GetToolsetVersion() const override { return TEXT("0.3.0-environment-acceptance"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.4.0-rain-niagara"); }
 
 	/**
 	 * Build a seeded environment with opt-in subsystems (include.* all default false).
@@ -31,8 +31,9 @@ public:
 	 * Rain-only: include.rain true; supply weather.rain_system_path or fallback_policy=allow_approximate.
 	 * Inputs: action=build_environment; target under /Game/__UeremcpPoc/; specification.seed REQUIRED;
 	 * options.dry_run must be true for preflight; false creates, saves, reloads, and structurally validates.
-	 * Example (full scene): {"protocol_version":"1.0","action":"build_environment","request_id":"env-1","target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain/"},"options":{"dry_run":true,"validate":true,"save":true},"specification":{"seed":4471,"include":{"terrain":true,"river":true,"forest":true,"rain":true,"lighting":true},"terrain":{"size_x":127,"size_y":127,"mountain_amplitude":0.6,"valley_depth":0.18},"river":{"width":900},"biome":{"max_foliage_instances":1000,"slope_limit_deg":32},"weather":{"follow":"player_camera"},"fallback_policy":"allow_approximate"}}
-	 * Example (rain on camera only): {"protocol_version":"1.0","action":"build_environment","request_id":"env-rain","target":{"asset_path":"/Game/__UeremcpPoc/RainOnly"},"options":{"dry_run":true},"specification":{"seed":99,"include":{"rain":true},"weather":{"follow":"player_camera"},"fallback_policy":"allow_approximate"}}
+	 * Example (full scene): {"protocol_version":"1.0","action":"build_environment","request_id":"env-1","target":{"asset_path":"/Game/__UeremcpPoc/MountainRiverRain/"},"options":{"dry_run":true,"validate":true,"save":true},"specification":{"seed":4471,"include":{"terrain":true,"river":true,"forest":true,"rain":true,"lighting":true},"terrain":{"size_x":127,"size_y":127,"mountain_amplitude":0.6,"valley_depth":0.18},"river":{"width":900},"biome":{"max_foliage_instances":1000,"slope_limit_deg":32},"weather":{"follow":"player_camera"},"fallback_policy":"prefer_real"}}
+	 * Example (rain on camera only): {"protocol_version":"1.0","action":"build_environment","request_id":"env-rain","target":{"asset_path":"/Game/__UeremcpPoc/RainOnly"},"options":{"dry_run":true},"specification":{"seed":99,"include":{"rain":true},"weather":{"follow":"player_camera"},"fallback_policy":"prefer_real"}}
+	 * Rain: creates real UNiagaraSystem via CreateNiagaraEffect(precipitation) at .../NS_EnvRain unless weather.rain_system_path is supplied. Streak fallback only if fallback_policy=allow_approximate.
 	 * Next: ValidateEnvironment; CaptureWorldFrames; or GetJobResult if partially_completed.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
@@ -77,10 +78,10 @@ public:
 	 * Attach rain/fog weather that can follow the player/camera.
 	 *
 	 * Use when: "make it raining including on the player camera"; ExecutePlan weather stage.
-	 * Inputs: action=attach_weather; weather.rain_system_path optional when fallback_policy=allow_approximate; follow=player_camera.
-	 * Outputs: weather actors. PIE camera-follow proof requires rain system asset + movement check.
+	 * Inputs: action=attach_weather; weather.rain_system_path optional (auto-creates NS_EnvRain via CreateNiagaraEffect when omitted); follow=player_camera.
+	 * Outputs: weather actors with real Niagara rain by default. Streak fallback only if fallback_policy=allow_approximate.
 	 * Specification has no required keys.
-	 * Example: {"protocol_version":"1.0","action":"attach_weather","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"options":{"dry_run":true},"specification":{"weather":{"rain_system_path":"/Game/VFX/NS_Rain"},"follow":"player_camera"}}
+	 * Example: {"protocol_version":"1.0","action":"attach_weather","target":{"asset_path":"/Game/__UeremcpPoc/Alpine"},"options":{"dry_run":true},"specification":{"weather":{"follow":"player_camera"},"fallback_policy":"prefer_real"}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString AttachWeather(const FString& RequestJson);
