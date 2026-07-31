@@ -10,7 +10,10 @@ A goal-level Unreal Engine 5.8 agent interface: an AI describes a complete outco
 submits one structured JSON request, and gets back one validated structured result
 with a change manifest — instead of issuing hundreds of primitive editor calls.
 
-Target project: `$UEREMCP_LEGACY_PROJECT` (UE 5.8).
+Target project: `$UEREMCP_PROJECT` (UE 5.8).
+`.uproject`: `$UEREMCP_PROJECT/visualtest.uproject`.
+Plugin junction: `visualtest/Plugins/UEREMCP` → `$UEREMCP_DEPLOY/Plugins/UEREMCP`.
+**Do not open or target RE** for live MCP/editor work.
 Existing prior art: `REAgentTools`.
 
 ## What this project is NOT

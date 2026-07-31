@@ -2,7 +2,7 @@
 param(
     [string]$Scaffold = "",
     [string]$MaterialsFixture = "",
-    [string]$Project = "$UEREMCP_LEGACY_PROJECT\RE.uproject",
+    [string]$Project = "$UEREMCP_PROJECT\visualtest.uproject",
     [string]$EngineCmd = "$UE_ROOT\Engine\Binaries\Win64\UnrealEditor-Cmd.exe"
 )
 

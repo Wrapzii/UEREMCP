@@ -66,16 +66,24 @@ public class UeremcpValidation : ModuleRules
 			"KismetCompiler",
 		});
 
-		// D5 Pattern B proof needs the RE game module. BuildPlugin HostProject has no
-		// RE sources — keep Validation packable without the live RE project.
-		bool bHasRE = false;
-		if (Target.ProjectFile != null)
+		// Never link the RE game module into deploy binaries. deploy-main is junctioned
+		// into visualtest; an UnrealEditor-RE.dll import makes UEREMCP fail to load there
+		// (Missing import → whole plugin disabled, Environment/Systems never register).
+		// Pattern B / RE-native automation must build from a RE-only worktree, not this tip.
+		// Opt-in only: set UEREMCP_LINK_RE=1 in the environment for an intentional RE build.
+		bool bLinkRE = false;
+		string linkReEnv = System.Environment.GetEnvironmentVariable("UEREMCP_LINK_RE");
+		if (!string.IsNullOrEmpty(linkReEnv) &&
+			(linkReEnv == "1" || linkReEnv.Equals("true", System.StringComparison.OrdinalIgnoreCase)))
 		{
-			string reBuildCs = System.IO.Path.Combine(
-				Target.ProjectFile.Directory.FullName, "Source", "RE", "RE.Build.cs");
-			bHasRE = System.IO.File.Exists(reBuildCs);
+			if (Target.ProjectFile != null)
+			{
+				string reBuildCs = System.IO.Path.Combine(
+					Target.ProjectFile.Directory.FullName, "Source", "RE", "RE.Build.cs");
+				bLinkRE = System.IO.File.Exists(reBuildCs);
+			}
 		}
-		if (bHasRE)
+		if (bLinkRE)
 		{
 			PrivateDependencyModuleNames.Add("RE");
 			PublicDefinitions.Add("UEREMCP_WITH_RE=1");

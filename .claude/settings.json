@@ -14,18 +14,22 @@
       "Read($UE_ROOT/Engine/Plugins/**)",
       "Read($UE_ROOT/Engine/Source/**)",
       "Read(REAgentTools/**)",
-      "Read($UEREMCP_LEGACY_PROJECT/Source/**)",
-      "Read($UEREMCP_LEGACY_PROJECT/Plugins/**)",
-      "Read($UEREMCP_LEGACY_PROJECT/Config/**)",
-      "Read($UEREMCP_LEGACY_PROJECT/*.uproject)",
-      "Read($UEREMCP_LEGACY_PROJECT/Docs/**)"
+      "Read($UEREMCP_PROJECT/Source/**)",
+      "Read($UEREMCP_PROJECT/Plugins/**)",
+      "Read($UEREMCP_PROJECT/Config/**)",
+      "Read($UEREMCP_PROJECT/*.uproject)",
+      "Read($UEREMCP_PROJECT/Docs/**)",
+      "Read($UEREMCP_DEPLOY/Plugins/UEREMCP/**)"
     ],
     "deny": [
       "Write($UE_INSTALL_ROOT/**)",
       "Edit($UE_INSTALL_ROOT/**)",
-      "Read($UEREMCP_LEGACY_PROJECT/Content/**)",
-      "Read($UEREMCP_LEGACY_PROJECT/DerivedDataCache/**)",
-      "Read($UEREMCP_LEGACY_PROJECT/Intermediate/**)"
+      "Read($UEREMCP_LEGACY_PROJECT/**)",
+      "Write($UEREMCP_LEGACY_PROJECT/**)",
+      "Edit($UEREMCP_LEGACY_PROJECT/**)",
+      "Read($UEREMCP_PROJECT/Content/**)",
+      "Read($UEREMCP_PROJECT/DerivedDataCache/**)",
+      "Read($UEREMCP_PROJECT/Intermediate/**)"
     ]
   }
 }

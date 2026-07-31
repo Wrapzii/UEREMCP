@@ -24,7 +24,7 @@
 #   pwsh tests/run_editor_tests.ps1 -Filter "AI.ToolsetRegistry.Sandbox.Library" -NoProbe
 #
 param(
-    [string]$Project = "$UEREMCP_LEGACY_PROJECT\RE.uproject",
+    [string]$Project = "$UEREMCP_PROJECT\visualtest.uproject",
     [string]$EngineCmd = "$UE_ROOT\Engine\Binaries\Win64\UnrealEditor-Cmd.exe",
     [string]$Filter = "UEREMCP.Validation",
     [string]$LogDir = "",

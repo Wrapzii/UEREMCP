@@ -22,7 +22,8 @@ Paths below are abbreviated:
 - `$MCP` = `$ENGINE/Plugins/Experimental/ModelContextProtocol`
 - `$TR` = `$ENGINE/Plugins/Experimental/ToolsetRegistry`
 - `$TS` = `$ENGINE/Plugins/Experimental/Toolsets`
-- `$PROJ` = `$UEREMCP_LEGACY_PROJECT`
+- `$PROJ` = `$UEREMCP_PROJECT`
+- `$PROJ_UPROJECT` = `$UEREMCP_PROJECT/visualtest.uproject`
 - `$RAT` = `REAgentTools`
 
 ---
