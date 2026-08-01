@@ -36,6 +36,7 @@ The user then raised the **quality bar**: a high-fidelity **inventory / characte
 | No mannequin helper | `spawn_character_preview` reports `mesh_source` (`project`\|`engine`\|`proxy`) |
 | Unsaved WBP crash loss | Default save on create + `save_widget_asset` |
 | Inventory grids / hotbar / paper-doll | `create_inventory_sheet_from_spec`, `set_slot_icon`, `set_container_weight`, `set_slot_layout` |
+| Black MCPProbe proof | `SpawnUIHost` now applies transform **after** Root register; `capture_ui_frame` frames WC front explicitly, warms draws, reports `avg_luminance` / Simulate warnings |
 
 ### Live smoke (`/Game/UI/MCPProbe/`)
 
@@ -44,8 +45,19 @@ The user then raised the **quality bar**: a high-fidelity **inventory / characte
 | WBP | `/Game/UI/MCPProbe/WBP_Probe` (saved `.uasset` on disk) |
 | World host | `UEREMCP_UIHost_Probe` |
 | Preview | `UEREMCP_CharPreview_Probe` (`mesh_source=engine`, TutorialTPP) |
-| Proof | `Saved/UEREMCP/MCPProbe/proof.png` |
+| Proof | `Saved/UEREMCP/MCPProbe/proof.png` (+ `proof_v2.png`) — non-black after framing + Simulate |
 | Honest reject | `capture_ui_frame` + `screen_space_umg=true` → `SCREEN_UMG_CAPTURE_UNSUPPORTED` |
+
+### Gotcha — black `capture_ui_frame` / CaptureViewport proofs
+
+**Symptom:** `Saved/UEREMCP/MCPProbe/proof.png` was solid black (axis gizmo only).
+
+**Root causes (stacked):**
+1. **`SpawnUIHost` dropped the host transform** — `SetRootComponent` after `SpawnActor`/`SetActorTransform` reset the actor to identity at origin with scale 1, so the WC was oversized / mis-oriented vs the documented default `(200,-150,120) @ yaw 140 scale 0.25`.
+2. **`FocusViewportOnBox` silently no-op’d** in this World Partition / far-camera session (camera stayed ~75km away looking at empty sky).
+3. **Simulate was required** for WC paint; capture without Simulate + wrong camera = black void.
+
+**Fix:** apply actor transform after Root register + `InitWidget`; replace box-focus with an explicit camera pose on the WC forward axis; multi-draw + `FlushRenderingCommands`; return `avg_luminance` / `simulate_running` / `camera_framed` warnings. Agents must still `StartPIE(bSimulate=true)` before proof.
 
 ### Remaining UI gaps
 

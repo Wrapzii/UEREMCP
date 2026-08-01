@@ -45,6 +45,7 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "Animation/SkeletalMeshActor.h"
+#include "RenderingThread.h"
 #include "Slate/SceneViewport.h"
 #include "WidgetBlueprint.h"
 #include "Blueprint/WidgetTree.h"
@@ -228,19 +229,21 @@ namespace
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		Params.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
-		AActor* Host = World->SpawnActor<AActor>(AActor::StaticClass(), Xform, Params);
+		// Spawn at identity — SetRootComponent on a freshly spawned AActor resets world
+		// transform; apply Xform only after Root is registered.
+		AActor* Host = World->SpawnActor<AActor>(AActor::StaticClass(), FTransform::Identity, Params);
 		if (!Host)
 		{
 			OutError = TEXT("Failed to spawn UI host actor.");
 			return nullptr;
 		}
 		Host->SetActorLabel(Label);
-		Host->SetActorTransform(Xform);
 
 		USceneComponent* Root = NewObject<USceneComponent>(Host, TEXT("Root"));
 		Host->SetRootComponent(Root);
 		Host->AddInstanceComponent(Root);
 		Root->RegisterComponent();
+		Host->SetActorTransform(Xform);
 
 		UWidgetComponent* WC = NewObject<UWidgetComponent>(Host, TEXT("UIWidget"));
 		WC->SetupAttachment(Root);
@@ -251,12 +254,17 @@ namespace
 		WC->SetPivot(FVector2D(0.5f, 0.5f));
 		WC->SetTwoSided(true);
 		WC->SetWidgetClass(WidgetClass);
+		WC->InitWidget();
 		WC->RequestRedraw();
 		return Host;
 	}
 
-	bool CaptureEditorViewportPng(const FString& AbsolutePath, FString& OutError)
+	bool CaptureEditorViewportPng(const FString& AbsolutePath, FString& OutError, float* OutAvgLuminance)
 	{
+		if (OutAvgLuminance)
+		{
+			*OutAvgLuminance = 0.f;
+		}
 		FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
 		TSharedPtr<ILevelEditor> LevelEd = LevelEditor.GetFirstLevelEditor();
 		if (!LevelEd.IsValid())
@@ -280,13 +288,33 @@ namespace
 		}
 
 		FViewport* Viewport = ViewportWidget->GetActiveViewport();
-		Viewport->Draw(true);
+		// World-space WidgetComponents need a couple of draws after Simulate/framing
+		// before the RT has paint; a single Draw often yields a black proof.
+		for (int32 Warmup = 0; Warmup < 3; ++Warmup)
+		{
+			Viewport->Draw(true);
+			FlushRenderingCommands();
+		}
 		TArray<FColor> Pixels;
 		const FIntPoint Size = Viewport->GetSizeXY();
 		if (Size.X <= 0 || Size.Y <= 0 || !Viewport->ReadPixels(Pixels))
 		{
 			OutError = TEXT("Viewport ReadPixels failed.");
 			return false;
+		}
+
+		if (OutAvgLuminance && Pixels.Num() > 0)
+		{
+			double Acc = 0.0;
+			const int32 Step = FMath::Max(1, Pixels.Num() / 4096);
+			int32 Samples = 0;
+			for (int32 i = 0; i < Pixels.Num(); i += Step)
+			{
+				const FColor& C = Pixels[i];
+				Acc += (double(C.R) + double(C.G) + double(C.B)) / 3.0;
+				++Samples;
+			}
+			*OutAvgLuminance = Samples > 0 ? float(Acc / Samples) : 0.f;
 		}
 
 		IImageWrapperModule& ImageWrapperModule =
@@ -309,34 +337,143 @@ namespace
 		return true;
 	}
 
-	void FocusActors(UWorld* World, const TArray<FString>& Labels)
+	bool FindActorsByLabels(UWorld* World, const TArray<FString>& Labels, TArray<AActor*>& OutActors)
 	{
+		OutActors.Reset();
 		if (!World || Labels.Num() == 0)
 		{
-			return;
+			return false;
 		}
-		FBox Bound(ForceInit);
-		bool bAny = false;
 		for (TActorIterator<AActor> It(World); It; ++It)
 		{
 			for (const FString& Label : Labels)
 			{
 				if (It->GetActorLabel().Equals(Label, ESearchCase::IgnoreCase))
 				{
-					Bound += It->GetComponentsBoundingBox(true);
-					bAny = true;
+					OutActors.Add(*It);
 					break;
 				}
 			}
 		}
-		if (!bAny)
+		return OutActors.Num() > 0;
+	}
+
+	void RedrawWorldWidgetComponents(const TArray<AActor*>& Actors)
+	{
+		for (AActor* Actor : Actors)
 		{
-			return;
+			if (!Actor)
+			{
+				continue;
+			}
+			TArray<UWidgetComponent*> Widgets;
+			Actor->GetComponents<UWidgetComponent>(Widgets);
+			for (UWidgetComponent* WC : Widgets)
+			{
+				if (!WC)
+				{
+					continue;
+				}
+				if (!WC->GetUserWidgetObject())
+				{
+					WC->InitWidget();
+				}
+				WC->RequestRedraw();
+			}
 		}
+	}
+
+	/**
+	 * Frame the level viewport on labeled hosts.
+	 * Prefer an explicit camera pose in front of the first World-space WidgetComponent —
+	 * FocusViewportOnBox often no-ops in World Partition / far-camera sessions and was
+	 * the root of black MCPProbe proofs.
+	 */
+	bool FocusActors(UWorld* World, const TArray<FString>& Labels, FString& OutFocusNote)
+	{
+		OutFocusNote.Reset();
+		if (!World || Labels.Num() == 0)
+		{
+			OutFocusNote = TEXT("No focus_actors provided — capturing current viewport camera.");
+			return false;
+		}
+
+		TArray<AActor*> Actors;
+		if (!FindActorsByLabels(World, Labels, Actors))
+		{
+			// During Simulate, duplicates live in the PIE world — also search there.
+			if (GEditor)
+			{
+				for (const FWorldContext& Ctx : GEditor->GetWorldContexts())
+				{
+					if (Ctx.WorldType == EWorldType::PIE && Ctx.World())
+					{
+						FindActorsByLabels(Ctx.World(), Labels, Actors);
+						if (Actors.Num() > 0)
+						{
+							break;
+						}
+					}
+				}
+			}
+		}
+		if (Actors.Num() == 0)
+		{
+			OutFocusNote = FString::Printf(
+				TEXT("focus_actors not found in editor/PIE worlds: %s"),
+				*FString::Join(Labels, TEXT(",")));
+			return false;
+		}
+
+		RedrawWorldWidgetComponents(Actors);
+
+		FVector FocusPoint = FVector::ZeroVector;
+		FVector FaceDir = FVector::ForwardVector;
+		bool bHaveWC = false;
+		FBox Bound(ForceInit);
+		for (AActor* Actor : Actors)
+		{
+			Bound += Actor->GetComponentsBoundingBox(true);
+			TArray<UWidgetComponent*> Widgets;
+			Actor->GetComponents<UWidgetComponent>(Widgets);
+			for (UWidgetComponent* WC : Widgets)
+			{
+				if (WC && WC->GetWidgetSpace() == EWidgetSpace::World)
+				{
+					FocusPoint = WC->GetComponentLocation();
+					FaceDir = WC->GetForwardVector();
+					bHaveWC = true;
+					break;
+				}
+			}
+			if (bHaveWC)
+			{
+				break;
+			}
+		}
+		if (!bHaveWC)
+		{
+			FocusPoint = Bound.GetCenter();
+			FaceDir = FVector::ForwardVector;
+		}
+
+		const float Extent = FMath::Max(Bound.GetExtent().GetMax(), 50.f);
+		const float Distance = FMath::Clamp(Extent * 2.5f, 250.f, 2500.f);
+		const FVector CamLoc = FocusPoint + FaceDir * Distance + FVector(0.f, 0.f, Extent * 0.15f);
+		const FRotator CamRot = (FocusPoint - CamLoc).Rotation();
+
 		if (GCurrentLevelEditingViewportClient)
 		{
-			GCurrentLevelEditingViewportClient->FocusViewportOnBox(Bound);
+			GCurrentLevelEditingViewportClient->SetViewLocation(CamLoc);
+			GCurrentLevelEditingViewportClient->SetViewRotation(CamRot);
+			GCurrentLevelEditingViewportClient->Invalidate();
+			OutFocusNote = FString::Printf(
+				TEXT("Framed %d actor(s) from WC front (dist=%.0f)."), Actors.Num(), Distance);
+			return true;
 		}
+
+		OutFocusNote = TEXT("No level editing viewport client — could not frame camera.");
+		return false;
 	}
 }
 
@@ -820,7 +957,9 @@ FString UUeremcpUIToolset::CaptureUiFrame(const FString& RequestJson)
 		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
 
-	FocusActors(EditorWorld(), FocusLabels);
+	const bool bPieRunning = GEditor && GEditor->PlayWorld != nullptr;
+	FString FocusNote;
+	const bool bFramed = FocusActors(EditorWorld(), FocusLabels, FocusNote);
 
 	FString AbsPath = RelPath;
 	if (FPaths::IsRelative(AbsPath))
@@ -829,27 +968,53 @@ FString UUeremcpUIToolset::CaptureUiFrame(const FString& RequestJson)
 	}
 
 	FString Err;
-	if (!CaptureEditorViewportPng(AbsPath, Err))
+	float AvgLum = 0.f;
+	if (!CaptureEditorViewportPng(AbsPath, Err, &AvgLum))
 	{
 		return FUeremcpEnvelope::MakeRejection(Request.RequestId, Err);
 	}
 
+	const bool bLikelyBlack = AvgLum < 12.f;
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
 	Response.UnderstoodAction = Request.Action;
-	Response.Status = TEXT("created_with_warnings");
+	Response.Status = (bLikelyBlack || !bPieRunning || !bFramed)
+		? TEXT("created_with_warnings")
+		: TEXT("created");
 	Response.Summary = FString::Printf(
-		TEXT("Captured level viewport (world + world-space widgets) to %s. Screen UMG excluded."),
-		*AbsPath);
+		TEXT("Captured level viewport (world + world-space widgets) to %s. Screen UMG excluded. avg_luminance=%.1f."),
+		*AbsPath, AvgLum);
 	Response.Metrics.McpRoundTrips = 1;
 	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
 	Result->SetStringField(TEXT("path"), AbsPath);
 	Result->SetBoolField(TEXT("includes_world_space_widgets"), bWorldWidgets);
 	Result->SetBoolField(TEXT("includes_screen_space_umg"), false);
+	Result->SetNumberField(TEXT("avg_luminance"), AvgLum);
+	Result->SetBoolField(TEXT("simulate_running"), bPieRunning);
+	Result->SetBoolField(TEXT("camera_framed"), bFramed);
+	if (!FocusNote.IsEmpty())
+	{
+		Result->SetStringField(TEXT("focus_note"), FocusNote);
+	}
 	Response.ExtraFields = MakeShared<FJsonObject>();
 	Response.ExtraFields->SetObjectField(TEXT("result"), Result);
 	Response.CapabilityNotes.Add(
-		TEXT("World-space WidgetComponents draw as scene geometry and appear in this capture once Simulate/view is framed."));
+		TEXT("World-space WidgetComponents draw as scene geometry once Simulate is running and the camera faces the WC."));
+	if (!bPieRunning)
+	{
+		Response.CapabilityNotes.Add(
+			TEXT("WARNING: Simulate/PIE was not running — WC paint is often blank. Call EditorApp.StartPIE with bSimulate=true before capture_ui_frame."));
+	}
+	if (!bFramed && FocusLabels.Num() > 0)
+	{
+		Response.CapabilityNotes.Add(
+			TEXT("WARNING: focus_actors could not be framed — capture may be off-camera / black."));
+	}
+	if (bLikelyBlack)
+	{
+		Response.CapabilityNotes.Add(
+			TEXT("WARNING: capture avg_luminance is near-black. Ensure Simulate is on, host transform survived spawn, and camera faces the WidgetComponent."));
+	}
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }
 
