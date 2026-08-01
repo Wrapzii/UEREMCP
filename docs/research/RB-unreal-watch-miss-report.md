@@ -3,7 +3,7 @@
 **Audience:** UEREMCP / REAgentTools owner  
 **Date:** 2026-07-31  
 **Session:** Northridge / MMORPG fieldtest (`ueremcp_fieldtest`)  
-**Watcher source:** `C:\Users\WhiteWidow\Documents\GitHub\REAgentTools\Optional\UnrealWatchMCP\` (v0.3.0 local, uncommitted vs `10d98cd`)  
+**Watcher source:** `REAgentTools/Optional/UnrealWatchMCP/` (v0.3.0 local, uncommitted vs `10d98cd`)  
 **Cursor server id:** `user-unreal-watch` (config key `unreal-watch`)
 
 ---

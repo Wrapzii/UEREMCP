@@ -113,7 +113,7 @@ Screen-space HUD remains required for many game systems (CommonUI input stacks, 
 
 **Status:** Quality bar set by user; next stress test after start menu.  
 **Reference (4-class collage):** Cursor workspace asset  
-`…/assets/c__Users_WhiteWidow_AppData_Roaming_Cursor_User_workspaceStorage_empty-window_images_B60B4682-329F-4C50-A22C-B0EC0A7F445C-827a8edd-9b46-449a-9a50-d2a46b5a3de4.png`
+`(local Cursor workspace image — path redacted; not stored in this repo)`
 
 The collage shows four class variants of the same dense dark-fantasy sheet (Stormwarden / Ironcrown / Wildspeaker / Nightreaver). Shared structure that tooling must eventually support:
 
