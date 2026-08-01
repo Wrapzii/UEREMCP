@@ -166,6 +166,77 @@
         "create_landscape_material"
       ],
       "why": "needs landscape; paint auto-creates LayerInfos and optional material_path assigns the blend"
+    },
+    {
+      "action": "create_widget_from_spec",
+      "depends_on_actions": [],
+      "why": "UI domain entry"
+    },
+    {
+      "action": "show_widget_in_world",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "needs WBP"
+    },
+    {
+      "action": "show_widget_on_screen",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "needs WBP"
+    },
+    {
+      "action": "capture_ui_frame",
+      "depends_on_actions": [
+        "show_widget_in_world"
+      ],
+      "why": "proof after world host"
+    },
+    {
+      "action": "spawn_character_preview",
+      "depends_on_actions": [],
+      "why": "preview stand"
+    },
+    {
+      "action": "save_widget_asset",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "persist"
+    },
+    {
+      "action": "create_inventory_sheet_from_spec",
+      "depends_on_actions": [],
+      "why": "inventory sheet"
+    },
+    {
+      "action": "apply_ui_theme",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "theme"
+    },
+    {
+      "action": "set_slot_icon",
+      "depends_on_actions": [
+        "create_inventory_sheet_from_spec"
+      ],
+      "why": "slot icons"
+    },
+    {
+      "action": "set_container_weight",
+      "depends_on_actions": [
+        "create_inventory_sheet_from_spec"
+      ],
+      "why": "weights"
+    },
+    {
+      "action": "set_slot_layout",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "layout"
     }
   ],
   "operations": [
@@ -2261,6 +2332,460 @@
           ]
         }
       }
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.CreateWidgetFromSpec",
+      "action": "create_widget_from_spec",
+      "use_when": [
+        "create MMORPG start menu",
+        "UMG overlay",
+        "character creation UI",
+        "widget from spec",
+        "start menu UMG",
+        "world-space widget menu"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": false,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "After create call show_widget_in_world then capture_ui_frame.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_widget_from_spec",
+        "options": {
+          "save": true
+        },
+        "specification": {
+          "asset_path": "/Game/UI/MCPProbe/WBP_Probe",
+          "theme": "northridge_fantasy",
+          "screens": [
+            {
+              "id": "main",
+              "layout": "overlay_left_panel",
+              "brand": {
+                "title": "NORTHRIDGE ONLINE",
+                "tagline": "Forge your legend"
+              },
+              "actions": [
+                "Play",
+                "Quit"
+              ]
+            }
+          ]
+        }
+      },
+      "next_actions": [
+        {
+          "action": "show_widget_in_world",
+          "why": "host for proof",
+          "specification_hint": {}
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.ApplyUiTheme",
+      "action": "apply_ui_theme",
+      "use_when": [
+        "fantasy MMO theme",
+        "apply widget theme",
+        "northridge fantasy UI style",
+        "style buttons and text"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for apply_ui_theme",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "apply_ui_theme",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_Probe",
+          "theme": "northridge_fantasy"
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.ShowWidgetInWorld",
+      "action": "show_widget_in_world",
+      "use_when": [
+        "show widget in world",
+        "world-space widget",
+        "diegetic UI host",
+        "WidgetComponent World",
+        "MMO overlay in world"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for show_widget_in_world",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "show_widget_in_world",
+        "specification": {
+          "widget_asset": "/Game/UI/MCPProbe/WBP_Probe",
+          "host_label": "UEREMCP_UIHost_Probe",
+          "transform": {
+            "location": [
+              200,
+              -150,
+              120
+            ],
+            "rotation": [
+              0,
+              140,
+              0
+            ],
+            "scale": [
+              0.25,
+              0.25,
+              0.25
+            ]
+          },
+          "draw_size": [
+            1280,
+            720
+          ]
+        }
+      },
+      "next_actions": [
+        {
+          "action": "capture_ui_frame",
+          "why": "proof",
+          "specification_hint": {}
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.ShowWidgetOnScreen",
+      "action": "show_widget_on_screen",
+      "use_when": [
+        "show widget on screen",
+        "AddToViewport",
+        "screen HUD",
+        "pause menu screen"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "For proof use show_widget_in_world.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "show_widget_on_screen",
+        "specification": {
+          "widget_asset": "/Game/UI/MCPProbe/WBP_Probe",
+          "z_order": 100
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.CaptureUiFrame",
+      "action": "capture_ui_frame",
+      "use_when": [
+        "capture UI frame",
+        "CaptureViewport with UI",
+        "proof overlay screenshot",
+        "include world-space widgets"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "If SCREEN_UMG_CAPTURE_UNSUPPORTED, use show_widget_in_world.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "capture_ui_frame",
+        "specification": {
+          "path": "Saved/UEREMCP/MCPProbe/proof.png",
+          "include": {
+            "world": true,
+            "world_space_widgets": true,
+            "screen_space_umg": false
+          },
+          "camera": {
+            "focus_actors": [
+              "UEREMCP_UIHost_Probe"
+            ]
+          }
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SpawnCharacterPreview",
+      "action": "spawn_character_preview",
+      "use_when": [
+        "character preview",
+        "mannequin helper",
+        "spawn preview mesh",
+        "character create stand"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for spawn_character_preview",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "spawn_character_preview",
+        "specification": {
+          "label": "UEREMCP_CharPreview_Probe",
+          "mesh": "auto",
+          "location": [
+            80,
+            40,
+            0
+          ]
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SaveWidgetAsset",
+      "action": "save_widget_asset",
+      "use_when": [
+        "save widget blueprint",
+        "persist WBP",
+        "auto-save UI after edit"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "Unsaved WBPs are lost on editor crash.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "save_widget_asset",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_Probe"
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.CreateInventorySheetFromSpec",
+      "action": "create_inventory_sheet_from_spec",
+      "use_when": [
+        "inventory sheet",
+        "paper doll",
+        "item slot grid",
+        "hotbar",
+        "character sheet UI",
+        "backpack grid"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": false,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for create_inventory_sheet_from_spec",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_inventory_sheet_from_spec",
+        "options": {
+          "save": true
+        },
+        "specification": {
+          "asset_path": "/Game/UI/MCPProbe/WBP_InvProbe",
+          "theme": "northridge_diegetic",
+          "grids": [
+            {
+              "id": "backpack",
+              "kind": "uniform_grid",
+              "rows": 2,
+              "cols": 4,
+              "cell_px": 64
+            },
+            {
+              "id": "hotbar",
+              "kind": "hotbar",
+              "slots": 10,
+              "show_index": true
+            },
+            {
+              "id": "equipment",
+              "kind": "paper_doll",
+              "slots": [
+                "head",
+                "torso",
+                "feet"
+              ]
+            }
+          ]
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SetSlotIcon",
+      "action": "set_slot_icon",
+      "use_when": [
+        "set slot icon",
+        "item icon brush",
+        "assign inventory icon"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "ICON_NOT_FOUND — pass icon.texture Texture2D path.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "set_slot_icon",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_InvProbe",
+          "slot": "Slot_Backpack_r0_c0",
+          "icon": {
+            "texture": "/Engine/EngineResources/DefaultTexture"
+          },
+          "stack": {
+            "count": 3,
+            "show": true
+          }
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SetContainerWeight",
+      "action": "set_container_weight",
+      "use_when": [
+        "container weight",
+        "backpack kg",
+        "inventory weight label"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for set_container_weight",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "set_container_weight",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_InvProbe",
+          "containers": [
+            {
+              "id": "backpack",
+              "current_kg": 18.3,
+              "max_kg": 40
+            }
+          ]
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SetSlotLayout",
+      "action": "set_slot_layout",
+      "use_when": [
+        "set canvas fill",
+        "box padding",
+        "slot layout helper"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for set_slot_layout",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "set_slot_layout",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_Probe",
+          "widget": "ScreenSwitcher",
+          "canvas": {
+            "anchors": "fill",
+            "offsets": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      "next_actions": []
     }
   ],
   "asset_role_patterns": {

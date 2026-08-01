@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/ui/create_inventory_sheet_from_spec.schema.json",
+  "title": "create_inventory_sheet_from_spec specification",
+  "type": "object",
+  "required": ["asset_path", "grids"],
+  "additionalProperties": true,
+  "properties": {
+    "asset_path": { "type": "string" },
+    "theme": { "type": "string" },
+    "layout": { "type": "string" },
+    "grids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["uniform_grid", "hotbar", "paper_doll"] },
+          "rows": { "type": "integer", "minimum": 1 },
+          "cols": { "type": "integer", "minimum": 1 },
+          "cell_px": { "type": "integer", "minimum": 8 },
+          "slots": {
+            "oneOf": [
+              { "type": "integer" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "show_index": { "type": "boolean" }
+        }
+      }
+    },
+    "stats": { "type": "array", "items": { "type": "string" } },
+    "host": { "type": "object", "additionalProperties": true }
+  }
+}

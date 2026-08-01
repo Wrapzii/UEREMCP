@@ -11663,6 +11663,231 @@
     }
    },
    "version": "1.0"
+  },
+  "UeremcpUI.UeremcpUIToolset": {
+   "description": "Goal-level UMG authoring for MMO overlays.",
+   "tools": {
+    "CreateWidgetFromSpec": {
+     "description": "CreateWidgetFromSpec",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.CreateWidgetFromSpec",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "ApplyUiTheme": {
+     "description": "ApplyUiTheme",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.ApplyUiTheme",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "ShowWidgetInWorld": {
+     "description": "ShowWidgetInWorld",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.ShowWidgetInWorld",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "ShowWidgetOnScreen": {
+     "description": "ShowWidgetOnScreen",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.ShowWidgetOnScreen",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "CaptureUiFrame": {
+     "description": "CaptureUiFrame",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.CaptureUiFrame",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SpawnCharacterPreview": {
+     "description": "SpawnCharacterPreview",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SpawnCharacterPreview",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SaveWidgetAsset": {
+     "description": "SaveWidgetAsset",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SaveWidgetAsset",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "CreateInventorySheetFromSpec": {
+     "description": "CreateInventorySheetFromSpec",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.CreateInventorySheetFromSpec",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SetSlotIcon": {
+     "description": "SetSlotIcon",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SetSlotIcon",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SetContainerWeight": {
+     "description": "SetContainerWeight",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SetContainerWeight",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SetSlotLayout": {
+     "description": "SetSlotLayout",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SetSlotLayout",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    }
+   }
   }
  },
  "ueremcp_tool_count": 46
