@@ -153,13 +153,14 @@ Prefer **new** IDs (`HG-*`). Known leftovers kept only if still true after WS-11
 
 | | |
 |--|--|
-| **Symptom** | Unsaved WBP wiped after crash; Restore Packages + Crash Reporter block `:8000`; agents retry Unreal MCP into WinError 10054/10061; watch MCP unusable so no fail-fast. |
-| **Why hard** | Editor session reliability is half host (UnrealWatch) half UEREMCP (default save helped UI create; BlueprintTools.create hang −32001 remains). Watch: Cursor discovery error **still live this session**; pull-only; offline `agent_instruction` lied ("clear") historically. |
-| **RTT / cost** | Full inventory rebuild; hours lost; multitask agents thrash dead ports. |
-| **Goal API** | Persist-by-default everywhere; `BlueprintTools.create` timeout envelope; UnrealWatch v0.4+ discoverable + `status=editor_offline` STOP; optional auto-dismiss Restore Packages when MCP connected. |
-| **Acceptance** | Kill editor mid-UI-edit → relaunch → asset on disk OR honest recovery plan; closed editor → agents stop MCP within 1 watch call. |
+| **Symptom** | Unsaved WBP wiped after crash; Restore Packages + Crash Reporter block `:8000`; Interchange **Import Content** also blocks the game thread; agents retry Unreal MCP into WinError 10054/10061; watch MCP unusable so no fail-fast. |
+| **Why hard** | Editor session reliability is half host (UnrealWatch) half UEREMCP (default save helped UI create; BlueprintTools.create hang −32001 remains). Watch: Cursor discovery error **still live this session**; pull-only; offline `agent_instruction` lied ("clear") historically; Import Content was under-classified vs Message Log and default dismiss was Escape. |
+| **RTT / cost** | Full inventory rebuild; hours lost; multitask agents thrash dead ports; FBX import stalls ice-wall / VFX pipelines. |
+| **Goal API** | Persist-by-default everywhere; `BlueprintTools.create` timeout envelope; UnrealWatch v0.4+ discoverable + `status=editor_offline` STOP; v0.6+ `import_dialog` + `dismiss_unreal_blocker` → Import; optional auto-dismiss Restore Packages when MCP connected. |
+| **Acceptance** | Kill editor mid-UI-edit → relaunch → asset on disk OR honest recovery plan; closed editor → agents stop MCP within 1 watch call; open Import Content → `get_editor_status` ≠ `ok`, dismiss clicks Import. |
 
 **Class:** tooling (host + editor).
+**Note (2026-07-31):** Import Content detection/dismiss shipped in REAgentTools UnrealWatchMCP v0.6.0 — see [`RB-unreal-watch-miss-report.md`](./RB-unreal-watch-miss-report.md) §10.
 
 ---
 

@@ -359,3 +359,18 @@ Log contains `Successfully connected to stdio server`.
 - GetStarted / proxy “do_not_use watch” backlog copy may still be stale until updated separately.
 - Slate context menus without a stable title remain best-effort (size/owner heuristics + probe failure).
 - Closing orphan headless CRC processes is out of scope (no HWND to dismiss).
+
+---
+
+## 10. Missed Interchange “Import Content” (2026-07-31 field)
+
+**Symptom:** FBX / Interchange **Import Content** modal blocked the game thread; agents hung on Unreal MCP. Watch either ranked **Message Log** above Import (dismiss → Escape) or agents treated generic `modal` without an Import-primary dismiss path. Heartbeat/`get_editor_status` must not report plain `ok` while this dialog is open.
+
+**Fix (REAgentTools UnrealWatchMCP v0.6.0):**
+1. Title classify `Import Content` / FBX import / Interchange hints → `blocker_kind=import_dialog`, status **`import_dialog`** (always `abort_unreal_mcp`, like Restore Packages).
+2. Dialog sort prefers Import over Message Log.
+3. `dismiss_unreal_blocker` default clicks **Import**; `policy=cancel` aborts only.
+4. Tests: title match + STOP/RECOVER instruction + dismiss Import vs cancel.
+5. Heartbeat `modal_alert.json` includes `status=import_dialog` when project path is set.
+
+**Agent recover:** `get_editor_status` → if `import_dialog` → `dismiss_unreal_blocker()` (no args) to click Import.
