@@ -14,6 +14,8 @@ struct FUeremcpMaterialMasterBuildRequest
 	FString MasterPackagePath;
 	TArray<FString> Features;
 	bool bTrailPurpose = false;
+	/** Ice barrier / crystal masters use translucent blend instead of additive. */
+	bool bTranslucentBlend = false;
 };
 
 struct FUeremcpMaterialMasterBuildResult

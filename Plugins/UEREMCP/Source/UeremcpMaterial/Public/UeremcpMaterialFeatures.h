@@ -27,6 +27,12 @@ namespace UeremcpMaterialFeatures
 	/** True for trail/ribbon purposes. */
 	bool IsTrailPurpose(const FString& Purpose);
 
+	/** True for ice crystal / barrier purposes (translucent Fresnel masters). */
+	bool IsIceBarrierPurpose(const FString& Purpose);
+
+	/** Normalize common aliases (projectile_core → elemental_projectile_core, ice → ice_crystal). */
+	FString NormalizePurpose(const FString& Purpose);
+
 	/** Master base name without signature, e.g. M_Ueremcp_ProjCore. */
 	FString MasterBaseAssetName(const FString& Purpose);
 
@@ -48,6 +54,7 @@ namespace UeremcpMaterialFeatures
 		bool bOpacityConnected = false;
 		bool bParticleColorConsumed = false;
 		bool bAdditiveBlend = false;
+		bool bTranslucentBlend = false;
 		bool bUnlit = false;
 		TMap<FString, bool> FeatureWired;
 	};

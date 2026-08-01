@@ -730,8 +730,36 @@ FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJ
 	{
 		return Fail(TEXT("error"), TEXT("render-target creation failed"));
 	}
-	const FVector CamLoc = StageOrigin + CameraOffset(CameraPreset);
-	const FVector AimAt = StageOrigin + FVector(0.0, 0.0, 210.0);
+
+	FBox ContentBounds;
+	const bool bHaveContent = ComputeWorldContentBounds(World, ContentBounds);
+	FVector AimAt = StageOrigin + FVector(0.0, 0.0, 210.0);
+	FVector CamLoc = StageOrigin + CameraOffset(CameraPreset);
+	FString FramingMode = TEXT("stage_origin");
+	if (bHaveContent)
+	{
+		AimAt = ContentBounds.GetCenter();
+		CamLoc = AimAt + ScaledCameraOffset(CameraPreset, ContentBounds);
+		FramingMode = TEXT("world_content_bounds");
+	}
+
+	// Optional focus override from specification.
+	if (Request.Specification.IsValid())
+	{
+		TArray<double> FocusLoc;
+		const TArray<TSharedPtr<FJsonValue>>* FocusArr = nullptr;
+		if (Request.Specification->TryGetArrayField(TEXT("focus_location"), FocusArr)
+			&& FocusArr && FocusArr->Num() >= 3)
+		{
+			AimAt = FVector(
+				(*FocusArr)[0]->AsNumber(),
+				(*FocusArr)[1]->AsNumber(),
+				(*FocusArr)[2]->AsNumber());
+			CamLoc = AimAt + CameraOffset(CameraPreset);
+			FramingMode = TEXT("specification.focus_location");
+		}
+	}
+
 	ASceneCapture2D* CamActor = SpawnFramedCapture(
 		World, CamLoc, AimAt, Target, Tracked);
 	if (!CamActor)
@@ -782,7 +810,26 @@ FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJ
 		TEXT("world_path"), World->GetOutermost() ? World->GetOutermost()->GetName() : FString());
 	Structural->SetNumberField(TEXT("actor_count"), ActorCount);
 	Structural->SetStringField(TEXT("camera"), CameraPreset);
+	Structural->SetStringField(TEXT("framing_mode"), FramingMode);
+	Structural->SetBoolField(TEXT("framed_world_content"), bHaveContent);
 	Structural->SetBoolField(TEXT("stage_teardown_complete"), bTeardown);
+
+	double MaxMeanLuminance = 0.0;
+	for (const TSharedPtr<FJsonValue>& FrameValue : FrameInfos)
+	{
+		const TSharedPtr<FJsonObject> FrameObj =
+			FrameValue.IsValid() ? FrameValue->AsObject() : nullptr;
+		if (!FrameObj.IsValid())
+		{
+			continue;
+		}
+		double Mean = 0.0;
+		if (FrameObj->TryGetNumberField(TEXT("mean_luminance"), Mean))
+		{
+			MaxMeanLuminance = FMath::Max(MaxMeanLuminance, Mean);
+		}
+	}
+	const bool bNearBlack = OkFrames > 0 && MaxMeanLuminance < 0.02;
 
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
@@ -795,19 +842,41 @@ FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJ
 	Response.CapabilityNotes.Add(
 		TEXT("Does not prove landscape quality, river continuity, or foliage exclusion — "
 			 "use tests/visual mountain_river harness for those."));
-	if (OkFrames == FrameCount && bTeardown)
+	Response.CapabilityNotes.Add(
+		TEXT("Frames around live actor bounds by default (not disposable StageOrigin). "
+			 "Pass specification.focus_location [x,y,z] to override."));
+	if (bNearBlack)
+	{
+		Response.CapabilityNotes.Add(
+			TEXT("NEAR_BLACK: mean luminance < 0.02. Prefer EditorAppToolset.CaptureViewport "
+				 "with an explicit camera transform facing the subject."));
+		Response.NextArgs = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> SpecHint = MakeShared<FJsonObject>();
+		SpecHint->SetStringField(
+			TEXT("hint"),
+			TEXT("Retry CaptureViewport aimed at the actor, or pass focus_location."));
+		Response.NextArgs->SetObjectField(TEXT("specification"), SpecHint);
+	}
+	if (OkFrames == FrameCount && bTeardown && !bNearBlack)
 	{
 		Response.Status = TEXT("no_change_required");
 		Response.Summary = FString::Printf(
-			TEXT("Captured and reread %d/%d world frames (%dx%d) after %d warm-up ticks"),
-			OkFrames, FrameCount, Width, Height, WarmUpTicks);
+			TEXT("Captured and reread %d/%d world frames (%dx%d) after %d warm-up ticks "
+				 "(framing=%s)"),
+			OkFrames, FrameCount, Width, Height, WarmUpTicks, *FramingMode);
 	}
 	else if (OkFrames > 0)
 	{
 		Response.Status = TEXT("partially_completed");
-		Response.Summary = FString::Printf(
-			TEXT("Captured %d/%d world frames; teardown=%s"),
-			OkFrames, FrameCount, bTeardown ? TEXT("ok") : TEXT("incomplete"));
+		Response.Summary = bNearBlack
+			? FString::Printf(
+				TEXT("Captured %d/%d world frames but framing looks near-black "
+					 "(max mean_luminance=%.4f, framing=%s). Prefer CaptureViewport."),
+				OkFrames, FrameCount, MaxMeanLuminance, *FramingMode)
+			: FString::Printf(
+				TEXT("Captured %d/%d world frames; teardown=%s framing=%s"),
+				OkFrames, FrameCount, bTeardown ? TEXT("ok") : TEXT("incomplete"),
+				*FramingMode);
 	}
 	else
 	{
@@ -825,6 +894,8 @@ FString UUeremcpVisualCaptureToolset::CaptureWorldFrames(const FString& RequestJ
 	Verification->SetBoolField(TEXT("png_files_reread"), OkFrames == FrameCount);
 	Verification->SetBoolField(TEXT("stage_teardown_complete"), bTeardown);
 	Verification->SetNumberField(TEXT("ok_frames"), OkFrames);
+	Verification->SetBoolField(TEXT("near_black"), bNearBlack);
+	Verification->SetNumberField(TEXT("max_mean_luminance"), MaxMeanLuminance);
 	Extra->SetObjectField(TEXT("verification"), Verification);
 	Response.ExtraFields = Extra;
 	return Dispatch.Complete(Response);

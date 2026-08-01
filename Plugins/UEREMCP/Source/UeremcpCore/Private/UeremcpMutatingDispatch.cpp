@@ -1,6 +1,7 @@
 #include "UeremcpMutatingDispatch.h"
 
 #include "Dom/JsonObject.h"
+#include "Misc/Guid.h"
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -92,8 +93,11 @@ FString FUeremcpMutatingDispatch::MakeMutatorQueuedResponse(
 	Response.CapabilityNotes.Add(
 		TEXT("Mutator queue: RETRY this same tool call with the SAME request_id "
 			 "(FIFO head acquires). Do NOT poll get_job_result forever — abandoned "
-			 "waiters auto-clear after ~45s; orphaned active slots after ~180s."));
+			 "waiters auto-clear after ~45s; orphaned active slots after ~180s. "
+			 "Merge error.next_args.request_id and keep it stable across retries."));
 	Response.ErrorCode = TEXT("MUTATOR_BUSY");
+	Response.NextArgs = MakeShared<FJsonObject>();
+	Response.NextArgs->SetStringField(TEXT("request_id"), Request.RequestId);
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }
 
@@ -204,6 +208,23 @@ bool FUeremcpMutatingDispatch::TryBegin(
 	{
 		bGateOpen = true;
 		return true;
+	}
+
+	// Mutating ops require a stable request_id for FIFO ownership. Hand back a
+	// usable id in next_args instead of a prose-only footgun.
+	if (Request.RequestId.IsEmpty())
+	{
+		const FString SuggestedId =
+			FGuid::NewGuid().ToString(EGuidFormats::DigitsWithHyphensLower);
+		TSharedPtr<FJsonObject> NextArgs = MakeShared<FJsonObject>();
+		NextArgs->SetStringField(TEXT("request_id"), SuggestedId);
+		OutBlockingResponseJson = FUeremcpEnvelope::MakeRejection(
+			FString(),
+			TEXT("Mutating tools require request_id for mutator serialization. "
+				 "Merge error.next_args into the request and retry with that id."),
+			TEXT("REQUEST_ID_REQUIRED"),
+			NextArgs);
+		return false;
 	}
 
 	// Drop abandoned FIFO entries before acquire so CreateLandscape / AttachWeather /

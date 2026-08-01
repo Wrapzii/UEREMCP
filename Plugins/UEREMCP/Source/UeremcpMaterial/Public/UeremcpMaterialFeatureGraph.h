@@ -30,5 +30,6 @@ namespace UeremcpMaterialFeatureGraph
 	FUeremcpFeatureGraphBuildResult BuildGraph(
 		UMaterial* Material,
 		const TArray<FString>& Features,
-		bool bTrailPurpose);
+		bool bTrailPurpose,
+		bool bTranslucentBlend = false);
 }

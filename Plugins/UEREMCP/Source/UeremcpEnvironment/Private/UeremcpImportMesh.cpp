@@ -1,20 +1,25 @@
 // UEREMCP — import_mesh_for_world (MCP-008).
 //
 // One call replacing import → unit-scale fight → collision preset → Nanite flag.
-// Composes StaticMeshTools.import_file via ToolsetRegistry — does not reimplement
-// FBX import.
+// Primary path: silent UAssetImportTask (bAutomated) so Interchange never opens
+// Import Content and blocks the game thread / MCP. Falls back to
+// StaticMeshTools.import_file only if AssetTools import fails without a dialog.
 //
 // API NOTES — read, not recalled:
 //   [VERIFIED: StaticMesh.h:2200/2204] GetBounds / GetBoundingBox
 //   [VERIFIED: BodySetup.h] UBodySetup::CollisionTraceFlag / CTF_UseComplexAsSimple
 //   [VERIFIED: StaticMesh.h NaniteSettings accessors]
+//   [VERIFIED: AssetImportTask.h] bAutomated / ImportAssetTasks
 //   [VERIFIED: UToolsetRegistry::ExecuteTool] sync via ToolCallAsyncResultString
 
 #include "UeremcpEnvironmentToolset.h"
 
 #include "UeremcpEnvelope.h"
 
+#include "AssetImportTask.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
+#include "Editor.h"
 #include "Engine/StaticMesh.h"
 #include "PhysicsEngine/BodySetup.h"
 #include "BodySetupEnums.h" // PhysicsCore — not under PhysicsEngine/
@@ -71,7 +76,52 @@ namespace
 		return Out;
 	}
 
-	bool CallStaticMeshImportFile(
+	bool CallSilentAssetImportTask(
+		const FString& FolderPath,
+		const FString& AssetName,
+		const FString& SourceFile,
+		FString& OutError)
+	{
+		// Prefer AssetTools automated import so Interchange never opens Import Content
+		// (game-thread modal → MCP death). bAutomated + automation guard are the contract.
+		if (!FModuleManager::Get().IsModuleLoaded(TEXT("AssetTools"))
+			&& !FModuleManager::Get().LoadModule(TEXT("AssetTools")))
+		{
+			OutError = TEXT("AssetTools module unavailable for silent import");
+			return false;
+		}
+
+		UAssetImportTask* Task = NewObject<UAssetImportTask>();
+		Task->Filename = SourceFile;
+		Task->DestinationPath = FolderPath;
+		Task->DestinationName = AssetName;
+		Task->bAutomated = true;
+		Task->bSave = false;
+		Task->bReplaceExisting = true;
+		Task->bReplaceExistingSettings = true;
+
+		TArray<UAssetImportTask*> Tasks;
+		Tasks.Add(Task);
+
+		// Keep Interchange / factory UI suppressed for the duration of this call.
+		TGuardValue<bool> AutomationGuard(GIsAutomationTesting, true);
+
+		FAssetToolsModule& AssetToolsModule =
+			FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
+		AssetToolsModule.Get().ImportAssetTasks(Tasks);
+
+		if (!Task->ImportedObjectPaths.Num())
+		{
+			OutError = TEXT(
+				"Silent AssetImportTask produced no assets. "
+				"If Interchange Import Content is open, dismiss it and retry — "
+				"MCP import must stay automated (bAutomated).");
+			return false;
+		}
+		return true;
+	}
+
+	bool CallStaticMeshImportFileFallback(
 		const FString& FolderPath,
 		const FString& AssetName,
 		const FString& SourceFile,
@@ -99,14 +149,18 @@ namespace
 			OutError = TEXT("StaticMeshTools.import_file returned null");
 			return false;
 		}
-		const double Deadline = FPlatformTime::Seconds() + 120.0;
+		// Short deadline: if Epic path opens a modal, fail fast instead of hanging MCP.
+		const double Deadline = FPlatformTime::Seconds() + 15.0;
 		while (!AsyncResult->bIsComplete && FPlatformTime::Seconds() < Deadline)
 		{
 			FPlatformProcess::Sleep(0.01f);
 		}
 		if (!AsyncResult->bIsComplete)
 		{
-			OutError = TEXT("StaticMeshTools.import_file timed out");
+			OutError = TEXT(
+				"StaticMeshTools.import_file timed out (likely Interchange Import Content "
+				"modal). Dismiss the dialog, then retry import_mesh_for_world — silent "
+				"AssetImportTask is the preferred path.");
 			return false;
 		}
 		if (!AsyncResult->Error.IsEmpty())
@@ -115,6 +169,31 @@ namespace
 			return false;
 		}
 		return true;
+	}
+
+	bool CallStaticMeshImport(
+		const FString& FolderPath,
+		const FString& AssetName,
+		const FString& SourceFile,
+		FString& OutError,
+		FString& OutPathUsed)
+	{
+		if (CallSilentAssetImportTask(FolderPath, AssetName, SourceFile, OutError))
+		{
+			OutPathUsed = TEXT("AssetImportTask(bAutomated)");
+			return true;
+		}
+		const FString SilentError = OutError;
+		OutError.Reset();
+		if (CallStaticMeshImportFileFallback(FolderPath, AssetName, SourceFile, OutError))
+		{
+			OutPathUsed = TEXT("StaticMeshTools.import_file(fallback)");
+			return true;
+		}
+		OutError = FString::Printf(
+			TEXT("Silent import failed (%s); fallback also failed (%s)"),
+			*SilentError, *OutError);
+		return false;
 	}
 
 	void SplitAssetPath(const FString& AssetPath, FString& OutFolder, FString& OutName)
@@ -198,18 +277,19 @@ FString UUeremcpEnvironmentToolset::ImportMeshForWorld(const FString& RequestJso
 		Response.UnderstoodAction = Request.Action;
 		Response.Status = TEXT("no_change_required");
 		Response.Summary = FString::Printf(
-			TEXT("Dry run: would import %s → %s/%s via StaticMeshTools.import_file."),
+			TEXT("Dry run: would import %s → %s/%s via silent AssetImportTask (bAutomated)."),
 			*SourceFile, *Folder, *AssetName);
 		Response.Metrics.McpRoundTrips = 1;
 		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
 
 	FString ImportError;
-	if (!CallStaticMeshImportFile(Folder, AssetName, SourceFile, ImportError))
+	FString ImportPathUsed;
+	if (!CallStaticMeshImport(Folder, AssetName, SourceFile, ImportError, ImportPathUsed))
 	{
 		return FUeremcpEnvelope::MakeRejection(
 			Request.RequestId,
-			FString::Printf(TEXT("StaticMeshTools.import_file failed: %s"), *ImportError));
+			FString::Printf(TEXT("import_mesh_for_world failed: %s"), *ImportError));
 	}
 
 	const FString ObjectPath = Folder / AssetName + TEXT(".") + AssetName;
@@ -321,8 +401,8 @@ FString UUeremcpEnvironmentToolset::ImportMeshForWorld(const FString& RequestJso
 	Response.UnderstoodAction = Request.Action;
 	Response.Status = TEXT("created_with_warnings");
 	Response.Summary = FString::Printf(
-		TEXT("Imported %s via StaticMeshTools.import_file; collision=%s nanite=%s."),
-		*Mesh->GetPathName(), *Collision, bNanite ? TEXT("true") : TEXT("false"));
+		TEXT("Imported %s via %s; collision=%s nanite=%s."),
+		*Mesh->GetPathName(), *ImportPathUsed, *Collision, bNanite ? TEXT("true") : TEXT("false"));
 	Response.PrimaryAsset = Mesh->GetPathName();
 	FUeremcpAssetRef Ref;
 	Ref.AssetPath = Mesh->GetPathName();
@@ -335,5 +415,8 @@ FString UUeremcpEnvironmentToolset::ImportMeshForWorld(const FString& RequestJso
 	Response.CapabilityNotes.Add(
 		TEXT("expected_bounds_m omitted → actual bounds reported so the agent can check. "
 			 "A castle the size of a crate looks fine in the outliner."));
+	Response.CapabilityNotes.Add(
+		TEXT("Import uses silent UAssetImportTask(bAutomated) to avoid Interchange "
+			 "Import Content modals that block MCP."));
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }

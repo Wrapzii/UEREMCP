@@ -174,11 +174,24 @@ class TestMutatorQueueStaleClear(unittest.TestCase):
         self.assertIn("ClearStale", body)
         self.assertIn("MUTATOR_BUSY", body)
         self.assertIn("Do NOT poll get_job_result forever", body)
+        self.assertIn("REQUEST_ID_REQUIRED", body)
+        self.assertIn("next_args", body.lower())
+        self.assertIn('SetStringField(TEXT("request_id")', body)
+
+    def test_request_id_required_in_schema(self):
+        with open(SCHEMA, encoding="utf-8") as fh:
+            schema = json.load(fh)
+        codes = schema["properties"]["error"]["properties"]["code"]["enum"]
+        self.assertIn("REQUEST_ID_REQUIRED", codes)
+        self.assertIn("MUTATOR_BUSY", codes)
 
 
 class TestImportAndPaint(unittest.TestCase):
     def test_import_composes_static_mesh_tools(self):
         body = read(IMPORT_MESH)
+        self.assertIn("AssetImportTask", body)
+        self.assertIn("bAutomated", body)
+        self.assertIn("GIsAutomationTesting", body)
         self.assertIn("StaticMeshTools", body)
         self.assertIn("import_file", body)
         self.assertIn("MESH_BOUNDS_MISMATCH", body)

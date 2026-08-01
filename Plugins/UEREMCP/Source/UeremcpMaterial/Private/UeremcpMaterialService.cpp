@@ -794,9 +794,11 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		UeremcpMaterialFeatures::ParseFeaturesFromSpec(Spec, RequestedFeatures);
 	}
 
+	Purpose = UeremcpMaterialFeatures::NormalizePurpose(Purpose);
 	const TArray<FString> Features =
 		UeremcpMaterialFeatures::ResolveFeaturesForPurpose(Purpose, RequestedFeatures);
 	const bool bTrailPurpose = UeremcpMaterialFeatures::IsTrailPurpose(Purpose);
+	const bool bIceBarrierPurpose = UeremcpMaterialFeatures::IsIceBarrierPurpose(Purpose);
 
 	if (Purpose.IsEmpty())
 	{
@@ -809,13 +811,17 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 		Purpose.Equals(TEXT("elemental_projectile_core"), ESearchCase::CaseSensitive) ||
 		Purpose.Equals(TEXT("elemental_projectile_trail"), ESearchCase::CaseSensitive) ||
 		Purpose.Equals(TEXT("fireball_core"), ESearchCase::CaseSensitive) ||
-		Purpose.Equals(TEXT("fireball_ribbon_trail"), ESearchCase::CaseSensitive);
+		Purpose.Equals(TEXT("fireball_ribbon_trail"), ESearchCase::CaseSensitive) ||
+		Purpose.Equals(TEXT("ice_crystal"), ESearchCase::CaseSensitive) ||
+		Purpose.Equals(TEXT("elemental_ice_barrier"), ESearchCase::CaseSensitive);
 
 	if (!bSupportedPurpose)
 	{
 		Result.Status = TEXT("partially_completed");
 		Result.Summary = FString::Printf(
-			TEXT("purpose '%s' is not yet implemented; only elemental_projectile_core|trail and fireball_core|ribbon_trail are wired."),
+			TEXT("purpose '%s' is not yet implemented; wired: elemental_projectile_core|trail, "
+				 "fireball_core|ribbon_trail, ice_crystal|elemental_ice_barrier "
+				 "(aliases: ice, ice_wall, projectile_core)."),
 			*Purpose);
 		return Result;
 	}
@@ -846,6 +852,13 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 						*Element));
 			}
 		}
+	}
+	// Ice barriers / crystals must not inherit projectile emissive blowout.
+	if (bIceBarrierPurpose && Params.EmissiveScale > 2.0f)
+	{
+		Params.EmissiveScale = 1.5f;
+		Result.InterpretationNotes.Add(
+			TEXT("Clamped EmissiveScale to 1.5 for ice barrier/crystal (avoid additive whiteout)."));
 	}
 	UeremcpMaterialElementPresets::ApplyModifiers(Modifiers, Purpose, Params);
 
@@ -1002,6 +1015,7 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 	MasterRequest.MasterPackagePath = MasterPath;
 	MasterRequest.Features = Features;
 	MasterRequest.bTrailPurpose = bTrailPurpose;
+	MasterRequest.bTranslucentBlend = bIceBarrierPurpose;
 
 	const FUeremcpMaterialMasterBuildResult MasterResult =
 		UeremcpMaterialMasterBuilder::EnsureMasterMaterial(MasterRequest);

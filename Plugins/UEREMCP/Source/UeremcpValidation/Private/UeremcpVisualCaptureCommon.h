@@ -27,6 +27,16 @@ namespace UeremcpVisualCapture
 
 	FVector CameraOffset(const FString& Preset);
 
+	/**
+	 * Compute a focus box for CaptureWorldFrames from live actors (skips info /
+	 * capture / volume noise). Returns false when the world has no useful bounds
+	 * — caller may fall back to StageOrigin.
+	 */
+	bool ComputeWorldContentBounds(UWorld* World, FBox& OutBounds);
+
+	/** Scale a three_quarter-style offset so the focus box fills the frame. */
+	FVector ScaledCameraOffset(const FString& Preset, const FBox& FocusBounds);
+
 	/** Saved/UEREMCP/<Domain>/<Asset>/<RequestId>/ with safe path components. */
 	FString MakeOutputDirectory(
 		const FString& Domain,

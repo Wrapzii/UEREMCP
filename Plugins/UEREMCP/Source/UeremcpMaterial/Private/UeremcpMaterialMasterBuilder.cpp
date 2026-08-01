@@ -120,7 +120,8 @@ namespace
 		const FUeremcpFeatureGraphBuildResult GraphResult = UeremcpMaterialFeatureGraph::BuildGraph(
 			Material,
 			Request.Features,
-			Request.bTrailPurpose);
+			Request.bTrailPurpose,
+			Request.bTranslucentBlend);
 		Result.InternalOperations += GraphResult.InternalOperations;
 		Result.WiredFeatures = GraphResult.WiredFeatures;
 		Result.SkippedFeatures = GraphResult.SkippedFeatures;

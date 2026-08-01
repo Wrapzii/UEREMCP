@@ -63,6 +63,20 @@
       "dynamic_color",
       "dynamic_intensity"
     ],
+    "ice_crystal": [
+      "fresnel",
+      "radial_falloff",
+      "depth_fade",
+      "dynamic_color",
+      "dynamic_intensity"
+    ],
+    "elemental_ice_barrier": [
+      "fresnel",
+      "radial_falloff",
+      "depth_fade",
+      "dynamic_color",
+      "dynamic_intensity"
+    ],
     "elemental_projectile_trail": [
       "panning_textures",
       "erosion",
@@ -79,6 +93,8 @@
   "purpose_master_base": {
     "elemental_projectile_core": "M_Ueremcp_ProjCore",
     "fireball_core": "M_Ueremcp_ProjCore",
+    "ice_crystal": "M_Ueremcp_IceCrystal",
+    "elemental_ice_barrier": "M_Ueremcp_IceCrystal",
     "elemental_projectile_trail": "M_Ueremcp_ProjTrail",
     "fireball_ribbon_trail": "M_Ueremcp_ProjTrail"
   },

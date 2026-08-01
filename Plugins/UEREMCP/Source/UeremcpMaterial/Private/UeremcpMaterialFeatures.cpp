@@ -89,6 +89,17 @@ TArray<FString> UeremcpMaterialFeatures::DefaultFeaturesForPurpose(const FString
 			TEXT("dynamic_color"),
 		};
 	}
+	if (Purpose.Equals(TEXT("ice_crystal"), ESearchCase::CaseSensitive) ||
+		Purpose.Equals(TEXT("elemental_ice_barrier"), ESearchCase::CaseSensitive))
+	{
+		return {
+			TEXT("fresnel"),
+			TEXT("radial_falloff"),
+			TEXT("depth_fade"),
+			TEXT("dynamic_color"),
+			TEXT("dynamic_intensity"),
+		};
+	}
 	if (Purpose.Equals(TEXT("elemental_projectile_core"), ESearchCase::CaseSensitive) ||
 		Purpose.Equals(TEXT("fireball_core"), ESearchCase::CaseSensitive))
 	{
@@ -129,11 +140,49 @@ bool UeremcpMaterialFeatures::IsTrailPurpose(const FString& Purpose)
 		Purpose.Equals(TEXT("fireball_ribbon_trail"), ESearchCase::CaseSensitive);
 }
 
+bool UeremcpMaterialFeatures::IsIceBarrierPurpose(const FString& Purpose)
+{
+	return Purpose.Equals(TEXT("ice_crystal"), ESearchCase::CaseSensitive) ||
+		Purpose.Equals(TEXT("elemental_ice_barrier"), ESearchCase::CaseSensitive);
+}
+
+FString UeremcpMaterialFeatures::NormalizePurpose(const FString& Purpose)
+{
+	if (Purpose.Equals(TEXT("projectile_core"), ESearchCase::IgnoreCase)
+		|| Purpose.Equals(TEXT("core"), ESearchCase::IgnoreCase))
+	{
+		return TEXT("elemental_projectile_core");
+	}
+	if (Purpose.Equals(TEXT("projectile_trail"), ESearchCase::IgnoreCase)
+		|| Purpose.Equals(TEXT("trail"), ESearchCase::IgnoreCase)
+		|| Purpose.Equals(TEXT("ribbon_trail"), ESearchCase::IgnoreCase))
+	{
+		return TEXT("elemental_projectile_trail");
+	}
+	if (Purpose.Equals(TEXT("ice"), ESearchCase::IgnoreCase)
+		|| Purpose.Equals(TEXT("ice_wall"), ESearchCase::IgnoreCase)
+		|| Purpose.Equals(TEXT("ice_barrier"), ESearchCase::IgnoreCase)
+		|| Purpose.Equals(TEXT("frost_barrier"), ESearchCase::IgnoreCase))
+	{
+		return TEXT("elemental_ice_barrier");
+	}
+	if (Purpose.Equals(TEXT("crystal"), ESearchCase::IgnoreCase)
+		|| Purpose.Equals(TEXT("crystalline"), ESearchCase::IgnoreCase))
+	{
+		return TEXT("ice_crystal");
+	}
+	return Purpose;
+}
+
 FString UeremcpMaterialFeatures::MasterBaseAssetName(const FString& Purpose)
 {
 	if (IsTrailPurpose(Purpose))
 	{
 		return TEXT("M_Ueremcp_ProjTrail");
+	}
+	if (IsIceBarrierPurpose(Purpose))
+	{
+		return TEXT("M_Ueremcp_IceCrystal");
 	}
 	if (Purpose.Equals(TEXT("elemental_projectile_core"), ESearchCase::CaseSensitive) ||
 		Purpose.Equals(TEXT("fireball_core"), ESearchCase::CaseSensitive))
@@ -204,6 +253,7 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 	OutResult.bEmissiveConnected = EmissiveRoot != nullptr;
 	OutResult.bOpacityConnected = OpacityRoot != nullptr;
 	OutResult.bAdditiveBlend = Material->BlendMode == BLEND_Additive;
+	OutResult.bTranslucentBlend = Material->BlendMode == BLEND_Translucent;
 	OutResult.bUnlit = Material->GetShadingModels().HasShadingModel(MSM_Unlit);
 
 	TArray<const UMaterialExpressionSphereMask*> SphereMasks;
@@ -250,7 +300,7 @@ bool UeremcpMaterialFeatures::VerifyFeatureGraph(
 	if (!OutResult.bEmissiveConnected ||
 		!OutResult.bOpacityConnected ||
 		!OutResult.bParticleColorConsumed ||
-		!OutResult.bAdditiveBlend ||
+		!(OutResult.bAdditiveBlend || OutResult.bTranslucentBlend) ||
 		!OutResult.bUnlit)
 	{
 		return false;

@@ -104,9 +104,9 @@ namespace
 			return Mul;
 		}
 
-		bool Build(FUeremcpFeatureGraphBuildResult& Result)
+		bool Build(FUeremcpFeatureGraphBuildResult& Result, bool bTranslucentBlend)
 		{
-			Material->BlendMode = BLEND_Additive;
+			Material->BlendMode = bTranslucentBlend ? BLEND_Translucent : BLEND_Additive;
 			Material->TwoSided = true;
 			Material->SetShadingModel(MSM_Unlit);
 
@@ -692,7 +692,8 @@ namespace
 FUeremcpFeatureGraphBuildResult UeremcpMaterialFeatureGraph::BuildGraph(
 	UMaterial* Material,
 	const TArray<FString>& Features,
-	bool bTrailPurpose)
+	bool bTrailPurpose,
+	bool bTranslucentBlend)
 {
 	FUeremcpFeatureGraphBuildResult Result;
 	(void)bTrailPurpose;
@@ -713,7 +714,7 @@ FUeremcpFeatureGraphBuildResult UeremcpMaterialFeatureGraph::BuildGraph(
 	}
 
 	FFeatureGraphBuilder Builder(Material, Features, Result.InternalOperations);
-	if (!Builder.Build(Result))
+	if (!Builder.Build(Result, bTranslucentBlend))
 	{
 		Result.bSuccess = false;
 		return Result;

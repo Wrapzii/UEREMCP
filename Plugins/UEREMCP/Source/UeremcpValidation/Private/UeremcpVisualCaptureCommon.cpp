@@ -2,6 +2,9 @@
 #include "UeremcpVisualCaptureCommon.h"
 
 #include "Components/SceneCaptureComponent2D.h"
+#include "EngineUtils.h"
+#include "GameFramework/Info.h"
+#include "GameFramework/WorldSettings.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/FileManager.h"
 #include "Kismet/KismetRenderingLibrary.h"
@@ -17,6 +20,53 @@ namespace UeremcpVisualCapture
 		if (Preset == TEXT("side")) { return FVector(0.0, -950.0, 300.0); }
 		if (Preset == TEXT("top")) { return FVector(-300.0, 0.0, 1050.0); }
 		return FVector(-820.0, -560.0, 360.0); // three_quarter
+	}
+
+	bool ComputeWorldContentBounds(UWorld* World, FBox& OutBounds)
+	{
+		OutBounds.Init();
+		if (!World)
+		{
+			return false;
+		}
+
+		bool bAny = false;
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			AActor* Actor = *It;
+			if (!Actor || !IsValid(Actor) || Actor->IsTemporarilyHiddenInEditor())
+			{
+				continue;
+			}
+			if (Actor->IsA<AWorldSettings>() || Actor->IsA<AInfo>()
+				|| Actor->IsA<ASceneCapture2D>())
+			{
+				continue;
+			}
+
+			FVector Origin;
+			FVector Extent;
+			Actor->GetActorBounds(false, Origin, Extent);
+			if (Extent.GetAbsMax() < 1.0f)
+			{
+				continue;
+			}
+			OutBounds += FBox(Origin - Extent, Origin + Extent);
+			bAny = true;
+		}
+		return bAny && OutBounds.IsValid;
+	}
+
+	FVector ScaledCameraOffset(const FString& Preset, const FBox& FocusBounds)
+	{
+		const FVector Base = CameraOffset(Preset);
+		if (!FocusBounds.IsValid)
+		{
+			return Base;
+		}
+		const float Radius = FocusBounds.GetExtent().Size();
+		const float Scale = FMath::Clamp(Radius / 400.0f, 0.35f, 8.0f);
+		return Base * Scale;
 	}
 
 	FString MakeOutputDirectory(

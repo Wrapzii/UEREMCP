@@ -50,6 +50,7 @@
             "FLATTEN_PAD_UNSUPPORTED",
             "LAYER_NOT_FOUND",
             "MUTATOR_BUSY",
+            "REQUEST_ID_REQUIRED",
             "SCREEN_UMG_CAPTURE_UNSUPPORTED",
             "COMMON_UI_UNAVAILABLE",
             "PREVIEW_NOT_VISIBLE",

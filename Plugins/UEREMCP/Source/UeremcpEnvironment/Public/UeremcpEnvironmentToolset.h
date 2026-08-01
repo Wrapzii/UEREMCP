@@ -221,7 +221,8 @@ public:
 	 * Import a mesh for world use: file → unit check → collision → Nanite.
 	 *
 	 * Use when: bringing an FBX/OBJ into /Game for foliage or prefabs. Composes
-	 *   StaticMeshTools.import_file; does not reimplement FBX import.
+	 *   StaticMeshTools.import_file only as fallback; primary path is silent
+	 *   UAssetImportTask(bAutomated) so Interchange Import Content never opens.
 	 * Inputs: action=import_mesh_for_world; target.asset_path; specification.source_file
 	 *   REQUIRED. Optional source_unit, collision, nanite, expected_bounds_m.
 	 *   expected_bounds_m is the load-bearing field — reject when actual bounds

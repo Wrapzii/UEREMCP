@@ -79,10 +79,14 @@ class FeatureGraphVerificationTests(unittest.TestCase):
             self.features_cpp,
         )
 
-    def test_vfx_master_requires_additive_unlit_graph(self) -> None:
-        self.assertIn("Material->BlendMode = BLEND_Additive", self.graph_cpp)
+    def test_vfx_master_requires_additive_or_translucent_unlit_graph(self) -> None:
+        # Projectile masters stay Additive; ice barrier/crystal use Translucent.
+        self.assertIn("BLEND_Additive", self.graph_cpp)
+        self.assertIn("BLEND_Translucent", self.graph_cpp)
+        self.assertIn("bTranslucentBlend", self.graph_cpp)
         self.assertIn("Material->SetShadingModel(MSM_Unlit)", self.graph_cpp)
         self.assertIn("Material->BlendMode == BLEND_Additive", self.features_cpp)
+        self.assertIn("Material->BlendMode == BLEND_Translucent", self.features_cpp)
         self.assertIn("HasShadingModel(MSM_Unlit)", self.features_cpp)
 
     def test_fireball_modulators_preserve_nonzero_emissive_floor(self) -> None:

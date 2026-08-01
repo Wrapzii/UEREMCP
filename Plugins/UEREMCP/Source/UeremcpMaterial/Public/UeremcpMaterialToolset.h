@@ -39,15 +39,16 @@ public:
 	static FString Echo(const FString& RequestJson);
 
 	/**
-	 * Create or update a VFX material (elemental projectile core/trail, fresnel, color).
+	 * Create or update a VFX material (elemental projectile, ice barrier/crystal, fresnel).
 	 *
-	 * Use when: make a VFX/shader material, change fireball color/orange tint, translucent FX mats.
+	 * Use when: VFX/shader materials including ice walls — prefer purpose ice_crystal /
+	 *   elemental_ice_barrier (translucent Fresnel) over projectile_core for barriers.
 	 * Inputs: action=create_vfx_material, target.asset_path, specification.purpose required;
 	 * prefer options.dry_run + validate=true; idempotency_key recommended.
 	 * Outputs: created/modified statuses with parameter re-read when validate=true.
 	 * Do not use for: MaterialTools expression graphs; MaterialInstanceConstant authoring gaps.
 	 * Next tool: CreateNiagaraEffect to bind the material into an effect.
-	 * Example: {"protocol_version":"1.0","action":"create_vfx_material","target":{"asset_path":"/Game/__UeremcpTests/M_FireCore"},"options":{"dry_run":true,"validate":true},"specification":{"purpose":"projectile_core","element":"fire"}}
+	 * Example: {"protocol_version":"1.0","action":"create_vfx_material","target":{"asset_path":"/Game/__UeremcpTests/M_IceBarrier"},"options":{"dry_run":true,"validate":true},"specification":{"purpose":"elemental_ice_barrier","element":"ice"}}
 	 *
 	 * @param RequestJson  Request with action create_vfx_material and target.asset_path set.
 	 */

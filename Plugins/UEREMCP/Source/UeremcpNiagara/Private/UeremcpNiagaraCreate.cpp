@@ -180,6 +180,40 @@ namespace
 		{
 			AddVar(MakeFloatUserVariable(TEXT("User.Intensity"), static_cast<float>(Intensity)));
 		}
+
+		// Mist / fog knobs (IW-005) — aliases map onto User.* for precipitation roles.
+		double Density = 0.0;
+		if (Parameters->TryGetNumberField(TEXT("density"), Density)
+			|| Parameters->TryGetNumberField(TEXT("mist_density"), Density)
+			|| Parameters->TryGetNumberField(TEXT("spawn_rate"), Density))
+		{
+			AddVar(MakeFloatUserVariable(TEXT("User.Density"), static_cast<float>(Density)));
+			AddVar(MakeFloatUserVariable(TEXT("User.MistDensity"), static_cast<float>(Density)));
+		}
+
+		double Radius = 0.0;
+		if (Parameters->TryGetNumberField(TEXT("radius"), Radius)
+			|| Parameters->TryGetNumberField(TEXT("mist_radius"), Radius))
+		{
+			AddVar(MakeFloatUserVariable(TEXT("User.Radius"), static_cast<float>(Radius)));
+		}
+
+		const TArray<TSharedPtr<FJsonValue>>* MistColor = nullptr;
+		if (Parameters->TryGetArrayField(TEXT("mist_color"), MistColor)
+			|| Parameters->TryGetArrayField(TEXT("fog_color"), MistColor)
+			|| Parameters->TryGetArrayField(TEXT("color"), MistColor))
+		{
+			FLinearColor Color;
+			if (TryReadLinearColorFromArray(MistColor, Color))
+			{
+				AddVar(MakeColorUserVariable(TEXT("User.MistColor"), Color));
+				// Also seed primary color when agents only pass mist_color/color.
+				if (!Parameters->HasField(TEXT("primary_color")))
+				{
+					AddVar(MakeColorUserVariable(TEXT("User.Color"), Color));
+				}
+			}
+		}
 	}
 
 	bool ApplyParticleColor(
@@ -732,10 +766,43 @@ bool FUeremcpNiagaraCreate::Run(
 		Context,
 		OutResult.InternalOperations);
 
+	// Stronger default mist density when precipitation/mist roles are present and
+	// the agent did not pass density knobs (IW-005 field: ground mist too thin).
+	TSharedPtr<FJsonObject> EffectiveParams = Spec.Parameters;
+	const bool bHasMistRole = Spec.ComponentRoles.ContainsByPredicate(
+		[](const FString& Role)
+		{
+			return Role.Equals(TEXT("mist"), ESearchCase::IgnoreCase)
+				|| Role.Equals(TEXT("fog"), ESearchCase::IgnoreCase);
+		});
+	const bool bPrecipitation =
+		Spec.EffectType.Equals(TEXT("precipitation"), ESearchCase::IgnoreCase)
+		|| Spec.EffectType.Equals(TEXT("rain"), ESearchCase::IgnoreCase)
+		|| Spec.EffectType.Equals(TEXT("weather"), ESearchCase::IgnoreCase)
+		|| Spec.EffectType.Equals(TEXT("mist"), ESearchCase::IgnoreCase);
+	if ((bPrecipitation || bHasMistRole)
+		&& (!EffectiveParams.IsValid()
+			|| (!EffectiveParams->HasField(TEXT("density"))
+				&& !EffectiveParams->HasField(TEXT("mist_density"))
+				&& !EffectiveParams->HasField(TEXT("intensity")))))
+	{
+		if (!EffectiveParams.IsValid())
+		{
+			EffectiveParams = MakeShared<FJsonObject>();
+		}
+		else
+		{
+			EffectiveParams = MakeShared<FJsonObject>(*EffectiveParams);
+		}
+		EffectiveParams->SetNumberField(TEXT("density"), 2.5);
+		EffectiveParams->SetNumberField(TEXT("intensity"), 3.0);
+		OutResult.ChecksPerformed.Add(TEXT("niagara.default_mist_density"));
+	}
+
 	ApplySpecificationParameters(
 		System,
 		Context,
-		Spec.Parameters,
+		EffectiveParams,
 		OutResult.UserVariablesAdded,
 		OutResult.InternalOperations);
 

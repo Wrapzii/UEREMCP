@@ -45,6 +45,9 @@ public:
 
 	/**
 	 * Capture the current editor world with warm-up ticks and framed SceneCapture2D.
+	 * Frames live actor bounds by default (not disposable StageOrigin). Optional
+	 * specification.focus_location [x,y,z]. Near-black captures are partially_completed
+	 * with a CaptureViewport fallback note.
 	 *
 	 * Use when: screenshot a level/environment after BuildEnvironment (BACKLOG 3.2).
 	 * Inputs: action=capture_world_frames; target.asset_path optional label;
