@@ -315,27 +315,46 @@ Log contains `Successfully connected to stdio server`.
 
 ## 9. Fixed (2026-07-31)
 
-**Repo / branch:** `REAgentTools` → `cursor/unreal-watch-mcp-fix` (UnrealWatchMCP v0.4.0)  
-**Commits:** REAgentTools `956c88a`; this report `9e659cf` (UEREMCP `ws-11-northridge-remaining-impl`)  
-**Cursor config:** `%USERPROFILE%\.cursor\mcp.json` → spawn via `uv run --python 3.11 --with mcp>=1.9,<2` + GitHub `UnrealWatchMCP\server.py`; `UNREAL_WATCH_PROJECT` → `ueremcp_fieldtest`; `UNREAL_WATCH_HEARTBEAT_S=5`.
+**Repo / branch:** `REAgentTools` → `cursor/unreal-watch-mcp-fix`  
+**Commits:** discovery/offline `956c88a` (v0.4.0); blocker/dismiss `21d04e1` (v0.5.0).  
+**This report:** UEREMCP `ws-11-northridge-remaining-impl` (doc update committing with this section).
 
-### What changed
+### What changed (v0.4.0)
 
-1. **Cursor discovery** — Replaced fragile hand-rolled stdio as the primary path with official **`mcp` FastMCP** stdio (same family as blender-mcp). Hardened legacy framing kept as ImportError fallback. Verified live: `GetMcpTools(user-unreal-watch)` → `serverStatus=ready` with `check_unreal`, `get_editor_status`, `wait_for_editor`, `dismiss_dialog`, config tools.
-2. **Honest offline** — `check_unreal` now returns `status=editor_offline`, `abort_unreal_mcp=true`, `likely_blocked=true`, and `agent_instruction` starts with **STOP** / “not running”. Never emits “watch clear / may be used” when the editor is down. Other statuses: `ok | modal_blocked | ports_wedged | proxy_unhealthy`.
-3. **Process detection** — `CreateToolhelp32Snapshot` + window enum (headless / no-HWND no longer false-offline when process exists).
-4. **Pull improvements** — New tools `get_editor_status`, `wait_for_editor`; optional heartbeat thread writes `Saved/REAgentTools/modal_alert.json` when `UNREAL_WATCH_HEARTBEAT_S` + project path set.
-5. **Tests** — `Optional/UnrealWatchMCP/test_offline_semantics.py` (AT-OFFLINE-01 semantics).
+1. **Cursor discovery** — Official **`mcp` FastMCP** stdio (legacy framing ImportError fallback). `GetMcpTools(user-unreal-watch)` → `serverStatus=ready`.
+2. **Honest offline** — `status=editor_offline`, `abort_unreal_mcp=true`, `agent_instruction` starts with **STOP**. Never “watch clear” when down.
+3. **Process detection** — `CreateToolhelp32Snapshot` + window enum.
+4. **Pull improvements** — `get_editor_status`, `wait_for_editor`; heartbeat → `Saved/REAgentTools/modal_alert.json`.
+5. **Tests** — AT-OFFLINE-01 semantics.
 
-### How to verify in Cursor
+### What changed (v0.5.0 — dialogs / crash / dismiss)
 
-1. Command Palette → **MCP: Restart Servers** (or reload window) if status is still error from an older session.
-2. Confirm `user-unreal-watch` tools list includes `check_unreal` / `get_editor_status`.
-3. With editor open: call `check_unreal` → expect `status=ok`.
-4. Quit Unreal: call `check_unreal` → expect `status=editor_offline`, instruction contains `STOP`, no “watch clear”.
-5. CLI: `python …\UnrealWatchMCP\server.py --check` (stdlib; no mcp package required).
+1. **Stronger detection** — `CrashReportClient` / `CrashReportClientEditor` (visible HWND or editor-offline); Restore Packages title classification; Slate message boxes + compact owned context-menu windows; editor process exit via snapshot.
+2. **Status enum** — `ok | editor_offline | modal_blocked | crash_reporter | restore_packages | ports_wedged | proxy_unhealthy` with STOP/RECOVER `agent_instruction` + `recover_tool`.
+3. **`dismiss_unreal_blocker`** — Safe defaults (`safe_cancel` → Escape/Cancel/Don't Restore/close CRC). Never clicks Delete/Overwrite without `allow_destructive=true`. Low-level `dismiss_dialog` kept.
+4. **`wait_for_editor`** — Returns early on blocker (`wait_result=blocker:…`); best-effort MCP progress notify; heartbeat file unchanged.
+5. **Orphan CRC guard** — Headless leftover CrashReportClientEditor PIDs do **not** force `crash_reporter` while the editor is up and responsive (still listed in `crash_reporter_processes`).
+6. **Tests** — offline / modal / crash / restore instruction text; destructive dismiss refusal; wait-on-blocker; orphan CRC.
+
+### Agent contract
+
+1. `get_editor_status` (or `check_unreal`) before Unreal MCP batches / after timeout / 10061.
+2. `status=editor_offline` → STOP; ask user; `wait_for_editor`.
+3. `modal_blocked` / `crash_reporter` / `restore_packages` → `dismiss_unreal_blocker`.
+4. Never `allow_destructive=true` without explicit user confirmation.
+5. Never kill/rebind `:8001`.
+
+### How to verify
+
+1. MCP: Restart Servers if tools list is stale; expect `dismiss_unreal_blocker`.
+2. Editor open + healthy → `status=ok` (orphan CRC allowed).
+3. Known dialog / CRC window → matching status; `dismiss_unreal_blocker` clears or asks.
+4. Quit Unreal → `editor_offline`, STOP, no “watch clear”.
+5. `python test_offline_semantics.py` and `python server.py --check`.
 
 ### Remaining limitations
 
-- Still **not** a Cursor push notifier — heartbeat updates a file; agents must poll tools or the alert JSON.
-- GetStarted / proxy “do_not_use watch” backlog copy may still be stale until those docs are updated separately.
+- Still **not** a Cursor push notifier — heartbeat file + poll / `wait_for_editor`; progress notify is best-effort.
+- GetStarted / proxy “do_not_use watch” backlog copy may still be stale until updated separately.
+- Slate context menus without a stable title remain best-effort (size/owner heuristics + probe failure).
+- Closing orphan headless CRC processes is out of scope (no HWND to dismiss).
