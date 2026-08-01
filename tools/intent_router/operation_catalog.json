@@ -1,6 +1,6 @@
 {
   "catalog_version": "1.0.0",
-  "as_of": "2026-07-30",
+  "as_of": "2026-07-31",
   "owner": "WS-03",
   "notes": [
     "Enrichment overlay for ResolveIntent. Candidates still come only from the live registry/snapshot.",
@@ -34,7 +34,7 @@
         "create_water_body",
         "submit_mesh_ops"
       ],
-      "why": "bank forest needs terrain + river exclusion corridor, and a real mesh or it places cubes"
+      "why": "needs terrain, and a real mesh with a real material -- without one it places /Engine/BasicShapes/Cube. Author the texture and master material FIRST, then the mesh, then scatter. Placing geometry before its surface exists is how blockout gets mistaken for finished work."
     },
     {
       "action": "attach_weather",
@@ -112,7 +112,131 @@
       "depends_on_actions": [
         "create_master_material"
       ],
-      "why": "a mesh needs a surface material before it is useful downstream"
+      "why": "a mesh without a surface is a grey solid; author the material before the geometry that wears it"
+    },
+    {
+      "action": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
+      "depends_on_actions": [],
+      "why": "import is a source of geometry, not a consumer -- it runs before anything that places a mesh, and is the alternative to SubmitMeshOps when the result must match a reference rather than merely read as a tree"
+    },
+    {
+      "action": "create_landscape_material",
+      "depends_on_actions": [
+        "create_procedural_texture"
+      ],
+      "why": "layers may sample textures; author or import them first"
+    },
+    {
+      "action": "snap_actors_to_landscape",
+      "depends_on_actions": [
+        "create_landscape"
+      ],
+      "why": "there must be a landscape to snap onto"
+    },
+    {
+      "action": "clear_foliage_in_volumes",
+      "depends_on_actions": [
+        "scatter_foliage"
+      ],
+      "why": "clears instances that scattering placed"
+    },
+    {
+      "action": "find_project_assets",
+      "depends_on_actions": [],
+      "why": "read-only AssetRegistry probe; unblocks foliage/prefab paths"
+    },
+    {
+      "action": "import_mesh_for_world",
+      "depends_on_actions": [],
+      "why": "import is a source of geometry for scatter/place"
+    },
+    {
+      "action": "place_prefab_on_landscape",
+      "depends_on_actions": [
+        "create_landscape",
+        "import_mesh_for_world",
+        "find_project_assets"
+      ],
+      "why": "needs terrain and a real mesh"
+    },
+    {
+      "action": "paint_landscape_layers",
+      "depends_on_actions": [
+        "create_landscape",
+        "create_landscape_material"
+      ],
+      "why": "needs landscape; paint auto-creates LayerInfos and optional material_path assigns the blend"
+    },
+    {
+      "action": "create_widget_from_spec",
+      "depends_on_actions": [],
+      "why": "UI domain entry"
+    },
+    {
+      "action": "show_widget_in_world",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "needs WBP"
+    },
+    {
+      "action": "show_widget_on_screen",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "needs WBP"
+    },
+    {
+      "action": "capture_ui_frame",
+      "depends_on_actions": [
+        "show_widget_in_world"
+      ],
+      "why": "proof after world host"
+    },
+    {
+      "action": "spawn_character_preview",
+      "depends_on_actions": [],
+      "why": "preview stand"
+    },
+    {
+      "action": "save_widget_asset",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "persist"
+    },
+    {
+      "action": "create_inventory_sheet_from_spec",
+      "depends_on_actions": [],
+      "why": "inventory sheet"
+    },
+    {
+      "action": "apply_ui_theme",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "theme"
+    },
+    {
+      "action": "set_slot_icon",
+      "depends_on_actions": [
+        "create_inventory_sheet_from_spec"
+      ],
+      "why": "slot icons"
+    },
+    {
+      "action": "set_container_weight",
+      "depends_on_actions": [
+        "create_inventory_sheet_from_spec"
+      ],
+      "why": "weights"
+    },
+    {
+      "action": "set_slot_layout",
+      "depends_on_actions": [
+        "create_widget_from_spec"
+      ],
+      "why": "layout"
     }
   ],
   "operations": [
@@ -183,7 +307,7 @@
         "envelope example"
       ],
       "do_not_use_for": [
-        "discovering which tool to pick \u2014 use ResolveIntent"
+        "discovering which tool to pick — use ResolveIntent"
       ],
       "destructive": false,
       "idempotent": true,
@@ -192,13 +316,14 @@
         "no_change_required",
         "rejected"
       ],
-      "recovery": "If the name is unknown, call ResolveIntent or list_toolsets.",
+      "recovery": "specification.detail: index|slim(default)|full. Pass if_none_match=content_hash to skip an unchanged body. Prefer slim over describe_toolset.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "describe_operation",
         "request_id": "do-1",
         "specification": {
-          "tool": "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect"
+          "tool": "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect",
+          "detail": "slim"
         }
       }
     },
@@ -251,7 +376,16 @@
             "ribbon_trail"
           ]
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "capture_effect_frames",
+          "why": "deterministic frames are the only proof it renders",
+          "specification_hint": {
+            "frame_count": 8
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpNiagara.UeremcpNiagaraToolset.InspectSystem",
@@ -327,7 +461,15 @@
           "element": "fire",
           "role": "core"
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "create_niagara_effect",
+          "why": "bind this material into an effect",
+          "specification_hint": {}
+        }
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateProceduralTexture",
@@ -362,7 +504,19 @@
           "dry_run": true
         },
         "specification": {}
-      }
+      },
+      "next_actions": [
+        {
+          "action": "create_master_material",
+          "why": "wire this texture into a master material before anything wears it",
+          "specification_hint": {
+            "features": [
+              "dynamic_color"
+            ]
+          }
+        }
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpBlueprint.UeremcpBlueprintToolset.ReadGraph",
@@ -489,7 +643,7 @@
         "notify tracks"
       ],
       "do_not_use_for": [
-        "montage authoring \u2014 UEREMCP does not author montages"
+        "montage authoring — UEREMCP does not author montages"
       ],
       "destructive": false,
       "idempotent": true,
@@ -527,7 +681,7 @@
         "no_change_required",
         "partially_completed"
       ],
-      "recovery": "Authoring unsupported \u2014 use Epic animation tools if write is required.",
+      "recovery": "Authoring unsupported — use Epic animation tools if write is required.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "read_anim_bp",
@@ -548,7 +702,7 @@
         "known pattern"
       ],
       "do_not_use_for": [
-        "direct asset creation when template_id already known \u2014 InstantiateTemplate"
+        "direct asset creation when template_id already known — InstantiateTemplate"
       ],
       "destructive": false,
       "idempotent": true,
@@ -641,7 +795,8 @@
         "specification": {
           "frame_count": 6
         }
-      }
+      },
+      "capture_preference": "For Niagara effects specifically. For a level view use capture_world_frames."
     },
     {
       "qualified": "UeremcpCore.UeremcpReferenceToolset.ExecutePlan",
@@ -744,9 +899,15 @@
         "river",
         "forest",
         "rain",
+        "snow",
+        "hail",
+        "ice wall",
+        "blizzard",
+        "winter biome",
         "environment",
         "new world",
-        "biome"
+        "biome",
+        "weather"
       ],
       "do_not_use_for": [
         "Niagara VFX authoring",
@@ -762,22 +923,64 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Dry-run first; then options.dry_run=false; ValidateEnvironment; CaptureWorldFrames.",
+      "recovery": "terrain.scale_z must be set; the default of 100 gives vertical needles. Sane range 2-5, start at 3. Dry-run first; then options.dry_run=false; ValidateEnvironment; CaptureWorldFrames.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "build_environment",
-        "request_id": "env-1",
+        "request_id": "env-snow-ice",
         "target": {
-          "asset_path": "/Game/__UeremcpPoc/MountainRiverRain"
+          "asset_path": "/Game/__UeremcpPoc/SnowIceHail"
         },
         "options": {
           "dry_run": true,
           "validate": true
         },
         "specification": {
-          "seed": 42
+          "schema_version": 2,
+          "seed": 8801,
+          "terrain": {
+            "profile": "mountains",
+            "mountain_amplitude": 0.62,
+            "scale_z": 3
+          },
+          "weather": [
+            {
+              "phenomenon": "snow",
+              "intensity": 0.75,
+              "follow_player": true
+            },
+            {
+              "phenomenon": "hail",
+              "intensity": 0.35,
+              "follow_player": true
+            }
+          ],
+          "structures": [
+            {
+              "kind": "ice_wall_ring",
+              "count": 28,
+              "height": 900
+            }
+          ],
+          "lighting": {
+            "preset": "blizzard"
+          }
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "validate_environment",
+          "why": "check the structural gates",
+          "specification_hint": {}
+        },
+        {
+          "action": "capture_world_frames",
+          "why": "look at it",
+          "specification_hint": {
+            "frame_count": 1
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateLandscape",
@@ -799,7 +1002,7 @@
         "created_with_warnings",
         "rejected"
       ],
-      "recovery": "Check heightmap_hash for determinism.",
+      "recovery": "terrain.scale_z must be set; the default of 100 gives vertical needles. Sane range 2-5, start at 3. Check heightmap_hash for determinism.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_landscape",
@@ -810,21 +1013,43 @@
           "dry_run": true
         },
         "specification": {
-          "seed": 4471
+          "seed": 4471,
+          "terrain": {
+            "profile": "mountains",
+            "scale_z": 3
+          }
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "vegetate the terrain",
+          "specification_hint": {
+            "seed": 42
+          }
+        },
+        {
+          "action": "create_water_body",
+          "why": "add a river that conforms to this terrain",
+          "specification_hint": {
+            "seed": 42
+          }
+        }
+      ]
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateWaterBody",
       "action": "create_water_body",
       "use_when": [
-        "river",
+        "river through a valley",
+        "stream",
         "lake",
         "ocean",
-        "water spline"
+        "still water",
+        "multi-water additive"
       ],
       "do_not_use_for": [
-        "terrain creation"
+        "wiping unrelated water labels — only the requested label is replaced"
       ],
       "destructive": true,
       "idempotent": true,
@@ -833,9 +1058,10 @@
         "no_change_required",
         "created_with_warnings",
         "failed_validation",
-        "rejected"
+        "rejected",
+        "partially_completed"
       ],
-      "recovery": "CreateLandscape first when water must conform to terrain.",
+      "recovery": "Set body_type=river|lake|ocean. River uses river.width; lake needs lake.center+radius_cm; ocean needs ocean.center+extents_cm. Optional label keeps bodies additive (UEREMCP_River/Lake/Ocean defaults). Unknown body_type → BODY_TYPE_UNSUPPORTED, never coerced to river.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_water_body",
@@ -847,6 +1073,7 @@
         },
         "specification": {
           "seed": 4471,
+          "body_type": "river",
           "river": {
             "width": 1200
           }
@@ -874,7 +1101,7 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Create terrain and water first; require exclusion_violations=0.",
+      "recovery": "biome.mesh_path must be a mesh that EXISTS. There is no stock /Game/Meshes/SM_Pine in an empty project -- resolve one first via import_file, submit_mesh_ops, or a project search. Without a real mesh this places /Engine/BasicShapes/Cube. Create terrain and water first; require exclusion_violations=0.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "scatter_foliage",
@@ -887,20 +1114,35 @@
         "specification": {
           "seed": 4471,
           "biome": {
-            "mesh_path": "/Game/Meshes/SM_Pine",
+            "mesh_path": "<mesh_path from submit_mesh_ops, import_file, or a project asset>",
             "max_foliage_instances": 800
           }
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "capture_world_frames",
+          "why": "look at it -- instance counts do not prove it reads as foliage",
+          "specification_hint": {
+            "frame_count": 1
+          }
+        }
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.AttachWeather",
       "action": "attach_weather",
       "use_when": [
-        "rain",
-        "weather",
+        "add weather",
         "fog",
-        "follow player camera"
+        "follow player camera",
+        "make it rain",
+        "one-shot weather",
+        "rain",
+        "rain on the player",
+        "storm",
+        "weather"
       ],
       "do_not_use_for": [
         "Niagara asset authoring"
@@ -964,7 +1206,8 @@
           "seed": 4471,
           "count": 6
         }
-      }
+      },
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.InspectEnvironment",
@@ -1058,7 +1301,8 @@
           "frame_count": 1,
           "warm_up_ticks": 30
         }
-      }
+      },
+      "capture_preference": "PREFERRED for 'show me the level'. Use CaptureViewport only for a quick annotated single shot; do not use both for the same check."
     },
     {
       "qualified": "UeremcpGameplay.UeremcpGameplayToolset.CreateSpellVariation",
@@ -1160,7 +1404,7 @@
       }
     },
     {
-      "qualified": "EditorToolset.LogsToolset.GetLog",
+      "qualified": "EditorToolset.LogsToolset.GetLogEntries",
       "action": null,
       "use_when": [
         "editor log",
@@ -1440,15 +1684,14 @@
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateMasterMaterial",
       "action": "create_master_material",
       "use_when": [
-        "material from scratch",
-        "no assets yet",
-        "author a master material",
-        "empty project",
-        "need a material before anything else"
+        "vfx master material",
+        "particle shader",
+        "effect material from scratch",
+        "fresnel or erosion or flipbook features"
       ],
       "do_not_use_for": [
-        "material instances with preset defaults",
-        "texture generation"
+        "terrain or prop SURFACES (snow, rock, grass, sand, stone) -- the feature vocabulary is VFX-only and produces an empty shell",
+        "material instances with preset defaults"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1460,7 +1703,7 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Check skipped_features; then CreateVfxMaterial with master_template set to primary_asset.",
+      "recovery": "VFX only. For a surface material use editor_toolset MaterialTools (create_material, add_expression, connect_to_output) or import one. This action has no base_color/roughness/normal and will hand back a named shell if you ask it for snow.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_master_material",
@@ -1478,21 +1721,46 @@
             "dynamic_color"
           ]
         }
-      }
+      },
+      "next_actions": [
+        {
+          "action": "submit_mesh_ops",
+          "why": "author the geometry that wears this material",
+          "specification_hint": {
+            "ops": [
+              {
+                "op": "box",
+                "size": [
+                  100,
+                  100,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "action": "create_vfx_material",
+          "why": "instance this master with per-effect parameters",
+          "specification_hint": {}
+        }
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
     },
     {
       "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SubmitMeshOps",
       "action": "submit_mesh_ops",
       "use_when": [
-        "mesh from scratch",
-        "need a tree mesh",
-        "author geometry",
-        "no static mesh exists",
-        "build a rock or tower"
+        "blockout geometry",
+        "crate or wall segment",
+        "collision proxy",
+        "placeholder mesh to unblock layout",
+        "simple primitive shape",
+        "no static mesh exists and any shape will do"
       ],
       "do_not_use_for": [
-        "placing meshes in a level",
-        "landscape terrain"
+        "hero foliage or anything that must look realistic — use StaticMeshTools.import_file",
+        "placing meshes in a level"
       ],
       "destructive": true,
       "idempotent": true,
@@ -1503,13 +1771,13 @@
         "failed_validation",
         "rejected"
       ],
-      "recovery": "Pass primary_asset as biome.mesh_path to ScatterFoliage, or as a kit mesh to PlaceStructures.",
+      "recovery": "Blockout only. If the ask implied quality -- realistic, hero, matching a reference -- stop and use editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file instead. A cylinder plus a cone reads as a tree icon, not a tree.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "submit_mesh_ops",
         "request_id": "mo-1",
         "target": {
-          "asset_path": "/Game/__UeremcpTests/Meshes/SM_Conifer"
+          "asset_path": "/Game/__UeremcpTests/Meshes/SM_CrateBlockout"
         },
         "options": {
           "dry_run": true
@@ -1517,23 +1785,1026 @@
         "specification": {
           "ops": [
             {
-              "op": "cylinder",
-              "radius": 18,
-              "height": 220
+              "op": "box",
+              "size": [
+                120,
+                120,
+                120
+              ]
             },
             {
-              "op": "cone",
-              "base_radius": 130,
-              "height": 420,
+              "op": "box",
+              "size": [
+                130,
+                130,
+                12
+              ],
               "origin": [
                 0,
                 0,
-                180
+                120
+              ]
+            }
+          ]
+        }
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "place the mesh you just authored -- pass primary_asset as biome.mesh_path",
+          "specification_hint": {
+            "seed": 42,
+            "biome": {
+              "mesh_path": "<primary_asset>"
+            }
+          }
+        },
+        {
+          "action": "place_structures",
+          "why": "place it as a structure kit instead",
+          "specification_hint": {
+            "seed": 42
+          }
+        }
+      ],
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Need several? Put them all in ONE execute_plan with different ids and targets -- one round trip, not N. Use transaction.atomic=false and on_failure=continue_independent so one failure does not discard the rest."
+    },
+    {
+      "qualified": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
+      "action": "editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file",
+      "use_when": [
+        "asset the procedural tools cannot make",
+        "believable foliage",
+        "fbx obj gltf from disk",
+        "final art",
+        "hero asset",
+        "high quality",
+        "import a real mesh",
+        "looks like the reference",
+        "not blockout",
+        "photoreal",
+        "photoreal asset",
+        "realistic",
+        "should look like a real tree",
+        "trees that match a reference",
+        "use a downloaded model"
+      ],
+      "do_not_use_for": [
+        "procedural primitives — use SubmitMeshOps",
+        "placing meshes in a level"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Pass the resulting asset path as biome.mesh_path to ScatterFoliage. This is the ONLY path to reference-faithful geometry: SubmitMeshOps composes boxes/cylinders/cones/spheres and cannot match a photograph.",
+      "example_request": {
+        "source_file": "C:/assets/SM_Pine.fbx",
+        "destination_path": "/Game/__UeremcpPoc/Meshes"
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "place the imported mesh -- pass its path as biome.mesh_path",
+          "specification_hint": {
+            "seed": 42,
+            "biome": {
+              "mesh_path": "<primary_asset>"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "qualified": "editor_toolset.toolsets.texture.TextureTools.import_file",
+      "action": "editor_toolset.toolsets.texture.TextureTools.import_file",
+      "use_when": [
+        "import a texture",
+        "use a downloaded image",
+        "png jpg from disk",
+        "real bark or foliage texture",
+        "photoreal material input"
+      ],
+      "do_not_use_for": [
+        "procedural noise — use CreateProceduralTexture"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Reference the imported texture from CreateMasterMaterial or CreateVfxMaterial.",
+      "example_request": {
+        "source_file": "C:/assets/T_Bark.png",
+        "destination_path": "/Game/__UeremcpPoc/Textures"
+      }
+    },
+    {
+      "qualified": "editor_toolset.toolsets.skeletal_mesh.SkeletalMeshTools.import_file",
+      "action": "editor_toolset.toolsets.skeletal_mesh.SkeletalMeshTools.import_file",
+      "use_when": [
+        "import a character",
+        "rigged mesh from disk",
+        "skeletal fbx"
+      ],
+      "do_not_use_for": [
+        "static props — use StaticMeshTools.import_file"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Inspect with UeremcpAnimation.ReadAnimBp or InspectMontage.",
+      "example_request": {
+        "source_file": "C:/assets/SK_Char.fbx",
+        "destination_path": "/Game/__UeremcpPoc/Characters"
+      }
+    },
+    {
+      "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateLandscapeMaterial",
+      "action": "create_landscape_material",
+      "use_when": [
+        "terrain material",
+        "landscape surface",
+        "snow rock grass sand layers",
+        "height based texture",
+        "slope based texture",
+        "layered terrain shader",
+        "material for the landscape"
+      ],
+      "do_not_use_for": [
+        "VFX or particle materials",
+        "static mesh surfaces"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "failed_validation",
+        "rejected"
+      ],
+      "recovery": "Call paint_landscape_layers with matching layer names (auto-creates LayerInfos); pass specification.material_path to assign this material. Then CaptureWorldFrames.",
+      "batch_hint": "FAN-OUT: ids are unique, actions are not. Author several materials in ONE execute_plan with atomic=false and on_failure=continue_independent.",
+      "next_actions": [
+        {
+          "action": "paint_landscape_layers",
+          "why": "assign height/slope weights so the terrain is not the first layer only",
+          "specification_hint": {
+            "rules": [
+              {
+                "layer": "snow",
+                "min_height_m": 1100,
+                "blend_m": 150
+              },
+              {
+                "layer": "rock",
+                "min_slope_deg": 35,
+                "blend_deg": 8
+              },
+              {
+                "layer": "grass",
+                "fallback": true
+              }
+            ]
+          }
+        },
+        {
+          "action": "capture_world_frames",
+          "why": "a terrain material is only judgeable by looking at it",
+          "specification_hint": {
+            "frame_count": 1
+          }
+        }
+      ],
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_landscape_material",
+        "request_id": "lm-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Materials/M_Terrain"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "layers": [
+            {
+              "name": "grass",
+              "base_color": [
+                0.15,
+                0.35,
+                0.1
+              ],
+              "roughness": 0.9,
+              "max_height_m": 900,
+              "max_slope_deg": 30
+            },
+            {
+              "name": "rock",
+              "base_color": [
+                0.35,
+                0.33,
+                0.3
+              ],
+              "roughness": 0.8,
+              "max_slope_deg": 90
+            },
+            {
+              "name": "snow",
+              "base_color": [
+                0.9,
+                0.92,
+                0.95
+              ],
+              "roughness": 0.6,
+              "min_height_m": 1100
+            }
+          ]
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.SnapActorsToLandscape",
+      "action": "snap_actors_to_landscape",
+      "use_when": [
+        "floating actors",
+        "snap to ground",
+        "buildings in the air",
+        "sit on terrain",
+        "re-snap after rebuild"
+      ],
+      "do_not_use_for": [
+        "foliage instances — rescatter those instead"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "Traces ALandscapeProxy only, so canopy cannot catch it. Actors with no landscape beneath are named, not dropped.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "snap_actors_to_landscape",
+        "request_id": "snap_a-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "label_prefixes": [
+            "UEREMCP_Structure"
+          ],
+          "z_offset_cm": 0
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ClearFoliageInVolumes",
+      "action": "clear_foliage_in_volumes",
+      "use_when": [
+        "trees inside the castle",
+        "clear a road corridor",
+        "clear a building footprint",
+        "cull foliage in an area"
+      ],
+      "do_not_use_for": [
+        "WaterBodyExclusionVolume — that excludes water, not foliage"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "Removes instanced foliage inside world-space boxes. Then snap_actors_to_landscape if anything moved.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "clear_foliage_in_volumes",
+        "request_id": "clear_-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "volumes": [
+            {
+              "center": [
+                1800,
+                -2000,
+                9000
+              ],
+              "extent": [
+                1500,
+                1500,
+                4000
               ]
             }
           ]
         }
       }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.FindProjectAssets",
+      "action": "find_project_assets",
+      "use_when": [
+        "find foliage mesh",
+        "what trees exist",
+        "asset registry probe",
+        "resolve mesh path",
+        "PCG trees"
+      ],
+      "do_not_use_for": [
+        "importing a file from disk"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "rejected"
+      ],
+      "recovery": "unresolved roles need import_mesh_for_world or StaticMeshTools.import_file. Never invent /Game/Meshes/SM_Pine.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "find_project_assets",
+        "request_id": "fa-1",
+        "specification": {
+          "roles": [
+            "foliage.tree",
+            "foliage.grass",
+            "structure.wall"
+          ],
+          "class_filter": [
+            "StaticMesh"
+          ],
+          "path_scopes": [
+            "/Game",
+            "/Engine/BasicShapes"
+          ],
+          "max_per_role": 5
+        }
+      },
+      "next_actions": [
+        {
+          "action": "scatter_foliage",
+          "why": "place a resolved foliage mesh",
+          "specification_hint": {
+            "biome": {
+              "mesh_path": "<resolved path>"
+            }
+          }
+        },
+        {
+          "action": "import_mesh_for_world",
+          "why": "when unresolved, import a real mesh",
+          "specification_hint": {}
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.ImportMeshForWorld",
+      "action": "import_mesh_for_world",
+      "use_when": [
+        "import FBX for world",
+        "castle mesh",
+        "real foliage mesh",
+        "unit scale check"
+      ],
+      "do_not_use_for": [
+        "blockout primitives — use submit_mesh_ops"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "Pass expected_bounds_m. A >20% mismatch rejects with both numbers. Compose uses StaticMeshTools.import_file.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "import_mesh_for_world",
+        "request_id": "im-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpPoc/Meshes/SM_Castle"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "source_file": "C:/exports/castle.fbx",
+          "source_unit": "meters",
+          "collision": "complex_as_simple",
+          "nanite": false,
+          "expected_bounds_m": [
+            240,
+            145,
+            90
+          ]
+        }
+      },
+      "next_actions": [
+        {
+          "action": "place_prefab_on_landscape",
+          "why": "drop the imported mesh on terrain",
+          "specification_hint": {
+            "mesh_path": "<primary_asset>"
+          }
+        },
+        {
+          "action": "scatter_foliage",
+          "why": "use as foliage species",
+          "specification_hint": {
+            "biome": {
+              "mesh_path": "<primary_asset>"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.PlacePrefabOnLandscape",
+      "action": "place_prefab_on_landscape",
+      "use_when": [
+        "place building on terrain",
+        "castle on landscape",
+        "snap and clear foundation"
+      ],
+      "do_not_use_for": [
+        "foliage scatter"
+      ],
+      "destructive": true,
+      "idempotent": false,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "partially_completed",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "flatten_pad writes a soft heightmap pad (radius_cm/falloff_cm). Mesh must exist (find_project_assets or import_mesh_for_world).",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "place_prefab_on_landscape",
+        "request_id": "pp-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "mesh_path": "/Game/__UeremcpPoc/Meshes/SM_Castle",
+          "location_xy": [
+            1800,
+            -2000
+          ],
+          "rotation_yaw": 35,
+          "clear_foliage_radius_cm": 1500,
+          "flatten_pad": {
+            "radius_cm": 1200,
+            "falloff_cm": 600
+          }
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpEnvironment.UeremcpEnvironmentToolset.PaintLandscapeLayers",
+      "action": "paint_landscape_layers",
+      "use_when": [
+        "paint snow rock grass",
+        "landscape layer weights",
+        "white landscape",
+        "auto paint terrain"
+      ],
+      "do_not_use_for": [
+        "authoring the material — use create_landscape_material first"
+      ],
+      "destructive": true,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "no_change_required",
+        "rejected"
+      ],
+      "recovery": "Auto-creates/assigns LayerInfo under /Game/__UeremcpPoc/LandscapeLayers. Optional material_path assigns the blend material. Exactly one rule with fallback=true. Reads live landscape height — never recomputes.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "paint_landscape_layers",
+        "request_id": "pl-1",
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "rules": [
+            {
+              "layer": "snow",
+              "min_height_m": 1100,
+              "blend_m": 150
+            },
+            {
+              "layer": "rock",
+              "min_slope_deg": 35,
+              "blend_deg": 8
+            },
+            {
+              "layer": "grass",
+              "fallback": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.CreateWidgetFromSpec",
+      "action": "create_widget_from_spec",
+      "use_when": [
+        "create MMORPG start menu",
+        "UMG overlay",
+        "character creation UI",
+        "widget from spec",
+        "start menu UMG",
+        "world-space widget menu"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": false,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "After create call show_widget_in_world then capture_ui_frame.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_widget_from_spec",
+        "options": {
+          "save": true
+        },
+        "specification": {
+          "asset_path": "/Game/UI/MCPProbe/WBP_Probe",
+          "theme": "northridge_fantasy",
+          "screens": [
+            {
+              "id": "main",
+              "layout": "overlay_left_panel",
+              "brand": {
+                "title": "NORTHRIDGE ONLINE",
+                "tagline": "Forge your legend"
+              },
+              "actions": [
+                "Play",
+                "Quit"
+              ]
+            }
+          ]
+        }
+      },
+      "next_actions": [
+        {
+          "action": "show_widget_in_world",
+          "why": "host for proof",
+          "specification_hint": {}
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.ApplyUiTheme",
+      "action": "apply_ui_theme",
+      "use_when": [
+        "fantasy MMO theme",
+        "apply widget theme",
+        "northridge fantasy UI style",
+        "style buttons and text"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for apply_ui_theme",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "apply_ui_theme",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_Probe",
+          "theme": "northridge_fantasy"
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.ShowWidgetInWorld",
+      "action": "show_widget_in_world",
+      "use_when": [
+        "show widget in world",
+        "world-space widget",
+        "diegetic UI host",
+        "WidgetComponent World",
+        "MMO overlay in world"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for show_widget_in_world",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "show_widget_in_world",
+        "specification": {
+          "widget_asset": "/Game/UI/MCPProbe/WBP_Probe",
+          "host_label": "UEREMCP_UIHost_Probe",
+          "transform": {
+            "location": [
+              200,
+              -150,
+              120
+            ],
+            "rotation": [
+              0,
+              140,
+              0
+            ],
+            "scale": [
+              0.25,
+              0.25,
+              0.25
+            ]
+          },
+          "draw_size": [
+            1280,
+            720
+          ]
+        }
+      },
+      "next_actions": [
+        {
+          "action": "capture_ui_frame",
+          "why": "proof",
+          "specification_hint": {}
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.ShowWidgetOnScreen",
+      "action": "show_widget_on_screen",
+      "use_when": [
+        "show widget on screen",
+        "AddToViewport",
+        "screen HUD",
+        "pause menu screen"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "For proof use show_widget_in_world.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "show_widget_on_screen",
+        "specification": {
+          "widget_asset": "/Game/UI/MCPProbe/WBP_Probe",
+          "z_order": 100
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.CaptureUiFrame",
+      "action": "capture_ui_frame",
+      "use_when": [
+        "capture UI frame",
+        "CaptureViewport with UI",
+        "proof overlay screenshot",
+        "include world-space widgets"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "If SCREEN_UMG_CAPTURE_UNSUPPORTED, use show_widget_in_world.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "capture_ui_frame",
+        "specification": {
+          "path": "Saved/UEREMCP/MCPProbe/proof.png",
+          "include": {
+            "world": true,
+            "world_space_widgets": true,
+            "screen_space_umg": false
+          },
+          "camera": {
+            "focus_actors": [
+              "UEREMCP_UIHost_Probe"
+            ]
+          }
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SpawnCharacterPreview",
+      "action": "spawn_character_preview",
+      "use_when": [
+        "character preview",
+        "mannequin helper",
+        "spawn preview mesh",
+        "character create stand"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for spawn_character_preview",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "spawn_character_preview",
+        "specification": {
+          "label": "UEREMCP_CharPreview_Probe",
+          "mesh": "auto",
+          "location": [
+            80,
+            40,
+            0
+          ]
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SaveWidgetAsset",
+      "action": "save_widget_asset",
+      "use_when": [
+        "save widget blueprint",
+        "persist WBP",
+        "auto-save UI after edit"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "Unsaved WBPs are lost on editor crash.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "save_widget_asset",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_Probe"
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.CreateInventorySheetFromSpec",
+      "action": "create_inventory_sheet_from_spec",
+      "use_when": [
+        "inventory sheet",
+        "paper doll",
+        "item slot grid",
+        "hotbar",
+        "character sheet UI",
+        "backpack grid"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": false,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for create_inventory_sheet_from_spec",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "create_inventory_sheet_from_spec",
+        "options": {
+          "save": true
+        },
+        "specification": {
+          "asset_path": "/Game/UI/MCPProbe/WBP_InvProbe",
+          "theme": "northridge_diegetic",
+          "grids": [
+            {
+              "id": "backpack",
+              "kind": "uniform_grid",
+              "rows": 2,
+              "cols": 4,
+              "cell_px": 64
+            },
+            {
+              "id": "hotbar",
+              "kind": "hotbar",
+              "slots": 10,
+              "show_index": true
+            },
+            {
+              "id": "equipment",
+              "kind": "paper_doll",
+              "slots": [
+                "head",
+                "torso",
+                "feet"
+              ]
+            }
+          ]
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SetSlotIcon",
+      "action": "set_slot_icon",
+      "use_when": [
+        "set slot icon",
+        "item icon brush",
+        "assign inventory icon"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "ICON_NOT_FOUND — pass icon.texture Texture2D path.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "set_slot_icon",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_InvProbe",
+          "slot": "Slot_Backpack_r0_c0",
+          "icon": {
+            "texture": "/Engine/EngineResources/DefaultTexture"
+          },
+          "stack": {
+            "count": 3,
+            "show": true
+          }
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SetContainerWeight",
+      "action": "set_container_weight",
+      "use_when": [
+        "container weight",
+        "backpack kg",
+        "inventory weight label"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for set_container_weight",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "set_container_weight",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_InvProbe",
+          "containers": [
+            {
+              "id": "backpack",
+              "current_kg": 18.3,
+              "max_kg": 40
+            }
+          ]
+        }
+      },
+      "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.SetSlotLayout",
+      "action": "set_slot_layout",
+      "use_when": [
+        "set canvas fill",
+        "box padding",
+        "slot layout helper"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_with_warnings",
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "See example_request for set_slot_layout",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "set_slot_layout",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_Probe",
+          "widget": "ScreenSwitcher",
+          "canvas": {
+            "anchors": "fill",
+            "offsets": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      "next_actions": []
     }
-  ]
+  ],
+  "asset_role_patterns": {
+    "foliage.tree": [
+      "*Tree*",
+      "*Pine*",
+      "*Conifer*",
+      "*Oak*",
+      "PCG_Tree*"
+    ],
+    "foliage.grass": [
+      "*Grass*",
+      "*Fern*",
+      "*Bush*"
+    ],
+    "structure.wall": [
+      "*Wall*",
+      "*Fence*",
+      "SM_*Wall*"
+    ]
+  }
 }

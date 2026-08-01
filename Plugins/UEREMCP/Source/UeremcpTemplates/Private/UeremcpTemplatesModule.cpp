@@ -13,6 +13,7 @@
 #include "UeremcpTemplateService.h"
 #include "UeremcpTemplateStore.h"
 #include "UeremcpTemplatesToolset.h"
+#include "UeremcpTemplatesPlanHandlers.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcpTemplates, Log, All);
 
@@ -32,6 +33,22 @@ public:
 		Store = MakeUnique<FUeremcpTemplateStore>();
 		Service = MakeUnique<FUeremcpTemplateService>(*Store);
 		UeremcpTemplates::SetExecutePlanDelegate(&FUeremcpPlanExecutor::ExecuteRequest);
+
+		// Outbound (above): Templates CALLS ExecutePlan to run a construction_plan.
+		// Inbound (below): template actions become usable INSIDE a plan. Both
+		// directions are needed -- promote_to_template is what banks a result the
+		// agent just proved, and without this it could never be the final step of
+		// the plan that produced the thing worth banking.
+		FString PlanError;
+		if (FUeremcpTemplatesPlanHandlers::Register(PlanError))
+		{
+			UE_LOG(LogUeremcpTemplates, Log, TEXT("Templates plan actions registered with ExecutePlan."));
+		}
+		else
+		{
+			UE_LOG(LogUeremcpTemplates, Warning,
+				TEXT("Templates plan action registration failed: %s"), *PlanError);
+		}
 
 		TArray<FString> Errors;
 		Store->LoadFromDirectory(UeremcpTemplates::ResolveTemplatesDirectory(), Errors);
@@ -62,6 +79,7 @@ public:
 			UToolsetRegistry::UnregisterToolsetClass(UUeremcpTemplatesToolset::StaticClass());
 		}
 
+		FUeremcpTemplatesPlanHandlers::Unregister();
 		UeremcpTemplates::ClearExecutePlanDelegate();
 		Service.Reset();
 		Store.Reset();

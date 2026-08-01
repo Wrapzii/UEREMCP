@@ -31,8 +31,11 @@
 #include "UnrealClient.h"
 
 #include "WaterBodyRiverActor.h"
+#include "WaterBodyLakeActor.h"
+#include "WaterBodyOceanActor.h"
 #include "WaterBodyActor.h"
 #include "WaterBodyComponent.h"
+#include "WaterBodyOceanComponent.h"
 #include "WaterSplineComponent.h"
 #include "DynamicMeshActor.h"
 #include "Components/DynamicMeshComponent.h"
@@ -528,12 +531,20 @@ namespace
 		return ReadEnvironmentTag(World, TEXT("UEREMCP_REV="));
 	}
 
-	int32 DestroyOwnedEnvironmentActors(UWorld* World)
+	// Destroys UEREMCP-owned actors. With a prefix, ONLY that group.
+	//
+	// This used to take out everything labelled UEREMCP_ unconditionally, which
+	// made foliage replace-not-append: scattering a second species wiped the
+	// first, so "a few different kinds of trees" could never be one forest. A
+	// scatter that owns one species must not delete another's work, or the
+	// terrain, or a structure.
+	int32 DestroyOwnedEnvironmentActors(UWorld* World, const FString& LabelPrefix = FString())
 	{
+		const FString Prefix = LabelPrefix.IsEmpty() ? TEXT("UEREMCP_") : LabelPrefix;
 		TArray<AActor*> ToDestroy;
 		for (TActorIterator<AActor> It(World); It; ++It)
 		{
-			if (It->GetActorLabel().StartsWith(TEXT("UEREMCP_")))
+			if (It->GetActorLabel().StartsWith(Prefix))
 			{
 				ToDestroy.Add(*It);
 			}
@@ -543,6 +554,95 @@ namespace
 			World->DestroyActor(Actor);
 		}
 		return ToDestroy.Num();
+	}
+
+	bool HasOwnedActorWithPrefix(UWorld* World, const FString& LabelPrefix)
+	{
+		if (!World || LabelPrefix.IsEmpty())
+		{
+			return false;
+		}
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel().StartsWith(LabelPrefix))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool HasOwnedActorWithExactLabel(UWorld* World, const FString& Label)
+	{
+		if (!World || Label.IsEmpty())
+		{
+			return false;
+		}
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel() == Label)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	int32 DestroyOwnedByExactLabel(UWorld* World, const FString& Label)
+	{
+		if (!World || Label.IsEmpty())
+		{
+			return 0;
+		}
+		TArray<AActor*> ToDestroy;
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel() == Label)
+			{
+				ToDestroy.Add(*It);
+			}
+		}
+		for (AActor* Actor : ToDestroy)
+		{
+			World->DestroyActor(Actor);
+		}
+		return ToDestroy.Num();
+	}
+
+	// True only when every stage THIS request would build already has owned actors.
+	// Matching env revision alone must not block additive create_water_body /
+	// scatter_foliage after create_landscape (same seed) — that was the P0 hole.
+	bool RequestedStagesAlreadyPresent(UWorld* World, const FUeremcpEnvironmentBuildSpec& Spec)
+	{
+		if (Spec.bIncludeTerrain && !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_Landscape")))
+		{
+			return false;
+		}
+		if (Spec.WantsAnyWater())
+		{
+			const FString WaterLabel = Spec.ResolvedWaterLabel();
+			if (!HasOwnedActorWithExactLabel(World, WaterLabel)
+				&& !HasOwnedActorWithPrefix(World, WaterLabel))
+			{
+				return false;
+			}
+		}
+		if (Spec.WantsVegetation() && !HasOwnedActorWithPrefix(World, Spec.FoliageActorLabel()))
+		{
+			return false;
+		}
+		if (Spec.HasAnyWeatherPhenomenon() && !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_Weather")))
+		{
+			return false;
+		}
+		if ((Spec.bIncludeStructures || Spec.Structures.Num() > 0)
+			&& !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_Structure")))
+		{
+			return false;
+		}
+		const bool bAnyStage = Spec.bIncludeTerrain || Spec.WantsAnyWater() || Spec.WantsVegetation()
+			|| Spec.HasAnyWeatherPhenomenon() || Spec.bIncludeStructures || Spec.Structures.Num() > 0;
+		return bAnyStage;
 	}
 
 	float SampleNormalizedHeight(
@@ -624,13 +724,28 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		Out.SchemaVersion = int32(SchemaVersion);
 	}
 
-	auto ReadObjNumber = [&](const FString& Obj, const FString& Key, double& InOut)
+	// Returns whether the field was PRESENT, and always clears InOut first.
+	//
+	// It previously left InOut untouched when the field was absent. Every call
+	// site shares one `Tmp`, so an absent field silently inherited the value of
+	// whichever field was read before it, and the `if (Tmp > 0)` guard then
+	// applied that unrelated number.
+	//
+	// Measured consequence: a request omitting vegetation.slope_limit_deg picked
+	// up min_normalized_height's 0.95 and enforced a 0.95-degree slope limit,
+	// rejecting effectively every candidate and scattering 0 instances -- while
+	// reporting success. Same mechanism silently corrupted terrain scale_z from
+	// terrain size.
+	auto ReadObjNumber = [&](const FString& Obj, const FString& Key, double& InOut) -> bool
 	{
+		InOut = 0;
 		const TSharedPtr<FJsonObject>* Child = nullptr;
 		if (Spec->TryGetObjectField(Obj, Child) && Child && (*Child)->HasField(Key))
 		{
 			InOut = (*Child)->GetNumberField(Key);
+			return true;
 		}
+		return false;
 	};
 
 	double Tmp = 0;
@@ -659,6 +774,13 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	ReadObjNumber(TEXT("terrain"), TEXT("scale_xy"), Tmp); if (Tmp > 0) Out.ScaleXY = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("scale_z"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
 	ReadObjNumber(TEXT("terrain"), TEXT("z_scale"), Tmp); if (Tmp > 0) Out.ScaleZ = float(Tmp);
+	if (const TSharedPtr<FJsonObject>* TerrainObj = nullptr;
+		Spec->TryGetObjectField(TEXT("terrain"), TerrainObj) && TerrainObj)
+	{
+		(*TerrainObj)->TryGetBoolField(TEXT("allow_nonuniform_scale"), Out.bAllowNonUniformScale);
+		(*TerrainObj)->TryGetBoolField(TEXT("allow_extreme_scale_z"), Out.bAllowExtremeScaleZ);
+	}
+	Spec->TryGetStringField(TEXT("quality"), Out.Quality);
 
 	const TSharedPtr<FJsonObject>* Hydrology = nullptr;
 	if (Spec->TryGetObjectField(TEXT("hydrology"), Hydrology) && Hydrology)
@@ -675,6 +797,63 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 	}
 	ReadObjNumber(TEXT("river"), TEXT("width"), Tmp); if (Tmp > 0) Out.RiverWidth = float(Tmp);
 
+	// MCP-001: honor body_type. Never silently coerce lake/ocean into a river.
+	{
+		FString BodyType;
+		Spec->TryGetStringField(TEXT("body_type"), BodyType);
+		if (BodyType.IsEmpty())
+		{
+			const TSharedPtr<FJsonObject>* WaterObj = nullptr;
+			if (Spec->TryGetObjectField(TEXT("water"), WaterObj) && WaterObj)
+			{
+				(*WaterObj)->TryGetStringField(TEXT("body_type"), BodyType);
+			}
+		}
+		if (!BodyType.IsEmpty())
+		{
+			Out.WaterBodyType = BodyType.ToLower();
+			if (Out.WaterBodyType != TEXT("river")
+				&& Out.WaterBodyType != TEXT("lake")
+				&& Out.WaterBodyType != TEXT("ocean"))
+			{
+				OutError = FString::Printf(
+					TEXT("body_type '%s' unsupported; use river|lake|ocean"),
+					*BodyType);
+				return false;
+			}
+		}
+		Spec->TryGetStringField(TEXT("label"), Out.WaterActorLabel);
+		const TSharedPtr<FJsonObject>* LakeObj = nullptr;
+		if (Spec->TryGetObjectField(TEXT("lake"), LakeObj) && LakeObj)
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Centre = nullptr;
+			if ((*LakeObj)->TryGetArrayField(TEXT("center"), Centre) && Centre && Centre->Num() >= 3)
+			{
+				Out.LakeCenter = FVector(
+					(*Centre)[0]->AsNumber(), (*Centre)[1]->AsNumber(), (*Centre)[2]->AsNumber());
+			}
+			if ((*LakeObj)->TryGetNumberField(TEXT("radius_cm"), Tmp) && Tmp > 0)
+			{
+				Out.LakeRadiusCm = float(Tmp);
+			}
+		}
+		const TSharedPtr<FJsonObject>* OceanObj = nullptr;
+		if (Spec->TryGetObjectField(TEXT("ocean"), OceanObj) && OceanObj)
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Centre = nullptr;
+			if ((*OceanObj)->TryGetArrayField(TEXT("center"), Centre) && Centre && Centre->Num() >= 3)
+			{
+				Out.OceanCenter = FVector(
+					(*Centre)[0]->AsNumber(), (*Centre)[1]->AsNumber(), (*Centre)[2]->AsNumber());
+			}
+			const TArray<TSharedPtr<FJsonValue>>* Ext = nullptr;
+			if ((*OceanObj)->TryGetArrayField(TEXT("extents_cm"), Ext) && Ext && Ext->Num() >= 2)
+			{
+				Out.OceanExtentsCm = FVector2D((*Ext)[0]->AsNumber(), (*Ext)[1]->AsNumber());
+			}
+		}
+	}
+
 	const TSharedPtr<FJsonObject>* Vegetation = nullptr;
 	if (Spec->TryGetObjectField(TEXT("vegetation"), Vegetation) && Vegetation)
 	{
@@ -685,17 +864,24 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
 		ReadObjNumber(TEXT("vegetation"), TEXT("slope_limit_deg"), Tmp);
 		if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
-		ReadObjNumber(TEXT("vegetation"), TEXT("min_normalized_height"), Tmp);
-		if (Tmp >= 0) Out.FoliageMinNormalizedHeight = float(Tmp);
+		if (ReadObjNumber(TEXT("vegetation"), TEXT("min_normalized_height"), Tmp) && Tmp >= 0)
+		{
+			Out.FoliageMinNormalizedHeight = float(Tmp);
+		}
 		ReadObjNumber(TEXT("vegetation"), TEXT("max_normalized_height"), Tmp);
 		if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
 		(*Vegetation)->TryGetStringField(TEXT("mesh_path"), Out.MeshPath);
+		(*Vegetation)->TryGetStringField(TEXT("group"), Out.FoliageGroup);
 	}
 
+	if (const TSharedPtr<FJsonObject>* BiomeObj = nullptr; Spec->TryGetObjectField(TEXT("biome"), BiomeObj) && BiomeObj)
+	{
+		(*BiomeObj)->TryGetStringField(TEXT("group"), Out.FoliageGroup);
+	}
 	ReadObjNumber(TEXT("biome"), TEXT("forest_bank_width"), Tmp); if (Tmp > 0) Out.ForestBankWidth = float(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("max_foliage_instances"), Tmp); if (Tmp > 0) Out.MaxFoliageInstances = int32(Tmp);
 	ReadObjNumber(TEXT("biome"), TEXT("slope_limit_deg"), Tmp); if (Tmp > 0) Out.FoliageSlopeLimitDegrees = float(Tmp);
-	ReadObjNumber(TEXT("biome"), TEXT("min_normalized_height"), Tmp); if (Tmp >= 0) Out.FoliageMinNormalizedHeight = float(Tmp);
+	if (ReadObjNumber(TEXT("biome"), TEXT("min_normalized_height"), Tmp) && Tmp >= 0) { Out.FoliageMinNormalizedHeight = float(Tmp); }
 	ReadObjNumber(TEXT("biome"), TEXT("max_normalized_height"), Tmp); if (Tmp > 0) Out.FoliageMaxNormalizedHeight = float(Tmp);
 	const TSharedPtr<FJsonObject>* Biome = nullptr;
 	if (Spec->TryGetObjectField(TEXT("biome"), Biome) && Biome)
@@ -959,20 +1145,172 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		OutError = TEXT("weather.follow must be player_camera or player_pawn");
 		return false;
 	}
+	if (!ValidateScaleAndQuality(Out, OutError))
+	{
+		return false;
+	}
 	return ValidateIncludeDependencies(Out, OutError);
+}
+
+bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
+	const FUeremcpEnvironmentBuildSpec& Spec,
+	FString& OutError)
+{
+	FUeremcpEnvironmentRejection Rejection;
+	if (!ValidateScaleAndQuality(Spec, Rejection))
+	{
+		OutError = Rejection.Message;
+		return false;
+	}
+	return true;
+}
+
+bool FUeremcpEnvironmentService::ValidateScaleAndQuality(
+	const FUeremcpEnvironmentBuildSpec& Spec,
+	FUeremcpEnvironmentRejection& OutRejection)
+{
+	OutRejection = FUeremcpEnvironmentRejection();
+
+	// Mergeable recovery must still pass ValidateScaleAndQuality: match axes
+	// AND keep scale_z under the needle threshold (default 5). NEEDLE alone used
+	// to patch only scale_z → agents hit NONUNIFORM on the next call (3 RTT).
+	constexpr float NeedleCap = 5.f;
+	auto MakeSafeUniformTerrainPatch = [&](float Preferred) -> TSharedPtr<FJsonObject>
+	{
+		const float SafeUniform = Preferred > NeedleCap ? 3.f : Preferred;
+		TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+		TSharedPtr<FJsonObject> Terrain = MakeShared<FJsonObject>();
+		Terrain->SetNumberField(TEXT("scale_xy"), SafeUniform);
+		Terrain->SetNumberField(TEXT("scale_z"), SafeUniform);
+		SpecPatch->SetObjectField(TEXT("terrain"), Terrain);
+		return SpecPatch;
+	};
+
+	// P0-3. Nonuniform scale bakes wrong slopes in permanently, and every "fix"
+	// after the fact is another rebuild. An agent set (300, 100) and corrected
+	// spiky terrain three times without ever being told the cause.
+	if (!Spec.bAllowNonUniformScale
+		&& !FMath::IsNearlyEqual(Spec.ScaleXY, Spec.ScaleZ, 0.01f * FMath::Max(Spec.ScaleXY, 1.f)))
+	{
+		OutRejection.Code = TEXT("NONUNIFORM_SCALE");
+		OutRejection.Message = FString::Printf(
+			TEXT("terrain.scale_xy (%.1f) != terrain.scale_z (%.1f). Nonuniform scale distorts "
+				 "every slope in the landscape and cannot be corrected without rebuilding. Set "
+				 "both the same, and raise terrain.max_altitude_m to make peaks taller. Pass "
+				 "terrain.allow_nonuniform_scale=true only if the distortion is intended."),
+			Spec.ScaleXY, Spec.ScaleZ);
+		OutRejection.NextArgs = MakeShared<FJsonObject>();
+		const float Matched = FMath::Min(Spec.ScaleXY, Spec.ScaleZ);
+		OutRejection.NextArgs->SetObjectField(
+			TEXT("specification"), MakeSafeUniformTerrainPatch(Matched));
+		return false;
+	}
+
+	// The default of 100 is itself the needle-maker [VERIFIED-RUNTIME: three builds].
+	constexpr float NeedleThreshold = 5.f;
+	if (!Spec.bAllowExtremeScaleZ && Spec.ScaleZ > NeedleThreshold)
+	{
+		OutRejection.Code = TEXT("NEEDLE_SCALE_Z");
+		OutRejection.Message = FString::Printf(
+			TEXT("terrain.scale_z=%.1f produces vertical needles rather than mountains. Sane "
+				 "range is 2-5; start at 3. Raise terrain.max_altitude_m for taller peaks. Pass "
+				 "terrain.allow_extreme_scale_z=true to override."),
+			Spec.ScaleZ);
+		OutRejection.NextArgs = MakeShared<FJsonObject>();
+		// Patch BOTH axes so merging into a uniform (100,100) request succeeds on
+		// the next call — not after an extra NONUNIFORM hop.
+		OutRejection.NextArgs->SetObjectField(
+			TEXT("specification"), MakeSafeUniformTerrainPatch(Spec.ScaleZ));
+		return false;
+	}
+
+	// P0-5. A warning that still succeeds is a warning nobody acts on: an agent
+	// read the note saying primitives cannot match a reference and shipped cone
+	// trees anyway, because the call returned success.
+	if (Spec.DemandsRealism() && Spec.WantsVegetation())
+	{
+		const bool bPlaceholder = Spec.MeshPath.IsEmpty()
+			|| Spec.MeshPath.Contains(TEXT("/Engine/BasicShapes"));
+		if (bPlaceholder)
+		{
+			OutRejection.Code = Spec.MeshPath.IsEmpty()
+				? TEXT("MESH_PATH_MISSING") : TEXT("REALISM_GATE");
+			OutRejection.Message = FString::Printf(
+				TEXT("quality='%s' forbids placeholder foliage. biome.mesh_path is %s. Resolve a "
+					 "real mesh first: find_project_assets, StaticMeshTools.import_file, or "
+					 "import_mesh_for_world. submit_mesh_ops output is blockout and does not "
+					 "satisfy a realism goal. Use quality='blockout' if primitives are genuinely wanted."),
+				*Spec.Quality,
+				Spec.MeshPath.IsEmpty() ? TEXT("unset") : TEXT("an engine placeholder"));
+			OutRejection.NextArgs = MakeShared<FJsonObject>();
+			TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+			if (Spec.MeshPath.IsEmpty())
+			{
+				TSharedPtr<FJsonObject> Biome = MakeShared<FJsonObject>();
+				Biome->SetStringField(
+					TEXT("mesh_path"),
+					TEXT("<path from find_project_assets or import_mesh_for_world>"));
+				SpecPatch->SetObjectField(TEXT("biome"), Biome);
+			}
+			else
+			{
+				SpecPatch->SetStringField(TEXT("quality"), TEXT("blockout"));
+			}
+			OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
+			return false;
+		}
+	}
+	return true;
+}
+
+bool FUeremcpEnvironmentService::ParseBuildSpec(
+	const TSharedPtr<FJsonObject>& Spec,
+	FUeremcpEnvironmentBuildSpec& Out,
+	FUeremcpEnvironmentRejection& OutRejection)
+{
+	FString Error;
+	if (!ParseBuildSpec(Spec, Out, Error))
+	{
+		OutRejection.Message = Error;
+		// Re-run the structured gate so Code/NextArgs are filled when that is why.
+		FUeremcpEnvironmentBuildSpec Probe = Out;
+		FUeremcpEnvironmentRejection Structured;
+		if (!ValidateScaleAndQuality(Probe, Structured) && Structured.Message == Error)
+		{
+			OutRejection = Structured;
+		}
+		else
+		{
+			if (Error.Contains(TEXT("body_type")))
+			{
+				OutRejection.Code = TEXT("BODY_TYPE_UNSUPPORTED");
+				OutRejection.NextArgs = MakeShared<FJsonObject>();
+				TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+				SpecPatch->SetStringField(TEXT("body_type"), TEXT("river"));
+				OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
+			}
+			else
+			{
+				OutRejection.Code = TEXT("UNKNOWN");
+			}
+		}
+		return false;
+	}
+	return true;
 }
 
 bool FUeremcpEnvironmentService::ValidateIncludeDependencies(
 	const FUeremcpEnvironmentBuildSpec& Spec,
 	FString& OutError)
 {
-	if (Spec.WantsVegetation() && !Spec.bIncludeRiver)
-	{
-		OutError = TEXT(
-			"vegetation/forest bank scatter requires hydrology.river or include.river: true "
-			"(bank scatter needs a river exclusion corridor; use vegetation.mode=none or add river)");
-		return false;
-	}
+	// Vegetation used to REQUIRE a river, because the only scatter implemented
+	// was a band along a bank. "Trees on a hillside" was therefore impossible --
+	// an agent asked for exactly that, was told to add a river it did not want,
+	// and a river appeared in a scene that should not have had one.
+	//
+	// A river is now an optional constraint, not a precondition: with one, the
+	// bank corridor applies; without one, foliage scatters across the terrain
+	// under the slope and height gates alone.
 	for (const FUeremcpStructurePlacementSpec& Placement : Spec.Structures)
 	{
 		if (Placement.Kind.Equals(TEXT("box_along_river"), ESearchCase::IgnoreCase) && !Spec.bIncludeRiver)
@@ -1152,7 +1490,12 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	TSharedPtr<FJsonObject> HeightMetrics;
 	GenerateHeightmap(Spec, River, Heights, HeightMetrics);
 	Result.StructuralMetrics = HeightMetrics;
-	const FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+	FString HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+	// Baked valley width written into the landscape hash. Additive water may
+	// request a different river.width for the mesh without rebuilding terrain —
+	// that must not flip HEIGHTMAP_MISMATCH. We re-bind this after World is up.
+	float HeightmapRiverWidth = Spec.RiverWidth;
+
 	const uint32 RevisionCrc = FCrc::StrCrc32(*FString::Printf(
 		TEXT("env-v2-1|%s|%llu|%dx%d|%.4f|%.4f|%.2f|%.2f|%d|%s|%d|%d"),
 		*HeightmapHash,
@@ -1170,7 +1513,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.Revision = FString::Printf(TEXT("env:%08x"), RevisionCrc);
 	Result.InternalOperations += 1;
 
-	const bool bAnyStage = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+	const bool bAnyStage = Spec.bIncludeTerrain || Spec.WantsAnyWater() || Spec.WantsVegetation()
 		|| Spec.WeatherPhenomena.Num() > 0 || Spec.bIncludeLighting || Spec.bCaptureScreenshot
 		|| Spec.bIncludeStructures || Spec.Structures.Num() > 0;
 
@@ -1193,7 +1536,21 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				TEXT("ALandscape::Import heightmap path planned [VERIFIED: LandscapeProxy.h:1418-1420]")));
 		}
 #if UEREMCP_HAS_WATER
-		if (Spec.bIncludeRiver)
+		if (Spec.bIncludeOcean)
+		{
+			Tech.Add(MakeTech(
+				TEXT("water_ocean"),
+				TEXT("real"),
+				TEXT("AWaterBodyOcean planned [VERIFIED: WaterBodyOceanActor.h]")));
+		}
+		else if (Spec.bIncludeLake)
+		{
+			Tech.Add(MakeTech(
+				TEXT("water_lake"),
+				TEXT("real"),
+				TEXT("AWaterBodyLake planned [VERIFIED: WaterBodyLakeActor.h]")));
+		}
+		else if (Spec.bIncludeRiver)
 		{
 			Tech.Add(MakeTech(
 				TEXT("water_river"),
@@ -1201,10 +1558,10 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				TEXT("AWaterBodyRiver planned [VERIFIED: WaterBodyRiverActor.h:28]")));
 		}
 #else
-		if (Spec.bIncludeRiver)
+		if (Spec.WantsAnyWater())
 		{
 			Tech.Add(MakeTech(
-				TEXT("water_river"),
+				TEXT("water"),
 				TEXT("blocked"),
 				TEXT("Water headers unavailable at compile time")));
 		}
@@ -1303,10 +1660,15 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			if (World && World->GetOutermost()->IsDirty())
 			{
 				Result.Status = TEXT("rejected");
+				Result.ErrorCode = TEXT("DIRTY_MAP_BLOCKS_SWITCH");
 				Result.Summary = FString::Printf(
 					TEXT("Current map %s has unsaved changes; refusing to switch maps and risk user content"),
 					*CurrentPackage);
 				Result.CapabilityNotes.Add(TEXT("Save or discard the current map explicitly, then retry BuildEnvironment."));
+				Result.NextArgs = MakeShared<FJsonObject>();
+				Result.NextArgs->SetStringField(
+					TEXT("recovery"),
+					TEXT("SaveAs or discard the current map, then retry with the same request."));
 				return Result;
 			}
 
@@ -1329,6 +1691,79 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		return Result;
 	}
 
+	// MCP-006. A staged call that PLACES on terrain but does not REBUILD it still
+	// recomputes the heightmap from whatever spec it was handed, and then places
+	// against those computed heights.
+	//
+	// If the caller does not repeat the exact terrain parameters that built the
+	// landscape -- seed, profile, size, scale_z -- the computed surface differs
+	// from the real one, and every instance lands at the wrong Z. That is the
+	// floating castle, huts and boardwalk in the field-test screenshots, and the
+	// "ScatterFoliage mutated the heightmap again" report: the hash changed
+	// because the recomputed surface was a different surface.
+	//
+	// The landscape already records its hash as a level tag, so this is
+	// checkable. Refuse rather than place into a fiction.
+	// Must run after World / bOwnsMapLifecycle exist (not before dry_run early-out).
+	if (!bOwnsMapLifecycle && !Spec.bIncludeTerrain)
+	{
+		// River.width carves the valley into the heightmap at landscape-create time.
+		// Additive create_water_body may pass a different width for the water mesh;
+		// that must not recompute a different surface hash. Re-bind Heights to the
+		// baked valley width stored on UEREMCP_Metadata.
+		const FString StoredRiverWidth = ReadEnvironmentTag(World, TEXT("UEREMCP_RIVER_WIDTH="));
+		if (!StoredRiverWidth.IsEmpty())
+		{
+			const float BakedWidth = FCString::Atof(*StoredRiverWidth);
+			if (BakedWidth > 0.f
+				&& !FMath::IsNearlyEqual(BakedWidth, Spec.RiverWidth, 0.01f))
+			{
+				FUeremcpEnvironmentBuildSpec TerrainSpec = Spec;
+				TerrainSpec.RiverWidth = BakedWidth;
+				const FBox BakedExtents(
+					FVector(0, 0, 0),
+					FVector(
+						float(TerrainSpec.SizeX - 1) * TerrainSpec.ScaleXY,
+						float(TerrainSpec.SizeY - 1) * TerrainSpec.ScaleXY,
+						0));
+				const FUeremcpSplinePath BakedRiver =
+					UeremcpSpline::MakeRiverAcross(TerrainSpec.Seed, BakedExtents, 12, BakedWidth);
+				GenerateHeightmap(TerrainSpec, BakedRiver, Heights, HeightMetrics);
+				Result.StructuralMetrics = HeightMetrics;
+				HeightmapHash = HeightMetrics->GetStringField(TEXT("heightmap_hash"));
+				HeightmapRiverWidth = BakedWidth;
+				Result.CapabilityNotes.Add(FString::Printf(
+					TEXT("Heightmap match uses landscape-baked river.width=%.1f; water mesh "
+						 "uses specification.river.width=%.1f."),
+					BakedWidth, Spec.RiverWidth));
+			}
+		}
+
+		const FString ExistingHash = ReadEnvironmentTag(World, TEXT("UEREMCP_HEIGHTMAP_HASH="));
+		if (!ExistingHash.IsEmpty() && ExistingHash != HeightmapHash)
+		{
+			Result.Status = TEXT("rejected");
+			Result.ErrorCode = TEXT("HEIGHTMAP_MISMATCH");
+			Result.Summary = FString::Printf(
+				TEXT("terrain parameters do not match the landscape in this level "
+					 "(level heightmap_hash=%s, this request computes %s). Placement would "
+					 "use a different surface than the one that exists and every actor would "
+					 "land at the wrong height. Repeat the SAME specification.seed and "
+					 "terrain block used to build the landscape, or call build_environment "
+					 "to rebuild the whole scene."),
+				*ExistingHash, *HeightmapHash);
+			Result.StructuralMetrics->SetStringField(TEXT("level_heightmap_hash"), ExistingHash);
+			Result.StructuralMetrics->SetStringField(TEXT("request_heightmap_hash"), HeightmapHash);
+			Result.NextArgs = MakeShared<FJsonObject>();
+			TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+			SpecPatch->SetStringField(
+				TEXT("note"),
+				TEXT("Repeat the exact seed + terrain block from the landscape that produced level_heightmap_hash, or set include.terrain/rebuild. river.width alone does not rebuild the heightmap on additive water."));
+			Result.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
+			return Result;
+		}
+	}
+
 	const FString ExistingRevision = ReadEnvironmentRevision(World);
 	if (Request.bHasExpectedRevision && Request.ExpectedRevision != ExistingRevision)
 	{
@@ -1340,7 +1775,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.CapabilityNotes.Add(TEXT("InspectEnvironment and retry with the returned revision."));
 		return Result;
 	}
-	if (!ExistingRevision.IsEmpty() && ExistingRevision == Result.Revision)
+	if (!ExistingRevision.IsEmpty() && ExistingRevision == Result.Revision
+		&& RequestedStagesAlreadyPresent(World, Spec))
 	{
 		Result.Status = TEXT("no_change_required");
 		Result.Summary = FString::Printf(
@@ -1350,15 +1786,67 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.ChangeManifest->SetStringField(TEXT("destination"), Dest);
 		Result.ChangeManifest->SetStringField(TEXT("revision"), Result.Revision);
 		Result.ChangeManifest->SetBoolField(TEXT("dry_run"), false);
-		Result.CapabilityNotes.Add(TEXT("Idempotency gate matched saved environment metadata; no actors were changed."));
+		Result.CapabilityNotes.Add(
+			TEXT("Idempotency gate matched saved environment metadata AND requested stage "
+				 "actors are already present; no actors were changed."));
 		return Result;
+	}
+	if (!ExistingRevision.IsEmpty() && ExistingRevision == Result.Revision)
+	{
+		Result.CapabilityNotes.Add(
+			TEXT("Revision matched but requested stage actors are missing — proceeding with "
+				 "replace_owned stage create (additive landscape→water→foliage)."));
 	}
 
 	const FScopedTransaction Transaction(
 		NSLOCTEXT("UEREMCP", "BuildEnvironmentTransaction", "UEREMCP Build Environment"),
 		Request.bAtomic);
-	const int32 ReplacedActorCount = DestroyOwnedEnvironmentActors(World);
+	// Destroy only what THIS request owns.
+	//
+	// Every stage previously wiped every UEREMCP_ actor, so "add a river" deleted
+	// the landscape you had just made, and a foliage scatter deleted both. Agents
+	// hit this repeatedly, abandoned the procedural path, and hand-placed props --
+	// which is what floating trees and disconnected water in the field-test
+	// screenshots actually are.
+	//
+	// A full build_environment legitimately owns the whole scene and still
+	// replaces everything. A staged call replaces only its own stage.
+	int32 ReplacedActorCount = 0;
+	TArray<FString> ReplacedPrefixes;
+	if (bOwnsMapLifecycle)
+	{
+		ReplacedActorCount = DestroyOwnedEnvironmentActors(World);
+		ReplacedPrefixes.Add(TEXT("UEREMCP_"));
+	}
+	else
+	{
+		auto ReplaceStage = [&](const TCHAR* Prefix)
+		{
+			ReplacedActorCount += DestroyOwnedEnvironmentActors(World, Prefix);
+			ReplacedPrefixes.Add(Prefix);
+		};
+		if (Spec.bIncludeTerrain)      { ReplaceStage(TEXT("UEREMCP_Landscape")); }
+		if (Spec.WantsAnyWater())
+		{
+			// Exact label only — never wipe other water body types / custom ids.
+			ReplacedActorCount += DestroyOwnedByExactLabel(World, Spec.ResolvedWaterLabel());
+			ReplacedPrefixes.Add(Spec.ResolvedWaterLabel());
+		}
+		if (Spec.WantsVegetation())    { ReplaceStage(*Spec.FoliageActorLabel()); }
+		if (Spec.Structures.Num() > 0) { ReplaceStage(TEXT("UEREMCP_Structure")); }
+		if (Spec.HasAnyWeatherPhenomenon()) { ReplaceStage(TEXT("UEREMCP_Weather")); }
+	}
 	Result.ChangeManifest->SetNumberField(TEXT("replaced_owned_actors"), ReplacedActorCount);
+	{
+		// Say what was removed. A silent wipe is indistinguishable from a bug.
+		TArray<TSharedPtr<FJsonValue>> PrefixArr;
+		for (const FString& P : ReplacedPrefixes)
+		{
+			PrefixArr.Add(MakeShared<FJsonValueString>(P));
+		}
+		Result.ChangeManifest->SetArrayField(TEXT("replaced_owned_prefixes"), PrefixArr);
+		Result.ChangeManifest->SetBoolField(TEXT("replaced_all_owned"), bOwnsMapLifecycle);
+	}
 
 	TArray<FString> CreatedLabels;
 	bool bRiverCreated = false;
@@ -1401,15 +1889,22 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			ELandscapeImportAlphamapType::Additive,
 			TArrayView<const FLandscapeLayer>());
 
+		// Import alone can leave Visibility collision thin/missing — place_prefab
+		// and snap then miss at small uniform scales. Rebuild collision now.
+		// [VERIFIED: LandscapeProxy.h:1242] CreateLandscapeInfo
+		// [VERIFIED: LandscapeProxy.h:1405] RecreateCollisionComponents
+		Landscape->CreateLandscapeInfo();
+		Landscape->RecreateCollisionComponents();
+
 		CreatedLabels.Add(TEXT("UEREMCP_Landscape"));
 		Tech.Add(MakeTech(
 			TEXT("landscape_heightmap"),
 			TEXT("real"),
-			TEXT("ALandscape::Import applied [VERIFIED: LandscapeProxy.h:1418-1420]")));
+			TEXT("ALandscape::Import + RecreateCollisionComponents [VERIFIED: LandscapeProxy.h:1418-1420,1405]")));
 		Result.InternalOperations += 2;
 	}
 
-	if (Spec.bIncludeRiver)
+	if (Spec.WantsAnyWater())
 	{
 #if UEREMCP_HAS_WATER
 		// Clear bAffectsLandscape in CustomPreSpawnInitialization, before
@@ -1419,60 +1914,143 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		// under a synchronous MCP tools/call.
 		// [VERIFIED-RUNTIME: BuildEnvironment hung at WaterBrushManager spawn 2026-07-30]
 		// [VERIFIED: WaterBodyComponent.h:630] bAffectsLandscape
-		// [VERIFIED: WaterEditorModule.cpp:190] AffectsLandscape() gates brush spawn
-		// [VERIFIED: World.h:517] CustomPreSpawnInitialization
-		const FTransform RiverXform(River.Points[0].Location + LandscapeOffset);
-		FActorSpawnParameters SpawnParameters;
-		SpawnParameters.SpawnCollisionHandlingOverride =
-			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		SpawnParameters.CustomPreSpawnInitialization = [](AActor* SpawnedActor)
+		auto DisableWaterBrush = [](AActor* SpawnedActor)
 		{
-			if (AWaterBodyRiver* SpawnedRiver = Cast<AWaterBodyRiver>(SpawnedActor))
+			if (AWaterBody* Body = Cast<AWaterBody>(SpawnedActor))
 			{
-				if (UWaterBodyComponent* WaterComp = SpawnedRiver->GetWaterBodyComponent())
+				if (UWaterBodyComponent* WaterComp = Body->GetWaterBodyComponent())
 				{
 					WaterComp->bAffectsLandscape = false;
 				}
 			}
 		};
-		AWaterBodyRiver* RiverActor = World->SpawnActor<AWaterBodyRiver>(
-			AWaterBodyRiver::StaticClass(),
-			RiverXform,
-			SpawnParameters);
-		if (RiverActor)
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParameters.CustomPreSpawnInitialization = DisableWaterBrush;
+
+		const FString WaterLabel = Spec.ResolvedWaterLabel();
+		bool bWaterOk = false;
+
+		if (Spec.bIncludeOcean)
 		{
-			RiverActor->SetActorLabel(TEXT("UEREMCP_River"));
-			// [VERIFIED: WaterBodyActor.h:103] GetWaterSpline
-			if (UWaterSplineComponent* Spline = RiverActor->GetWaterSpline())
+			const FTransform OceanXform(Spec.OceanCenter + LandscapeOffset);
+			AWaterBodyOcean* OceanActor = World->SpawnActor<AWaterBodyOcean>(
+				AWaterBodyOcean::StaticClass(), OceanXform, SpawnParameters);
+			if (OceanActor)
 			{
-				Spline->ClearSplinePoints(false);
-				for (int32 I = 0; I < River.Points.Num(); ++I)
+				OceanActor->SetActorLabel(WaterLabel);
+#if WITH_EDITOR
+				if (UWaterBodyOceanComponent* OceanComp =
+					Cast<UWaterBodyOceanComponent>(OceanActor->GetWaterBodyComponent()))
 				{
-					Spline->AddSplinePoint(
-						River.Points[I].Location + LandscapeOffset,
-						ESplineCoordinateSpace::World,
-						false);
+					// [VERIFIED: WaterBodyOceanComponent.h:30-32] SetCollisionExtents / SetOceanExtent
+					OceanComp->SetCollisionExtents(
+						FVector(Spec.OceanExtentsCm.X, Spec.OceanExtentsCm.Y, 2000.f));
+					OceanComp->SetOceanExtent(Spec.OceanExtentsCm);
 				}
-				Spline->UpdateSpline();
+#endif
+				CreatedLabels.Add(WaterLabel);
+				bWaterOk = true;
+				bRiverCreated = true; // structural gate: water stage succeeded
+				Tech.Add(MakeTech(
+					TEXT("water_ocean"),
+					TEXT("real"),
+					TEXT("AWaterBodyOcean pre-spawn bAffectsLandscape=false [VERIFIED: WaterBodyOceanActor.h]")));
+				Result.CapabilityNotes.Add(
+					TEXT("Ocean created additively — does not replace UEREMCP_River / UEREMCP_Lake."));
+				Result.InternalOperations += 2;
 			}
-			CreatedLabels.Add(TEXT("UEREMCP_River"));
-			bRiverCreated = true;
-			Tech.Add(MakeTech(
-				TEXT("water_river"),
-				TEXT("real"),
-				TEXT("AWaterBodyRiver pre-spawn bAffectsLandscape=false, spline set [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyComponent.h:630]")));
-			Result.CapabilityNotes.Add(
-				TEXT("River uses visible water mesh without landscape water brush (heightmap valley is authoritative)."));
-			Result.InternalOperations += 2;
+			else
+			{
+				Result.Warnings.Add(TEXT("AWaterBodyOcean spawn returned null — ocean skipped"));
+				Tech.Add(MakeTech(TEXT("water_ocean"), TEXT("blocked"), TEXT("SpawnActor<AWaterBodyOcean> returned null")));
+			}
 		}
-		else
+		else if (Spec.bIncludeLake)
 		{
-			Result.Warnings.Add(TEXT("AWaterBodyRiver deferred spawn returned null — river skipped"));
-			Tech.Add(MakeTech(TEXT("water_river"), TEXT("blocked"), TEXT("SpawnActorDeferred<AWaterBodyRiver> returned null")));
+			const FTransform LakeXform(Spec.LakeCenter + LandscapeOffset);
+			AWaterBodyLake* LakeActor = World->SpawnActor<AWaterBodyLake>(
+				AWaterBodyLake::StaticClass(), LakeXform, SpawnParameters);
+			if (LakeActor)
+			{
+				LakeActor->SetActorLabel(WaterLabel);
+				if (UWaterSplineComponent* Spline = LakeActor->GetWaterSpline())
+				{
+					// Closed circle approximating radius_cm.
+					Spline->ClearSplinePoints(false);
+					constexpr int32 Segments = 12;
+					for (int32 I = 0; I < Segments; ++I)
+					{
+						const float Ang = (2.f * PI * float(I)) / float(Segments);
+						const FVector Pt = Spec.LakeCenter + LandscapeOffset
+							+ FVector(FMath::Cos(Ang) * Spec.LakeRadiusCm,
+								FMath::Sin(Ang) * Spec.LakeRadiusCm, 0.f);
+						Spline->AddSplinePoint(Pt, ESplineCoordinateSpace::World, false);
+					}
+					Spline->SetClosedLoop(true, false);
+					Spline->UpdateSpline();
+				}
+				CreatedLabels.Add(WaterLabel);
+				bWaterOk = true;
+				bRiverCreated = true;
+				Tech.Add(MakeTech(
+					TEXT("water_lake"),
+					TEXT("real"),
+					TEXT("AWaterBodyLake pre-spawn bAffectsLandscape=false + circle spline [VERIFIED: WaterBodyLakeActor.h]")));
+				Result.CapabilityNotes.Add(
+					TEXT("Lake created additively — does not replace UEREMCP_River / UEREMCP_Ocean."));
+				Result.InternalOperations += 2;
+			}
+			else
+			{
+				Result.Warnings.Add(TEXT("AWaterBodyLake spawn returned null — lake skipped"));
+				Tech.Add(MakeTech(TEXT("water_lake"), TEXT("blocked"), TEXT("SpawnActor<AWaterBodyLake> returned null")));
+			}
 		}
+		else // river (default)
+		{
+			const FTransform RiverXform(River.Points[0].Location + LandscapeOffset);
+			AWaterBodyRiver* RiverActor = World->SpawnActor<AWaterBodyRiver>(
+				AWaterBodyRiver::StaticClass(),
+				RiverXform,
+				SpawnParameters);
+			if (RiverActor)
+			{
+				RiverActor->SetActorLabel(WaterLabel);
+				if (UWaterSplineComponent* Spline = RiverActor->GetWaterSpline())
+				{
+					Spline->ClearSplinePoints(false);
+					for (int32 I = 0; I < River.Points.Num(); ++I)
+					{
+						Spline->AddSplinePoint(
+							River.Points[I].Location + LandscapeOffset,
+							ESplineCoordinateSpace::World,
+							false);
+					}
+					Spline->UpdateSpline();
+				}
+				CreatedLabels.Add(WaterLabel);
+				bWaterOk = true;
+				bRiverCreated = true;
+				Tech.Add(MakeTech(
+					TEXT("water_river"),
+					TEXT("real"),
+					TEXT("AWaterBodyRiver pre-spawn bAffectsLandscape=false, spline set [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyComponent.h:630]")));
+				Result.CapabilityNotes.Add(
+					TEXT("River uses visible water mesh without landscape water brush (heightmap valley is authoritative)."));
+				Result.InternalOperations += 2;
+			}
+			else
+			{
+				Result.Warnings.Add(TEXT("AWaterBodyRiver spawn returned null — river skipped"));
+				Tech.Add(MakeTech(TEXT("water_river"), TEXT("blocked"), TEXT("SpawnActor<AWaterBodyRiver> returned null")));
+			}
+		}
+		(void)bWaterOk;
 #else
-		Result.Warnings.Add(TEXT("Water plugin headers not compiled in — river approximated as empty channel only"));
-		Tech.Add(MakeTech(TEXT("water_river"), TEXT("approximated"), TEXT("Valley carved in heightmap only; no AWaterBodyRiver")));
+		Result.Warnings.Add(TEXT("Water plugin headers not compiled in — water approximated as empty channel only"));
+		Tech.Add(MakeTech(TEXT("water"), TEXT("approximated"), TEXT("Valley carved in heightmap only; no WaterBody actor")));
 #endif
 	}
 
@@ -1511,7 +2089,9 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		if (Mesh)
 		{
 			AActor* Holder = World->SpawnActor<AActor>(FVector::ZeroVector, FRotator::ZeroRotator);
-			Holder->SetActorLabel(TEXT("UEREMCP_Forest"));
+			// Group-scoped label: a second species spawns its own holder rather
+			// than colliding with (and being wiped by) the first.
+			Holder->SetActorLabel(Spec.FoliageActorLabel());
 			USceneComponent* Root = NewObject<USceneComponent>(Holder);
 			Root->SetMobility(EComponentMobility::Static);
 			Holder->SetRootComponent(Root);
@@ -1533,12 +2113,17 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 					FMath::Lerp(Extents.Min.X, Extents.Max.X, U),
 					FMath::Lerp(Extents.Min.Y, Extents.Max.Y, V),
 					0.f);
-				const float Dist = Bank.DistanceToXY(Local);
-				const float Inner = Spec.RiverWidth * 0.55f;
-				const float Outer = Inner + Spec.ForestBankWidth;
-				if (Dist < Inner || Dist > Outer)
+				if (Spec.bIncludeRiver)
 				{
-					continue;
+					// Bank corridor: keep a clear channel, and band the forest
+					// along it. Only meaningful when a river actually exists.
+					const float Dist = Bank.DistanceToXY(Local);
+					const float Inner = Spec.RiverWidth * 0.55f;
+					const float Outer = Inner + Spec.ForestBankWidth;
+					if (Dist < Inner || Dist > Outer)
+					{
+						continue;
+					}
 				}
 				const float Density = UeremcpNoise::SmoothNoise2D(Spec.Seed ^ 0xD00Dull, U * 8.f, V * 8.f);
 				if (Density < 0.35f)
@@ -1597,6 +2182,65 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			Result.InternalOperations += 1;
 		}
 	}
+	// P0-3 / P0-4. You cannot gate on what you never measure, and "the mountains
+	// look like needles" was only ever visible in a screenshot. A slope
+	// distribution and a flat-area percentage make terrain shape checkable
+	// without a human looking at it.
+	{
+		TSharedPtr<FJsonObject> Scale = MakeShared<FJsonObject>();
+		Scale->SetNumberField(TEXT("xy"), Spec.ScaleXY);
+		Scale->SetNumberField(TEXT("z"), Spec.ScaleZ);
+		Result.StructuralMetrics->SetObjectField(TEXT("actor_scale"), Scale);
+		Result.StructuralMetrics->SetBoolField(TEXT("uniform_scale"),
+			FMath::IsNearlyEqual(Spec.ScaleXY, Spec.ScaleZ, 0.01f * FMath::Max(Spec.ScaleXY, 1.f)));
+
+		if (Heights.Num() > 0)
+		{
+			TArray<float> Slopes;
+			const int32 StepsX = FMath::Max(1, Spec.SizeX / 32);
+			const int32 StepsY = FMath::Max(1, Spec.SizeY / 32);
+			Slopes.Reserve(1024);
+			for (int32 Y = 1; Y < Spec.SizeY - 1; Y += StepsY)
+			{
+				for (int32 X = 1; X < Spec.SizeX - 1; X += StepsX)
+				{
+					Slopes.Add(SampleSlopeDegrees(
+						Heights, Spec, X * Spec.ScaleXY, Y * Spec.ScaleXY));
+				}
+			}
+			if (Slopes.Num() > 0)
+			{
+				Slopes.Sort();
+				auto Pct = [&Slopes](float P) -> float
+				{
+					const int32 Idx = FMath::Clamp(
+						FMath::RoundToInt(P * (Slopes.Num() - 1)), 0, Slopes.Num() - 1);
+					return Slopes[Idx];
+				};
+				int32 Flat = 0;
+				for (float S : Slopes) { if (S < 15.f) ++Flat; }
+
+				TSharedPtr<FJsonObject> Hist = MakeShared<FJsonObject>();
+				Hist->SetNumberField(TEXT("samples"), Slopes.Num());
+				Hist->SetNumberField(TEXT("p50_deg"), Pct(0.50f));
+				Hist->SetNumberField(TEXT("p95_deg"), Pct(0.95f));
+				Hist->SetNumberField(TEXT("max_deg"), Slopes.Last());
+				Result.StructuralMetrics->SetObjectField(TEXT("slope"), Hist);
+				Result.StructuralMetrics->SetNumberField(TEXT("flat_area_pct"),
+					100.f * float(Flat) / float(Slopes.Num()));
+
+				// Buildable flat ground is what a settlement needs; a scene that
+				// is all slope reads as spikes no matter what the peaks measure.
+				if (Slopes.Num() > 0 && (100.f * float(Flat) / float(Slopes.Num())) < 5.f)
+				{
+					Result.Warnings.Add(TEXT(
+						"flat_area_pct below 5% — almost no buildable ground. Lower "
+						"terrain.scale_z or reduce mountain coverage if this should be habitable."));
+				}
+			}
+		}
+	}
+
 	Result.StructuralMetrics->SetNumberField(TEXT("foliage_instances"), FoliageCount);
 	Result.StructuralMetrics->SetBoolField(TEXT("forest_bounded"), FoliageCount <= Spec.MaxFoliageInstances);
 	Result.StructuralMetrics->SetNumberField(TEXT("exclusion_violations"), ExclusionViolations);
@@ -1847,12 +2491,18 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.InternalOperations += 1;
 	}
 
+	DestroyOwnedEnvironmentActors(World, TEXT("UEREMCP_Metadata"));
 	if (AActor* Metadata = World->SpawnActor<AActor>(FVector::ZeroVector, FRotator::ZeroRotator))
 	{
+		// Singleton metadata: replace prior tags so additive stages do not leave
+		// stale UEREMCP_RIVER_WIDTH / HEIGHTMAP_HASH that ReadEnvironmentTag might
+		// miss or prefer incorrectly.
 		Metadata->SetActorLabel(TEXT("UEREMCP_Metadata"));
 		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_REV=%s"), *Result.Revision)));
 		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_SEED=%llu"), Spec.Seed)));
-		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_RIVER_WIDTH=%.3f"), Spec.RiverWidth)));
+		// Persist the width baked into the heightmap (not necessarily the water
+		// mesh width) so additive stages can rematch without HEIGHTMAP_MISMATCH.
+		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_RIVER_WIDTH=%.3f"), HeightmapRiverWidth)));
 		Metadata->Tags.Add(FName(*FString::Printf(TEXT("UEREMCP_HEIGHTMAP_HASH=%s"), *HeightmapHash)));
 		CreatedLabels.Add(TEXT("UEREMCP_Metadata"));
 		++Result.InternalOperations;
@@ -1875,12 +2525,12 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	const bool bForestOk = !Spec.WantsVegetation() || FoliageCount > 0;
 	const bool bBothBanks = !Spec.WantsVegetation() || (LeftBankCount > 0 && RightBankCount > 0);
 	const bool bOpenChannel = !Spec.WantsVegetation() || ExclusionViolations == 0;
-	const bool bRiverOk = !Spec.bIncludeRiver || bRiverCreated;
+	const bool bRiverOk = !Spec.WantsAnyWater() || bRiverCreated;
 	const bool bWeatherOk = Spec.WeatherPhenomena.Num() == 0
 		|| WeatherActorsCreated >= Spec.WeatherPhenomena.Num();
 	const bool bStructuresOk = StructureSpecs.Num() == 0
 		|| StructuresPlaced > 0;
-	const bool bAnyBuilt = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+	const bool bAnyBuilt = Spec.bIncludeTerrain || Spec.WantsAnyWater() || Spec.WantsVegetation()
 		|| Spec.WeatherPhenomena.Num() > 0 || Spec.bIncludeLighting || Spec.bCaptureScreenshot
 		|| StructureSpecs.Num() > 0;
 
@@ -1985,6 +2635,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 
 	int32 Landscapes = 0;
 	int32 Rivers = 0;
+	int32 Lakes = 0;
+	int32 Oceans = 0;
 	int32 Rain = 0;
 	int32 FoliageActors = 0;
 	int32 FoliageInstances = 0;
@@ -2000,6 +2652,14 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 		if (Label.Contains(TEXT("UEREMCP_River")))
 		{
 			++Rivers;
+		}
+		if (Label.Contains(TEXT("UEREMCP_Lake")))
+		{
+			++Lakes;
+		}
+		if (Label.Contains(TEXT("UEREMCP_Ocean")))
+		{
+			++Oceans;
 		}
 		if (Label.StartsWith(TEXT("UEREMCP_Weather_")) || Label == TEXT("UEREMCP_Rain"))
 		{
@@ -2025,6 +2685,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 	}
 	Result.StructuralMetrics->SetNumberField(TEXT("landscape_actors"), Landscapes);
 	Result.StructuralMetrics->SetNumberField(TEXT("river_actors"), Rivers);
+	Result.StructuralMetrics->SetNumberField(TEXT("lake_actors"), Lakes);
+	Result.StructuralMetrics->SetNumberField(TEXT("ocean_actors"), Oceans);
 	Result.StructuralMetrics->SetNumberField(TEXT("rain_actors"), Rain);
 	Result.StructuralMetrics->SetNumberField(TEXT("forest_actors"), FoliageActors);
 	Result.StructuralMetrics->SetNumberField(TEXT("foliage_instances"), FoliageInstances);
@@ -2040,8 +2702,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 	Result.StructuralMetrics->SetStringField(TEXT("query_path"), LevelOrPackagePath);
 	Result.Status = TEXT("no_change_required");
 	Result.Summary = FString::Printf(
-		TEXT("InspectEnvironment: landscapes=%d rivers=%d rain=%d forest=%d"),
-		Landscapes, Rivers, Rain, FoliageActors);
+		TEXT("InspectEnvironment: landscapes=%d rivers=%d lakes=%d oceans=%d rain=%d forest=%d"),
+		Landscapes, Rivers, Lakes, Oceans, Rain, FoliageActors);
 	return Result;
 }
 

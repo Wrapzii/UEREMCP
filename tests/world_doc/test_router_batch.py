@@ -166,13 +166,20 @@ class TestSingleDomainUnchanged(unittest.TestCase):
     """A batch for one operation is pure overhead, and widening the step cap
     must not turn a focused intent into five speculative calls."""
 
-    def test_abstention_produces_no_batch(self):
-        """Abstaining returns before assembly. A batch built on a plan the
-        router did not believe in would be worse than no answer at all."""
+    def test_independent_steps_do_not_become_a_batch(self):
+        """A batch claims the operations belong together. Three unrelated reads
+        wrapped in one rollback_all transaction is worse than three calls: a
+        failure in any one discards the others.
+
+        This intent used to abstain entirely; after the catalog merge restored
+        GetLogEntries it routes confidently, which exposed the real bug --
+        assembly fired on "two or more operations" rather than on an actual
+        dependency."""
         out = _plan(SINGLE)
-        self.assertTrue(out["abstained"])
-        self.assertIsNone(out.get("batch"))
-        self.assertEqual(out["plan"], [])
+        self.assertFalse(out["abstained"])
+        self.assertTrue(any("LogsToolset" in s["qualified"] for s in out["plan"]))
+        self.assertIsNone(out.get("batch"),
+                          "unrelated steps were wrapped in a transaction")
 
     def test_one_step_plan_gets_a_note_not_a_batch(self):
         out = _plan("inspect the niagara system at /Game/__UeremcpTests/Fireball")
@@ -206,6 +213,66 @@ class TestNoRegression(unittest.TestCase):
         for step in _plan(MULTI)["plan"]:
             self.assertIn(step["qualified"], known)
 
+class TestQualityIntentRoutesToImport(unittest.TestCase):
+    """The happy path must not teach that a primitive is finished art.
+
+    Measured: an agent asked for a lived-in landscape shipped cylinder-and-cone
+    trees, and said so plainly -- "cone trees were acceptable to me because the
+    tooling's happy path made them the intended empty-project answer." It had
+    read the note saying import_file is the only path to reference-faithful
+    geometry, and shipped cones anyway, because the catalog example for
+    SubmitMeshOps was a cylinder plus a cone named SM_Conifer.
+
+    An example IS a recommendation. These tests hold that line.
+    """
+
+    QUALITY = ("I want realistic high quality trees that look like the reference photos",
+               "photoreal foliage, not blockout",
+               "hero assets for the forest, final art quality")
+
+    def test_quality_vocabulary_reaches_import(self):
+        for intent in self.QUALITY:
+            out = _plan(intent)
+            tools = [s["qualified"] for s in out["plan"]]
+            self.assertTrue(any("import_file" in t for t in tools),
+                            "%r never surfaced an import path; got %s" % (intent, tools))
+
+    def test_quality_vocabulary_does_not_lead_with_primitives(self):
+        for intent in self.QUALITY:
+            out = _plan(intent)
+            if not out["plan"]:
+                continue
+            self.assertNotIn("SubmitMeshOps", out["plan"][0]["qualified"],
+                             "%r led with primitive authoring" % intent)
+
+    def test_submit_mesh_ops_example_is_not_a_tree(self):
+        """The example is the quality ceiling an agent infers."""
+        catalog = R.load_catalog()
+        op = next((o for o in catalog["operations"]
+                   if o.get("action") == "submit_mesh_ops"), None)
+        self.assertIsNotNone(op)
+        blob = json.dumps(op["example_request"]).lower()
+        for word in ("conifer", "pine", "tree", "cone"):
+            self.assertNotIn(word, blob,
+                             "submit_mesh_ops example still teaches %r as the shape "
+                             "to author" % word)
+
+    def test_submit_mesh_ops_warns_against_hero_use(self):
+        catalog = R.load_catalog()
+        op = next((o for o in catalog["operations"]
+                   if o.get("action") == "submit_mesh_ops"), None)
+        blob = (" ".join(op.get("do_not_use_for") or []) + " " + op.get("recovery", "")).lower()
+        self.assertIn("import_file", blob,
+                      "nothing points a quality ask at the import path")
+
+    def test_scatter_depends_on_a_real_mesh(self):
+        """Placing geometry before its surface exists is how blockout gets
+        mistaken for finished work."""
+        catalog = R.load_catalog()
+        edge = next((d for d in catalog["dependencies"]
+                     if d.get("action") == "scatter_foliage"), None)
+        self.assertIsNotNone(edge)
+        self.assertIn("submit_mesh_ops", edge["depends_on_actions"])
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

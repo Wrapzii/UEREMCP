@@ -1,10 +1,10 @@
 {
- "generated_utc": "2026-07-31T01:15:59+00:00",
+ "generated_utc": "2026-07-31T05:11:20+00:00",
  "snapshot_schema_version": 2,
  "source": "live MCP registry via list_toolsets + describe_toolset",
- "source_surface_fingerprint": "31ef6d284e8c4ac53d83a6238c67a890a6153e61a0adffc340bad68dc8b87326",
- "tool_count": 980,
- "toolset_count": 82,
+ "source_surface_fingerprint": "3599f8b6f1d5c8fdb74a99d80efcbb8c87afe05aa8109553dd2fc9cca5709fdb",
+ "tool_count": 936,
+ "toolset_count": 77,
  "toolsets": {
   "AutomationTestToolset.AutomationTestToolset": {
    "description": "Automation test discovery and execution toolset.\n\nWraps the IAutomationControllerManager API (the same backend the Session\nFrontend uses) to let MCP clients list available tests, run them, and\nretrieve results.\n\nTypical workflow:\n  1. DiscoverTests() once per session to initialize workers and load the test list.\n  2. ListTests() to find tests by name or tag.\n  3. RunTests() with the desired test names.\n  4. GetTestStatus() / GetTestResults() to monitor and retrieve results.\n  5. StopTests() to abort if needed.",
@@ -67,96 +67,6 @@
      "properties": [],
      "qualified_name": "AutomationTestToolset.AutomationTestToolset.StopTests",
      "required": []
-    }
-   },
-   "version": "1.0"
-  },
-  "ChaosClothAssetToolset.ChaosClothAssetToolset": {
-   "description": "Provides tools for creating and assigning ChaosClothAsset clothing data to skeletal meshes.\nReplicates the workflow available via the SkeletalMesh Editor viewport context menu.",
-   "tools": {
-    "AssignClothingToSection": {
-     "description": "Binds a clothing asset to a specific LOD and section on the skeletal mesh.\nMirrors the SkeletalMesh Editor's \"Apply Clothing Data\" action.\nAny clothing already bound to the section is unbound first.",
-     "properties": [
-      "clothingAssetName",
-      "clothingLodIndex",
-      "lodIndex",
-      "sectionIndex",
-      "skeletalMeshPath"
-     ],
-     "qualified_name": "ChaosClothAssetToolset.ChaosClothAssetToolset.AssignClothingToSection",
-     "required": [
-      "skeletalMeshPath",
-      "clothingAssetName",
-      "lodIndex",
-      "sectionIndex",
-      "clothingLodIndex"
-     ]
-    },
-    "ConvertClothingAssetCommonToChaosClothAsset": {
-     "description": "Converts a legacy UClothingAssetCommon (the cloth asset created via UChaosClothingSimulationFactory)\ninto a new UChaosClothAsset whose embedded Dataflow graph mirrors the legacy UChaosClothConfig and\nUChaosClothSharedSimConfig values, with one WeightMap node per legacy weight map.",
-     "properties": [
-      "assetName",
-      "clothingAssetName",
-      "outputPackagePath",
-      "skeletalMeshPath"
-     ],
-     "qualified_name": "ChaosClothAssetToolset.ChaosClothAssetToolset.ConvertClothingAssetCommonToChaosClothAsset",
-     "required": [
-      "skeletalMeshPath",
-      "clothingAssetName",
-      "outputPackagePath",
-      "assetName"
-     ]
-    },
-    "CreateClothingAsset": {
-     "description": "Creates a UChaosClothAssetSKMClothingAsset from a Chaos Cloth/Outfit Asset and adds it\nto the skeletal mesh's clothing asset array, making it available to assign to sections.",
-     "properties": [
-      "chaosClothAssetPath",
-      "skeletalMeshPath"
-     ],
-     "qualified_name": "ChaosClothAssetToolset.ChaosClothAssetToolset.CreateClothingAsset",
-     "required": [
-      "skeletalMeshPath",
-      "chaosClothAssetPath"
-     ]
-    },
-    "GetSectionClothing": {
-     "description": "Returns the name of clothing bound for a specific LOD section (if any).",
-     "properties": [
-      "lodIndex",
-      "sectionIndex",
-      "skeletalMeshPath"
-     ],
-     "qualified_name": "ChaosClothAssetToolset.ChaosClothAssetToolset.GetSectionClothing",
-     "required": [
-      "skeletalMeshPath",
-      "lodIndex",
-      "sectionIndex"
-     ]
-    },
-    "ListClothingAssets": {
-     "description": "Returns information about all Clothing Assets on a skeletal mesh.\nUse AssetName with AssignClothingToSection.\nCheck bRequiresMatchingLodIndex to determine how to supply ClothingLodIndex:\n  - true  (ChaosClothAsset): pass the same value as LodIndex\n  - false (UClothingAssetCommon): pass any value in [0, NumClothingLods-1]",
-     "properties": [
-      "skeletalMeshPath"
-     ],
-     "qualified_name": "ChaosClothAssetToolset.ChaosClothAssetToolset.ListClothingAssets",
-     "required": [
-      "skeletalMeshPath"
-     ]
-    },
-    "RemoveClothingFromSection": {
-     "description": "Removes the clothing binding from a specific LOD section on the skeletal mesh.\nMirrors the SkeletalMesh Editor's \"Remove Clothing Data\" action.",
-     "properties": [
-      "lodIndex",
-      "sectionIndex",
-      "skeletalMeshPath"
-     ],
-     "qualified_name": "ChaosClothAssetToolset.ChaosClothAssetToolset.RemoveClothingFromSection",
-     "required": [
-      "skeletalMeshPath",
-      "lodIndex",
-      "sectionIndex"
-     ]
     }
    },
    "version": "1.0"
@@ -1153,138 +1063,6 @@
    },
    "version": "1.0"
   },
-  "LiveCodingToolset.LiveCodingToolset": {
-   "description": "Live Coding compile toolset.\n\nExposes an MCP tool that triggers a Live Coding compile from the running\neditor and waits for the result, returning the compile status together with\nany captured LogLiveCoding output and UBT compiler diagnostics.",
-   "tools": {
-    "CompileLiveCoding": {
-     "description": "Triggers a Live Coding compile and waits for the result.\nLive Coding must be enabled in Editor Preferences.",
-     "properties": [],
-     "qualified_name": "LiveCodingToolset.LiveCodingToolset.CompileLiveCoding",
-     "required": []
-    }
-   },
-   "version": "1.0"
-  },
-  "MVVMToolset.MVVMToolset": {
-   "description": "MVVMToolset",
-   "tools": {
-    "AddViewModelProperty": {
-     "description": "Add a property to an existing ViewModel",
-     "properties": [
-      "defaultValue",
-      "propertyName",
-      "propertyType",
-      "viewModel"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.AddViewModelProperty",
-     "required": [
-      "viewModel",
-      "propertyName",
-      "propertyType",
-      "defaultValue"
-     ]
-    },
-    "AddViewModelToWidget": {
-     "description": "Adds a ViewModel to the WidgetBlueprint",
-     "properties": [
-      "viewModelClass",
-      "widgetBlueprint"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.AddViewModelToWidget",
-     "required": [
-      "widgetBlueprint",
-      "viewModelClass"
-     ]
-    },
-    "CreateViewBinding": {
-     "description": "Creates a View Binding from the SourceProperty to the Destination property.\nIf there is a type mismatch, an existing conversion function will try to be used.",
-     "properties": [
-      "conversionName",
-      "destinationContext",
-      "destinationPropertyPath",
-      "sourceContext",
-      "sourcePropertyPath",
-      "widgetBlueprint"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.CreateViewBinding",
-     "required": [
-      "widgetBlueprint",
-      "sourceContext",
-      "sourcePropertyPath",
-      "destinationContext",
-      "destinationPropertyPath",
-      "conversionName"
-     ]
-    },
-    "CreateViewModel": {
-     "description": "Creates a new ViewModel asset",
-     "properties": [
-      "packagePath",
-      "parentClass",
-      "viewModelName"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.CreateViewModel",
-     "required": [
-      "viewModelName",
-      "packagePath",
-      "parentClass"
-     ]
-    },
-    "ListConversionFunctions": {
-     "description": "List Available Conversion functions for a WidgetBlueprint that bind a Source Property to a Destination Property",
-     "properties": [
-      "widgetBlueprint"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.ListConversionFunctions",
-     "required": [
-      "widgetBlueprint"
-     ]
-    },
-    "ListViewModels": {
-     "description": "List all ViewModel under the search path",
-     "properties": [
-      "searchPath"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.ListViewModels",
-     "required": [
-      "searchPath"
-     ]
-    },
-    "ListWidgetViewBindings": {
-     "description": "List all view bindings on the WidgetBlueprint",
-     "properties": [
-      "widgetBlueprint"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.ListWidgetViewBindings",
-     "required": [
-      "widgetBlueprint"
-     ]
-    },
-    "ListWidgetViewModels": {
-     "description": "List all ViewModel on the WidgetBlueprint",
-     "properties": [
-      "widgetBlueprint"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.ListWidgetViewModels",
-     "required": [
-      "widgetBlueprint"
-     ]
-    },
-    "RemoveWidgetViewBinding": {
-     "description": "Removes View Binding on the WidgetBlueprint",
-     "properties": [
-      "bindingId",
-      "widgetBlueprint"
-     ],
-     "qualified_name": "MVVMToolset.MVVMToolset.RemoveWidgetViewBinding",
-     "required": [
-      "widgetBlueprint",
-      "bindingId"
-     ]
-    }
-   },
-   "version": "1.0"
-  },
   "NiagaraToolsets.NiagaraToolset_Assets": {
    "description": "Niagara Toolset for discovery of Niagara script assets.\n\nProvides:\n- GetAssetDiscoveryInfo: project-configured asset discovery groups\n- FindNiagaraScripts: asset registry search filtered by usage, visibility, name, and module usage bitmask\n- GetNiagaraScriptDigest: decoded asset-registry tags for a single script\n\nAll functions read from the asset registry without LoadObject. Pair with\nNiagaraToolset_System.AddModule to drop discovered modules into a stack.\n\nNote: FAssetData JSON serialization does not include the TagsAndValues map (it\nis not a UPROPERTY), so callers wanting decoded metadata for a result row from\nFindNiagaraScripts must round-trip through GetNiagaraScriptDigest.",
    "tools": {
@@ -1437,7 +1215,7 @@
    "description": "Niagara Toolset for Niagara System operations.\n\nProvides comprehensive access to Niagara System editing, including:\n- System, emitter, and module creation and modification\n- Schema discovery for understanding structure\n- Topology and Summary inspection for viewing current configuration\n- Data access for reading and writing properties\n- Dependency rollups via GetSystemDependencies\n- Dynamic-input chain traversal via GetDynamicInputChain\n\nThis is the primary toolset for working with Niagara Systems in the editor.",
    "tools": {
     "AddEmitter": {
-     "description": "Adds an emitter to a Niagara System.\nThe new emitter will be based on the template emitter, inheriting its configuration and modules.\nReturns the full emitter topology (no input values \u2014 call GetEmitterInputValues for values).",
+     "description": "Adds an emitter to a Niagara System.\nThe new emitter will be based on the template emitter, inheriting its configuration and modules.\nReturns the full emitter topology (no input values — call GetEmitterInputValues for values).",
      "properties": [
       "emitterName",
       "system",
@@ -1451,7 +1229,7 @@
      ]
     },
     "AddModule": {
-     "description": "Adds a module to a script stack.\nThe module will be inserted into the specified script's execution stack.\nReturns the module topology with all inputs walked (no input values \u2014 call GetModuleInputValues for values).",
+     "description": "Adds a module to a script stack.\nThe module will be inserted into the specified script's execution stack.\nReturns the module topology with all inputs walked (no input values — call GetModuleInputValues for values).",
      "properties": [
       "moduleAsset",
       "moduleLocationRef"
@@ -1589,7 +1367,7 @@
      ]
     },
     "GetEmitterData": {
-     "description": "Returns emitter property values as a single JSON-string blob in PropertyValues.\nThe blob contains the full FVersionedNiagaraEmitterData (SimTarget, bLocalSpace, RandomSeed,\nFixedBounds, etc.) \u2014 fields use C++ PascalCase, must be parsed to read individual values.\n\nFor typed access to common metadata (SimTarget, EmitterName, bEnabled, RendererClasses) prefer\nGetEmitterSummary \u2014 it returns those as named fields directly and avoids a JSON parse step.\nUse this endpoint when you need the full property set or a less-common field.",
+     "description": "Returns emitter property values as a single JSON-string blob in PropertyValues.\nThe blob contains the full FVersionedNiagaraEmitterData (SimTarget, bLocalSpace, RandomSeed,\nFixedBounds, etc.) — fields use C++ PascalCase, must be parsed to read individual values.\n\nFor typed access to common metadata (SimTarget, EmitterName, bEnabled, RendererClasses) prefer\nGetEmitterSummary — it returns those as named fields directly and avoids a JSON parse step.\nUse this endpoint when you need the full property set or a less-common field.",
      "properties": [
       "emitterRef"
      ],
@@ -1625,7 +1403,7 @@
      ]
     },
     "GetEmitterTopology": {
-     "description": "Returns full emitter topology: four script stacks with all modules and inputs, renderer references.\nAll fields always populated. The returned topology carries no input values; call GetEmitterInputValues in parallel.\nNote: mutation endpoints (AddEmitter, AddModule) also return topology structs \u2014 input values require a separate data call.",
+     "description": "Returns full emitter topology: four script stacks with all modules and inputs, renderer references.\nAll fields always populated. The returned topology carries no input values; call GetEmitterInputValues in parallel.\nNote: mutation endpoints (AddEmitter, AddModule) also return topology structs — input values require a separate data call.",
      "properties": [
       "emitterRef"
      ],
@@ -3294,7 +3072,7 @@
      ]
     },
     "WrapWidgets": {
-     "description": "Wraps one or more widgets in a new panel widget of the specified class.\nOnly the root-most widgets in the selection are wrapped \u2014 children of other selected widgets\nare skipped because their parent will be wrapped. Returns info for each newly created wrapper.\n\nUse ObjectTools.list_properties on each returned Widget and Slot to discover property names\nbefore calling set_properties (padding, alignment, anchors, etc. vary per panel class).",
+     "description": "Wraps one or more widgets in a new panel widget of the specified class.\nOnly the root-most widgets in the selection are wrapped — children of other selected widgets\nare skipped because their parent will be wrapped. Returns info for each newly created wrapper.\n\nUse ObjectTools.list_properties on each returned Widget and Slot to discover property names\nbefore calling set_properties (padding, alignment, anchors, etc. vary per panel class).",
      "properties": [
       "widgetBlueprint",
       "widgets",
@@ -3316,21 +3094,41 @@
     "InspectMontage": {
      "description": "Inspects one AnimMontage in a single call: skeleton, slots, segments, sections,\nreal notify objects, root-motion source flags, dependencies and revision.\n\nUse when: inspect montage sections, notify tracks, timing, slots, or root motion.\nInputs: action=inspect_montage and target.asset_path; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"inspect_montage\",\"target\":{\"asset_path\":\"/Game/Animation/AM_SwordCombo\"},\"specification\":{}}\n\nUntil WS-01 accepts the non-graph asset-state response proposal, the tool\nreturns an honest partial response with counts and revision; the domain\nservice already produces the complete structured state.",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpAnimation.UeremcpAnimationToolset.InspectMontage",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "ReadAnimBp": {
      "description": "Read-only AnimBlueprint graph retrieval in one call: skeleton, graph identity,\nADR-0004 nodes/pins/links, diagnostics, extensions.animation and revision.\n\nUse when: read an Animation Blueprint state machine, transition graph, or diagnostics.\nInputs: action=read_anim_bp and target.asset_path; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"read_anim_bp\",\"target\":{\"asset_path\":\"/Game/Characters/ABP_Rogue\"},\"specification\":{}}\n\nUses the shared UEdGraph reader; Blueprint DSL and AnimGraph/state-machine\nauthoring remain unsupported.",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpAnimation.UeremcpAnimationToolset.ReadAnimBp",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     }
    },
@@ -3342,11 +3140,21 @@
     "Echo": {
      "description": "Parses a request envelope and echoes understood fields inside a response envelope.\nUse when: validating envelope shape without touching assets.\nDo not use for: production graph work.\nInputs: requestJson envelope; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"echo\",\"specification\":{}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpBlueprint.UeremcpBlueprintToolset.Echo",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "Ping": {
@@ -3358,193 +3166,443 @@
     "ReadGraph": {
      "description": "Read a complete Blueprint graph (ADR-0004) + diagnostics in one call.\n\nUse when: inspect EventGraph / function graphs; capture revision before edits;\n\"add logic\" discovery step.\nInputs: action=read_graph, target.asset_path; options.response_detail=complete.\nOutputs: graph JSON + diagnostics + revision.\nDo not use for: pin-by-pin BlueprintTools loops.\nNext tool: SubmitGraph with expected_revision after editing the JSON.\nSpecification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"read_graph\",\"target\":{\"asset_path\":\"/Game/BP_Mage\",\"graph_id\":\"EventGraph\"},\"specification\":{}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpBlueprint.UeremcpBlueprintToolset.ReadGraph",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "SubmitGraph": {
      "description": "Replace a Blueprint graph from complete JSON (action=submit_graph, mode=replace).\n\nUse when: write blueprint logic (e.g. when the spell hits) from complete graph state.\nInputs: action=submit_graph, mode=replace, target.asset_path, expected_revision,\nspecification.graph; prefer options.dry_run first; idempotency_key recommended.\nOutputs: modified_and_validated only after compile/save/re-read evidence.\nDo not use for: create_node/connect_pins chains.\nNext tool: ReadGraph to verify; on revision conflict re-read then resubmit.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"submit_graph\",\"mode\":\"replace\",\"target\":{\"asset_path\":\"/Game/BP_Mage\",\"graph_id\":\"EventGraph\"},\"expected_revision\":\"<read_graph revision>\",\"options\":{\"dry_run\":true},\"specification\":{\"graph\":{\"schema_version\":\"1.0\",\"nodes\":[],\"edges\":[]}}}\n\nMCP toolset: UeremcpBlueprint.UeremcpBlueprintToolset\n[VERIFIED-RUNTIME: user-unreal-mcp list_toolsets, 2026-07-30]\n[VERIFIED: UeremcpBlueprintEpicBridge.cpp:194-323]",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpBlueprint.UeremcpBlueprintToolset.SubmitGraph",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     }
    },
    "version": "0.1.1-intent-vocab"
   },
   "UeremcpCore.UeremcpReferenceToolset": {
-   "description": "START HERE \u2014 UEREMCP reference + intent router (ADR-0002).\n\nUse when: first MCP call, discovering which semantic tool to invoke, or polling jobs.\nPrefer ResolveIntent over list_toolsets for goal routing. Prefer Ueremcp* domain tools\nover Epic primitives for create/modify/validate.\nDo not use for: domain asset authoring (use Niagara/Material/Blueprint/Templates toolsets).\n\nOne UToolsetDefinition subclass hosting static AICallable UFUNCTIONs. Registration is\nexplicit via UToolsetRegistry::RegisterToolsetClass\n[VERIFIED: $TR/.../Public/ToolsetRegistry/UToolsetRegistry.h:28]\n[VERIFIED: $TR/.../Private/ToolsetRegistry/ToolsetRegistrySubsystem.cpp:49]",
+   "description": "START HERE — UEREMCP reference + intent router (ADR-0002).\n\nUse when: first MCP call, discovering which semantic tool to invoke, or polling jobs.\nPrefer ResolveIntent over list_toolsets for goal routing. Prefer Ueremcp* domain tools\nover Epic primitives for create/modify/validate.\nDo not use for: domain asset authoring (use Niagara/Material/Blueprint/Templates toolsets).\n\nOne UToolsetDefinition subclass hosting static AICallable UFUNCTIONs. Registration is\nexplicit via UToolsetRegistry::RegisterToolsetClass\n[VERIFIED: $TR/.../Public/ToolsetRegistry/UToolsetRegistry.h:28]\n[VERIFIED: $TR/.../Private/ToolsetRegistry/ToolsetRegistrySubsystem.cpp:49]",
    "tools": {
     "CancelJob": {
      "description": "Cooperatively cancel a running job (action=cancel_job).\n\nUse when: stop a UEREMCP long job by job_id.\nDo not use for: assuming MCP notifications/cancelled alone is enough.\nInputs: action=cancel_job; specification.job_id is required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"cancel_job\",\"specification\":{\"job_id\":\"<prior job.job_id>\"}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.CancelJob",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "DescribeOperation": {
-     "description": "Describe one registry-verified operation: schema, example, safety notes.\n\nUse when: you already know the tool name and need the envelope/example.\nInputs: specification.tool = fully qualified Toolset.Tool (or unique short name).\nOutputs: description, input_schema, request_json example when catalogued.\nDo not use for: choosing which tool \u2014 use ResolveIntent first.\nNext tool: call_tool with the returned request_json.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"describe_operation\",\"specification\":{\"tool\":\"create_niagara_effect\"}}",
+     "description": "Describe one registry-verified operation: schema, example, safety notes.\n\nUse when: you already know the tool name and need the envelope/example.\nInputs: specification.tool = fully qualified Toolset.Tool (or unique short name).\nOutputs: description, input_schema, request_json example when catalogued.\nDo not use for: choosing which tool — use ResolveIntent first.\nNext tool: call_tool with the returned request_json.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"describe_operation\",\"specification\":{\"tool\":\"create_niagara_effect\"}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.DescribeOperation",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "Echo": {
      "description": "Echoes a request envelope inside a response envelope (ADR-0003 probe).\n\nUse when: validating envelope shape without touching assets.\nDo not use for: production domain work.\nInputs: requestJson envelope; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"echo\",\"specification\":{}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.Echo",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "ExecutePlan": {
-     "description": "Execute a complete multi-operation plan (action=execute_plan).\n\nUse when: you already have an explicit multi-step plan JSON.\nDo not use for: first-choice surface \u2014 prefer InstantiateTemplate or domain tools.\nNext tool: GetJobResult if partially_completed.\nInputs: action=execute_plan; specification.operations is required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"execute_plan\",\"options\":{\"dry_run\":true},\"specification\":{\"operations\":[]}}",
+     "description": "Execute a complete multi-operation plan (action=execute_plan).\n\nUse when: you already have an explicit multi-step plan JSON.\nDo not use for: first-choice surface — prefer InstantiateTemplate or domain tools.\nNext tool: GetJobResult if partially_completed.\nInputs: action=execute_plan; specification.operations is required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"execute_plan\",\"options\":{\"dry_run\":true},\"specification\":{\"operations\":[]}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.ExecutePlan",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "GetJobResult": {
      "description": "Poll a long-running job by id (action=get_job_result).\n\nUse when: a prior call returned partially_completed with job.job_id.\nDo not use for: starting new domain work.\nInputs: action=get_job_result; specification.job_id is required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"get_job_result\",\"specification\":{\"job_id\":\"<prior job.job_id>\"}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.GetJobResult",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "GetStarted": {
-     "description": "START HERE \u2014 bootstrap briefing for fresh agents.\n\nUse when: first call, \"what tools do I use?\", getting oriented on UEREMCP.\nInputs: requestJson envelope with action=get_started (specification optional).\nOutputs: prefer_toolsets, next_call=ResolveIntent, envelope reminder.\nDo not use for: creating assets \u2014 call ResolveIntent then a domain tool.\nNext tool: ResolveIntent with your plain-text goal.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"get_started\",\"specification\":{}}",
+     "description": "START HERE — bootstrap briefing for fresh agents.\n\nUse when: first call, \"what tools do I use?\", getting oriented on UEREMCP.\nInputs: requestJson envelope with action=get_started (specification optional).\nOutputs: prefer_toolsets, next_call=ResolveIntent, envelope reminder.\nDo not use for: creating assets — call ResolveIntent then a domain tool.\nNext tool: ResolveIntent with your plain-text goal.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"get_started\",\"specification\":{}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.GetStarted",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "Ping": {
-     "description": "Liveness probe. No parameters \u2014 isolates registration from schema questions.\n\nUse when: confirming UEREMCP MCP registration is alive before domain work.\nDo not use for: domain operations.\nInputs: no arguments.\nExample: call Ping with no arguments.",
+     "description": "Liveness probe. No parameters — isolates registration from schema questions.\n\nUse when: confirming UEREMCP MCP registration is alive before domain work.\nDo not use for: domain operations.\nInputs: no arguments.\nExample: call Ping with no arguments.",
      "properties": [],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.Ping",
      "required": []
     },
     "ResolveIntent": {
-     "description": "Resolve a plain-text intent into ordered UEREMCP semantic operations.\n\nUse when: you know the goal in English but not which tool/schema to call;\n\"make a spell effect with a helix and show me what it looks like\".\nInputs: specification.intent (required), mode=recommend|execute_if_complete,\noptional context hints and expected_registry_hash.\nOutputs: confidence, ordered plan with fully-qualified live registry names,\nrequest_json examples, input_schema, missing_fields, safety, recovery.\nDo not use for: skipping verification \u2014 routing accuracy \u2260 end-to-end success.\nNext tool: call each plan step; on low confidence answer clarification_questions.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"resolve_intent\",\"specification\":{\"intent\":\"make a fire projectile effect\",\"mode\":\"recommend\"}}\n\nCandidates come only from the live ToolsetRegistry\n[VERIFIED: UToolsetRegistry::GetAllToolsetJsonSchemas].\nCannot emit a tool name absent from the live registry. Abstains on hash mismatch\nor low confidence. Mode execute_if_complete is not auto-executed in this build.",
+     "description": "Resolve a plain-text intent into ordered UEREMCP semantic operations.\n\nUse when: you know the goal in English but not which tool/schema to call;\n\"make a spell effect with a helix and show me what it looks like\".\nInputs: specification.intent (required), mode=recommend|execute_if_complete,\noptional context hints and expected_registry_hash.\nOutputs: confidence, ordered plan with fully-qualified live registry names,\nrequest_json examples, input_schema, missing_fields, safety, recovery.\nDo not use for: skipping verification — routing accuracy ≠ end-to-end success.\nNext tool: call each plan step; on low confidence answer clarification_questions.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"resolve_intent\",\"specification\":{\"intent\":\"make a fire projectile effect\",\"mode\":\"recommend\"}}\n\nCandidates come only from the live ToolsetRegistry\n[VERIFIED: UToolsetRegistry::GetAllToolsetJsonSchemas].\nCannot emit a tool name absent from the live registry. Abstains on hash mismatch\nor low confidence. Mode execute_if_complete is not auto-executed in this build.",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpCore.UeremcpReferenceToolset.ResolveIntent",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     }
    },
    "version": "0.2.0-intent-router"
   },
   "UeremcpEnvironment.UeremcpEnvironmentToolset": {
-   "description": "Build and verify procedural environments (landscape, river, forest, weather, structures).\n\nPrefer BuildEnvironment for the full mountain/river/forest/rain scene.\nPrefer CreateLandscape / CreateWaterBody / ScatterFoliage / AttachWeather when\ncomposing via ExecutePlan with $ref chaining (COVERAGE_PLAN III.8 / III.10).\nUse ResolveIntent when unsure which world tool to call.",
+   "description": "Build and verify procedural environments (landscape, river, forest, weather, structures).\n\nPrefer BuildEnvironment with explicit include.* flags for each subsystem (all default false).\nPrefer CreateLandscape / CreateWaterBody / ScatterFoliage / AttachWeather when\ncomposing via ExecutePlan with $ref chaining (COVERAGE_PLAN III.8 / III.10).\nUse ResolveIntent when unsure which world tool to call.",
    "tools": {
     "AttachWeather": {
-     "description": "Attach rain/fog weather that can follow the player/camera.\n\nUse when: \"make it raining including on the player camera\"; ExecutePlan weather stage.\nInputs: action=attach_weather; weather.rain_system_path optional; follow=player_camera.\nOutputs: weather actors. PIE camera-follow proof requires rain system asset + movement check.\nSpecification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"attach_weather\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Alpine\"},\"options\":{\"dry_run\":true},\"specification\":{\"weather\":{\"rain_system_path\":\"/Game/VFX/NS_Rain\"},\"follow\":\"player_camera\"}}",
+     "description": "Attach rain/fog weather that can follow the player/camera.\n\nUse when: \"make it raining including on the player camera\"; ExecutePlan weather stage.\nInputs: action=attach_weather; specification.seed REQUIRED;\n  weather.rain_system_path optional when fallback_policy=allow_approximate;\n  follow=player_camera.\nOutputs: weather actors. PIE camera-follow proof requires rain system asset + movement check.\nDo not use for: day/night or weather-state cycles — no cycle contract exists;\n  this attaches a single state.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"attach_weather\", \"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"}, \"options\":{\"dry_run\":true},\"specification\":{\"seed\":42, \"weather\":{\"kind\":\"rain\",\"follow\":\"player_camera\"}}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.AttachWeather",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "BuildEnvironment": {
-     "description": "Build a seeded environment: mountains, river, forest banks, rain, lighting, optional capture.\n\nUse when: \"make a landscape with mountains and a river, forest around it, raining, screenshot\".\nInputs: action=build_environment; target under /Game/__UeremcpPoc/; specification.seed REQUIRED;\noptions.dry_run must be true for preflight; false creates, saves, reloads, and structurally validates.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"build_environment\",\"request_id\":\"env-1\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/MountainRiverRain/\"},\"idempotency_key\":\"mountain-river-rain-v1\",\"options\":{\"dry_run\":true,\"validate\":true,\"save\":true},\"specification\":{\"seed\":4471,\"terrain\":{\"size_x\":127,\"size_y\":127,\"mountain_amplitude\":0.6,\"valley_depth\":0.18},\"river\":{\"width\":900},\"biome\":{\"max_foliage_instances\":1000,\"slope_limit_deg\":32},\"weather\":{\"follow\":\"player_camera\"},\"fallback_policy\":\"allow_approximate\"}}\nNext: ValidateEnvironment; CaptureWorldFrames; or GetJobResult if partially_completed.",
+     "description": "Build a seeded environment with composable v2 blocks or legacy include.* flags.\n\nUse when: one call for a whole biome (terrain + water + foliage + weather).\n  Prefer the staging primitives when the caller enumerated the steps, or when\n  any stage needs its own parameters.\nInputs: action=build_environment; specification.seed REQUIRED. Optional blocks:\n  terrain.profile, hydrology.river, vegetation.mode, weather[], structures[].\nExample: {\"protocol_version\":\"1.0\",\"action\":\"build_environment\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"},\"options\":{\"dry_run\":true},\"specification\":{\"seed\":42,\"terrain\":{\"profile\":\"mountains\"}}}\n\nv2 (presence-based): terrain.profile, hydrology.river, vegetation.mode, weather[],\nstructures[], lighting.preset — each block activates its subsystem.\nLegacy: include.* all default false (418374c opt-in contract preserved).\n\nMulti-weather: snow+hail each get CreateNiagaraEffect precipitation assets; no streak fake.\nStructures: ice_wall_ring places GeometryScript boxes around terrain bounds.\n\nExample (snow/ice/hail): see docs/research/RB-16-environment-coverage.md § Snow acceptance\nExample (legacy MRR): include.terrain/river/forest/rain true with biome + river blocks.\nNext: ValidateEnvironment; CaptureWorldFrames; or GetJobResult if partially_completed.",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.BuildEnvironment",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "CreateLandscape": {
-     "description": "Create terrain from a seeded heightmap via ALandscape::Import (not sculpt brushes).\n\nUse when: generate mountains/valley heightmap only; ExecutePlan terrain stage.\nInputs: action=create_landscape; specification.seed REQUIRED; terrain.* optional.\nOutputs: heightmap_hash (determinism gate), structural_metrics.\nDo not use for: AlphaBrush sculpting \u2014 unavailable [VERIFIED-RUNTIME: COVERAGE_PLAN III.1].\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_landscape\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Alpine\"},\"options\":{\"dry_run\":true},\"specification\":{\"seed\":4471}}",
+     "description": "Create terrain from a seeded heightmap via ALandscape::Import (not sculpt brushes).\n\nUse when: generate mountains/valley heightmap only; ExecutePlan terrain stage.\nInputs: action=create_landscape; specification.seed REQUIRED; terrain.* optional.\nOutputs: heightmap_hash (determinism gate), structural_metrics.\nDo not use for: AlphaBrush sculpting — unavailable [VERIFIED-RUNTIME: COVERAGE_PLAN III.1].\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_landscape\", \"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"}, \"options\":{\"dry_run\":true},\"specification\":{\"seed\":42, \"terrain\":{\"profile\":\"mountains\",\"max_altitude_m\":1800}}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateLandscape",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "CreateWaterBody": {
-     "description": "Create a WaterBody river/lake/ocean from spline points.\n\nUse when: add a river through a valley; ExecutePlan water stage after landscape.\nInputs: action=create_water_body; specification.seed; river.width; body_type optional.\nOutputs: river actor label + spline length. Real AWaterBodyRiver when Water plugin loaded.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_water_body\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Alpine\"},\"options\":{\"dry_run\":true},\"specification\":{\"seed\":4471,\"river\":{\"width\":1200}}}",
+     "description": "Create a RIVER WaterBody from spline points.\n\nUse when: add a river through a valley; ExecutePlan water stage after landscape.\nInputs: action=create_water_body; specification.seed REQUIRED; river.width.\n  body_type accepts \"river\" only.\nOutputs: river actor label + spline length. Real AWaterBodyRiver when Water plugin loaded.\nDo not use for: lakes or oceans. Only AWaterBodyRiver is implemented, and\n  body_type is currently IGNORED — passing lake or ocean silently yields a\n  river. build_environment.schema.json marks both \"Phase 2\". Treat a lake\n  or ocean request as unsupported until body_type is honoured.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_water_body\", \"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"}, \"options\":{\"dry_run\":true},\"specification\":{\"seed\":42, \"river\":{\"width\":800}}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.CreateWaterBody",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "InspectEnvironment": {
      "description": "Read-only inspect of environment actors/metrics in the current editor world.\n\nUse when: diagnostics after BuildEnvironment / ExecutePlan.\nInputs: action=inspect_environment; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"inspect_environment\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/MountainRiverRain/MountainRiverRain\"},\"specification\":{}}\nDuring PIE returns weather_follow_distance_cm and weather_followed_10m.",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.InspectEnvironment",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "PlaceStructures": {
-     "description": "Place procedural structures along a spline using GeometryScript AppendBox.\n\nUse when: \"village by the river\" props/kits; ExecutePlan structures stage.\nInputs: action=place_structures; specification.seed; count optional.\nRequires GeometryScripting enabled [VERIFIED-RUNTIME: IsEnabled=true 2026-07-30].\nDo not use for: calling static-mesh kit drops \"procedural\" without GeometryScript.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"place_structures\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Alpine\"},\"options\":{\"dry_run\":true},\"specification\":{\"seed\":4471,\"count\":6}}",
+     "description": "Place procedural structures along a spline using GeometryScript AppendBox.\n\nUse when: \"village by the river\" props/kits; ExecutePlan structures stage.\nInputs: action=place_structures; specification.seed; count optional.\nRequires GeometryScripting enabled [VERIFIED-RUNTIME: IsEnabled=true 2026-07-30].\nDo not use for: calling static-mesh kit drops \"procedural\" without GeometryScript.\n  Also not for keeps/towers/gatehouses — kind accepts\n  ice_wall_ring|barrier_wall|box_along_river only, and an unknown kind is\n  REJECTED rather than substituted.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"place_structures\", \"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"}, \"options\":{\"dry_run\":true},\"specification\":{\"seed\":42, \"structures\":[{\"kind\":\"barrier_wall\",\"count\":12}]}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.PlaceStructures",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "ScatterFoliage": {
-     "description": "Seeded instanced foliage with slope/bank masks and river exclusion corridor.\n\nUse when: forest along river banks with a clear channel; ExecutePlan foliage stage.\nInputs: action=scatter_foliage; specification.seed; biome.mesh_path; max_foliage_instances.\nOutputs: foliage_instances, exclusion_violations (must be 0).\nCross-domain: exclusions reference the river spline (why BuildEnvironment is C++ not only a template).\nExample: {\"protocol_version\":\"1.0\",\"action\":\"scatter_foliage\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Alpine\"},\"options\":{\"dry_run\":true},\"specification\":{\"seed\":4471,\"biome\":{\"mesh_path\":\"/Game/Meshes/SM_Pine\",\"max_foliage_instances\":800}}}",
+     "description": "Seeded instanced foliage with slope/bank masks and river exclusion corridor.\n\nUse when: forest along river banks with a clear channel; ExecutePlan foliage stage.\nInputs: action=scatter_foliage; specification.seed; biome.mesh_path; max_foliage_instances.\nOutputs: foliage_instances, exclusion_violations (must be 0).\nCross-domain: exclusions reference the river spline (why BuildEnvironment is C++ not only a template).\nHonesty: when biome.mesh_path is absent or unloadable this places\n  /Engine/BasicShapes/Cube as a placeholder and warns. Supply a real mesh,\n  or generate one first, if you want trees rather than boxes.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"scatter_foliage\", \"target\":{\"asset_path\":\"/Game/__UeremcpPoc/Biome\"}, \"options\":{\"dry_run\":true},\"specification\":{\"seed\":42, \"biome\":{\"mesh_path\":\"/Game/Meshes/SM_Pine\"},\"max_foliage_instances\":5000}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.ScatterFoliage",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SubmitMeshOps": {
+     "description": "Author a StaticMesh asset from ordered GeometryScript primitive ops.\n\nUse when: you need a mesh from scratch in an empty project — a tree, a\n  rock, a tower — before anything can scatter or place it. This is the mesh\n  PRIMITIVE FLOOR: it composes geometry and consumes no existing asset.\nInputs: action=submit_mesh_ops, target.asset_path (StaticMesh under\n  /Game/__UeremcpTests/ or /Game/__UeremcpPoc/); specification.ops is a\n  REQUIRED non-empty array applied in order. Each op is one of:\n  {\"op\":\"box\",\"size\":[x,y,z],\"origin\":[x,y,z]},\n  {\"op\":\"cylinder\",\"radius\":r,\"height\":h},\n  {\"op\":\"cone\",\"base_radius\":r,\"top_radius\":r2,\"height\":h},\n  {\"op\":\"sphere\",\"radius\":r}.\nOutputs: primary_asset (the StaticMesh). An unsupported op REJECTS the whole\n  request — a partially built mesh is indistinguishable from a correct one.\nDo not use for: placing meshes in a level — use ScatterFoliage or\n  PlaceStructures with the asset path this returns.\nNext tool: ScatterFoliage with biome.mesh_path set to this asset path.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"submit_mesh_ops\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/Meshes/SM_Conifer\"},\"options\":{\"dry_run\":true},\"specification\":{\"ops\":[{\"op\":\"cylinder\",\"radius\":18,\"height\":220},{\"op\":\"cone\",\"base_radius\":130,\"height\":420,\"origin\":[0,0,180]}]}}",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.SubmitMeshOps",
+     "required": [
+      "protocol_version",
+      "action"
      ]
     },
     "ValidateEnvironment": {
      "description": "Validate structural gates (landscape, forest, river, rain). Screenshots are never a gate.\n\nUse when: acceptance after build; human-review companion metrics (COVERAGE_PLAN 5.8 / III.11).\nInputs: action=validate_environment; specification.require_weather_follow_10m optional.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"validate_environment\",\"target\":{\"asset_path\":\"/Game/__UeremcpPoc/MountainRiverRain/MountainRiverRain\"},\"specification\":{\"require_weather_follow_10m\":true}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.ValidateEnvironment",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SnapActorsToLandscape": {
+     "description": "Snap actors down onto the LANDSCAPE surface, ignoring foliage.",
+     "properties": [
+      "requestJson"
+     ],
+     "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.SnapActorsToLandscape",
+     "required": [
+      "requestJson"
+     ]
+    },
+    "ClearFoliageInVolumes": {
+     "description": "Remove instanced-foliage instances inside world-space boxes.",
+     "properties": [
+      "requestJson"
+     ],
+     "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.ClearFoliageInVolumes",
+     "required": [
+      "requestJson"
+     ]
+    },
+    "FindProjectAssets": {
+     "description": "Probe the AssetRegistry for meshes matching semantic roles.",
+     "properties": [
+      "requestJson"
+     ],
+     "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.FindProjectAssets",
+     "required": [
+      "requestJson"
+     ]
+    },
+    "ImportMeshForWorld": {
+     "description": "Import a mesh for world use: file, bounds check, collision, Nanite.",
+     "properties": [
+      "requestJson"
+     ],
+     "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.ImportMeshForWorld",
+     "required": [
+      "requestJson"
+     ]
+    },
+    "PlacePrefabOnLandscape": {
+     "description": "Place a static-mesh prefab on the landscape: spawn + snap + clear foliage.",
+     "properties": [
+      "requestJson"
+     ],
+     "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.PlacePrefabOnLandscape",
+     "required": [
+      "requestJson"
+     ]
+    },
+    "PaintLandscapeLayers": {
+     "description": "Paint landscape layer weights from height/slope rules on the LIVE landscape.",
+     "properties": [
+      "requestJson"
+     ],
+     "qualified_name": "UeremcpEnvironment.UeremcpEnvironmentToolset.PaintLandscapeLayers",
      "required": [
       "requestJson"
      ]
     }
    },
-   "version": "0.3.0-environment-acceptance"
+   "version": "0.4.0-environment-v2"
   },
   "UeremcpGameplay.UeremcpGameplayToolset": {
    "description": "One goal-level gameplay surface; Epic GAS/DataTable primitives remain internal.",
@@ -3552,21 +3610,41 @@
     "CreateSpell": {
      "description": "Goal-level RE-native create_spell request.\n\nUse when: create a gameplay spell/ability row with delivery, costs, impact, and networking.\nInputs: action=create_spell; specification.row_name, element, element_color,\ndelivery, and networking are required.\nDry-run returns a normalized FREAbilityDef plan and Pattern B checks with\nstatus partially_completed and no mutation. Non-dry requests admit through\nFUeremcpMutatingDispatch, upsert one row under /Game/__UeremcpTests/, save,\nre-read, and report honest *_validated / rolled_back / failed_validation\nstatuses. Also registered with FUeremcpPlanExecutor for execute_plan.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_spell\",\"options\":{\"dry_run\":true},\"specification\":{\"row_name\":\"IceBarrier\",\"element\":\"Frost\",\"element_color\":[0.2,0.7,1.0,1.0],\"delivery\":{\"type\":\"self_cast\"},\"networking\":{\"pattern\":\"B\",\"authority\":\"server\",\"cast_path\":\"AuthorityCastAbility\"}}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpGameplay.UeremcpGameplayToolset.CreateSpell",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "CreateSpellVariation": {
      "description": "Clone one RE ability row into a scratch target row, changing only selected\npresentation soft paths, then re-read and compare protected gameplay fields.\n\nUse when: make a VFX-only variation of an existing spell without changing gameplay.\nInputs: action=create_spell_variation; specification.source_binding, target_row,\npresentation_asset, and verification_mode are required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_spell_variation\",\"options\":{\"dry_run\":true},\"specification\":{\"source_binding\":{\"ability_table\":\"/Game/Data/DT_Abilities\",\"source_row\":\"FireBolt\",\"vfx_phase\":\"projectile\"},\"target_row\":\"IceBoltVisual\",\"presentation_asset\":\"/Game/VFX/NS_IceBolt\",\"verification_mode\":\"protected_fields_equal\"}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpGameplay.UeremcpGameplayToolset.CreateSpellVariation",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     }
    },
@@ -3575,32 +3653,92 @@
   "UeremcpMaterial.UeremcpMaterialToolset": {
    "description": "Agent-facing material operations for UEREMCP.\n\nPrefer CreateVfxMaterial / CreateProceduralTexture over Epic MaterialTools\nexpression graphs for VFX materials. Use ResolveIntent if unsure.",
    "tools": {
-    "CreateProceduralTexture": {
-     "description": "Generate a procedural Texture2D (noise, dissolve masks) under /Game/__UeremcpTests/.\n\nUse when: tileable noise/mask textures for VFX materials.\nInputs: action=create_procedural_texture, target.asset_path, specification.generate required.\nDo not use for: full material graphs \u2014 use CreateVfxMaterial.\nNext tool: CreateVfxMaterial referencing the texture path.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_procedural_texture\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/T_DissolveNoise\"},\"options\":{\"dry_run\":true},\"specification\":{\"generate\":\"noise\",\"dimensions\":[256,256],\"seed\":42}}",
+    "CreateMasterMaterial": {
+     "description": "Author a master material directly from a feature list. No template library.\n\nUse when: you need a material from scratch in an empty project, or a master\n  whose feature set no preset covers. This is the material PRIMITIVE FLOOR:\n  it composes MaterialEditingLibrary expressions and needs no existing asset.\nInputs: action=create_master_material, target.asset_path (UMaterial under\n  /Game/__UeremcpTests/ or /Game/__UeremcpPoc/); specification.features is a\n  REQUIRED non-empty array of feature tokens; specification.trail optional bool.\n  Known tokens: radial_falloff, animated_noise, fresnel, erosion, depth_fade,\n  distortion, panning_textures, flow_maps, flipbook_subuv, dynamic_color,\n  dynamic_intensity. Unknown tokens are reported in skipped_features, not faked.\nOutputs: primary_asset (the master), wired_features, skipped_features.\nDo not use for: material INSTANCES with preset defaults — use CreateVfxMaterial.\nNext tool: CreateVfxMaterial with master_template set to this asset path.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_master_material\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/Materials/Masters/M_Stone\"},\"options\":{\"dry_run\":true},\"specification\":{\"features\":[\"fresnel\",\"erosion\",\"dynamic_color\"]}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpMaterial.UeremcpMaterialToolset.CreateMasterMaterial",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "CreateProceduralTexture": {
+     "description": "Generate a procedural Texture2D (noise, dissolve masks) under /Game/__UeremcpTests/.\n\nUse when: tileable noise/mask textures for VFX materials.\nInputs: action=create_procedural_texture, target.asset_path, specification.generate required.\nDo not use for: full material graphs — use CreateVfxMaterial.\nNext tool: CreateVfxMaterial referencing the texture path.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_procedural_texture\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/T_DissolveNoise\"},\"options\":{\"dry_run\":true},\"specification\":{\"generate\":\"noise\",\"dimensions\":[256,256],\"seed\":42}}",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpMaterial.UeremcpMaterialToolset.CreateProceduralTexture",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "CreateVfxMaterial": {
      "description": "Create or update a VFX material (elemental projectile core/trail, fresnel, color).\n\nUse when: make a VFX/shader material, change fireball color/orange tint, translucent FX mats.\nInputs: action=create_vfx_material, target.asset_path, specification.purpose required;\nprefer options.dry_run + validate=true; idempotency_key recommended.\nOutputs: created/modified statuses with parameter re-read when validate=true.\nDo not use for: MaterialTools expression graphs; MaterialInstanceConstant authoring gaps.\nNext tool: CreateNiagaraEffect to bind the material into an effect.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_vfx_material\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/M_FireCore\"},\"options\":{\"dry_run\":true,\"validate\":true},\"specification\":{\"purpose\":\"projectile_core\",\"element\":\"fire\"}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpMaterial.UeremcpMaterialToolset.CreateVfxMaterial",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "Echo": {
-     "description": "Protocol probe \u2014 mirrors UUeremcpReferenceToolset::Echo without touching assets.\n\nUse when: validating the Material module envelope path.\nDo not use for: creating materials or textures.\nInputs: requestJson envelope; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"echo\",\"specification\":{}}",
+     "description": "Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.\n\nUse when: validating the Material module envelope path.\nDo not use for: creating materials or textures.\nInputs: requestJson envelope; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"echo\",\"specification\":{}}",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpMaterial.UeremcpMaterialToolset.Echo",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "CreateLandscapeMaterial": {
+     "description": "Author a layered LANDSCAPE material from height and slope bands.",
      "properties": [
       "requestJson"
      ],
-     "qualified_name": "UeremcpMaterial.UeremcpMaterialToolset.Echo",
+     "qualified_name": "UeremcpMaterial.UeremcpMaterialToolset.CreateLandscapeMaterial",
      "required": [
       "requestJson"
      ]
@@ -3612,33 +3750,63 @@
    "description": "Agent-facing Niagara operations for UEREMCP.\n\nSTART HERE for particle/VFX goals: prefer CreateNiagaraEffect / InspectSystem over\nEpic NiagaraToolsets primitives. Use ResolveIntent first if unsure which tool.\n\nPer ADR-0002 one UToolsetDefinition per domain. Primitives from NiagaraToolsets.*\nare internalised; agents see goal-level actions.",
    "tools": {
     "CreateNiagaraEffect": {
-     "description": "Goal-level Niagara effect creation (spell/projectile/beam/explosion VFX).\n\nUse when: create a particle/Niagara effect, helix/ribbon/projectile, spell VFX.\nInputs: action=create_niagara_effect, target.asset_path, specification.effect_type;\nprefer options.dry_run first; idempotency_key recommended.\nOutputs: honest statuses \u2014 may be partially_completed until visual gates close.\nDo not use for: Epic NiagaraToolsets module primitives; material-only edits.\nNext tool: InspectSystem to verify; CaptureEffectFrames to show what it looks like.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_niagara_effect\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/NS_FireProjectile\"},\"options\":{\"dry_run\":true,\"validate\":true},\"specification\":{\"effect_type\":\"projectile\",\"element\":\"fire\",\"components\":[\"core\",\"ribbon_trail\"]}}\n\n[VERIFIED: composes UNiagaraExternalEditUtilities \u2014 same substrate as NiagaraToolsets]",
+     "description": "Goal-level Niagara effect creation (spell/projectile/beam/explosion VFX).\n\nUse when: create a particle/Niagara effect, helix/ribbon/projectile, spell VFX.\nInputs: action=create_niagara_effect, target.asset_path, specification.effect_type;\nprefer options.dry_run first; idempotency_key recommended.\nOutputs: honest statuses — may be partially_completed until visual gates close.\nDo not use for: Epic NiagaraToolsets module primitives; material-only edits.\nNext tool: InspectSystem to verify; CaptureEffectFrames to show what it looks like.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_niagara_effect\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/NS_FireProjectile\"},\"options\":{\"dry_run\":true,\"validate\":true},\"specification\":{\"effect_type\":\"projectile\",\"element\":\"fire\",\"components\":[\"core\",\"ribbon_trail\"]}}\n\n[VERIFIED: composes UNiagaraExternalEditUtilities — same substrate as NiagaraToolsets]",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpNiagara.UeremcpNiagaraToolset.CreateNiagaraEffect",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "Echo": {
-     "description": "Protocol probe \u2014 mirrors UUeremcpReferenceToolset::Echo without touching assets.\n\nUse when: validating the Niagara module envelope path.\nDo not use for: creating or inspecting systems.\nInputs: requestJson envelope; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"echo\",\"specification\":{}}",
+     "description": "Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.\n\nUse when: validating the Niagara module envelope path.\nDo not use for: creating or inspecting systems.\nInputs: requestJson envelope; specification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"echo\",\"specification\":{}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpNiagara.UeremcpNiagaraToolset.Echo",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "InspectSystem": {
-     "description": "Inspect a Niagara system into graph.schema.json + extensions.niagara.\n\nUse when: read emitters/renderers/user params; verify a system after create.\nInputs: action=inspect_system, target.asset_path required.\nOutputs: structured topology + diagnostics; some stacks intentionally lossy.\nDo not use for: creating effects \u2014 use CreateNiagaraEffect.\nNext tool: CreateNiagaraEffect to author; CaptureEffectFrames for visual proof.\nSpecification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"inspect_system\",\"target\":{\"asset_path\":\"/Game/VFX/NS_FrostNova\"},\"specification\":{}}",
+     "description": "Inspect a Niagara system into graph.schema.json + extensions.niagara.\n\nUse when: read emitters/renderers/user params; verify a system after create.\nInputs: action=inspect_system, target.asset_path required.\nOutputs: structured topology + diagnostics; some stacks intentionally lossy.\nDo not use for: creating effects — use CreateNiagaraEffect.\nNext tool: CreateNiagaraEffect to author; CaptureEffectFrames for visual proof.\nSpecification has no required keys.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"inspect_system\",\"target\":{\"asset_path\":\"/Game/VFX/NS_FrostNova\"},\"specification\":{}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpNiagara.UeremcpNiagaraToolset.InspectSystem",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     }
    },
@@ -3648,53 +3816,103 @@
    "description": "Remaining-domain coverage toolset (audio, replication validation, world partition).\n\nPrefer CreateAudioCue over inventing MetaSound graph primitives.\nPrefer ValidateReplication over looping BlueprintTools.get/set_variable_replication.\nPrefer InspectWorldPartition / RepairWorldPartition over silent WP commandlet wraps.\nUse ResolveIntent if unsure.",
    "tools": {
     "CreateAudioCue": {
-     "description": "Create or update a SoundCue (optional attenuation) from SoundWave paths.\n\nUse when: add cast/impact audio; make a sound cue with attenuation; wire waves into a cue.\nInputs: action=create_audio_cue; target.asset_path; specification.sound_waves REQUIRED;\nvolume_multiplier / pitch_multiplier / create_attenuation optional.\nOutputs: cue path + attenuation binding. Prefer options.dry_run=true first.\nDo not use for: MetaSound graph authoring (blocked \u2014 no goal API yet).\nNext tool: InspectAudio; create_spell presentation.audio_* soft paths; ValidateReplication.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_audio_cue\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/Audio/SC_Cast\"},\"options\":{\"dry_run\":true},\"specification\":{\"sound_waves\":[\"/Game/Audio/SW_Cast\"],\"create_attenuation\":true}}",
+     "description": "Create or update a SoundCue (optional attenuation) from SoundWave paths.\n\nUse when: add cast/impact audio; make a sound cue with attenuation; wire waves into a cue.\nInputs: action=create_audio_cue; target.asset_path; specification.sound_waves REQUIRED;\nvolume_multiplier / pitch_multiplier / create_attenuation optional.\nOutputs: cue path + attenuation binding. Prefer options.dry_run=true first.\nDo not use for: MetaSound graph authoring (blocked — no goal API yet).\nNext tool: InspectAudio; create_spell presentation.audio_* soft paths; ValidateReplication.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_audio_cue\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/Audio/SC_Cast\"},\"options\":{\"dry_run\":true},\"specification\":{\"sound_waves\":[\"/Game/Audio/SW_Cast\"],\"create_attenuation\":true}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpSystems.UeremcpSystemsToolset.CreateAudioCue",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "InspectAudio": {
      "description": "Inspect a SoundCue / SoundWave / SoundAttenuation asset in one response.\n\nUse when: verify audio asset wiring; list waves; check attenuation binding.\nInputs: action=inspect_audio; target.asset_path; specification has no required keys\n(include_wave_paths optional).\nOutputs: asset class, wave paths, attenuation soft path.\nDo not use for: MetaSound graph inspection.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"inspect_audio\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/Audio/SC_Cast\"},\"specification\":{\"include_wave_paths\":true}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpSystems.UeremcpSystemsToolset.InspectAudio",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "InspectWorldPartition": {
      "description": "Read-only world-partition state for the editor world or a loaded level.\n\nUse when: is this map partitioned?; streaming enabled?; world partition bounds / actor-desc count.\nInputs: action=inspect_world_partition; target.asset_path optional (omit = editor world);\nspecification has no required keys (include_bounds optional).\nOutputs: is_partitioned, streaming_enabled, bounds summary.\nDo not use for: mutating WP / HLOD builds.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"inspect_world_partition\",\"specification\":{\"include_bounds\":true}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpSystems.UeremcpSystemsToolset.InspectWorldPartition",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "RepairWorldPartition": {
      "description": "Create-or-repair World Partition on the current editor world (or named level).\n\nUse when: enable world partition on a large procedural world before streaming validation.\nInputs: action=repair_world_partition; target.asset_path optional; specification.enable_streaming\noptional. Defaults to options.dry_run=true. Mutating requires dry_run=false + allow_destructive.\nOutputs: planned/applied CreateOrRepairWorldPartition result. HLOD builders blocked.\nDo not use for: silent commandlet wraps; HLOD construction.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"repair_world_partition\",\"options\":{\"dry_run\":true},\"specification\":{\"enable_streaming\":true}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpSystems.UeremcpSystemsToolset.RepairWorldPartition",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "ValidateReplication": {
-     "description": "Goal-level Blueprint replication audit (+ optional configure) in one call.\n\nUse when: ensure variables are replicated / RepNotify; Pattern B checklist; replication validation.\nInputs: action=validate_replication; target.asset_path Blueprint;\nspecification.networking and/or specification.variables REQUIRED (anyOf); apply_fixes optional.\nOutputs: match/mismatch table. Multi-client runtime proof remains WS-11 \u2014 never claimed here.\nDo not use for: looping BlueprintTools.get/set_variable_replication as the agent surface.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"validate_replication\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/BP_Rep\"},\"options\":{\"dry_run\":true},\"specification\":{\"networking\":{\"pattern\":\"B\",\"authority\":\"server\",\"cast_path\":\"AuthorityCastAbility\"},\"variables\":[{\"name\":\"Health\",\"replication\":\"REPLICATED\"}]}}",
+     "description": "Goal-level Blueprint replication audit (+ optional configure) in one call.\n\nUse when: ensure variables are replicated / RepNotify; Pattern B checklist; replication validation.\nInputs: action=validate_replication; target.asset_path Blueprint;\nspecification.networking and/or specification.variables REQUIRED (anyOf); apply_fixes optional.\nOutputs: match/mismatch table. Multi-client runtime proof remains WS-11 — never claimed here.\nDo not use for: looping BlueprintTools.get/set_variable_replication as the agent surface.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"validate_replication\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/BP_Rep\"},\"options\":{\"dry_run\":true},\"specification\":{\"networking\":{\"pattern\":\"B\",\"authority\":\"server\",\"cast_path\":\"AuthorityCastAbility\"},\"variables\":[{\"name\":\"Health\",\"replication\":\"REPLICATED\"}]}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpSystems.UeremcpSystemsToolset.ValidateReplication",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     }
    },
@@ -3704,7 +3922,7 @@
    "description": "Thin toolset over FUeremcpTemplateService. One envelope in, one envelope out\nper ADR-0002 / ADR-0003.",
    "tools": {
     "CreateTemplate": {
-     "description": "CreateTemplate (nested envelope; see live describe)",
+     "description": "Author a new template from a complete template document (not from an existing asset).\nUse when: define emitter roles, materials, meshes, timing, inputs from scratch for this game.\nInputs: action=create_template; specification.template object required (template_id/domain/category/description).\nExample: {\"protocol_version\":\"1.0\",\"action\":\"create_template\",\"options\":{\"dry_run\":false},\"specification\":{\"template\":{\"template_id\":\"niagara.cast.helix.v1\",\"domain\":\"niagara\",\"category\":\"cast\",\"version\":1,\"description\":\"Ice helix cast ring\",\"construction_plan\":[]}}}",
      "properties": [
       "action",
       "expected_revision",
@@ -3726,35 +3944,65 @@
     "InstantiateTemplate": {
      "description": "Build assets from one reusable template and validated inputs/modifiers.\nUse when: a template_id is known and should produce a complete asset or asset set.\nInputs: action=instantiate_template; specification.template_id is required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"instantiate_template\",\"target\":{\"asset_path\":\"/Game/__UeremcpTests/NS_FromTemplate\"},\"options\":{\"dry_run\":true},\"specification\":{\"template_id\":\"niagara.projectile.elemental.v1\",\"inputs\":{\"element\":\"fire\"}}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpTemplates.UeremcpTemplatesToolset.InstantiateTemplate",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "PromoteToTemplate": {
-     "description": "Preview promotion of a successful scratch asset into a reusable template.\nUse when: capture a validated result as a repeatable pattern; currently preview-only.\nInputs: action=promote_to_template; specification.source_asset is required.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"promote_to_template\",\"options\":{\"dry_run\":true},\"specification\":{\"source_asset\":\"/Game/__UeremcpTests/NS_Good\",\"proposed_template_id\":\"niagara.projectile.good.v1\"}}",
+     "description": "Promote a successful scratch asset into a reusable, versioned template JSON.\nUse when: bank a validated result for later InstantiateTemplate.\nInputs: action=promote_to_template; specification.source_asset required.\nWrites under Saved/UEREMCP/Templates/agent/ when options.dry_run=false (default dry_run=true).\nExample: {\"protocol_version\":\"1.0\",\"action\":\"promote_to_template\",\"options\":{\"dry_run\":false},\"specification\":{\"source_asset\":\"/Game/__UeremcpTests/NS_Good\",\"proposed_template_id\":\"niagara.projectile.good.v1\"}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpTemplates.UeremcpTemplatesToolset.PromoteToTemplate",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "SearchTemplates": {
      "description": "Search reusable construction patterns before creating assets from scratch.\nUse when: find a known projectile, emitter, material, or gameplay template.\nInputs: action=search_templates; specification has no required keys; query/domain optional.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"search_templates\",\"specification\":{\"query\":\"fire projectile\",\"domain\":\"niagara\"}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpTemplates.UeremcpTemplatesToolset.SearchTemplates",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "UpdateTemplate": {
-     "description": "UpdateTemplate (nested envelope; see live describe)",
+     "description": "Replace an existing agent-authored template document by template_id.\nUse when: refine construction_plan / inputs after CreateTemplate or PromoteToTemplate.\nInputs: action=update_template; specification.template object required; template_id must already exist.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"update_template\",\"options\":{\"dry_run\":false},\"specification\":{\"template\":{\"template_id\":\"niagara.cast.helix.v1\",\"domain\":\"niagara\",\"category\":\"cast\",\"version\":2,\"description\":\"Refined helix\",\"construction_plan\":[]}}}",
      "properties": [
       "action",
       "expected_revision",
@@ -3777,46 +4025,86 @@
    "version": "0.1.0"
   },
   "UeremcpValidation.UeremcpVisualCaptureToolset": {
-   "description": "Captures visual evidence for Niagara, world/viewport, materials, and animation.\n\nScreenshots are supplemental. Structural evidence (asset identity, compile/inspect\nsummaries, pixel stats, teardown) is the gate. Prefer this over ad-hoc HighResShot\nloops when the validation toolset is registered.\nDo not use for: creating Niagara/materials/worlds \u2014 author first, then capture.",
+   "description": "Captures visual evidence for Niagara, world/viewport, materials, and animation.\n\nScreenshots are supplemental. Structural evidence (asset identity, compile/inspect\nsummaries, pixel stats, teardown) is the gate. Prefer this over ad-hoc HighResShot\nloops when the validation toolset is registered.\nDo not use for: creating Niagara/materials/worlds — author first, then capture.",
    "tools": {
     "CaptureAnimationFrames": {
      "description": "Capture an animation sequence posed on a skeletal mesh at deterministic times.\n\nUse when: visual proof of a montage/sequence after animation authoring.\nInputs: action=capture_animation_frames, target.asset_path = AnimSequence;\nspecification.skeletal_mesh_path required unless mesh is on the sequence;\nframe_count / duration_seconds / camera / width / height optional.\nOutputs: PNG + bone/length structural evidence. Supplemental to compile gates.\nDo not use for: authoring animation assets; claiming polish from pixels alone.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"capture_animation_frames\",\"target\":{\"asset_path\":\"/Game/Anims/AS_Idle\"},\"options\":{\"validate\":true},\"specification\":{\"skeletal_mesh_path\":\"/Game/Characters/SK_Hero\",\"frame_count\":4}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureAnimationFrames",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "CaptureEffectFrames": {
      "description": "Capture deterministic PNG frames of an existing Niagara system.\n\nUse when: show me what the effect looks like; pixel deltas vs empty stage.\nInputs: action=capture_effect_frames, target.asset_path, options.validate=true;\nspecification.frame_count / duration_seconds / camera / width / height optional.\nOutputs: frame paths under Saved/UEREMCP/VfxCapture + numeric deltas.\nDo not use for: authoring assets; HighResShot-only workflows when this tool exists;\nappearance judgements from pixels alone.\nNext tool: GetJobResult once if cold renderer returns partially_completed.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"capture_effect_frames\",\"target\":{\"asset_path\":\"/Game/VFX/NS_PoisonCloud\"},\"options\":{\"validate\":true},\"specification\":{\"frame_count\":6}}\n\nThis verifies that pixels changed against the empty-stage baseline. It does\nnot judge appearance quality or prove that the source Niagara asset compiles.",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureEffectFrames",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "CaptureMaterialFrames": {
      "description": "Capture a material on a disposable lit stage with structural material evidence.\n\nUse when: visual proof of a VFX/landscape material after create_vfx_material.\nInputs: action=capture_material_frames, target.asset_path = material path;\nspecification.frame_count / camera / width / height / warm_up_ticks optional.\nOutputs: PNG + luminance stats + structural material identity. Supplemental only.\nDo not use for: authoring materials; claiming beauty from pixels alone.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"capture_material_frames\",\"target\":{\"asset_path\":\"/Game/Materials/M_VFX\"},\"options\":{\"validate\":true},\"specification\":{\"frame_count\":1}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureMaterialFrames",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     },
     "CaptureWorldFrames": {
      "description": "Capture the current editor world with warm-up ticks and framed SceneCapture2D.\n\nUse when: screenshot a level/environment after BuildEnvironment (BACKLOG 3.2).\nInputs: action=capture_world_frames; target.asset_path optional label;\nspecification.frame_count, warm_up_ticks, camera, width/height optional.\nOutputs: PNG paths + pixel stats + structural world snapshot. Not a beauty gate\n(BACKLOG 5.8 / POC_ACCEPTANCE B10).\nDo not use for: claiming success from a screenshot alone.\nExample: {\"protocol_version\":\"1.0\",\"action\":\"capture_world_frames\",\"target\":{\"asset_path\":\"/Game/Maps/Alpine\"},\"options\":{\"validate\":true},\"specification\":{\"frame_count\":1,\"warm_up_ticks\":30,\"width\":1280,\"height\":720}}",
      "properties": [
-      "requestJson"
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
      ],
      "qualified_name": "UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames",
      "required": [
-      "requestJson"
+      "protocol_version",
+      "action"
      ]
     }
    },
@@ -8144,7 +8432,7 @@
      ]
     },
     "add_event": {
-     "description": "Adds an event node to the Blueprint's event graph.\n\n        If event_name matches an inherited overridable event, the new node is an\n        override of that event. Otherwise a new custom event with the given name is\n        created. Idempotent \u2014 if an event node with that name already exists,\n        that node is returned.\n\n        Args:\n            blueprint: The Blueprint asset to add the event to.\n            event_name: The name of an inherited event to override (e.g.\n                'ReceiveAnyDamage') or a name for a new custom event.\n            position: Position of the new node in the event graph.\n\n        Returns:\n            The event node.",
+     "description": "Adds an event node to the Blueprint's event graph.\n\n        If event_name matches an inherited overridable event, the new node is an\n        override of that event. Otherwise a new custom event with the given name is\n        created. Idempotent — if an event node with that name already exists,\n        that node is returned.\n\n        Args:\n            blueprint: The Blueprint asset to add the event to.\n            event_name: The name of an inherited event to override (e.g.\n                'ReceiveAnyDamage') or a name for a new custom event.\n            position: Position of the new node in the event graph.\n\n        Returns:\n            The event node.",
      "properties": [
       "blueprint",
       "event_name",
@@ -8169,7 +8457,7 @@
      ]
     },
     "add_function_graph": {
-     "description": "Adds a function graph to the Blueprint.\n\n        If graph_name matches an inherited overridable function, the new graph is a\n        function-graph override of that function. Idempotent \u2014 if a graph with that\n        name already exists, that graph is returned.\n\n        Args:\n            blueprint: The Blueprint asset to add the function to.\n            graph_name: The name of the new function graph.",
+     "description": "Adds a function graph to the Blueprint.\n\n        If graph_name matches an inherited overridable function, the new graph is a\n        function-graph override of that function. Idempotent — if a graph with that\n        name already exists, that graph is returned.\n\n        Args:\n            blueprint: The Blueprint asset to add the function to.\n            graph_name: The name of the new function graph.",
      "properties": [
       "blueprint",
       "graph_name"
@@ -8560,7 +8848,7 @@
      ]
     },
     "list_events": {
-     "description": "Lists all events visible on the Blueprint \u2014 locally defined custom events\n        plus inheritable events from the parent class chain and implemented interfaces.\n\n        Args:\n            blueprint: The Blueprint asset to query.",
+     "description": "Lists all events visible on the Blueprint — locally defined custom events\n        plus inheritable events from the parent class chain and implemented interfaces.\n\n        Args:\n            blueprint: The Blueprint asset to query.",
      "properties": [
       "blueprint"
      ],
@@ -8570,7 +8858,7 @@
      ]
     },
     "list_functions": {
-     "description": "Lists all functions visible on the Blueprint \u2014 locally defined plus\n        inheritable ones from the parent class chain and implemented interfaces.\n\n        Args:\n            blueprint: The Blueprint asset to query.",
+     "description": "Lists all functions visible on the Blueprint — locally defined plus\n        inheritable ones from the parent class chain and implemented interfaces.\n\n        Args:\n            blueprint: The Blueprint asset to query.",
      "properties": [
       "blueprint"
      ],
@@ -9465,7 +9753,7 @@
      ]
     },
     "set_vector_parameter": {
-     "description": "Sets the value of a vector parameter on a material instance.\n\n        Args:\n            instance: The MaterialInstanceConstant to modify.\n            name: The parameter name.\n            value: The new value as a LinearColor (RGBA). Use values in the range 0\u20131\n                for standard colors; values above 1 are valid for HDR and emissive.",
+     "description": "Sets the value of a vector parameter on a material instance.\n\n        Args:\n            instance: The MaterialInstanceConstant to modify.\n            name: The parameter name.\n            value: The new value as a LinearColor (RGBA). Use values in the range 0–1\n                for standard colors; values above 1 are valid for HDR and emissive.",
      "properties": [
       "instance",
       "name",
@@ -10459,108 +10747,6 @@
    },
    "version": "1.0"
   },
-  "metahuman_toolset.metahuman.MetaHumanToolset": {
-   "description": "Tools for creating and editing MetaHuman characters",
-   "tools": {
-    "begin_edit": {
-     "description": "Begin editing a MetaHuman character. Call this FIRST before any other MetaHuman tools.\n\n        Args:\n            object_path: Asset path\n\n        Returns:\n            Session to pass to other tools\n\n        IMPORTANT: Always call end_edit() when done to commit changes.",
-     "properties": [
-      "object_path"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.begin_edit",
-     "required": [
-      "object_path"
-     ]
-    },
-    "create": {
-     "description": "Create a new MetaHuman character asset.\n\n        Args:\n            asset_path: Asset path where the MetaHuman will be created\n\n        Returns:\n            Created MetaHuman character asset",
-     "properties": [
-      "asset_path"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.create",
-     "required": [
-      "asset_path"
-     ]
-    },
-    "end_edit": {
-     "description": "End editing a MetaHuman character. Call this LAST after all modifications.\n\n        Args:\n            session: Session from begin_edit()",
-     "properties": [
-      "session"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.end_edit",
-     "required": [
-      "session"
-     ]
-    },
-    "get_body_shape": {
-     "description": "Get MetaHuman body shape parameters.\n\n        Args:\n            session: Session from begin_edit()\n\n        Returns:\n            Current body shape parameters",
-     "properties": [
-      "session"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.get_body_shape",
-     "required": [
-      "session"
-     ]
-    },
-    "get_eye_color": {
-     "description": "Get MetaHuman eye color.\n\n        Args:\n            session: Session from begin_edit()\n\n        Returns:\n            Current eye color parameters",
-     "properties": [
-      "session"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.get_eye_color",
-     "required": [
-      "session"
-     ]
-    },
-    "get_skin_tone": {
-     "description": "Get MetaHuman skin tone.\n\n        Args:\n            session: Session from begin_edit()\n\n        Returns:\n            Current skin tone parameters",
-     "properties": [
-      "session"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.get_skin_tone",
-     "required": [
-      "session"
-     ]
-    },
-    "set_body_shape": {
-     "description": "Set MetaHuman body shape.\n\n        Args:\n            session: Session from begin_edit()\n            body_shape: Body shape parameters to apply",
-     "properties": [
-      "body_shape",
-      "session"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.set_body_shape",
-     "required": [
-      "session",
-      "body_shape"
-     ]
-    },
-    "set_eye_color": {
-     "description": "Set MetaHuman eye color.\n\n        Args:\n            session: Session from begin_edit()\n            eye_color: Eye color parameters to apply",
-     "properties": [
-      "eye_color",
-      "session"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.set_eye_color",
-     "required": [
-      "session",
-      "eye_color"
-     ]
-    },
-    "set_skin_tone": {
-     "description": "Set MetaHuman skin tone.\n\n        Args:\n            session: Session from begin_edit()\n            skin_tone: Skin tone parameters to apply",
-     "properties": [
-      "session",
-      "skin_tone"
-     ],
-     "qualified_name": "metahuman_toolset.metahuman.MetaHumanToolset.set_skin_tone",
-     "required": [
-      "session",
-      "skin_tone"
-     ]
-    }
-   },
-   "version": "1.0"
-  },
   "re_agent_tools.toolsets.actor_workflow_tools.REActorWorkflowTools": {
    "description": "RE composite actor workflows: set/verify, spawn, batch transform, delete, organize.",
    "tools": {
@@ -10673,10 +10859,10 @@
    "version": "1.0"
   },
   "re_agent_tools.toolsets.anim_workflow_tools.REAnimWorkflowTools": {
-   "description": "RE composite animation workflows: Control Rig poses \u2192 AnimSequence \u2192 Montage.",
+   "description": "RE composite animation workflows: Control Rig poses → AnimSequence → Montage.",
    "tools": {
     "author_clip_from_pose_timeline": {
-     "description": "One-shot: pose timeline \u2192 LevelSequence \u2192 AnimSequence \u2192 Montage.\n\n        clip_stem example: Sword_Light_01\n          \u2192 LS_RE_Sword_Light_01_Authoring, A_RE_Sword_Light_01, AM_RE_Sword_Light_01",
+     "description": "One-shot: pose timeline → LevelSequence → AnimSequence → Montage.\n\n        clip_stem example: Sword_Light_01\n          → LS_RE_Sword_Light_01_Authoring, A_RE_Sword_Light_01, AM_RE_Sword_Light_01",
      "properties": [
       "clip_stem",
       "end_frame",
@@ -10900,10 +11086,10 @@
    "version": "1.0"
   },
   "re_agent_tools.toolsets.capture_workflow_tools.RECaptureWorkflowTools": {
-   "description": "RE composite capture: disk path + optional downscale/JPEG \u2014 never return base64.",
+   "description": "RE composite capture: disk path + optional downscale/JPEG — never return base64.",
    "tools": {
     "capture_viewport_to_disk": {
-     "description": "Capture level viewport to Saved/Screenshots and return path/size only.\n\n        jpeg_quality: 0 = keep PNG; 1\u2013100 = write JPEG and delete PNG.\n        max_dimension: downscale longest edge after capture (0 = skip).",
+     "description": "Capture level viewport to Saved/Screenshots and return path/size only.\n\n        jpeg_quality: 0 = keep PNG; 1–100 = write JPEG and delete PNG.\n        max_dimension: downscale longest edge after capture (0 = skip).",
      "properties": [
       "filename",
       "height",
@@ -11048,7 +11234,7 @@
      "required": []
     },
     "resolve_targets": {
-     "description": "Resolve actors by label/path and assets by path. On failure: candidates in recovery \u2014 retry via execute_editor_batch, never Epic find_actors.",
+     "description": "Resolve actors by label/path and assets by path. On failure: candidates in recovery — retry via execute_editor_batch, never Epic find_actors.",
      "properties": [
       "actor_queries_json",
       "asset_paths_json"
@@ -11264,7 +11450,7 @@
    "version": "1.0"
   },
   "re_agent_tools.toolsets.niagara_workflow_tools.RENiagaraWorkflowTools": {
-   "description": "RE composite Niagara: place system, assign, set user params, compact inspect.",
+   "description": "RE composite Niagara: place system, assign, set user params, compact inspect.\n\n    System/emitter/renderer authoring is NOT here — use Epic NiagaraToolsets via one\n    ProgrammaticToolset.execute_tool_script (compile once at end). See Docs/NIAGARA_BATCHING.md.",
    "tools": {
     "assign_niagara_system_to_component": {
      "description": "Assign a NiagaraSystem to an existing actor's NiagaraComponent + verify.",
@@ -11283,7 +11469,7 @@
      ]
     },
     "inspect_niagara_compact": {
-     "description": "Compact Niagara component inspect (asset path, active, location) \u2014 no stack dump.",
+     "description": "Compact Niagara component inspect (asset path, active, location) — no stack dump.",
      "properties": [
       "actor_label",
       "component_name"
@@ -11330,7 +11516,7 @@
    "version": "1.0"
   },
   "re_agent_tools.toolsets.project_workflow_tools.REProjectWorkflowTools": {
-   "description": "RE project architecture notes \u2014 honest gaps for missing game systems.",
+   "description": "RE project architecture notes — honest gaps for missing game systems.",
    "tools": {
     "get_plugin_project_notes": {
      "description": "Return RE project architecture notes and unsupported domains.",
@@ -11360,7 +11546,7 @@
      "required": []
     },
     "get_recent_errors_compact": {
-     "description": "Best-effort recent errors \u2014 honest unsupported without log API.",
+     "description": "Best-effort recent errors — honest unsupported without log API.",
      "properties": [
       "max_lines"
      ],
@@ -11376,252 +11562,6 @@
      ],
      "qualified_name": "re_agent_tools.toolsets.validation_workflow_tools.REValidationWorkflowTools.run_validation_bundle",
      "required": []
-    }
-   },
-   "version": "1.0"
-  },
-  "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools": {
-   "description": "Tools for working with the Animation Mixer in Sequencer.",
-   "tools": {
-    "add_animation_to_mixer": {
-     "description": "Add a skeletal animation to a specific layer in the Anim Mixer.\n\n        Args:\n            track: The Anim Mixer track.\n            layer_index: The zero-based index of the target layer.\n            start_frame: The frame at which the animation starts.\n            anim_sequence: The AnimSequence asset to add.\n\n        Returns:\n            The newly created MovieSceneSection for the animation.",
-     "properties": [
-      "anim_sequence",
-      "layer_index",
-      "start_frame",
-      "track"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_animation_to_mixer",
-     "required": [
-      "track",
-      "layer_index",
-      "start_frame",
-      "anim_sequence"
-     ]
-    },
-    "add_child_track_to_layer": {
-     "description": "Add a child track (e.g. Control Rig) to a mixer layer.\n\n        The child track occupies the entire layer. Layers support either\n        animation sections or a single child track, not both. This is the\n        UI operation of adding a track type to an empty mixer layer.\n\n        Args:\n            track: The Anim Mixer track.\n            binding: The binding that owns this mixer track.\n            track_class: The track class to add (e.g. MovieSceneControlRigParameterTrack).\n            layer_index: The zero-based layer index to add the track to.\n\n        Returns:\n            The newly created child track.",
-     "properties": [
-      "binding",
-      "layer_index",
-      "track",
-      "track_class"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_child_track_to_layer",
-     "required": [
-      "track",
-      "binding",
-      "track_class",
-      "layer_index"
-     ]
-    },
-    "add_decoration": {
-     "description": "Add a decoration by class to a container.\n\n        If the decoration already exists, returns the existing one.\n\n        Args:\n            container: The decoration container to add the decoration to.\n            decoration_class: The decoration class to add.\n\n        Returns:\n            The decoration object (existing or newly created).",
-     "properties": [
-      "container",
-      "decoration_class"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_decoration",
-     "required": [
-      "container",
-      "decoration_class"
-     ]
-    },
-    "add_mixer_layer": {
-     "description": "Add a new empty layer at the end of the Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to add a layer to.\n\n        Returns:\n            The newly created MovieSceneAnimationMixerLayer.",
-     "properties": [
-      "track"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.add_mixer_layer",
-     "required": [
-      "track"
-     ]
-    },
-    "change_transition_type": {
-     "description": "Change the type of a transition, preserving blend data where possible.\n\n        Args:\n            transition: The transition to change.\n            new_transition_class: The new transition class to switch to.\n\n        Returns:\n            The new transition object (the old one becomes invalid).",
-     "properties": [
-      "new_transition_class",
-      "transition"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.change_transition_type",
-     "required": [
-      "transition",
-      "new_transition_class"
-     ]
-    },
-    "find_decoration": {
-     "description": "Find a specific decoration by class on a container.\n\n        Args:\n            container: The decoration container to search.\n            decoration_class: The decoration class to find.\n\n        Returns:\n            The decoration object, or None if not present.",
-     "properties": [
-      "container",
-      "decoration_class"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.find_decoration",
-     "required": [
-      "container",
-      "decoration_class"
-     ]
-    },
-    "get_compatible_decorations": {
-     "description": "Get all decoration classes that can be added to a container.\n\n        Works on any decoration container, including Anim Mixer layers.\n\n        Args:\n            container: The decoration container to query.\n\n        Returns:\n            List of UClass objects representing compatible decoration types.",
-     "properties": [
-      "container"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_compatible_decorations",
-     "required": [
-      "container"
-     ]
-    },
-    "get_decorations": {
-     "description": "Get all decorations currently on a container.\n\n        Args:\n            container: The decoration container to query.\n\n        Returns:\n            List of decoration objects.",
-     "properties": [
-      "container"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_decorations",
-     "required": [
-      "container"
-     ]
-    },
-    "get_layer_index": {
-     "description": "Get the index of a mixer layer within its parent track.\n\n        Args:\n            layer: The mixer layer to query.\n\n        Returns:\n            The layer index.",
-     "properties": [
-      "layer"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_layer_index",
-     "required": [
-      "layer"
-     ]
-    },
-    "get_layer_name": {
-     "description": "Get the display name of an Anim Mixer layer.\n\n        Args:\n            layer: The layer to query.\n\n        Returns:\n            The layer's display name.",
-     "properties": [
-      "layer"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_layer_name",
-     "required": [
-      "layer"
-     ]
-    },
-    "get_layer_sections": {
-     "description": "Get all animation sections on an Anim Mixer layer.\n\n        Args:\n            layer: The layer to query.\n\n        Returns:\n            List of MovieSceneSection objects on the layer.",
-     "properties": [
-      "layer"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_layer_sections",
-     "required": [
-      "layer"
-     ]
-    },
-    "get_mixer_layer_count": {
-     "description": "Get the number of layers in an Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to query.\n\n        Returns:\n            The layer count.",
-     "properties": [
-      "track"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_mixer_layer_count",
-     "required": [
-      "track"
-     ]
-    },
-    "get_mixer_layers": {
-     "description": "Get all layers in an Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to query.\n\n        Returns:\n            List of MovieSceneAnimationMixerLayer objects.",
-     "properties": [
-      "track"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_mixer_layers",
-     "required": [
-      "track"
-     ]
-    },
-    "get_transition_between": {
-     "description": "Get the transition between two specific sections.\n\n        Args:\n            track: The Anim Mixer track.\n            from_section: The earlier section.\n            to_section: The later section.\n\n        Returns:\n            The transition object, or None if no transition exists.",
-     "properties": [
-      "from_section",
-      "to_section",
-      "track"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transition_between",
-     "required": [
-      "track",
-      "from_section",
-      "to_section"
-     ]
-    },
-    "get_transition_info": {
-     "description": "Get detailed information about a transition.\n\n        Args:\n            transition: The transition to inspect.\n\n        Returns:\n            JSON string with 'name', 'is_valid', 'from_section_name',\n            and 'to_section_name'.",
-     "properties": [
-      "transition"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transition_info",
-     "required": [
-      "transition"
-     ]
-    },
-    "get_transition_name": {
-     "description": "Get the display name of a transition.\n\n        Args:\n            transition: The transition to query.\n\n        Returns:\n            The transition's display name.",
-     "properties": [
-      "transition"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transition_name",
-     "required": [
-      "transition"
-     ]
-    },
-    "get_transitions_for_section": {
-     "description": "Get all transitions associated with a section.\n\n        Transitions are created automatically when sections overlap.\n\n        Args:\n            track: The Anim Mixer track containing the section.\n            section: The section to query transitions for.\n\n        Returns:\n            List of transition objects touching this section.",
-     "properties": [
-      "section",
-      "track"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.get_transitions_for_section",
-     "required": [
-      "track",
-      "section"
-     ]
-    },
-    "insert_mixer_layer": {
-     "description": "Insert a new layer at a specific index in the Anim Mixer track.\n\n        Args:\n            track: The Anim Mixer track to insert a layer into.\n            index: The zero-based index at which to insert the layer.\n\n        Returns:\n            The newly created MovieSceneAnimationMixerLayer.",
-     "properties": [
-      "index",
-      "track"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.insert_mixer_layer",
-     "required": [
-      "track",
-      "index"
-     ]
-    },
-    "is_layer_empty": {
-     "description": "Check whether an Anim Mixer layer has any content.\n\n        Args:\n            layer: The layer to check.\n\n        Returns:\n            True if the layer is empty, False if it has sections.",
-     "properties": [
-      "layer"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.is_layer_empty",
-     "required": [
-      "layer"
-     ]
-    },
-    "remove_decoration": {
-     "description": "Remove a decoration by class from a container.\n\n        Args:\n            container: The decoration container to modify.\n            decoration_class: The decoration class to remove.",
-     "properties": [
-      "container",
-      "decoration_class"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.remove_decoration",
-     "required": [
-      "container",
-      "decoration_class"
-     ]
-    },
-    "set_layer_name": {
-     "description": "Set the display name of an Anim Mixer layer.\n\n        Args:\n            layer: The layer to rename.\n            name: The new display name.",
-     "properties": [
-      "layer",
-      "name"
-     ],
-     "qualified_name": "sequencer_animmixer_toolset.toolsets.mixer.SequencerAnimMixerTools.set_layer_name",
-     "required": [
-      "layer",
-      "name"
-     ]
     }
    },
    "version": "1.0"
@@ -11723,6 +11663,232 @@
     }
    },
    "version": "1.0"
+  },
+  "UeremcpUI.UeremcpUIToolset": {
+   "description": "Goal-level UMG authoring for MMO overlays.",
+   "tools": {
+    "CreateWidgetFromSpec": {
+     "description": "CreateWidgetFromSpec",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.CreateWidgetFromSpec",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "ApplyUiTheme": {
+     "description": "ApplyUiTheme",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.ApplyUiTheme",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "ShowWidgetInWorld": {
+     "description": "ShowWidgetInWorld",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.ShowWidgetInWorld",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "ShowWidgetOnScreen": {
+     "description": "ShowWidgetOnScreen",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.ShowWidgetOnScreen",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "CaptureUiFrame": {
+     "description": "CaptureUiFrame",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.CaptureUiFrame",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SpawnCharacterPreview": {
+     "description": "SpawnCharacterPreview",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SpawnCharacterPreview",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SaveWidgetAsset": {
+     "description": "SaveWidgetAsset",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SaveWidgetAsset",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "CreateInventorySheetFromSpec": {
+     "description": "CreateInventorySheetFromSpec",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.CreateInventorySheetFromSpec",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SetSlotIcon": {
+     "description": "SetSlotIcon",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SetSlotIcon",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SetContainerWeight": {
+     "description": "SetContainerWeight",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SetContainerWeight",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    },
+    "SetSlotLayout": {
+     "description": "SetSlotLayout",
+     "properties": [
+      "action",
+      "expected_revision",
+      "idempotency_key",
+      "mode",
+      "options",
+      "protocol_version",
+      "requestJson",
+      "request_id",
+      "specification",
+      "target"
+     ],
+     "qualified_name": "UeremcpUI.UeremcpUIToolset.SetSlotLayout",
+     "required": [
+      "protocol_version",
+      "action"
+     ]
+    }
+   }
   }
- }
+ },
+ "ueremcp_tool_count": 46
 }

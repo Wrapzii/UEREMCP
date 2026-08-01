@@ -282,7 +282,8 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		static const TSet<FString> OptAllowed = {
 			TEXT("dry_run"), TEXT("atomic"), TEXT("rollback_on_failure"), TEXT("compile"),
 			TEXT("validate"), TEXT("save"), TEXT("response_detail"), TEXT("timeout_ms"),
-			TEXT("on_revision_conflict"), TEXT("continue_on_error"), TEXT("allow_destructive")
+			TEXT("on_revision_conflict"), TEXT("continue_on_error"), TEXT("allow_destructive"),
+			TEXT("on_unsupported")
 		};
 		for (const auto& Pair : Options->Values)
 		{
@@ -301,6 +302,19 @@ bool FUeremcpEnvelope::ParseRequest(const FString& Json, FUeremcpRequest& OutReq
 		SetBoolDefault(Options, TEXT("save"), true, OutRequest.bSave);
 		SetBoolDefault(Options, TEXT("continue_on_error"), false, OutRequest.bContinueOnError);
 		SetBoolDefault(Options, TEXT("allow_destructive"), false, OutRequest.bAllowDestructive);
+
+		if (Options->HasField(TEXT("on_unsupported")))
+		{
+			OutRequest.OnUnsupported = Options->GetStringField(TEXT("on_unsupported"));
+			if (!OutRequest.OnUnsupported.Equals(TEXT("fail"), ESearchCase::IgnoreCase)
+				&& !OutRequest.OnUnsupported.Equals(TEXT("partial"), ESearchCase::IgnoreCase))
+			{
+				OutError = FString::Printf(
+					TEXT("invalid on_unsupported '%s'; expected fail or partial"),
+					*OutRequest.OnUnsupported);
+				return false;
+			}
+		}
 
 		if (Options->HasField(TEXT("response_detail")))
 		{
@@ -406,6 +420,25 @@ bool FUeremcpEnvelope::ValidateResponse(const FUeremcpResponse& Response, FStrin
 	return true;
 }
 
+namespace
+{
+	FUeremcpNextActionsProvider& NextActionsProvider()
+	{
+		static FUeremcpNextActionsProvider Provider;
+		return Provider;
+	}
+}
+
+void FUeremcpEnvelope::SetNextActionsProvider(FUeremcpNextActionsProvider Provider)
+{
+	NextActionsProvider() = MoveTemp(Provider);
+}
+
+void FUeremcpEnvelope::ClearNextActionsProvider()
+{
+	NextActionsProvider().Unbind();
+}
+
 FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 {
 	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
@@ -419,6 +452,21 @@ FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 	}
 	Root->SetStringField(TEXT("status"), Response.Status);
 	Root->SetStringField(TEXT("summary"), Response.Summary);
+
+	if (!Response.ErrorCode.IsEmpty() || Response.NextArgs.IsValid())
+	{
+		TSharedPtr<FJsonObject> Error = MakeShared<FJsonObject>();
+		if (!Response.ErrorCode.IsEmpty())
+		{
+			Error->SetStringField(TEXT("code"), Response.ErrorCode);
+		}
+		Error->SetStringField(TEXT("message"), Response.Summary);
+		if (Response.NextArgs.IsValid())
+		{
+			Error->SetObjectField(TEXT("next_args"), Response.NextArgs);
+		}
+		Root->SetObjectField(TEXT("error"), Error);
+	}
 
 	if (!Response.UnderstoodAction.IsEmpty() || !Response.UnderstoodTarget.IsEmpty()
 		|| !Response.UnderstoodTemplate.IsEmpty() || Response.InterpretationNotes.Num() > 0)
@@ -531,6 +579,27 @@ FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 		Root->SetArrayField(TEXT("capability_notes"), Notes);
 	}
 
+	{
+		// Serve the next step with the result. Domains do not populate this;
+		// asking every domain to know the whole graph is how the graph goes
+		// stale in nine places at once.
+		TArray<TSharedPtr<FJsonObject>> Suggestions = Response.NextActions;
+		if (Suggestions.Num() == 0 && NextActionsProvider().IsBound())
+		{
+			Suggestions = NextActionsProvider().Execute(
+				Response.UnderstoodAction, Response.PrimaryAsset, Response.Status);
+		}
+		if (Suggestions.Num() > 0)
+		{
+			TArray<TSharedPtr<FJsonValue>> Arr;
+			for (const TSharedPtr<FJsonObject>& S : Suggestions)
+			{
+				if (S.IsValid()) Arr.Add(MakeShared<FJsonValueObject>(S));
+			}
+			Root->SetArrayField(TEXT("next_actions"), Arr);
+		}
+	}
+
 	if (Response.ExtraFields.IsValid())
 	{
 		for (const auto& Pair : Response.ExtraFields->Values)
@@ -550,11 +619,22 @@ FString FUeremcpEnvelope::SerializeResponse(const FUeremcpResponse& Response)
 
 FString FUeremcpEnvelope::MakeRejection(const FString& RequestId, const FString& Reason)
 {
+	return MakeRejection(RequestId, Reason, FString(), nullptr);
+}
+
+FString FUeremcpEnvelope::MakeRejection(
+	const FString& RequestId,
+	const FString& Reason,
+	const FString& ErrorCode,
+	const TSharedPtr<FJsonObject>& NextArgs)
+{
 	FUeremcpResponse Response;
 	Response.ProtocolVersion = ProtocolVersion();
 	Response.RequestId = RequestId;
 	Response.Status = TEXT("rejected");
 	Response.Summary = Reason;
+	Response.ErrorCode = ErrorCode;
+	Response.NextArgs = NextArgs;
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = 0;
 
@@ -586,6 +666,12 @@ FString FUeremcpEnvelope::MakeRejection(const FString& RequestId, const FString&
 	Response.CapabilityNotes.Add(TEXT(
 		"next: fix the rejected field, or call UeremcpCore.UeremcpReferenceToolset.GetStarted "
 		"then ResolveIntent for a worked request_json."));
+	if (NextArgs.IsValid())
+	{
+		Response.CapabilityNotes.Add(TEXT(
+			"error.next_args is a PATCH to merge into the failing request, not a whole "
+			"new envelope. Merge it and retry."));
+	}
 
 	return SerializeResponse(Response);
 }

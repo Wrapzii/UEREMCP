@@ -10,6 +10,7 @@ routing plans point agents at callables that do not exist.
 from __future__ import annotations
 
 import json
+import re
 import os
 import sys
 
@@ -34,6 +35,87 @@ def load_snapshot_names() -> set[str]:
     return names
 
 
+# Actions that legitimately have no execute_plan handler: they orchestrate or
+# describe plans rather than being steps inside one.
+PLAN_EXEMPT = {
+    "get_started", "resolve_intent", "describe_operation",
+    "execute_plan", "get_job_result", "cancel_job",
+}
+
+
+def registered_plan_actions() -> set[str]:
+    """Actions bound via FUeremcpPlanExecutor::RegisterAction, read from source.
+
+    Being AICallable and being usable inside execute_plan are TWO registries.
+    A tool present in one and absent from the other fails only at plan time --
+    "no handler registered for '<action>'" -- after the agent has already
+    committed to a batch and has to abandon it. Measured in a live run: a
+    correct texture -> material -> mesh -> scatter plan was thrown away and
+    re-issued one call at a time, because submit_mesh_ops and
+    create_procedural_texture were never plan-registered.
+    """
+    found: set[str] = set()
+    src = os.path.join(ROOT, "Plugins", "UEREMCP", "Source")
+    for dirpath, _dirs, files in os.walk(src):
+        for name in files:
+            if not name.endswith("PlanHandlers.cpp"):
+                continue
+            with open(os.path.join(dirpath, name), encoding="utf-8", errors="replace") as fh:
+                body = fh.read()
+            for m in re.finditer(r'Bind\(\s*TEXT\("([a-z0-9_]+)"\)', body):
+                found.add(m.group(1))
+            for m in re.finditer(r'RegisterAction\(\s*TEXT\("([a-z0-9_]+)"\)', body):
+                found.add(m.group(1))
+            for m in re.finditer(r'return\s+TEXT\("([a-z0-9_]+)"\);', body):
+                found.add(m.group(1))
+    return found
+
+
+SHIPPED_CATALOG = os.path.join(
+    ROOT, "Plugins", "UEREMCP", "Content", "IntentRouter", "operation_catalog.json")
+TOOLS_CATALOG = os.path.join(ROOT, "tools", "intent_router", "operation_catalog.json")
+
+
+def check_catalog_drift() -> int:
+    """The two catalogs must be byte-identical.
+
+    There are two copies: the plugin one the shipped C++ router loads, and the
+    tools one the Python prototype loads. Nothing compared them, so they drifted
+    silently in BOTH directions -- the plugin copy was missing every operation
+    added during a week of work (CreateMasterMaterial, SubmitMeshOps, the
+    import_file entries), and the tools copy carried a stale `GetLog` that does
+    not exist in the registry at all.
+
+    The visible consequence: an agent was told there was no way to import a real
+    mesh. StaticMeshTools.import_file existed the whole time; it simply was not
+    in the catalog the router actually reads, and AllowedInPlan admits only
+    UEREMCP tools and catalog entries -- so the import path could never appear
+    in any plan.
+    """
+    if not (os.path.exists(SHIPPED_CATALOG) and os.path.exists(TOOLS_CATALOG)):
+        print("CATALOG DRIFT: expected a catalog at both %s and %s"
+              % (SHIPPED_CATALOG, TOOLS_CATALOG))
+        return 1
+    with open(SHIPPED_CATALOG, encoding="utf-8") as fh:
+        shipped = fh.read()
+    with open(TOOLS_CATALOG, encoding="utf-8") as fh:
+        tools = fh.read()
+    if shipped != tools:
+        a = json.loads(shipped).get("operations") or []
+        b = json.loads(tools).get("operations") or []
+        qa = {o.get("qualified") for o in a}
+        qb = {o.get("qualified") for o in b}
+        print("CATALOG DRIFT: the shipped and tools catalogs differ.")
+        for q in sorted(qb - qa):
+            print("  missing from the SHIPPED catalog (router cannot route it): %s" % q)
+        for q in sorted(qa - qb):
+            print("  missing from the TOOLS catalog: %s" % q)
+        if qa == qb:
+            print("  same operations, different bytes -- ordering or metadata differs")
+        return 1
+    return 0
+
+
 def main() -> int:
     if not os.path.exists(CATALOG):
         print("missing catalog: %s" % CATALOG)
@@ -45,7 +127,7 @@ def main() -> int:
     with open(CATALOG, encoding="utf-8") as fh:
         catalog = json.load(fh)
     registry = load_snapshot_names()
-    problems = 0
+    problems = check_catalog_drift()
 
     operations = catalog.get("operations") or []
     seen_actions: set[str] = set()
@@ -83,7 +165,24 @@ def main() -> int:
                 print("CATALOG UNKNOWN depends_on_actions: %s (from %s)" % (parent, action))
                 problems += 1
 
-    print("checked %d catalog operation(s) against registry snapshot" % len(operations))
+    # Every mutating action the router can put in a batch must be executable
+    # inside that batch.
+    plan_actions = registered_plan_actions()
+    for op in operations:
+        action = op.get("action")
+        if not action or action in PLAN_EXEMPT or "." in action:
+            continue
+        if not op.get("destructive"):
+            continue
+        if action not in plan_actions:
+            print("NO PLAN HANDLER %s: routable and destructive, but no "
+                  "FUeremcpPlanExecutor::RegisterAction binding found in any "
+                  "*PlanHandlers.cpp. execute_plan will reject a batch "
+                  "containing it." % action)
+            problems += 1
+
+    print("checked %d catalog operation(s) against registry snapshot; "
+          "%d plan-registered action(s)" % (len(operations), len(plan_actions)))
     print("%d problem(s)" % problems)
     return 1 if problems else 0
 

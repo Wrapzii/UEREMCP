@@ -31,8 +31,11 @@ public:
 	 *   Prefer the staging primitives when the caller enumerated the steps, or when
 	 *   any stage needs its own parameters.
 	 * Inputs: action=build_environment; specification.seed REQUIRED. Optional blocks:
+	 *   options.on_unsupported = fail (default) | partial. Use partial when you want
+	 *   every supported part applied and the rest reported, rather than the whole
+	 *   request rejected because one block is unsupported.
 	 *   terrain.profile, hydrology.river, vegetation.mode, weather[], structures[].
-	 * Example: {"protocol_version":"1.0","action":"build_environment","target":{"asset_path":"/Game/__UeremcpPoc/Biome"},"options":{"dry_run":true},"specification":{"seed":42,"terrain":{"profile":"mountains"}}}
+	 * Example: {"protocol_version":"1.0","action":"build_environment","target":{"asset_path":"/Game/__UeremcpPoc/Biome"},"options":{"dry_run":true},"specification":{"seed":42,"terrain":{"profile":"mountains","scale_z":3}}}
 	 *
 	 * v2 (presence-based): terrain.profile, hydrology.river, vegetation.mode, weather[],
 	 * structures[], lighting.preset — each block activates its subsystem.
@@ -53,25 +56,31 @@ public:
 	 *
 	 * Use when: generate mountains/valley heightmap only; ExecutePlan terrain stage.
 	 * Inputs: action=create_landscape; specification.seed REQUIRED; terrain.* optional.
+	 *   terrain.scale_z: SET THIS. Sane range is 2-5. The default of 100 produces
+	 *   vertical needles, not mountains [VERIFIED-RUNTIME: three separate builds].
+	 *   It is a Z multiplier, not a metre value, and the default is wrong for every
+	 *   terrain profile shipped. Start at 3. To make peaks higher raise
+	 *   terrain.max_altitude_m; raising scale_z past ~5 gives spikes.
 	 * Outputs: heightmap_hash (determinism gate), structural_metrics.
 	 * Do not use for: AlphaBrush sculpting — unavailable [VERIFIED-RUNTIME: COVERAGE_PLAN III.1].
-	 * Example: {"protocol_version":"1.0","action":"create_landscape", "target":{"asset_path":"/Game/__UeremcpPoc/Biome"}, "options":{"dry_run":true},"specification":{"seed":42, "terrain":{"profile":"mountains","max_altitude_m":1800}}}
+	 * Example: {"protocol_version":"1.0","action":"create_landscape", "target":{"asset_path":"/Game/__UeremcpPoc/Biome"}, "options":{"dry_run":true},"specification":{"seed":42, "terrain":{"profile":"mountains","scale_z":3,"max_altitude_m":1800}}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString CreateLandscape(const FString& RequestJson);
 
 	/**
-	 * Create a RIVER WaterBody from spline points.
+	 * Create a WaterBody (river, lake, or ocean) without wiping other water types.
 	 *
-	 * Use when: add a river through a valley; ExecutePlan water stage after landscape.
-	 * Inputs: action=create_water_body; specification.seed REQUIRED; river.width.
-	 *   body_type accepts "river" only.
-	 * Outputs: river actor label + spline length. Real AWaterBodyRiver when Water plugin loaded.
-	 * Do not use for: lakes or oceans. Only AWaterBodyRiver is implemented, and
-	 *   body_type is currently IGNORED — passing lake or ocean silently yields a
-	 *   river. build_environment.schema.json marks both "Phase 2". Treat a lake
-	 *   or ocean request as unsupported until body_type is honoured.
-	 * Example: {"protocol_version":"1.0","action":"create_water_body", "target":{"asset_path":"/Game/__UeremcpPoc/Biome"}, "options":{"dry_run":true},"specification":{"seed":42, "river":{"width":800}}}
+	 * Use when: river through a valley; lake / ocean for still water; additive multi-water.
+	 * Inputs: action=create_water_body; specification.seed REQUIRED;
+	 *   body_type=river|lake|ocean (default river); optional label, river.width,
+	 *   lake.{center,radius_cm}, ocean.{center,extents_cm}.
+	 * Outputs: water actor with type-specific label (UEREMCP_River|Lake|Ocean or custom).
+	 *   Only the matching label is replaced — other water bodies remain.
+	 * Do not use for: inventing body_type values; unknown types are rejected
+	 *   (BODY_TYPE_UNSUPPORTED), never silently coerced to a river.
+	 * Example: {"protocol_version":"1.0","action":"create_water_body",
+	 *   "specification":{"seed":42,"body_type":"lake","lake":{"center":[8500,3200,-80],"radius_cm":2500}}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString CreateWaterBody(const FString& RequestJson);
@@ -83,6 +92,13 @@ public:
 	 * Inputs: action=scatter_foliage; specification.seed; biome.mesh_path; max_foliage_instances.
 	 * Outputs: foliage_instances, exclusion_violations (must be 0).
 	 * Cross-domain: exclusions reference the river spline (why BuildEnvironment is C++ not only a template).
+	 * Multiple species: set vegetation.group (or biome.group) to a distinct name per
+	 *   species. A scatter replaces only its OWN group, so a second call ADDS a
+	 *   species instead of wiping the first. Omitting it uses one shared group and
+	 *   each scatter replaces the last.
+	 * A river is optional. With hydrology.river the forest bands along the bank and
+	 *   keeps a clear channel; without one it scatters across the terrain under the
+	 *   slope and height gates alone. Trees on a bare hillside no longer need a river.
 	 * Honesty: when biome.mesh_path is absent or unloadable this places
 	 *   /Engine/BasicShapes/Cube as a placeholder and warns. Supply a real mesh,
 	 *   or generate one first, if you want trees rather than boxes.
@@ -124,9 +140,15 @@ public:
 	/**
 	 * Author a StaticMesh asset from ordered GeometryScript primitive ops.
 	 *
-	 * Use when: you need a mesh from scratch in an empty project — a tree, a
-	 *   rock, a tower — before anything can scatter or place it. This is the mesh
-	 *   PRIMITIVE FLOOR: it composes geometry and consumes no existing asset.
+	 * Use when: you need BLOCKOUT geometry — a crate, a wall segment, a pillar, a
+	 *   collision proxy — or a stand-in that unblocks layout while real art is
+	 *   sourced. This is the mesh PRIMITIVE FLOOR: it consumes no existing asset.
+	 * NOT FOR HERO ART. Boxes, cylinders, cones and spheres cannot look like a
+	 *   photograph. A cylinder with a cone on top reads as a tree ICON, not a tree.
+	 *   If the caller said realistic, high quality, hero, or matching a reference,
+	 *   use editor_toolset.toolsets.static_mesh.StaticMeshTools.import_file and
+	 *   bring in a real model. Shipping primitives against a quality ask is the
+	 *   failure this note exists to prevent.
 	 * Inputs: action=submit_mesh_ops, target.asset_path (StaticMesh under
 	 *   /Game/__UeremcpTests/ or /Game/__UeremcpPoc/); specification.ops is a
 	 *   REQUIRED non-empty array applied in order. Each op is one of:
@@ -138,13 +160,101 @@ public:
 	 *   request — a partially built mesh is indistinguishable from a correct one.
 	 * Do not use for: placing meshes in a level — use ScatterFoliage or
 	 *   PlaceStructures with the asset path this returns.
-	 * Next tool: ScatterFoliage with biome.mesh_path set to this asset path.
-	 * Example: {"protocol_version":"1.0","action":"submit_mesh_ops","target":{"asset_path":"/Game/__UeremcpTests/Meshes/SM_Conifer"},"options":{"dry_run":true},"specification":{"ops":[{"op":"cylinder","radius":18,"height":220},{"op":"cone","base_radius":130,"height":420,"origin":[0,0,180]}]}}
+	 * Next tool: PlaceStructures, or ScatterFoliage via biome.mesh_path — but only
+	 *   when blockout foliage is genuinely what was asked for.
+	 * Example: {"protocol_version":"1.0","action":"submit_mesh_ops","target":{"asset_path":"/Game/__UeremcpTests/Meshes/SM_CrateBlockout"},"options":{"dry_run":true},"specification":{"ops":[{"op":"box","size":[120,120,120]},{"op":"box","size":[130,130,12],"origin":[0,0,120]}]}}
 	 *
 	 * @param RequestJson  Request with action submit_mesh_ops and target.asset_path set.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString SubmitMeshOps(const FString& RequestJson);
+
+	/**
+	 * Snap actors down onto the LANDSCAPE surface, ignoring foliage.
+	 *
+	 * Use when: buildings, props or roads sit above or below the terrain after a
+	 *   rebuild or an import. This is the fix for floating actors.
+	 * Inputs: action=snap_actors_to_landscape; specification.label_prefixes is an
+	 *   optional array (default ["UEREMCP_"]); specification.z_offset_cm optional.
+	 * Do not use for: foliage instances -- rescatter those instead.
+	 * Why it exists: a generic downward trace stops on the first blocker, which in
+	 *   a forest is a tree, which is how buildings ended up resting on canopy.
+	 *   This traces ALandscapeProxy only. An actor with no landscape beneath it is
+	 *   NAMED and left alone rather than dropped into the void.
+	 * Example: {"protocol_version":"1.0","action":"snap_actors_to_landscape","options":{"dry_run":true},"specification":{"label_prefixes":["UEREMCP_Structure","Castle"],"z_offset_cm":0}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString SnapActorsToLandscape(const FString& RequestJson);
+
+	/**
+	 * Remove instanced-foliage instances inside world-space boxes.
+	 *
+	 * Use when: clearing a building footprint, a road corridor or a courtyard so
+	 *   trees stop growing through walls.
+	 * Inputs: action=clear_foliage_in_volumes; specification.volumes REQUIRED --
+	 *   a non-empty array of {"center":[x,y,z],"extent":[x,y,z]} in world space.
+	 * Do not use for: WaterBodyExclusionVolume is NOT a foliage cull. It excludes
+	 *   water. Placing one and expecting trees to disappear is why they did not.
+	 * Example: {"protocol_version":"1.0","action":"clear_foliage_in_volumes","options":{"dry_run":true},"specification":{"volumes":[{"center":[1800,-2000,9000],"extent":[1500,1500,4000]}]}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString ClearFoliageInVolumes(const FString& RequestJson);
+
+	/**
+	 * Probe the AssetRegistry for meshes matching semantic roles.
+	 *
+	 * Use when: you need a real foliage/structure mesh that EXISTS in this project
+	 *   before scattering or placing. This is why agents stopped inventing
+	 *   /Game/Meshes/SM_Pine.
+	 * Inputs: action=find_project_assets; specification.roles REQUIRED array of
+	 *   semantic roles (foliage.tree, foliage.grass, structure.wall, …). Optional
+	 *   class_filter, path_scopes, max_per_role.
+	 * Outputs: resolved[] with real paths, unresolved[] with searched patterns and
+	 *   satisfied_by import action. Never fabricates a path.
+	 * Do not use for: importing a file — use import_mesh_for_world when unresolved.
+	 * Example: {"protocol_version":"1.0","action":"find_project_assets","request_id":"fa-1","specification":{"roles":["foliage.tree"],"class_filter":["StaticMesh"],"path_scopes":["/Game"],"max_per_role":5}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString FindProjectAssets(const FString& RequestJson);
+
+	/**
+	 * Import a mesh for world use: file → unit check → collision → Nanite.
+	 *
+	 * Use when: bringing an FBX/OBJ into /Game for foliage or prefabs. Composes
+	 *   StaticMeshTools.import_file; does not reimplement FBX import.
+	 * Inputs: action=import_mesh_for_world; target.asset_path; specification.source_file
+	 *   REQUIRED. Optional source_unit, collision, nanite, expected_bounds_m.
+	 *   expected_bounds_m is the load-bearing field — reject when actual bounds
+	 *   differ by more than ~20%.
+	 * Example: {"protocol_version":"1.0","action":"import_mesh_for_world","target":{"asset_path":"/Game/__UeremcpPoc/Meshes/SM_Castle"},"specification":{"source_file":"C:/exports/castle.fbx","source_unit":"meters","collision":"complex_as_simple","nanite":false,"expected_bounds_m":[240,145,90]}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString ImportMeshForWorld(const FString& RequestJson);
+
+	/**
+	 * Place a static-mesh prefab on the landscape: spawn + snap + clear foliage.
+	 *
+	 * Use when: dropping a building/prop that must sit on terrain, not canopy.
+	 * Inputs: action=place_prefab_on_landscape; specification.mesh_path,
+	 *   location_xy, optional rotation_yaw, clear_foliage_radius_cm, flatten_pad.
+	 *   flatten_pad writes a soft heightmap pad via FLandscapeEditDataInterface::SetHeightData.
+	 * Example: {"protocol_version":"1.0","action":"place_prefab_on_landscape","specification":{"mesh_path":"/Game/__UeremcpPoc/Meshes/SM_Castle","location_xy":[1800,-2000],"rotation_yaw":35,"clear_foliage_radius_cm":1500,"flatten_pad":{"radius_cm":1200,"falloff_cm":600}}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString PlacePrefabOnLandscape(const FString& RequestJson);
+
+	/**
+	 * Paint landscape layer weights from height/slope rules on the LIVE landscape.
+	 *
+	 * Use when: terrain material layers exist but the ground is still the first
+	 *   layer (the white-landscape failure). Reads height/slope from the landscape
+	 *   itself — never recomputes a heightmap.
+	 * Inputs: action=paint_landscape_layers; specification.rules REQUIRED. Exactly
+	 *   one rule may set fallback=true; weights sum to 1 per vertex.
+	 * Example: {"protocol_version":"1.0","action":"paint_landscape_layers","specification":{"rules":[{"layer":"snow","min_height_m":1100,"blend_m":150},{"layer":"rock","min_slope_deg":35,"blend_deg":8},{"layer":"grass","fallback":true}]}}
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
+	static FString PaintLandscapeLayers(const FString& RequestJson);
 
 	/**
 	 * Read-only inspect of environment actors/metrics in the current editor world.

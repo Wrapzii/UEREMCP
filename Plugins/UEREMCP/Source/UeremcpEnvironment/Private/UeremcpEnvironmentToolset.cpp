@@ -57,6 +57,8 @@ namespace
 			Extra->SetBoolField(TEXT("approximated"), true);
 		}
 		Response.ExtraFields = Extra;
+		Response.ErrorCode = Result.ErrorCode;
+		Response.NextArgs = Result.NextArgs;
 	}
 
 	enum class EEnvStage : uint8
@@ -73,6 +75,8 @@ namespace
 	{
 		Spec.bIncludeTerrain = false;
 		Spec.bIncludeRiver = false;
+		Spec.bIncludeLake = false;
+		Spec.bIncludeOcean = false;
 		Spec.bIncludeForest = false;
 		Spec.bIncludeRain = false;
 		Spec.bIncludeLighting = false;
@@ -92,7 +96,20 @@ namespace
 			Spec.bIncludeTerrain = true;
 			break;
 		case EEnvStage::Water:
-			Spec.bIncludeRiver = true;
+			// MCP-001: honor body_type already parsed onto Spec.
+			if (Spec.WaterBodyType.Equals(TEXT("ocean"), ESearchCase::IgnoreCase))
+			{
+				Spec.bIncludeOcean = true;
+			}
+			else if (Spec.WaterBodyType.Equals(TEXT("lake"), ESearchCase::IgnoreCase))
+			{
+				Spec.bIncludeLake = true;
+			}
+			else
+			{
+				Spec.bIncludeRiver = true;
+				Spec.WaterBodyType = TEXT("river");
+			}
 			break;
 		case EEnvStage::Foliage:
 			Spec.bIncludeForest = true;
@@ -141,11 +158,12 @@ namespace
 		const bool bReadOnly = ExpectedAction.Equals(TEXT("inspect_environment"))
 			|| ExpectedAction.Equals(TEXT("validate_environment"));
 		FUeremcpEnvironmentBuildSpec Spec;
-		FString SpecError;
+		FUeremcpEnvironmentRejection Rejection;
 		if (!bReadOnly
-			&& !FUeremcpEnvironmentService::ParseBuildSpec(Request.Specification, Spec, SpecError))
+			&& !FUeremcpEnvironmentService::ParseBuildSpec(Request.Specification, Spec, Rejection))
 		{
-			return FUeremcpEnvelope::MakeRejection(Request.RequestId, SpecError);
+			return FUeremcpEnvelope::MakeRejection(
+				Request.RequestId, Rejection.Message, Rejection.Code, Rejection.NextArgs);
 		}
 		if (Spec.DestinationLevelPath.IsEmpty())
 		{

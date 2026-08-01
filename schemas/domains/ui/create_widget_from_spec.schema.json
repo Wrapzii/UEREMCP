@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/ui/create_widget_from_spec.schema.json",
+  "title": "create_widget_from_spec specification",
+  "description": "Declarative Widget Blueprint create for MMO overlays (UI-MCP-001).",
+  "type": "object",
+  "required": ["asset_path"],
+  "additionalProperties": true,
+  "properties": {
+    "asset_path": { "type": "string", "minLength": 1 },
+    "parent_class": { "type": "string", "default": "/Script/UMG.UserWidget" },
+    "theme": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object", "additionalProperties": true }
+      ]
+    },
+    "ui_framework": {
+      "type": "string",
+      "enum": ["umg", "common_ui", "auto"],
+      "default": "umg"
+    },
+    "screens": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "layout": { "type": "string" },
+          "brand": { "type": "object", "additionalProperties": true },
+          "actions": { "type": "array", "items": { "type": "string" } },
+          "fields": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "navigation": { "type": "object", "additionalProperties": true }
+  }
+}

@@ -38,8 +38,9 @@ public:
 	/** Bootstrap briefing + START HERE pointer to ResolveIntent. */
 	static FUeremcpIntentRouterResult GetStarted(const FString& Detail);
 
-	/** Schema + example for one registry-verified tool. */
-	static FUeremcpIntentRouterResult DescribeOperation(const FString& ToolQuery);
+	/** Schema + example for one registry-verified tool.
+	 *  Spec may include tool, detail (index|slim|full), if_none_match. */
+	static FUeremcpIntentRouterResult DescribeOperation(const TSharedPtr<FJsonObject>& Spec);
 
 	/** SHA-256 of sorted live qualified names. */
 	static FString ComputeLiveRegistryHash();

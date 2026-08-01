@@ -36,6 +36,10 @@ public class UeremcpMaterial : ModuleRules
 
 			// Epic material editor surface [VERIFIED: MaterialEditingLibrary.h].
 			"MaterialEditor",
+
+			// UMaterialExpressionLandscapeLayerBlend
+			// [VERIFIED: Landscape/Classes/Materials/MaterialExpressionLandscapeLayerBlend.h].
+			"Landscape",
 		});
 	}
 }

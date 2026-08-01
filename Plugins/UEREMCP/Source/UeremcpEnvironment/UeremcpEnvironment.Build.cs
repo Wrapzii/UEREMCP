@@ -32,6 +32,7 @@ public class UeremcpEnvironment : ModuleRules
 			"LandscapeEditor",
 			"Foliage",
 			"Niagara",
+			"PhysicsCore", // BodySetupEnums.h for import_mesh_for_world collision
 			"GeometryFramework",
 			"GeometryCore",
 			"GeometryScriptingCore",

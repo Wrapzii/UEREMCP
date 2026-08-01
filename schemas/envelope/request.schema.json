@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/envelope/request.schema.json",
   "title": "UEREMCP Request Envelope",
-  "description": "The single JSON object every agent-facing UEREMCP tool accepts. Frozen by ADR-0003. Domain workstreams extend `specification` ONLY — never the envelope. Owned by WS-01.",
+  "description": "The single JSON object every agent-facing UEREMCP tool accepts. Frozen by ADR-0003. Domain workstreams extend `specification` ONLY \u2014 never the envelope. Owned by WS-01.",
   "type": "object",
   "required": [
     "protocol_version",
@@ -60,7 +60,7 @@
         "dry_run": {
           "type": "boolean",
           "default": false,
-          "description": "Plan and execute inside a sandbox, report the full result, then discard (ADR-0005 rule 5). NOT a separate no-op code path — a dry run that exercises different code predicts nothing. Destructive actions default this to true; see ADR-0010 and options.allow_destructive."
+          "description": "Plan and execute inside a sandbox, report the full result, then discard (ADR-0005 rule 5). NOT a separate no-op code path \u2014 a dry run that exercises different code predicts nothing. Destructive actions default this to true; see ADR-0010 and options.allow_destructive."
         },
         "atomic": {
           "type": "boolean",
@@ -105,12 +105,21 @@
           "type": "boolean",
           "default": false,
           "description": "Opt in to the destructive permission tier (ADR-0010). Default false (tier off). Elevates to destructive when true or when mode is delete or replace. Does not elevate to unsafe; that tier is project settings only."
+        },
+        "on_unsupported": {
+          "type": "string",
+          "enum": [
+            "fail",
+            "partial"
+          ],
+          "default": "fail",
+          "description": "What to do when part of a request is not supported. 'fail' rejects the whole request and changes nothing -- the right default, because a caller who asked for three things and silently got two is worse off than one who got none and was told why. 'partial' applies every supported part, leaves the rest untouched, and returns partially_completed with each refusal named in the response. Use 'partial' for incremental edits where doing most of the work is still progress."
         }
       }
     },
     "expected_revision": {
       "$ref": "../common/defs.schema.json#/$defs/revision",
-      "description": "Optimistic concurrency guard (ADR-0006). If it does not match current state, options.on_revision_conflict decides. Omit to skip the check — acceptable for creates, risky for modifications in a multi-agent project."
+      "description": "Optimistic concurrency guard (ADR-0006). If it does not match current state, options.on_revision_conflict decides. Omit to skip the check \u2014 acceptable for creates, risky for modifications in a multi-agent project."
     },
     "idempotency_key": {
       "type": [

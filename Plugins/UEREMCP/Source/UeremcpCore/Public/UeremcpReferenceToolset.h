@@ -88,11 +88,14 @@ public:
 	 * Describe one registry-verified operation: schema, example, safety notes.
 	 *
 	 * Use when: you already know the tool name and need the envelope/example.
-	 * Inputs: specification.tool = fully qualified Toolset.Tool (or unique short name).
-	 * Outputs: description, input_schema, request_json example when catalogued.
+	 * Inputs: specification.tool REQUIRED; specification.detail = index|slim|full
+	 *   (default slim); specification.if_none_match = prior content_hash to skip
+	 *   an unchanged body (returns no_change_required with empty payload).
+	 * Outputs: content_hash always; slim carries required fields + example, not
+	 *   the duplicated nested envelope mirror.
 	 * Do not use for: choosing which tool — use ResolveIntent first.
 	 * Next tool: call_tool with the returned request_json.
-	 * Example: {"protocol_version":"1.0","action":"describe_operation","specification":{"tool":"create_niagara_effect"}}
+	 * Example: {"protocol_version":"1.0","action":"describe_operation","specification":{"tool":"create_landscape","detail":"slim"}}
 	 *
 	 * @param RequestJson Request envelope (schemas/domains/_shared/describe_operation.schema.json).
 	 * @return Response envelope; rejected if the name is not in the live registry.

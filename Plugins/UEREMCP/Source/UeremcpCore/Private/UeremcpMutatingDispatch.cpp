@@ -90,7 +90,10 @@ FString FUeremcpMutatingDispatch::MakeMutatorQueuedResponse(
 	Response.Metrics.McpRoundTrips = 1;
 	Response.Metrics.InternalOperations = 0;
 	Response.CapabilityNotes.Add(
-		TEXT("Mutator queue: retry the same request id; FIFO head acquires on next poll."));
+		TEXT("Mutator queue: RETRY this same tool call with the SAME request_id "
+			 "(FIFO head acquires). Do NOT poll get_job_result forever — abandoned "
+			 "waiters auto-clear after ~45s; orphaned active slots after ~180s."));
+	Response.ErrorCode = TEXT("MUTATOR_BUSY");
 	return FUeremcpEnvelope::SerializeResponse(Response);
 }
 
@@ -201,6 +204,15 @@ bool FUeremcpMutatingDispatch::TryBegin(
 	{
 		bGateOpen = true;
 		return true;
+	}
+
+	// Drop abandoned FIFO entries before acquire so CreateLandscape / AttachWeather /
+	// ScatterFoliage cannot hang forever behind timed-out retries with new request ids.
+	{
+		bool bClearedActive = false;
+		const int32 Cleared = FUeremcpMutatorQueue::ClearStale(ProjectKey, bClearedActive);
+		(void)Cleared;
+		(void)bClearedActive;
 	}
 
 	const FUeremcpMutatorQueue::FAcquireResult Acquire =

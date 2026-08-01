@@ -4,6 +4,7 @@
 
 #include "ToolsetRegistry/UToolsetRegistry.h"
 #include "UeremcpBlueprintToolset.h"
+#include "UeremcpBlueprintPlanHandlers.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcpBlueprint, Log, All);
 
@@ -51,6 +52,17 @@ private:
 		{
 			UE_LOG(LogUeremcpBlueprint, Warning,
 				TEXT("UUeremcpBlueprintToolset registration failed at PostEngineInit."));
+		}
+
+		FString PlanError;
+		if (FUeremcpBlueprintPlanHandlers::Register(PlanError))
+		{
+			UE_LOG(LogUeremcpBlueprint, Log, TEXT("Blueprint plan actions registered with ExecutePlan."));
+		}
+		else
+		{
+			UE_LOG(LogUeremcpBlueprint, Warning,
+				TEXT("Blueprint plan action registration failed: %s"), *PlanError);
 		}
 	}
 

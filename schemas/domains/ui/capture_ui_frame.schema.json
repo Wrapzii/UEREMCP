@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/ui/capture_ui_frame.schema.json",
+  "title": "capture_ui_frame specification",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "path": { "type": "string" },
+    "include": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "world": { "type": "boolean" },
+        "world_space_widgets": { "type": "boolean" },
+        "screen_space_umg": { "type": "boolean" },
+        "editor_chrome": { "type": "boolean" }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "focus_actors": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/ui/show_widget_in_world.schema.json",
+  "title": "show_widget_in_world specification",
+  "type": "object",
+  "required": ["widget_asset"],
+  "additionalProperties": true,
+  "properties": {
+    "widget_asset": { "type": "string" },
+    "host_label": { "type": "string" },
+    "transform": { "type": "object", "additionalProperties": true },
+    "draw_size": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "space": { "type": "string", "enum": ["World", "Screen"], "default": "World" },
+    "replace_owned": { "type": "string" },
+    "screen_id": { "type": "string" }
+  }
+}

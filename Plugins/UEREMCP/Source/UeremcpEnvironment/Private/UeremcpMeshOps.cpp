@@ -15,15 +15,17 @@
 // This exposes that capability as an op document: primitives composed in order,
 // same read/modify/apply shape as the Blueprint graph tools.
 //
-// COMPILE NOTES FOR REVIEW — read before building:
+// COMPILE NOTES — verified against UE 5.8 GeometryScripting headers:
 //   [VERIFIED: MeshPrimitiveFunctions.h:168] AppendBox
-//   [UNVERIFIED] AppendCylinder / AppendCone / AppendSphere parameter lists were
-//     NOT read. Signatures follow the AppendBox pattern but may differ in
-//     argument order or count. Each is isolated in its own ApplyOp_* branch so a
-//     mismatch is a local fix, not a rewrite.
-//   [UNVERIFIED] CreateNewStaticMeshAssetFromMesh lives in GeometryScriptingEditor,
-//     which is added to Build.cs by this change. If the symbol or its options
-//     struct differs, only MakeStaticMeshAsset() below needs editing.
+//   [VERIFIED: MeshPrimitiveFunctions.h:392] AppendCylinder
+//   [VERIFIED: MeshPrimitiveFunctions.h:409] AppendCone
+//   [VERIFIED: MeshPrimitiveFunctions.h:271] AppendSphereLatLong
+//   [VERIFIED: CreateNewAssetUtilityFunctions.h:48] FGeometryScriptCreateNewStaticMeshAssetOptions
+//   [VERIFIED: CreateNewAssetUtilityFunctions.h:177] CreateNewStaticMeshAssetFromMesh
+//   [VERIFIED: GeometryScriptTypes.h / CreateNewAssetUtilityFunctions.h] EGeometryScriptOutcomePins
+//   Module: GeometryScriptingEditor (Editor-only; UEREMCP.uplugin already enables
+//   GeometryScripting; UeremcpEnvironment is Editor TargetAllowList — no extra
+//   Target.bBuildEditor guard required beyond the existing Water pattern).
 
 #include "UeremcpEnvironmentToolset.h"
 
@@ -128,7 +130,7 @@ namespace
 		return false;
 	}
 
-	/** Isolated so a signature mismatch here is a one-function fix. [UNVERIFIED] */
+	/** [VERIFIED: CreateNewAssetUtilityFunctions.h:177] */
 	UStaticMesh* MakeStaticMeshAsset(UDynamicMesh* Mesh, const FString& AssetPath, FString& OutError)
 	{
 		FGeometryScriptCreateNewStaticMeshAssetOptions Options;

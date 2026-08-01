@@ -72,6 +72,29 @@ struct UEREMCPPROTOCOL_API FUeremcpRequest
 	bool bAllowDestructive = false;
 
 	/**
+	 * fail (default) | partial — what to do when part of a request is not
+	 * supported.
+	 *
+	 * `fail` rejects the whole request and changes nothing. That is the right
+	 * default: a caller who asked for three things and got two without noticing
+	 * is worse off than one who got none and was told why.
+	 *
+	 * `partial` applies every supported part, leaves the rest untouched, and
+	 * returns partially_completed with each refusal named in the response.
+	 *
+	 * Measured need: asked to thin foliage, shorten it, and add snow above the
+	 * treeline, an agent could do the first two but not the third, and did
+	 * NOTHING -- because all-or-nothing was the only contract available. The
+	 * refusal was honest and the outcome was still useless.
+	 */
+	FString OnUnsupported = TEXT("fail");
+
+	bool AllowsPartial() const
+	{
+		return OnUnsupported.Equals(TEXT("partial"), ESearchCase::IgnoreCase);
+	}
+
+	/**
 	 * ADR-0009: 0 / omitted → complete inline on MCP SSE.
 	 * > 0 → on expiry return partially_completed + job handle; poll get_job_result.
 	 * Long-op default when choosing a positive timeout: FUeremcpJobDefaults::DefaultTimeoutMs
@@ -126,11 +149,45 @@ struct UEREMCPPROTOCOL_API FUeremcpResponse
 
 	TArray<FString> CapabilityNotes;
 
+	/**
+	 * What to call next, served WITH the result.
+	 *
+	 * Left empty by domains; SerializeResponse fills it from the registered
+	 * provider. An agent that finished a call otherwise has two options -- spend
+	 * a whole round trip re-asking the router what it already knows, or guess.
+	 * Cost is superlinear in call count, so that round trip is among the most
+	 * expensive things the protocol can spend one on.
+	 */
+	TArray<TSharedPtr<FJsonObject>> NextActions;
+
+	/**
+	 * Structured rejection (MCP-011). Present when status is rejected and the
+	 * service knows a machine-readable fix. next_args is a PATCH to merge into
+	 * the failing request — not a whole new envelope.
+	 */
+	FString ErrorCode;
+	TSharedPtr<FJsonObject> NextArgs;
+
 	/** Raw extensions kept for fields not yet modelled (validation, changes, …).
 	 *  Prefer typed fields above; this exists so Serialize can round-trip extras
 	 *  without inventing envelope fields. */
 	TSharedPtr<FJsonObject> ExtraFields;
 };
+
+/**
+ * Supplies next-step suggestions for a completed action.
+ *
+ * A delegate rather than a direct call so UeremcpProtocol keeps depending on
+ * neither ToolsetRegistry nor the catalog and stays unit-testable outside the
+ * editor (Plugins/UEREMCP/README.md). UeremcpCore registers the real
+ * implementation at startup; unregistered simply means no suggestions.
+ */
+DECLARE_DELEGATE_RetVal_ThreeParams(
+	TArray<TSharedPtr<FJsonObject>>,
+	FUeremcpNextActionsProvider,
+	const FString& /*CompletedAction*/,
+	const FString& /*PrimaryAsset*/,
+	const FString& /*Status*/);
 
 /** Envelope parse / serialise / validate. */
 class UEREMCPPROTOCOL_API FUeremcpEnvelope
@@ -156,6 +213,16 @@ public:
 	/** Convenience for the two rejection paths every tool needs. */
 	static FString MakeRejection(const FString& RequestId, const FString& Reason);
 
+	/**
+	 * Rejection with a stable error.code and a next_args patch (MCP-011).
+	 * Code must be one of the enum values in response.schema.json.
+	 */
+	static FString MakeRejection(
+		const FString& RequestId,
+		const FString& Reason,
+		const FString& ErrorCode,
+		const TSharedPtr<FJsonObject>& NextArgs);
+
 	/** Convenience for reporting an operation that ran but could not be verified. */
 	static FString MakeUnverified(const FString& RequestId, const FString& Summary,
 	                              const TArray<FString>& CapabilityNotes);
@@ -176,6 +243,10 @@ public:
 
 	/** Allowed status values from schemas/common/defs.schema.json#/$defs/status. */
 	static bool IsValidStatus(const FString& Status);
+
+	/** UeremcpCore installs this at startup. Safe to leave unset. */
+	static void SetNextActionsProvider(FUeremcpNextActionsProvider Provider);
+	static void ClearNextActionsProvider();
 
 	/** Allowed response_detail values. */
 	static bool IsValidResponseDetail(const FString& Detail);

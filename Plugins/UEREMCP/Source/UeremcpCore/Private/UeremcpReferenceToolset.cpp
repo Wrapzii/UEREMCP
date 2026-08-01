@@ -141,7 +141,8 @@ FString UUeremcpReferenceToolset::DescribeOperation(const FString& RequestJson)
 			Request.RequestId, TEXT("specification.tool is required"));
 	}
 	return FinishRouterResponse(
-		Request.RequestId, Request.Action, FUeremcpIntentRouter::DescribeOperation(Tool));
+		Request.RequestId, Request.Action,
+		FUeremcpIntentRouter::DescribeOperation(Request.Specification));
 }
 
 FString UUeremcpReferenceToolset::Ping()

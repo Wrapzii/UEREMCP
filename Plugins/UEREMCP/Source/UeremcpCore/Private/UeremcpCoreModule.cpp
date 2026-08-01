@@ -7,6 +7,8 @@
 #include "UeremcpPlanTransactionCoordinator.h"
 #include "UeremcpReferenceToolset.h"
 #include "UeremcpSchemaPublishing.h"
+#include "UeremcpNextActions.h"
+#include "UeremcpEnvelope.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogUeremcp, Log, All);
 
@@ -29,6 +31,13 @@ public:
 	virtual void StartupModule() override
 	{
 		UE_LOG(LogUeremcp, Log, TEXT("UEREMCP core module started; deferring toolset registration."));
+
+		// Serve the next step with every result. Registered here rather than
+		// called directly from the envelope so UeremcpProtocol keeps depending
+		// on neither the catalog nor ToolsetRegistry and stays unit-testable
+		// outside the editor.
+		FUeremcpEnvelope::SetNextActionsProvider(
+			FUeremcpNextActionsProvider::CreateStatic(&FUeremcpNextActions::Suggest));
 		// UE 5.8: OnPostEngineInit deprecated in favour of GetOnPostEngineInit()
 		// [VERIFIED-RUNTIME: UeremcpCoreModule.cpp C4996 on UE 5.8.0-55116800]
 		OnPostEngineInitHandle = FCoreDelegates::GetOnPostEngineInit().AddRaw(
@@ -37,6 +46,7 @@ public:
 
 	virtual void ShutdownModule() override
 	{
+		FUeremcpEnvelope::ClearNextActionsProvider();
 		FUeremcpPlanTransactionCoordinator::UnregisterFromExecutor();
 
 		if (SchemaPublishTickerHandle.IsValid())
