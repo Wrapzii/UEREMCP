@@ -69,19 +69,18 @@ public:
 	static FString CreateLandscape(const FString& RequestJson);
 
 	/**
-	 * Create a RIVER WaterBody from spline points.
+	 * Create a WaterBody (river, lake, or ocean) without wiping other water types.
 	 *
-	 * Use when: a RIVER through a valley. Rivers are the only implemented body.
-	 * Do not use for: lakes or oceans. Spawn AWaterBodyLake / AWaterBodyOcean via
-	 *   SceneTools.add_to_scene_from_class instead, until body_type is honoured.
-	 * Inputs: action=create_water_body; specification.seed REQUIRED; river.width.
-	 *   body_type accepts "river" only.
-	 * Outputs: river actor label + spline length. Real AWaterBodyRiver when Water plugin loaded.
-	 * Do not use for: lakes or oceans. Only AWaterBodyRiver is implemented, and
-	 *   body_type is currently IGNORED — passing lake or ocean silently yields a
-	 *   river. build_environment.schema.json marks both "Phase 2". Treat a lake
-	 *   or ocean request as unsupported until body_type is honoured.
-	 * Example: {"protocol_version":"1.0","action":"create_water_body", "target":{"asset_path":"/Game/__UeremcpPoc/Biome"}, "options":{"dry_run":true},"specification":{"seed":42, "river":{"width":800}}}
+	 * Use when: river through a valley; lake / ocean for still water; additive multi-water.
+	 * Inputs: action=create_water_body; specification.seed REQUIRED;
+	 *   body_type=river|lake|ocean (default river); optional label, river.width,
+	 *   lake.{center,radius_cm}, ocean.{center,extents_cm}.
+	 * Outputs: water actor with type-specific label (UEREMCP_River|Lake|Ocean or custom).
+	 *   Only the matching label is replaced — other water bodies remain.
+	 * Do not use for: inventing body_type values; unknown types are rejected
+	 *   (BODY_TYPE_UNSUPPORTED), never silently coerced to a river.
+	 * Example: {"protocol_version":"1.0","action":"create_water_body",
+	 *   "specification":{"seed":42,"body_type":"lake","lake":{"center":[8500,3200,-80],"radius_cm":2500}}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString CreateWaterBody(const FString& RequestJson);
@@ -238,9 +237,8 @@ public:
 	 * Use when: dropping a building/prop that must sit on terrain, not canopy.
 	 * Inputs: action=place_prefab_on_landscape; specification.mesh_path,
 	 *   location_xy, optional rotation_yaw, clear_foliage_radius_cm, flatten_pad.
-	 *   flatten_pad is currently unsupported — other steps still apply and the
-	 *   response is partially_completed naming it.
-	 * Example: {"protocol_version":"1.0","action":"place_prefab_on_landscape","specification":{"mesh_path":"/Game/__UeremcpPoc/Meshes/SM_Castle","location_xy":[1800,-2000],"rotation_yaw":35,"clear_foliage_radius_cm":1500}}
+	 *   flatten_pad writes a soft heightmap pad via FLandscapeEditDataInterface::SetHeightData.
+	 * Example: {"protocol_version":"1.0","action":"place_prefab_on_landscape","specification":{"mesh_path":"/Game/__UeremcpPoc/Meshes/SM_Castle","location_xy":[1800,-2000],"rotation_yaw":35,"clear_foliage_radius_cm":1500,"flatten_pad":{"radius_cm":1200,"falloff_cm":600}}}
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Environment")
 	static FString PlacePrefabOnLandscape(const FString& RequestJson);

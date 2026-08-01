@@ -75,6 +75,8 @@ namespace
 	{
 		Spec.bIncludeTerrain = false;
 		Spec.bIncludeRiver = false;
+		Spec.bIncludeLake = false;
+		Spec.bIncludeOcean = false;
 		Spec.bIncludeForest = false;
 		Spec.bIncludeRain = false;
 		Spec.bIncludeLighting = false;
@@ -94,7 +96,20 @@ namespace
 			Spec.bIncludeTerrain = true;
 			break;
 		case EEnvStage::Water:
-			Spec.bIncludeRiver = true;
+			// MCP-001: honor body_type already parsed onto Spec.
+			if (Spec.WaterBodyType.Equals(TEXT("ocean"), ESearchCase::IgnoreCase))
+			{
+				Spec.bIncludeOcean = true;
+			}
+			else if (Spec.WaterBodyType.Equals(TEXT("lake"), ESearchCase::IgnoreCase))
+			{
+				Spec.bIncludeLake = true;
+			}
+			else
+			{
+				Spec.bIncludeRiver = true;
+				Spec.WaterBodyType = TEXT("river");
+			}
 			break;
 		case EEnvStage::Foliage:
 			Spec.bIncludeForest = true;

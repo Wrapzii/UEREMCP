@@ -49,6 +49,11 @@
             "ASSET_REGISTRY_LOADING",
             "FLATTEN_PAD_UNSUPPORTED",
             "LAYER_NOT_FOUND",
+            "MUTATOR_BUSY",
+            "SCREEN_UMG_CAPTURE_UNSUPPORTED",
+            "COMMON_UI_UNAVAILABLE",
+            "PREVIEW_NOT_VISIBLE",
+            "ICON_NOT_FOUND",
             "UNKNOWN"
           ]
         },

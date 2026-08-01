@@ -459,6 +459,7 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 		TEXT("ResolveIntent with specification.intent = your goal, mode=recommend"));
 	TArray<TSharedPtr<FJsonValue>> Prefer;
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpEnvironment.UeremcpEnvironmentToolset")));
+	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpUI.UeremcpUIToolset")));
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpNiagara.UeremcpNiagaraToolset")));
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpMaterial.UeremcpMaterialToolset")));
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpBlueprint.UeremcpBlueprintToolset")));
@@ -468,15 +469,28 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 	Payload->SetStringField(TEXT("detail"), Detail.IsEmpty() ? TEXT("summary") : Detail);
 	Payload->SetStringField(TEXT("set_name_filters_note"),
 		TEXT("FToolset::SetNameFilters exists [VERIFIED: Toolset.h:59-60] but UEREMCP does not apply global hides; router demotes SUPERSEDED instead."));
+	Payload->SetStringField(TEXT("ui_domain"),
+		TEXT("UeremcpUI.UeremcpUIToolset — create_widget_from_spec, show_widget_in_world (preferred MMO overlay / CaptureViewport path), spawn_character_preview, create_inventory_sheet_from_spec. Screen UMG is invisible to CaptureViewport; use world-space hosts."));
 
-	// MCP-013 / MCP-014 are not UEREMCP-owned. Advertising dead tools costs an agent
-	// a call and a wrong assumption every session.
+	// MCP-013 / MCP-014 are external. Watch was fixed (UnrealWatchMCP v0.4.0) —
+	// do NOT advertise do_not_use / available:false. Point agents at check_unreal.
 	TArray<TSharedPtr<FJsonValue>> External;
 	{
 		TSharedPtr<FJsonObject> Watch = MakeShared<FJsonObject>();
 		Watch->SetStringField(TEXT("name"), TEXT("user-unreal-watch"));
-		Watch->SetBoolField(TEXT("available"), false);
-		Watch->SetStringField(TEXT("fallback"), TEXT("Use CaptureWorldFrames / InspectEnvironment inside UEREMCP."));
+		Watch->SetBoolField(TEXT("available"), true);
+		Watch->SetStringField(TEXT("primary"), TEXT("check_unreal"));
+		Watch->SetStringField(
+			TEXT("tools"),
+			TEXT("check_unreal,get_editor_status,wait_for_editor,dismiss_dialog,get_watch_config,set_watch_config"));
+		Watch->SetStringField(
+			TEXT("use_when"),
+			TEXT("Before Unreal MCP timeout / 10061 / empty-upstream retry loops; "
+				 "confirm editor_offline vs ok vs modal_blocked. Prefer check_unreal; "
+				 "use get_editor_status for a lighter poll."));
+		Watch->SetStringField(
+			TEXT("fallback"),
+			TEXT("If watch MCP is not discovered: python UnrealWatchMCP/server.py --check"));
 		External.Add(MakeShared<FJsonValueObject>(Watch));
 		TSharedPtr<FJsonObject> Sem = MakeShared<FJsonObject>();
 		Sem->SetStringField(TEXT("name"), TEXT("SemanticSearch"));
@@ -487,6 +501,12 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 	Payload->SetArrayField(TEXT("external_mcp_capabilities"), External);
 	Payload->SetStringField(TEXT("asset_probe"),
 		TEXT("UeremcpEnvironment.UeremcpEnvironmentToolset.FindProjectAssets — ask the AssetRegistry before inventing mesh paths."));
+	Payload->SetStringField(
+		TEXT("capture_beauty"),
+		TEXT("Prefer editor viewport / CaptureMaterialFrames for beauty review — not a structural gate."));
+	Payload->SetStringField(
+		TEXT("capture_structural"),
+		TEXT("UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames — structural world evidence after env builds."));
 	Result.Payload = Payload;
 	return Result;
 }

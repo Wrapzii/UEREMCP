@@ -46,6 +46,8 @@ struct FUeremcpEnvironmentBuildSpec
 	int32 RainStreakCount = 256;
 	bool bIncludeTerrain = false;
 	bool bIncludeRiver = false;
+	bool bIncludeLake = false;
+	bool bIncludeOcean = false;
 	bool bIncludeForest = false;
 	bool bIncludeRain = false;
 	bool bIncludeLighting = false;
@@ -56,6 +58,13 @@ struct FUeremcpEnvironmentBuildSpec
 	FString FallbackPolicy = TEXT("prefer_real");
 	FString LightingPreset = TEXT("overcast");
 	FString ViewpointMode = TEXT("auto");
+	/** Optional exact actor label for water (default UEREMCP_River|Lake|Ocean). */
+	FString WaterActorLabel;
+	FString WaterBodyType = TEXT("river");
+	FVector LakeCenter = FVector(8500.f, 3200.f, -80.f);
+	float LakeRadiusCm = 2500.f;
+	FVector OceanCenter = FVector(0.f, -16000.f, -120.f);
+	FVector2D OceanExtentsCm = FVector2D(60000.f, 30000.f);
 	TArray<FUeremcpWeatherPhenomenonSpec> WeatherPhenomena;
 	TArray<FUeremcpStructurePlacementSpec> Structures;
 
@@ -88,6 +97,28 @@ struct FUeremcpEnvironmentBuildSpec
 		return bIncludeForest
 			|| VegetationMode.Equals(TEXT("forest"), ESearchCase::IgnoreCase)
 			|| VegetationMode.Equals(TEXT("sparse"), ESearchCase::IgnoreCase);
+	}
+
+	bool WantsAnyWater() const
+	{
+		return bIncludeRiver || bIncludeLake || bIncludeOcean;
+	}
+
+	FString ResolvedWaterLabel() const
+	{
+		if (!WaterActorLabel.IsEmpty())
+		{
+			return WaterActorLabel;
+		}
+		if (bIncludeOcean || WaterBodyType.Equals(TEXT("ocean"), ESearchCase::IgnoreCase))
+		{
+			return TEXT("UEREMCP_Ocean");
+		}
+		if (bIncludeLake || WaterBodyType.Equals(TEXT("lake"), ESearchCase::IgnoreCase))
+		{
+			return TEXT("UEREMCP_Lake");
+		}
+		return TEXT("UEREMCP_River");
 	}
 };
 

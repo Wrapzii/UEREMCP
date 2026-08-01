@@ -31,8 +31,11 @@
 #include "UnrealClient.h"
 
 #include "WaterBodyRiverActor.h"
+#include "WaterBodyLakeActor.h"
+#include "WaterBodyOceanActor.h"
 #include "WaterBodyActor.h"
 #include "WaterBodyComponent.h"
+#include "WaterBodyOceanComponent.h"
 #include "WaterSplineComponent.h"
 #include "DynamicMeshActor.h"
 #include "Components/DynamicMeshComponent.h"
@@ -569,6 +572,43 @@ namespace
 		return false;
 	}
 
+	bool HasOwnedActorWithExactLabel(UWorld* World, const FString& Label)
+	{
+		if (!World || Label.IsEmpty())
+		{
+			return false;
+		}
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel() == Label)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	int32 DestroyOwnedByExactLabel(UWorld* World, const FString& Label)
+	{
+		if (!World || Label.IsEmpty())
+		{
+			return 0;
+		}
+		TArray<AActor*> ToDestroy;
+		for (TActorIterator<AActor> It(World); It; ++It)
+		{
+			if (It->GetActorLabel() == Label)
+			{
+				ToDestroy.Add(*It);
+			}
+		}
+		for (AActor* Actor : ToDestroy)
+		{
+			World->DestroyActor(Actor);
+		}
+		return ToDestroy.Num();
+	}
+
 	// True only when every stage THIS request would build already has owned actors.
 	// Matching env revision alone must not block additive create_water_body /
 	// scatter_foliage after create_landscape (same seed) — that was the P0 hole.
@@ -578,9 +618,14 @@ namespace
 		{
 			return false;
 		}
-		if (Spec.bIncludeRiver && !HasOwnedActorWithPrefix(World, TEXT("UEREMCP_River")))
+		if (Spec.WantsAnyWater())
 		{
-			return false;
+			const FString WaterLabel = Spec.ResolvedWaterLabel();
+			if (!HasOwnedActorWithExactLabel(World, WaterLabel)
+				&& !HasOwnedActorWithPrefix(World, WaterLabel))
+			{
+				return false;
+			}
 		}
 		if (Spec.WantsVegetation() && !HasOwnedActorWithPrefix(World, Spec.FoliageActorLabel()))
 		{
@@ -595,7 +640,7 @@ namespace
 		{
 			return false;
 		}
-		const bool bAnyStage = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+		const bool bAnyStage = Spec.bIncludeTerrain || Spec.WantsAnyWater() || Spec.WantsVegetation()
 			|| Spec.HasAnyWeatherPhenomenon() || Spec.bIncludeStructures || Spec.Structures.Num() > 0;
 		return bAnyStage;
 	}
@@ -751,6 +796,63 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		}
 	}
 	ReadObjNumber(TEXT("river"), TEXT("width"), Tmp); if (Tmp > 0) Out.RiverWidth = float(Tmp);
+
+	// MCP-001: honor body_type. Never silently coerce lake/ocean into a river.
+	{
+		FString BodyType;
+		Spec->TryGetStringField(TEXT("body_type"), BodyType);
+		if (BodyType.IsEmpty())
+		{
+			const TSharedPtr<FJsonObject>* WaterObj = nullptr;
+			if (Spec->TryGetObjectField(TEXT("water"), WaterObj) && WaterObj)
+			{
+				(*WaterObj)->TryGetStringField(TEXT("body_type"), BodyType);
+			}
+		}
+		if (!BodyType.IsEmpty())
+		{
+			Out.WaterBodyType = BodyType.ToLower();
+			if (Out.WaterBodyType != TEXT("river")
+				&& Out.WaterBodyType != TEXT("lake")
+				&& Out.WaterBodyType != TEXT("ocean"))
+			{
+				OutError = FString::Printf(
+					TEXT("body_type '%s' unsupported; use river|lake|ocean"),
+					*BodyType);
+				return false;
+			}
+		}
+		Spec->TryGetStringField(TEXT("label"), Out.WaterActorLabel);
+		const TSharedPtr<FJsonObject>* LakeObj = nullptr;
+		if (Spec->TryGetObjectField(TEXT("lake"), LakeObj) && LakeObj)
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Centre = nullptr;
+			if ((*LakeObj)->TryGetArrayField(TEXT("center"), Centre) && Centre && Centre->Num() >= 3)
+			{
+				Out.LakeCenter = FVector(
+					(*Centre)[0]->AsNumber(), (*Centre)[1]->AsNumber(), (*Centre)[2]->AsNumber());
+			}
+			if ((*LakeObj)->TryGetNumberField(TEXT("radius_cm"), Tmp) && Tmp > 0)
+			{
+				Out.LakeRadiusCm = float(Tmp);
+			}
+		}
+		const TSharedPtr<FJsonObject>* OceanObj = nullptr;
+		if (Spec->TryGetObjectField(TEXT("ocean"), OceanObj) && OceanObj)
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Centre = nullptr;
+			if ((*OceanObj)->TryGetArrayField(TEXT("center"), Centre) && Centre && Centre->Num() >= 3)
+			{
+				Out.OceanCenter = FVector(
+					(*Centre)[0]->AsNumber(), (*Centre)[1]->AsNumber(), (*Centre)[2]->AsNumber());
+			}
+			const TArray<TSharedPtr<FJsonValue>>* Ext = nullptr;
+			if ((*OceanObj)->TryGetArrayField(TEXT("extents_cm"), Ext) && Ext && Ext->Num() >= 2)
+			{
+				Out.OceanExtentsCm = FVector2D((*Ext)[0]->AsNumber(), (*Ext)[1]->AsNumber());
+			}
+		}
+	}
 
 	const TSharedPtr<FJsonObject>* Vegetation = nullptr;
 	if (Spec->TryGetObjectField(TEXT("vegetation"), Vegetation) && Vegetation)
@@ -1179,7 +1281,18 @@ bool FUeremcpEnvironmentService::ParseBuildSpec(
 		}
 		else
 		{
-			OutRejection.Code = TEXT("UNKNOWN");
+			if (Error.Contains(TEXT("body_type")))
+			{
+				OutRejection.Code = TEXT("BODY_TYPE_UNSUPPORTED");
+				OutRejection.NextArgs = MakeShared<FJsonObject>();
+				TSharedPtr<FJsonObject> SpecPatch = MakeShared<FJsonObject>();
+				SpecPatch->SetStringField(TEXT("body_type"), TEXT("river"));
+				OutRejection.NextArgs->SetObjectField(TEXT("specification"), SpecPatch);
+			}
+			else
+			{
+				OutRejection.Code = TEXT("UNKNOWN");
+			}
 		}
 		return false;
 	}
@@ -1400,7 +1513,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	Result.Revision = FString::Printf(TEXT("env:%08x"), RevisionCrc);
 	Result.InternalOperations += 1;
 
-	const bool bAnyStage = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+	const bool bAnyStage = Spec.bIncludeTerrain || Spec.WantsAnyWater() || Spec.WantsVegetation()
 		|| Spec.WeatherPhenomena.Num() > 0 || Spec.bIncludeLighting || Spec.bCaptureScreenshot
 		|| Spec.bIncludeStructures || Spec.Structures.Num() > 0;
 
@@ -1423,7 +1536,21 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				TEXT("ALandscape::Import heightmap path planned [VERIFIED: LandscapeProxy.h:1418-1420]")));
 		}
 #if UEREMCP_HAS_WATER
-		if (Spec.bIncludeRiver)
+		if (Spec.bIncludeOcean)
+		{
+			Tech.Add(MakeTech(
+				TEXT("water_ocean"),
+				TEXT("real"),
+				TEXT("AWaterBodyOcean planned [VERIFIED: WaterBodyOceanActor.h]")));
+		}
+		else if (Spec.bIncludeLake)
+		{
+			Tech.Add(MakeTech(
+				TEXT("water_lake"),
+				TEXT("real"),
+				TEXT("AWaterBodyLake planned [VERIFIED: WaterBodyLakeActor.h]")));
+		}
+		else if (Spec.bIncludeRiver)
 		{
 			Tech.Add(MakeTech(
 				TEXT("water_river"),
@@ -1431,10 +1558,10 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 				TEXT("AWaterBodyRiver planned [VERIFIED: WaterBodyRiverActor.h:28]")));
 		}
 #else
-		if (Spec.bIncludeRiver)
+		if (Spec.WantsAnyWater())
 		{
 			Tech.Add(MakeTech(
-				TEXT("water_river"),
+				TEXT("water"),
 				TEXT("blocked"),
 				TEXT("Water headers unavailable at compile time")));
 		}
@@ -1699,7 +1826,12 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 			ReplacedPrefixes.Add(Prefix);
 		};
 		if (Spec.bIncludeTerrain)      { ReplaceStage(TEXT("UEREMCP_Landscape")); }
-		if (Spec.bIncludeRiver)        { ReplaceStage(TEXT("UEREMCP_River")); }
+		if (Spec.WantsAnyWater())
+		{
+			// Exact label only — never wipe other water body types / custom ids.
+			ReplacedActorCount += DestroyOwnedByExactLabel(World, Spec.ResolvedWaterLabel());
+			ReplacedPrefixes.Add(Spec.ResolvedWaterLabel());
+		}
 		if (Spec.WantsVegetation())    { ReplaceStage(*Spec.FoliageActorLabel()); }
 		if (Spec.Structures.Num() > 0) { ReplaceStage(TEXT("UEREMCP_Structure")); }
 		if (Spec.HasAnyWeatherPhenomenon()) { ReplaceStage(TEXT("UEREMCP_Weather")); }
@@ -1772,7 +1904,7 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		Result.InternalOperations += 2;
 	}
 
-	if (Spec.bIncludeRiver)
+	if (Spec.WantsAnyWater())
 	{
 #if UEREMCP_HAS_WATER
 		// Clear bAffectsLandscape in CustomPreSpawnInitialization, before
@@ -1782,60 +1914,143 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 		// under a synchronous MCP tools/call.
 		// [VERIFIED-RUNTIME: BuildEnvironment hung at WaterBrushManager spawn 2026-07-30]
 		// [VERIFIED: WaterBodyComponent.h:630] bAffectsLandscape
-		// [VERIFIED: WaterEditorModule.cpp:190] AffectsLandscape() gates brush spawn
-		// [VERIFIED: World.h:517] CustomPreSpawnInitialization
-		const FTransform RiverXform(River.Points[0].Location + LandscapeOffset);
-		FActorSpawnParameters SpawnParameters;
-		SpawnParameters.SpawnCollisionHandlingOverride =
-			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		SpawnParameters.CustomPreSpawnInitialization = [](AActor* SpawnedActor)
+		auto DisableWaterBrush = [](AActor* SpawnedActor)
 		{
-			if (AWaterBodyRiver* SpawnedRiver = Cast<AWaterBodyRiver>(SpawnedActor))
+			if (AWaterBody* Body = Cast<AWaterBody>(SpawnedActor))
 			{
-				if (UWaterBodyComponent* WaterComp = SpawnedRiver->GetWaterBodyComponent())
+				if (UWaterBodyComponent* WaterComp = Body->GetWaterBodyComponent())
 				{
 					WaterComp->bAffectsLandscape = false;
 				}
 			}
 		};
-		AWaterBodyRiver* RiverActor = World->SpawnActor<AWaterBodyRiver>(
-			AWaterBodyRiver::StaticClass(),
-			RiverXform,
-			SpawnParameters);
-		if (RiverActor)
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride =
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		SpawnParameters.CustomPreSpawnInitialization = DisableWaterBrush;
+
+		const FString WaterLabel = Spec.ResolvedWaterLabel();
+		bool bWaterOk = false;
+
+		if (Spec.bIncludeOcean)
 		{
-			RiverActor->SetActorLabel(TEXT("UEREMCP_River"));
-			// [VERIFIED: WaterBodyActor.h:103] GetWaterSpline
-			if (UWaterSplineComponent* Spline = RiverActor->GetWaterSpline())
+			const FTransform OceanXform(Spec.OceanCenter + LandscapeOffset);
+			AWaterBodyOcean* OceanActor = World->SpawnActor<AWaterBodyOcean>(
+				AWaterBodyOcean::StaticClass(), OceanXform, SpawnParameters);
+			if (OceanActor)
 			{
-				Spline->ClearSplinePoints(false);
-				for (int32 I = 0; I < River.Points.Num(); ++I)
+				OceanActor->SetActorLabel(WaterLabel);
+#if WITH_EDITOR
+				if (UWaterBodyOceanComponent* OceanComp =
+					Cast<UWaterBodyOceanComponent>(OceanActor->GetWaterBodyComponent()))
 				{
-					Spline->AddSplinePoint(
-						River.Points[I].Location + LandscapeOffset,
-						ESplineCoordinateSpace::World,
-						false);
+					// [VERIFIED: WaterBodyOceanComponent.h:30-32] SetCollisionExtents / SetOceanExtent
+					OceanComp->SetCollisionExtents(
+						FVector(Spec.OceanExtentsCm.X, Spec.OceanExtentsCm.Y, 2000.f));
+					OceanComp->SetOceanExtent(Spec.OceanExtentsCm);
 				}
-				Spline->UpdateSpline();
+#endif
+				CreatedLabels.Add(WaterLabel);
+				bWaterOk = true;
+				bRiverCreated = true; // structural gate: water stage succeeded
+				Tech.Add(MakeTech(
+					TEXT("water_ocean"),
+					TEXT("real"),
+					TEXT("AWaterBodyOcean pre-spawn bAffectsLandscape=false [VERIFIED: WaterBodyOceanActor.h]")));
+				Result.CapabilityNotes.Add(
+					TEXT("Ocean created additively — does not replace UEREMCP_River / UEREMCP_Lake."));
+				Result.InternalOperations += 2;
 			}
-			CreatedLabels.Add(TEXT("UEREMCP_River"));
-			bRiverCreated = true;
-			Tech.Add(MakeTech(
-				TEXT("water_river"),
-				TEXT("real"),
-				TEXT("AWaterBodyRiver pre-spawn bAffectsLandscape=false, spline set [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyComponent.h:630]")));
-			Result.CapabilityNotes.Add(
-				TEXT("River uses visible water mesh without landscape water brush (heightmap valley is authoritative)."));
-			Result.InternalOperations += 2;
+			else
+			{
+				Result.Warnings.Add(TEXT("AWaterBodyOcean spawn returned null — ocean skipped"));
+				Tech.Add(MakeTech(TEXT("water_ocean"), TEXT("blocked"), TEXT("SpawnActor<AWaterBodyOcean> returned null")));
+			}
 		}
-		else
+		else if (Spec.bIncludeLake)
 		{
-			Result.Warnings.Add(TEXT("AWaterBodyRiver deferred spawn returned null — river skipped"));
-			Tech.Add(MakeTech(TEXT("water_river"), TEXT("blocked"), TEXT("SpawnActorDeferred<AWaterBodyRiver> returned null")));
+			const FTransform LakeXform(Spec.LakeCenter + LandscapeOffset);
+			AWaterBodyLake* LakeActor = World->SpawnActor<AWaterBodyLake>(
+				AWaterBodyLake::StaticClass(), LakeXform, SpawnParameters);
+			if (LakeActor)
+			{
+				LakeActor->SetActorLabel(WaterLabel);
+				if (UWaterSplineComponent* Spline = LakeActor->GetWaterSpline())
+				{
+					// Closed circle approximating radius_cm.
+					Spline->ClearSplinePoints(false);
+					constexpr int32 Segments = 12;
+					for (int32 I = 0; I < Segments; ++I)
+					{
+						const float Ang = (2.f * PI * float(I)) / float(Segments);
+						const FVector Pt = Spec.LakeCenter + LandscapeOffset
+							+ FVector(FMath::Cos(Ang) * Spec.LakeRadiusCm,
+								FMath::Sin(Ang) * Spec.LakeRadiusCm, 0.f);
+						Spline->AddSplinePoint(Pt, ESplineCoordinateSpace::World, false);
+					}
+					Spline->SetClosedLoop(true, false);
+					Spline->UpdateSpline();
+				}
+				CreatedLabels.Add(WaterLabel);
+				bWaterOk = true;
+				bRiverCreated = true;
+				Tech.Add(MakeTech(
+					TEXT("water_lake"),
+					TEXT("real"),
+					TEXT("AWaterBodyLake pre-spawn bAffectsLandscape=false + circle spline [VERIFIED: WaterBodyLakeActor.h]")));
+				Result.CapabilityNotes.Add(
+					TEXT("Lake created additively — does not replace UEREMCP_River / UEREMCP_Ocean."));
+				Result.InternalOperations += 2;
+			}
+			else
+			{
+				Result.Warnings.Add(TEXT("AWaterBodyLake spawn returned null — lake skipped"));
+				Tech.Add(MakeTech(TEXT("water_lake"), TEXT("blocked"), TEXT("SpawnActor<AWaterBodyLake> returned null")));
+			}
 		}
+		else // river (default)
+		{
+			const FTransform RiverXform(River.Points[0].Location + LandscapeOffset);
+			AWaterBodyRiver* RiverActor = World->SpawnActor<AWaterBodyRiver>(
+				AWaterBodyRiver::StaticClass(),
+				RiverXform,
+				SpawnParameters);
+			if (RiverActor)
+			{
+				RiverActor->SetActorLabel(WaterLabel);
+				if (UWaterSplineComponent* Spline = RiverActor->GetWaterSpline())
+				{
+					Spline->ClearSplinePoints(false);
+					for (int32 I = 0; I < River.Points.Num(); ++I)
+					{
+						Spline->AddSplinePoint(
+							River.Points[I].Location + LandscapeOffset,
+							ESplineCoordinateSpace::World,
+							false);
+					}
+					Spline->UpdateSpline();
+				}
+				CreatedLabels.Add(WaterLabel);
+				bWaterOk = true;
+				bRiverCreated = true;
+				Tech.Add(MakeTech(
+					TEXT("water_river"),
+					TEXT("real"),
+					TEXT("AWaterBodyRiver pre-spawn bAffectsLandscape=false, spline set [VERIFIED: WaterBodyRiverActor.h:28] [VERIFIED: WaterBodyComponent.h:630]")));
+				Result.CapabilityNotes.Add(
+					TEXT("River uses visible water mesh without landscape water brush (heightmap valley is authoritative)."));
+				Result.InternalOperations += 2;
+			}
+			else
+			{
+				Result.Warnings.Add(TEXT("AWaterBodyRiver spawn returned null — river skipped"));
+				Tech.Add(MakeTech(TEXT("water_river"), TEXT("blocked"), TEXT("SpawnActor<AWaterBodyRiver> returned null")));
+			}
+		}
+		(void)bWaterOk;
 #else
-		Result.Warnings.Add(TEXT("Water plugin headers not compiled in — river approximated as empty channel only"));
-		Tech.Add(MakeTech(TEXT("water_river"), TEXT("approximated"), TEXT("Valley carved in heightmap only; no AWaterBodyRiver")));
+		Result.Warnings.Add(TEXT("Water plugin headers not compiled in — water approximated as empty channel only"));
+		Tech.Add(MakeTech(TEXT("water"), TEXT("approximated"), TEXT("Valley carved in heightmap only; no WaterBody actor")));
 #endif
 	}
 
@@ -2310,12 +2525,12 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Build(
 	const bool bForestOk = !Spec.WantsVegetation() || FoliageCount > 0;
 	const bool bBothBanks = !Spec.WantsVegetation() || (LeftBankCount > 0 && RightBankCount > 0);
 	const bool bOpenChannel = !Spec.WantsVegetation() || ExclusionViolations == 0;
-	const bool bRiverOk = !Spec.bIncludeRiver || bRiverCreated;
+	const bool bRiverOk = !Spec.WantsAnyWater() || bRiverCreated;
 	const bool bWeatherOk = Spec.WeatherPhenomena.Num() == 0
 		|| WeatherActorsCreated >= Spec.WeatherPhenomena.Num();
 	const bool bStructuresOk = StructureSpecs.Num() == 0
 		|| StructuresPlaced > 0;
-	const bool bAnyBuilt = Spec.bIncludeTerrain || Spec.bIncludeRiver || Spec.WantsVegetation()
+	const bool bAnyBuilt = Spec.bIncludeTerrain || Spec.WantsAnyWater() || Spec.WantsVegetation()
 		|| Spec.WeatherPhenomena.Num() > 0 || Spec.bIncludeLighting || Spec.bCaptureScreenshot
 		|| StructureSpecs.Num() > 0;
 
@@ -2420,6 +2635,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 
 	int32 Landscapes = 0;
 	int32 Rivers = 0;
+	int32 Lakes = 0;
+	int32 Oceans = 0;
 	int32 Rain = 0;
 	int32 FoliageActors = 0;
 	int32 FoliageInstances = 0;
@@ -2435,6 +2652,14 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 		if (Label.Contains(TEXT("UEREMCP_River")))
 		{
 			++Rivers;
+		}
+		if (Label.Contains(TEXT("UEREMCP_Lake")))
+		{
+			++Lakes;
+		}
+		if (Label.Contains(TEXT("UEREMCP_Ocean")))
+		{
+			++Oceans;
 		}
 		if (Label.StartsWith(TEXT("UEREMCP_Weather_")) || Label == TEXT("UEREMCP_Rain"))
 		{
@@ -2460,6 +2685,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 	}
 	Result.StructuralMetrics->SetNumberField(TEXT("landscape_actors"), Landscapes);
 	Result.StructuralMetrics->SetNumberField(TEXT("river_actors"), Rivers);
+	Result.StructuralMetrics->SetNumberField(TEXT("lake_actors"), Lakes);
+	Result.StructuralMetrics->SetNumberField(TEXT("ocean_actors"), Oceans);
 	Result.StructuralMetrics->SetNumberField(TEXT("rain_actors"), Rain);
 	Result.StructuralMetrics->SetNumberField(TEXT("forest_actors"), FoliageActors);
 	Result.StructuralMetrics->SetNumberField(TEXT("foliage_instances"), FoliageInstances);
@@ -2475,8 +2702,8 @@ FUeremcpEnvironmentBuildResult FUeremcpEnvironmentService::Inspect(const FString
 	Result.StructuralMetrics->SetStringField(TEXT("query_path"), LevelOrPackagePath);
 	Result.Status = TEXT("no_change_required");
 	Result.Summary = FString::Printf(
-		TEXT("InspectEnvironment: landscapes=%d rivers=%d rain=%d forest=%d"),
-		Landscapes, Rivers, Rain, FoliageActors);
+		TEXT("InspectEnvironment: landscapes=%d rivers=%d lakes=%d oceans=%d rain=%d forest=%d"),
+		Landscapes, Rivers, Lakes, Oceans, Rain, FoliageActors);
 	return Result;
 }
 

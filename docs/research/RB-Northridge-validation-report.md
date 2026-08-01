@@ -18,7 +18,17 @@ Follow-up on this branch closes the two validation P0 holes from §1 / §6:
 | `LAYER_NOT_FOUND` on paint | `paint_landscape_layers` auto-creates/assigns `ULandscapeLayerInfoObject` via `UE::Landscape::CreateTargetLayerInfo` + `CreateTargetLayerSettingsFor` / `UpdateLayerInfoMap`; optional `specification.material_path` assigns the blend | UE 5.8 `BuildPlugin` **PASS**; `test_northridge_remaining.py` **18 PASS** (new ensure + staging contracts) |
 | Additive water/foliage blocked by revision | Env revision `no_change_required` only when revision matches **and** requested stage actors already exist (`RequestedStagesAlreadyPresent`) | Same static + build; live re-verify pending (editor stalled/modal after binary install relaunch) |
 
-Also: `NONUNIFORM_SCALE` `next_args` now suggests a **uniform** safe scale (mergeable); `MESH_BOUNDS_MISMATCH` deletes the just-imported asset. `flatten_pad` still honestly unsupported. Multi-water / `body_type` still open.
+Also: `NONUNIFORM_SCALE` `next_args` now suggests a **uniform** safe scale (mergeable); `MESH_BOUNDS_MISMATCH` deletes the just-imported asset.
+
+### Remaining world/env gaps closed (this commit)
+
+| Gap | Fix |
+|-----|-----|
+| `flatten_pad` | Heightmap pad via `FLandscapeEditDataInterface::SetHeightData` + collision recreate |
+| Multi-water / `body_type` | `river` / `lake` / `ocean` spawn; exact-label replace only (additive) |
+| Mutator FIFO hang | Stale waiter (45s) + orphaned active (180s) clear; `MUTATOR_BUSY` + retry guidance (not forever poll) |
+| GetStarted watch lies | `user-unreal-watch` available; points at `check_unreal` / `get_editor_status` |
+| Capture role confusion | GetStarted `capture_structural` → `CaptureWorldFrames` |
 
 **Live MCP:** Binaries from this build were installed into the fieldtest plugin junction and the editor was relaunched; `user-unreal-mcp` did not become responsive (upstream `:8000` busy/modal, proxy `:8001` healthy). Re-run appendix §8 steps 6–8 after the editor is interactive — do not invent PASS for paint/additive until live actors + weights are observed.
 
@@ -141,11 +151,12 @@ Compile fixes landed in the same commit path: UE 5.8 `FJsonObject` key type (`FS
 |-----|-----|----------------|------------------------|
 | **P0** | ~~Env revision idempotency blocks additive water/foliage~~ | Agents still cannot compose region stages | **Fixed in code** (stage-presence gate). Live re-proof pending after editor interactive. |
 | **P0** | ~~Paint LayerInfo auto-assign~~ | White landscape complaint | **Fixed in code** (`CreateTargetLayerInfo` ensure). Live re-proof pending. |
-| **P0** | Multi-water without overwrite / honor `body_type` (MCP-001) | Still SceneTools class-spawn for ocean/lake | Open from backlog |
-| **P1** | `flatten_pad` on `place_prefab_on_landscape` | Castle/settlement pads still manual | `FLATTEN_PAD_UNSUPPORTED` / `partially_completed` |
+| **P0** | ~~Multi-water without overwrite / honor `body_type` (MCP-001)~~ | Still SceneTools class-spawn for ocean/lake | **Fixed in code** — lake/ocean spawn + exact-label replace |
+| **P1** | ~~`flatten_pad` on `place_prefab_on_landscape`~~ | Castle/settlement pads still manual | **Fixed in code** — SetHeightData pad |
 | **P1** | Confirm `ScatterFoliage` does not mutate heightmap (or opt-in + document) | Field HF upgrade noted hash drift | MCP-006 gate helps; silent mutation claim needs re-proof |
+| **P1** | Mutator FIFO hang after abandoned retries | Agents hang on CreateLandscape / AttachWeather / ScatterFoliage | **Fixed in code** — stale clear + MUTATOR_BUSY guidance |
 | **P2** | Measure describe traffic post-slim; ExecutePlan-first GetStarted | Discovery tax may still be high if agents ignore slim | Spec acceptance: index &lt; 4 KB for Environment |
-| **P2** | External: fix or remove `user-unreal-watch`; SemanticSearch auth | Dead tools confuse agents | GetStarted now says unavailable |
+| **P2** | ~~External: fix or remove `user-unreal-watch`~~ | Dead tools confuse agents | GetStarted now points at `check_unreal` / `get_editor_status` |
 
 ---
 

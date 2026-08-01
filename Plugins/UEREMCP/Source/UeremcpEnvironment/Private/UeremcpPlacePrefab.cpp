@@ -4,8 +4,7 @@
 //   1. Spawn at (x, y, 0)
 //   2. Snap via LandscapeZAt (reuse — do not write a second trace)
 //   3. ClearFoliageInVolumes over mesh bounds expanded by clear_foliage_radius_cm
-//   4. Optional flatten_pad — unsupported until heightmap pad write lands;
-//      partially_completed naming it, everything else applied.
+//   4. Optional flatten_pad — heightmap pad write via FLandscapeEditDataInterface
 
 #include "UeremcpEnvironmentToolset.h"
 #include "UeremcpWorldOpsHelpers.h"
@@ -73,6 +72,8 @@ FString UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(const FString& Reques
 	double Yaw = 0.0;
 	double ClearRadius = 0.0;
 	bool bFlattenPad = false;
+	float FlattenRadius = 0.f;
+	float FlattenFalloff = 0.f;
 	if (Request.Specification.IsValid())
 	{
 		Request.Specification->TryGetStringField(TEXT("mesh_path"), MeshPath);
@@ -84,7 +85,19 @@ FString UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(const FString& Reques
 		Request.Specification->TryGetNumberField(TEXT("rotation_yaw"), Yaw);
 		Request.Specification->TryGetNumberField(TEXT("clear_foliage_radius_cm"), ClearRadius);
 		const TSharedPtr<FJsonObject>* Pad = nullptr;
-		bFlattenPad = Request.Specification->TryGetObjectField(TEXT("flatten_pad"), Pad) && Pad;
+		if (Request.Specification->TryGetObjectField(TEXT("flatten_pad"), Pad) && Pad)
+		{
+			bFlattenPad = true;
+			double R = 0.0, F = 0.0;
+			(*Pad)->TryGetNumberField(TEXT("radius_cm"), R);
+			(*Pad)->TryGetNumberField(TEXT("falloff_cm"), F);
+			FlattenRadius = float(R);
+			FlattenFalloff = float(F);
+			if (FlattenRadius <= 0.f)
+			{
+				FlattenRadius = 1200.f;
+			}
+		}
 	}
 	if (MeshPath.IsEmpty())
 	{
@@ -112,7 +125,9 @@ FString UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(const FString& Reques
 		Response.Summary = FString::Printf(
 			TEXT("Dry run: would place %s at (%.0f, %.0f), snap to landscape, clear foliage r=%.0f%s."),
 			*MeshPath, LocationXY.X, LocationXY.Y, ClearRadius,
-			bFlattenPad ? TEXT(", flatten_pad UNSUPPORTED") : TEXT(""));
+			bFlattenPad
+				? *FString::Printf(TEXT(", flatten_pad r=%.0f falloff=%.0f"), FlattenRadius, FlattenFalloff)
+				: TEXT(""));
 		Response.Metrics.McpRoundTrips = 1;
 		return FUeremcpEnvelope::SerializeResponse(Response);
 	}
@@ -133,7 +148,7 @@ FString UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(const FString& Reques
 	Actor->SetMobility(EComponentMobility::Static);
 
 	float Z = 0.f;
-	const bool bSnapped = UeremcpWorldOps::LandscapeZAt(World, Actor->GetActorLocation(), Z);
+	bool bSnapped = UeremcpWorldOps::LandscapeZAt(World, Actor->GetActorLocation(), Z);
 	if (bSnapped)
 	{
 		const FVector Loc = Actor->GetActorLocation();
@@ -152,6 +167,25 @@ FString UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(const FString& Reques
 		Removed = UeremcpWorldOps::ClearFoliageInBoxes(World, Volumes, false, Inspected);
 	}
 
+	bool bFlattenApplied = false;
+	int32 FlattenVerts = 0;
+	FString FlattenError;
+	if (bFlattenPad && bSnapped)
+	{
+		bFlattenApplied = UeremcpWorldOps::FlattenPadAt(
+			World, LocationXY, Z, FlattenRadius, FlattenFalloff, FlattenError, FlattenVerts);
+		if (bFlattenApplied)
+		{
+			float NewZ = Z;
+			if (UeremcpWorldOps::LandscapeZAt(World, Actor->GetActorLocation(), NewZ))
+			{
+				const FVector Loc = Actor->GetActorLocation();
+				Actor->SetActorLocation(FVector(Loc.X, Loc.Y, NewZ));
+				Z = NewZ;
+			}
+		}
+	}
+
 	FUeremcpResponse Response;
 	Response.RequestId = Request.RequestId;
 	Response.UnderstoodAction = Request.Action;
@@ -164,6 +198,15 @@ FString UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(const FString& Reques
 	Result->SetBoolField(TEXT("snapped"), bSnapped);
 	Result->SetNumberField(TEXT("foliage_removed"), Removed);
 	Result->SetNumberField(TEXT("z"), Actor->GetActorLocation().Z);
+	if (bFlattenPad)
+	{
+		Result->SetBoolField(TEXT("flatten_pad_applied"), bFlattenApplied);
+		Result->SetNumberField(TEXT("flatten_pad_verts"), FlattenVerts);
+		if (!FlattenError.IsEmpty())
+		{
+			Result->SetStringField(TEXT("flatten_pad_error"), FlattenError);
+		}
+	}
 
 	if (!bSnapped)
 	{
@@ -172,25 +215,44 @@ FString UUeremcpEnvironmentToolset::PlacePrefabOnLandscape(const FString& Reques
 			"Prefab spawned but no landscape beneath the pivot — left at Z=0. "
 			"Named, not dropped into the void.");
 		Response.InterpretationNotes.Add(TEXT("no landscape beneath pivot"));
+		if (bFlattenPad)
+		{
+			Response.CapabilityNotes.Add(
+				TEXT("flatten_pad skipped because snap failed (no landscape under pivot)."));
+		}
 	}
-	else if (bFlattenPad)
+	else if (bFlattenPad && !bFlattenApplied)
 	{
 		Response.Status = TEXT("partially_completed");
 		Response.ErrorCode = TEXT("FLATTEN_PAD_UNSUPPORTED");
 		Response.Summary = FString::Printf(
 			TEXT("Placed and snapped %s; cleared %d foliage instance(s). "
-				 "flatten_pad is not implemented yet — heightmap pad write deferred."),
-			*Actor->GetActorLabel(), Removed);
+				 "flatten_pad failed: %s"),
+			*Actor->GetActorLabel(), Removed,
+			FlattenError.IsEmpty() ? TEXT("unknown") : *FlattenError);
 		Response.CapabilityNotes.Add(
-			TEXT("Steps 1–3 applied. flatten_pad rejected as unsupported rather than faked."));
-		Result->SetBoolField(TEXT("flatten_pad_applied"), false);
+			TEXT("Steps 1–3 applied. flatten_pad heightmap write failed — see flatten_pad_error."));
 	}
 	else
 	{
 		Response.Status = TEXT("created_with_warnings");
-		Response.Summary = FString::Printf(
-			TEXT("Placed %s on landscape (Z=%.1f); cleared %d foliage instance(s)."),
-			*Actor->GetActorLabel(), Actor->GetActorLocation().Z, Removed);
+		if (bFlattenApplied)
+		{
+			Response.Summary = FString::Printf(
+				TEXT("Placed %s on landscape (Z=%.1f); cleared %d foliage; "
+					 "flattened pad (%d verts, r=%.0f)."),
+				*Actor->GetActorLabel(), Actor->GetActorLocation().Z, Removed,
+				FlattenVerts, FlattenRadius);
+			Response.CapabilityNotes.Add(
+				TEXT("flatten_pad wrote heightmap via FLandscapeEditDataInterface::SetHeightData "
+					 "[VERIFIED: LandscapeEdit.h]."));
+		}
+		else
+		{
+			Response.Summary = FString::Printf(
+				TEXT("Placed %s on landscape (Z=%.1f); cleared %d foliage instance(s)."),
+				*Actor->GetActorLabel(), Actor->GetActorLocation().Z, Removed);
+		}
 	}
 
 	Response.ExtraFields = MakeShared<FJsonObject>();

@@ -32,7 +32,11 @@
 #include "Engine/World.h"
 #include "Editor.h"
 #include "EngineUtils.h"
+#include "Landscape.h"
+#include "LandscapeInfo.h"
 #include "LandscapeProxy.h"
+#include "LandscapeDataAccess.h"
+#include "LandscapeEdit.h"
 #include "LandscapeHeightfieldCollisionComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "CollisionQueryParams.h"
@@ -91,6 +95,149 @@ namespace UeremcpWorldOps
 			}
 		}
 		return false;
+	}
+
+	bool FlattenPadAt(
+		UWorld* World,
+		const FVector2D& LocationXY,
+		float TargetWorldZ,
+		float RadiusCm,
+		float FalloffCm,
+		FString& OutError,
+		int32& OutVertsTouched)
+	{
+		OutError.Reset();
+		OutVertsTouched = 0;
+		if (!World)
+		{
+			OutError = TEXT("No editor world.");
+			return false;
+		}
+		if (RadiusCm <= 0.f)
+		{
+			OutError = TEXT("flatten_pad.radius_cm must be > 0.");
+			return false;
+		}
+		FalloffCm = FMath::Max(0.f, FalloffCm);
+
+		ALandscape* Landscape = nullptr;
+		for (TActorIterator<ALandscape> It(World); It; ++It)
+		{
+			if (It->GetActorLabel().StartsWith(TEXT("UEREMCP_Landscape")))
+			{
+				Landscape = *It;
+				break;
+			}
+			if (!Landscape)
+			{
+				Landscape = *It;
+			}
+		}
+		if (!Landscape)
+		{
+			OutError = TEXT("No ALandscape in the editor world to flatten.");
+			return false;
+		}
+
+		ULandscapeInfo* Info = Landscape->GetLandscapeInfo();
+		if (!Info)
+		{
+			Landscape->CreateLandscapeInfo();
+			Info = Landscape->GetLandscapeInfo();
+		}
+		if (!Info)
+		{
+			OutError = TEXT("Landscape has no ULandscapeInfo.");
+			return false;
+		}
+
+		int32 MinX = MAX_int32, MinY = MAX_int32, MaxX = MIN_int32, MaxY = MIN_int32;
+		if (!Info->GetLandscapeExtent(MinX, MinY, MaxX, MaxY))
+		{
+			OutError = TEXT("Could not read landscape extent for flatten_pad.");
+			return false;
+		}
+
+		const FTransform LandscapeToWorld = Landscape->LandscapeActorToWorld();
+		const FVector CentreWorld(LocationXY.X, LocationXY.Y, TargetWorldZ);
+		const FVector CentreLocal = LandscapeToWorld.InverseTransformPosition(CentreWorld);
+		const int32 CentreQX = FMath::RoundToInt(CentreLocal.X);
+		const int32 CentreQY = FMath::RoundToInt(CentreLocal.Y);
+		const uint16 TargetHeight = LandscapeDataAccess::GetTexHeight(CentreLocal.Z);
+
+		// Quad spacing in world cm ≈ actor scale XY (Import uses 1 unit per quad).
+		const FVector Scale = Landscape->GetActorScale3D();
+		const float QuadCm = FMath::Max(1.f, float(Scale.X));
+		const int32 RadiusQuads = FMath::CeilToInt((RadiusCm + FalloffCm) / QuadCm) + 1;
+		int32 X1 = FMath::Clamp(CentreQX - RadiusQuads, MinX, MaxX);
+		int32 Y1 = FMath::Clamp(CentreQY - RadiusQuads, MinY, MaxY);
+		int32 X2 = FMath::Clamp(CentreQX + RadiusQuads, MinX, MaxX);
+		int32 Y2 = FMath::Clamp(CentreQY + RadiusQuads, MinY, MaxY);
+		if (X2 < X1 || Y2 < Y1)
+		{
+			OutError = TEXT("flatten_pad centre is outside the landscape extent.");
+			return false;
+		}
+
+		const int32 SizeX = X2 - X1 + 1;
+		const int32 SizeY = Y2 - Y1 + 1;
+		TArray<uint16> Heights;
+		Heights.SetNumUninitialized(SizeX * SizeY);
+		{
+			// [VERIFIED: LandscapeEdit.h:128] FLandscapeEditDataInterface(ULandscapeInfo*)
+			// [VERIFIED: LandscapeEdit.h:165] GetHeightData
+			FLandscapeEditDataInterface Edit(Info);
+			int32 GX1 = X1, GY1 = Y1, GX2 = X2, GY2 = Y2;
+			Edit.GetHeightData(GX1, GY1, GX2, GY2, Heights.GetData(), 0);
+		}
+
+		const float Inner = RadiusCm;
+		const float Outer = RadiusCm + FalloffCm;
+		for (int32 Y = Y1; Y <= Y2; ++Y)
+		{
+			for (int32 X = X1; X <= X2; ++X)
+			{
+				const FVector VertWorld = LandscapeToWorld.TransformPosition(FVector(float(X), float(Y), 0.f));
+				const float Dist = FVector2D::Distance(
+					FVector2D(VertWorld.X, VertWorld.Y), LocationXY);
+				float Weight = 0.f;
+				if (Dist <= Inner)
+				{
+					Weight = 1.f;
+				}
+				else if (Dist < Outer && Outer > Inner)
+				{
+					Weight = 1.f - ((Dist - Inner) / (Outer - Inner));
+				}
+				if (Weight <= KINDA_SMALL_NUMBER)
+				{
+					continue;
+				}
+				const int32 Idx = (Y - Y1) * SizeX + (X - X1);
+				const uint16 Old = Heights[Idx];
+				const float Blended = FMath::Lerp(float(Old), float(TargetHeight), Weight);
+				Heights[Idx] = uint16(FMath::Clamp(FMath::RoundToInt(Blended), 0, 65535));
+				++OutVertsTouched;
+			}
+		}
+
+		if (OutVertsTouched == 0)
+		{
+			OutError = TEXT("flatten_pad touched 0 verts — centre may miss the landscape.");
+			return false;
+		}
+
+		{
+			// [VERIFIED: LandscapeEdit.h:145] SetHeightData(..., InCalcNormals, ... InUpdateCollision)
+			FLandscapeEditDataInterface Edit(Info);
+			Edit.SetHeightData(
+				X1, Y1, X2, Y2,
+				Heights.GetData(),
+				0,
+				/*InCalcNormals=*/true);
+		}
+		Landscape->RecreateCollisionComponents();
+		return true;
 	}
 
 	int32 ClearFoliageInBoxes(UWorld* World, const TArray<FBox>& Volumes, bool bDryRun, int32& OutInspected)

@@ -972,13 +972,13 @@
       "use_when": [
         "river through a valley",
         "stream",
-        "water channel",
-        "creek"
+        "lake",
+        "ocean",
+        "still water",
+        "multi-water additive"
       ],
       "do_not_use_for": [
-        "lakes — AWaterBodyLake is not implemented",
-        "oceans — AWaterBodyOcean is not implemented",
-        "any still water; only flowing river splines exist"
+        "wiping unrelated water labels — only the requested label is replaced"
       ],
       "destructive": true,
       "idempotent": true,
@@ -987,9 +987,10 @@
         "no_change_required",
         "created_with_warnings",
         "failed_validation",
-        "rejected"
+        "rejected",
+        "partially_completed"
       ],
-      "recovery": "RIVER ONLY. body_type is never read, so lake and ocean silently yield a river. For still water spawn AWaterBodyLake/AWaterBodyOcean via SceneTools.add_to_scene_from_class until this tool honours body_type.",
+      "recovery": "Set body_type=river|lake|ocean. River uses river.width; lake needs lake.center+radius_cm; ocean needs ocean.center+extents_cm. Optional label keeps bodies additive (UEREMCP_River/Lake/Ocean defaults). Unknown body_type → BODY_TYPE_UNSUPPORTED, never coerced to river.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_water_body",
@@ -1001,6 +1002,7 @@
         },
         "specification": {
           "seed": 4471,
+          "body_type": "river",
           "river": {
             "width": 1200
           }
@@ -2189,7 +2191,7 @@
         "no_change_required",
         "rejected"
       ],
-      "recovery": "flatten_pad is unsupported — other steps still apply. Mesh must exist (find_project_assets or import_mesh_for_world).",
+      "recovery": "flatten_pad writes a soft heightmap pad (radius_cm/falloff_cm). Mesh must exist (find_project_assets or import_mesh_for_world).",
       "example_request": {
         "protocol_version": "1.0",
         "action": "place_prefab_on_landscape",
@@ -2204,7 +2206,11 @@
             -2000
           ],
           "rotation_yaw": 35,
-          "clear_foliage_radius_cm": 1500
+          "clear_foliage_radius_cm": 1500,
+          "flatten_pad": {
+            "radius_cm": 1200,
+            "falloff_cm": 600
+          }
         }
       }
     },

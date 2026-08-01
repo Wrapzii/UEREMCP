@@ -357,6 +357,22 @@ bool FUeremcpSecurityMutatorQueueTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("third writer acquires next"), Writer3Promoted.bAcquired);
 	TestTrue(TEXT("third writer releases"), FUeremcpMutatorQueue::Release(ProjectA, TEXT("write-3")));
 	TestFalse(TEXT("queue inactive after releases"), FUeremcpMutatorQueue::IsActive(ProjectA));
+
+	// Stale FIFO: abandoned waiters must not block forever.
+	const auto Owner = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("stale-owner"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("stale owner acquires"), Owner.bAcquired);
+	const auto Abandoned = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("stale-waiter"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("stale waiter queues"), Abandoned.bQueued);
+	TestTrue(TEXT("owner releases leaving waiter"), FUeremcpMutatorQueue::Release(ProjectA, TEXT("stale-owner")));
+	FUeremcpMutatorQueue::ForceClear(ProjectA);
+	TestFalse(TEXT("force clear removes activity"), FUeremcpMutatorQueue::IsActive(ProjectA));
+	TestEqual(TEXT("force clear removes waiters"), FUeremcpMutatorQueue::PendingCount(ProjectA), 0);
+	const auto Fresh = FUeremcpMutatorQueue::TryAcquire(
+		ProjectA, TEXT("fresh-after-clear"), EUeremcpPermissionTier::Write);
+	TestTrue(TEXT("fresh acquire after force clear"), Fresh.bAcquired);
+	TestTrue(TEXT("fresh releases"), FUeremcpMutatorQueue::Release(ProjectA, TEXT("fresh-after-clear")));
 	return true;
 }
 

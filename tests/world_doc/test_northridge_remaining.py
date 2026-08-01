@@ -114,12 +114,15 @@ class TestPlacePrefabReusesLandscapeZ(unittest.TestCase):
         body = read(PLACE)
         self.assertIn("UeremcpWorldOps::LandscapeZAt", body)
         self.assertIn("flatten_pad", body)
-        self.assertIn("FLATTEN_PAD_UNSUPPORTED", body)
+        self.assertIn("FlattenPadAt", body)
+        self.assertIn("flatten_pad_applied", body)
 
     def test_world_ops_exports_helper(self):
         body = read(WORLD_OPS)
         self.assertIn("bool LandscapeZAt(", body)
         self.assertIn("ClearFoliageInBoxes", body)
+        self.assertIn("FlattenPadAt", body)
+        self.assertIn("SetHeightData", body)
         # Visibility miss after Import at small scales — Editor heightfield fallback.
         self.assertIn("GetHeightAtLocation", body)
         self.assertIn("EHeightfieldSource::Editor", body)
@@ -128,6 +131,49 @@ class TestPlacePrefabReusesLandscapeZ(unittest.TestCase):
         body = read(ENV_SERVICE)
         self.assertIn("RecreateCollisionComponents", body)
         self.assertIn("CreateLandscapeInfo", body)
+
+
+class TestMultiWaterBodyType(unittest.TestCase):
+    def test_body_type_honored_not_ignored(self):
+        body = read(ENV_SERVICE)
+        self.assertIn("body_type", body)
+        self.assertIn("AWaterBodyLake", body)
+        self.assertIn("AWaterBodyOcean", body)
+        self.assertIn("bIncludeLake", body)
+        self.assertIn("bIncludeOcean", body)
+        self.assertIn("DestroyOwnedByExactLabel", body)
+        self.assertIn("ResolvedWaterLabel", body)
+        # Must not silently coerce lake/ocean into river.
+        self.assertIn("BODY_TYPE_UNSUPPORTED", body)
+
+    def test_catalog_advertises_lake_ocean(self):
+        op = next(o for o in catalog()["operations"] if o["action"] == "create_water_body")
+        self.assertIn("lake", " ".join(op["use_when"]).lower())
+        self.assertIn("ocean", " ".join(op["use_when"]).lower())
+        self.assertNotIn("body_type is never read", op["recovery"])
+        self.assertIn("body_type", op["recovery"])
+
+
+class TestMutatorQueueStaleClear(unittest.TestCase):
+    def test_queue_has_stale_timeout(self):
+        path = os.path.join(
+            REPO, "Plugins", "UEREMCP", "Source", "UeremcpSecurity",
+            "Private", "UeremcpMutatorQueue.cpp")
+        body = read(path)
+        self.assertIn("StaleWaiterSeconds", body)
+        self.assertIn("StaleActiveSeconds", body)
+        self.assertIn("ClearStale", body)
+        self.assertIn("ForceClear", body)
+        self.assertIn("LastSeenSeconds", body)
+
+    def test_dispatch_clears_stale_before_acquire(self):
+        path = os.path.join(
+            REPO, "Plugins", "UEREMCP", "Source", "UeremcpCore",
+            "Private", "UeremcpMutatingDispatch.cpp")
+        body = read(path)
+        self.assertIn("ClearStale", body)
+        self.assertIn("MUTATOR_BUSY", body)
+        self.assertIn("Do NOT poll get_job_result forever", body)
 
 
 class TestImportAndPaint(unittest.TestCase):
@@ -217,12 +263,20 @@ class TestNewActionsPlanRegistered(unittest.TestCase):
 
 
 class TestExternalCapabilitiesHonesty(unittest.TestCase):
-    def test_get_started_marks_watch_and_semantic_unavailable(self):
+    def test_get_started_points_at_check_unreal(self):
         body = read(INTENT_ROUTER)
         self.assertIn("external_mcp_capabilities", body)
         self.assertIn("user-unreal-watch", body)
+        self.assertIn("check_unreal", body)
+        self.assertIn("get_editor_status", body)
         self.assertIn("SemanticSearch", body)
-        self.assertIn('SetBoolField(TEXT("available"), false)', body)
+        # Watch is no longer advertised as available:false / do_not_use.
+        watch_idx = body.find('TEXT("user-unreal-watch")')
+        self.assertGreater(watch_idx, 0)
+        watch_block = body[watch_idx:watch_idx + 1200]
+        self.assertIn('SetBoolField(TEXT("available"), true)', watch_block)
+        self.assertIn("capture_structural", body)
+        self.assertIn("CaptureWorldFrames", body)
 
 
 if __name__ == "__main__":
