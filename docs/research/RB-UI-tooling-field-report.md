@@ -824,6 +824,7 @@ Extend UI-MCP-004:
 | Fieldtest `docs/MCP_UI_Tooling_Audit.md` | Mirror of short audit |
 | Fieldtest `docs/MCP_UI_Tooling_Field_Report.md` | Mirror of this report |
 | [`RB-Northridge-validation-report.md`](./RB-Northridge-validation-report.md) | Peer seriousness / scorecard style |
+| [`RB-MCP-hard-gaps-fieldtest.md`](./RB-MCP-hard-gaps-fieldtest.md) | Expanded hard gaps (ArtKit bar, visual iterate, layout duty) |
 | Fieldtest `MCP_Field_Report_Northridge.md` / `MCP_Backlog_API_Shapes.md` | Northridge evidence + MCP-001…018 shapes |
 | Start-menu screenshots | `ueremcp_fieldtest/Saved/UEREMCP/MMOStart/start_menu_overlay.png`, `character_creation_preview.png` |
 | Inventory reference | Workspace assets collage `B60B4682-…-d2a46b5a3de4.png` (Stormwarden / Ironcrown / Wildspeaker / Nightreaver) |
