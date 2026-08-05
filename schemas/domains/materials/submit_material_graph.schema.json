@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/materials/submit_material_graph.schema.json",
+  "title": "submit_material_graph specification",
+  "description": "Apply edited inspect_material graphs[] / parameters to an existing material or create under scratch roots (WS-08). Prefer in-place for production. Never silent-delete user masters. fidelity.round_trip_supported remains false until retrieve→replace→retrieve is proven. Owned by WS-08.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "graphs": {
+      "type": "array",
+      "description": "ADR-0004 MaterialGraph documents from inspect_material result.graphs. Agents may edit before submit. Required unless parameters is provided for MIC-only updates.",
+      "items": {
+        "type": "object",
+        "required": ["graph_type"],
+        "additionalProperties": true,
+        "properties": {
+          "graph_type": {
+            "type": "string",
+            "enum": ["MaterialGraph", "MaterialFunctionGraph"]
+          },
+          "graph_id": { "type": "string" },
+          "nodes": { "type": "array" },
+          "links": { "type": "array" },
+          "extensions": { "type": "object" },
+          "fidelity": { "type": "object" },
+          "content_hash": { "type": "string" },
+          "revision": { "type": "string" }
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "description": "MIC (or master default) parameter overrides. Prefer this for MaterialInstanceConstant edits. Values are current desired values, not named keys alone.",
+      "additionalProperties": false,
+      "properties": {
+        "scalar": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "vector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 4
+          }
+        },
+        "texture": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "static_switch": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        }
+      }
+    },
+    "apply": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional knobs; defaults favour safe in-place edits.",
+      "properties": {
+        "parameters": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply scalar/vector/texture/static_switch parameter values."
+        },
+        "links": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reconnect expression links that reference existing node_ids (masters only)."
+        },
+        "property_inputs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply extensions.material.property_inputs MP_* wiring when nodes exist."
+        },
+        "create_missing_expressions": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true and target is under scratch roots, create nodes listed in graphs that are missing. Never enabled silently on production."
+        },
+        "delete_missing_expressions": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true with envelope mode=replace AND scratch root only, delete expressions absent from graphs. Forbidden on production masters."
+        }
+      }
+    },
+    "parent_material": {
+      "type": "string",
+      "description": "Optional parent master path when creating a new MaterialInstanceConstant under scratch roots."
+    }
+  },
+  "anyOf": [
+    { "required": ["graphs"] },
+    { "required": ["parameters"] }
+  ],
+  "examples": [
+    {
+      "parameters": {
+        "scalar": { "EmissiveScale": 4.0 },
+        "vector": { "ParticleColor": [1.0, 0.4, 0.1, 1.0] }
+      },
+      "apply": { "parameters": true }
+    },
+    {
+      "graphs": [
+        {
+          "graph_type": "MaterialGraph",
+          "graph_id": "/Game/__UeremcpTests/Materials/Masters/M_Ueremcp_Probe::Material",
+          "nodes": [],
+          "links": [],
+          "extensions": {
+            "material": {
+              "parameters": {
+                "scalar": [{ "name": "EmissiveScale", "value": 2.0 }]
+              }
+            }
+          },
+          "fidelity": { "round_trip_supported": false }
+        }
+      ],
+      "apply": {
+        "parameters": true,
+        "links": true,
+        "property_inputs": true,
+        "create_missing_expressions": false,
+        "delete_missing_expressions": false
+      }
+    }
+  ]
+}

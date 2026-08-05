@@ -1,0 +1,176 @@
+{
+
+  "description": "Example envelope: author a 3-emitter custom stack from modules[] with no preset role names (ice_creep/freeze_dome/sparks). Minimal substrate + AddModule.",
+
+  "request": {
+
+    "protocol_version": "1.0",
+
+    "request_id": "ws07-custom-triple-stack",
+
+    "action": "create_niagara_effect",
+
+    "mode": "replace",
+
+    "target": {
+
+      "asset_path": "/Game/__UeremcpPoc/Magecraft/NS_UeremcpCustomTripleStack"
+
+    },
+
+    "options": {
+
+      "dry_run": true,
+
+      "compile": true,
+
+      "save": true,
+
+      "allow_destructive": true
+
+    },
+
+    "specification": {
+
+      "name": "NS_UeremcpCustomTripleStack",
+
+      "effect_type": "custom",
+
+      "element": "arcane",
+
+      "emitters": [
+
+        {
+
+          "name": "GroundMist",
+
+          "enabled": true,
+
+          "renderer": { "type": "sprite" },
+
+          "modules": [
+
+            { "primitive_id": "emitter_state", "script": "EmitterUpdateScript" },
+
+            {
+
+              "primitive_id": "spawn_rate",
+
+              "script": "EmitterUpdateScript",
+
+              "inputs": { "SpawnRate": 40 }
+
+            },
+
+            { "primitive_id": "initialize_particle", "script": "ParticleSpawnScript" },
+
+            { "primitive_id": "update_age", "script": "ParticleUpdateScript" },
+
+            { "primitive_id": "color", "script": "ParticleUpdateScript" },
+
+            { "primitive_id": "solve_forces_and_velocity", "script": "ParticleUpdateScript" }
+
+          ]
+
+        },
+
+        {
+
+          "name": "RisingWisps",
+
+          "renderer": "sprite",
+
+          "modules": [
+
+            { "primitive_id": "spawn_rate", "inputs": { "SpawnRate": 12 } },
+
+            { "primitive_id": "initialize_particle" },
+
+            { "primitive_id": "add_velocity" },
+
+            { "primitive_id": "update_age" },
+
+            { "primitive_id": "particle_state" }
+
+          ]
+
+        },
+
+        {
+
+          "name": "ImpactFlash",
+
+          "modules": [
+
+            {
+
+              "name": "SpawnBurst_Instantaneous",
+
+              "asset_path": "/Niagara/Modules/Emitter/SpawnBurst_Instantaneous",
+
+              "script": "EmitterUpdateScript"
+
+            },
+
+            { "primitive_id": "initialize_particle" },
+
+            { "primitive_id": "color" }
+
+          ]
+
+        }
+
+      ],
+
+      "parameters": {
+
+        "primary_color": [0.55, 0.75, 1.0, 1.0],
+
+        "intensity": 5.0
+
+      }
+
+    }
+
+  },
+
+  "expectations": {
+
+    "no_preset_roles": ["ice_creep", "freeze_dome", "sparks"],
+
+    "emitter_names": ["GroundMist", "RisingWisps", "ImpactFlash"],
+
+    "substrate": "/Niagara/DefaultAssets/Templates/Emitters/Minimal",
+
+    "apis": [
+
+      "UNiagaraExternalEditUtilities::CreateNiagaraSystem",
+
+      "UNiagaraExternalEditUtilities::AddEmitter",
+
+      "UNiagaraExternalEditUtilities::AddModule",
+
+      "UNiagaraExternalEditUtilities::SetModuleEnabled",
+
+      "UNiagaraExternalEditUtilities::SetStackInputData",
+
+      "UNiagaraExternalEditUtilities::AddRenderer"
+
+    ],
+
+    "round_trip_supported": false,
+
+    "notes": [
+
+      "Presets/roles are optional shortcuts only; this envelope uses none.",
+
+      "Custom HLSL / NiagaraScriptGraph internals / linked DI inputs remain lossy.",
+
+      "CreateNiagaraSystem has no CreateEmitter asset API — AddEmitter(Minimal) is the substrate."
+
+    ]
+
+  }
+
+}
+

@@ -73,6 +73,19 @@ bool FUeremcpNiagaraCompileAwaitOfflineTest::RunTest(const FString& Parameters)
 		TEXT("error flag incomplete"),
 		FUeremcpNiagaraCompileAwait::IsScriptDerivedCompileComplete(ErrorFlag));
 
+	// Failure-mode documentation (no editor): live AwaitCompile must never pump
+	// FTSTicker/ProcessAsyncTasks — those reach PollSystemCompilations →
+	// QueryCompileComplete and assert TSharedPtr::operator-> IsValid()
+	// (SharedPointer.h:1133) on hybrid ActiveCompilations. Structured Error is
+	// returned instead; see FUeremcpNiagaraCompileAwaitResult::Error /
+	// bLiveEnginePumpSkipped.
+	{
+		FUeremcpNiagaraCompileAwaitResult Doc;
+		TestFalse(TEXT("default await result not awaited"), Doc.bAwaited);
+		TestTrue(TEXT("default await result has empty Error"), Doc.Error.IsEmpty());
+		TestFalse(TEXT("default live pump skipped false"), Doc.bLiveEnginePumpSkipped);
+	}
+
 	return true;
 }
 

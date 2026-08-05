@@ -89,6 +89,18 @@ class MaterialsSpecificationTests(unittest.TestCase):
     def test_create_vfx_material_examples(self) -> None:
         self._validate_examples("create_vfx_material.schema.json")
 
+    def test_inspect_material_examples(self) -> None:
+        self._validate_examples("inspect_material.schema.json")
+
+    def test_submit_material_graph_examples(self) -> None:
+        self._validate_examples("submit_material_graph.schema.json")
+
+    def test_submit_material_graph_requires_graphs_or_parameters(self) -> None:
+        schema = load_schema("submit_material_graph.schema.json")
+        validator = Draft202012Validator(schema, registry=self.registry)
+        with self.assertRaises(jsonschema.ValidationError):
+            validator.validate({"apply": {"parameters": True}})
+
     def test_create_vfx_material_requires_purpose(self) -> None:
         schema = load_schema("create_vfx_material.schema.json")
         validator = Draft202012Validator(schema, registry=self.registry)

@@ -17,6 +17,16 @@ namespace
 	}
 }
 
+bool UeremcpMaterialPaths::IsAllowedInspectPath(const FString& SoftPackagePath)
+{
+	return IsUnderRoot(NormalizePackagePath(SoftPackagePath), GameContentRoot);
+}
+
+bool UeremcpMaterialPaths::IsAllowedMutateCreatePath(const FString& SoftPackagePath)
+{
+	return IsUnderAllowedScratchRoot(SoftPackagePath);
+}
+
 bool UeremcpMaterialPaths::IsUnderTestsRoot(const FString& SoftPackagePath)
 {
 	return IsUnderRoot(NormalizePackagePath(SoftPackagePath), TestsContentRoot);

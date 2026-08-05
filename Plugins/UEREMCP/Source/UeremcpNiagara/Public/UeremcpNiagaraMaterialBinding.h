@@ -50,6 +50,9 @@ struct FUeremcpNiagaraMaterialBindingResult
 	TArray<FString> UnresolvedMaterialBindings;
 	TArray<FUeremcpNiagaraInlineMaterialCreate> InlineMaterialCreates;
 
+	/** Soft paths for inline materials deferred to WS-08 create_vfx_material (may be empty). */
+	TArray<FString> CreatedMaterialAssetsPendingWs08;
+
 	FString Error;
 };
 

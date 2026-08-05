@@ -77,19 +77,41 @@
       "description": "System-level property blob from GetSystemData.",
       "additionalProperties": true
     },
+    "sim_target": {
+      "type": "string",
+      "description": "CPUSim | GPUComputeSim from GetEmitterTopology / SetEmitterData."
+    },
+    "life_cycle": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Emitter State Life Cycle panel (mode, loop_behavior, loop_duration, inactive_response).",
+      "properties": {
+        "mode": { "type": "string" },
+        "loop_behavior": { "type": "string" },
+        "loop_duration": { "type": "number" },
+        "inactive_response": { "type": "string" }
+      }
+    },
     "event_handlers": {
       "type": "array",
-      "description": "Lossy until GetEmitterTopology exposes ParticleEventScript stacks (RB-07 A.1 gap).",
+      "description": "From FVersionedNiagaraEmitterData::GetEventHandlers (+ NodeGraph samples). WRITE blocked (no UsageId on StackItemReference).",
       "items": {
         "type": "object",
         "properties": {
           "event_name": { "type": "string" },
           "source_emitter": { "type": "string" },
           "usage_guid": { "type": "string" },
+          "execution_mode": { "type": "string" },
+          "script_graph_internals": { "type": "object", "additionalProperties": true },
           "modules": { "type": "array", "items": { "type": "object" } }
         },
         "additionalProperties": true
       }
+    },
+    "script_graph_internals": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "READ-only UNiagaraScriptSource::NodeGraph summary. write_supported=false."
     },
     "inheritance": {
       "type": "object",

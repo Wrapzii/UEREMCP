@@ -237,6 +237,18 @@
         "create_widget_from_spec"
       ],
       "why": "layout"
+    },
+    {
+      "action": "bind_inventory_sheet",
+      "depends_on_actions": [
+        "create_inventory_sheet_from_spec"
+      ],
+      "why": "needs inventory WBP + PIE"
+    },
+    {
+      "action": "verify_inventory_toggle",
+      "depends_on_actions": [],
+      "why": "PIE Tab open/close assert"
     }
   ],
   "operations": [
@@ -353,13 +365,13 @@
         "partially_completed",
         "failed_validation"
       ],
-      "recovery": "On partially_completed poll GetJobResult; on failed_validation InspectSystem then fix.",
+      "recovery": "YES one-shot multi-emitter create under Magecraft+sandbox. round_trip_supported=false is hash-only — authoring still works. On partially_completed InspectSystem then Adapt/Submit; on failed_validation fix path/spec.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "create_niagara_effect",
         "request_id": "nx-1",
         "target": {
-          "asset_path": "/Game/__UeremcpTests/NS_RouterScratch"
+          "asset_path": "/Game/__UeremcpPoc/Magecraft/NS_UeremcpIceFreezeDome"
         },
         "mode": "create_or_update",
         "options": {
@@ -367,14 +379,19 @@
           "validate": true,
           "save": true
         },
-        "idempotency_key": "router-niagara-scratch-1",
+        "idempotency_key": "router-niagara-ice-freeze-1",
         "specification": {
-          "effect_type": "projectile",
-          "element": "fire",
-          "components": [
-            "core",
-            "ribbon_trail"
-          ]
+          "effect_type": "ice",
+          "element": "ice",
+          "emitters": [
+            { "role": "ice_creep", "name": "IceCreep" },
+            { "role": "freeze_dome", "name": "FreezeDome" },
+            { "role": "sparks", "name": "FrostSparks" }
+          ],
+          "parameters": {
+            "primary_color": [0.55, 0.85, 1.0, 1.0],
+            "intensity": 6.0
+          }
         }
       },
       "next_actions": [
@@ -394,10 +411,18 @@
         "inspect niagara",
         "read emitters",
         "niagara topology",
-        "system summary"
+        "system summary",
+        "niagara system graph"
       ],
       "do_not_use_for": [
-        "creating effects"
+        "creating effects",
+        "inspect material",
+        "material graph",
+        "Free_Spells material",
+        "M_Free_Spells",
+        "MI_Free_Spells",
+        "material expression graph",
+        "material instance parameters"
       ],
       "destructive": false,
       "idempotent": true,
@@ -406,7 +431,7 @@
         "no_change_required",
         "partially_completed"
       ],
-      "recovery": "If lossy stacks noted, prefer capability_notes over guessing.",
+      "recovery": "If lossy stacks noted, prefer capability_notes over guessing. Edit result.graphs[] then SubmitNiagaraGraph; AdaptNiagaraEffect for light User.*/material only.",
       "example_request": {
         "protocol_version": "1.0",
         "action": "inspect_system",
@@ -418,7 +443,138 @@
           "response_detail": "complete"
         },
         "specification": {}
+      },
+      "example_response_shape": {
+        "status": "partially_completed",
+        "result": {
+          "primary_asset": "/Game/…/NS_…",
+          "asset_path": "/Game/…/NS_…",
+          "emitters": ["…"],
+          "user_parameters": [],
+          "fidelity": {
+            "round_trip_supported": false
+          },
+          "graphs": [
+            {
+              "graph_type": "NiagaraSystemGraph"
+            }
+          ]
+        },
+        "diagnostics": {
+          "execution_trace": [],
+          "hash_scaffold": {}
+        },
+        "note": "Primary graph dump is result.graphs[]; diagnostics is trace/scaffold only."
       }
+    },
+    {
+      "qualified": "UeremcpMaterial.UeremcpMaterialToolset.InspectMaterial",
+      "action": "inspect_material",
+      "use_when": [
+        "inspect material",
+        "read material graph",
+        "material expression graph",
+        "Free_Spells",
+        "M_Free_Spells",
+        "MI_Free_Spells",
+        "material by name",
+        "material instance parameters inventory",
+        "inspect materials"
+      ],
+      "do_not_use_for": [
+        "inspect niagara system",
+        "creating materials from scratch"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "partially_completed"
+      ],
+      "recovery": "Edit result.graphs[] / parameters then SubmitMaterialGraph. Visual proof via CaptureMaterialFrames. fidelity.round_trip_supported=false.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "inspect_material",
+        "request_id": "mat-inspect-1",
+        "specification": {
+          "query": "M_Free_Spells_Flash",
+          "search_root": "/Game"
+        }
+      },
+      "example_response_shape": {
+        "result": {
+          "asset_path": "/Game/.../M_Free_Spells_Flash",
+          "asset_class": "Material",
+          "graphs": [{ "graph_type": "MaterialGraph" }],
+          "fidelity": { "round_trip_supported": false }
+        }
+      },
+      "next_actions": [
+        {
+          "action": "submit_material_graph",
+          "why": "write edited graphs/parameters back",
+          "specification_hint": {}
+        },
+        {
+          "action": "capture_material_frames",
+          "why": "visual proof of the material",
+          "specification_hint": {}
+        }
+      ]
+    },
+    {
+      "qualified": "UeremcpMaterial.UeremcpMaterialToolset.SubmitMaterialGraph",
+      "action": "submit_material_graph",
+      "use_when": [
+        "submit material graph",
+        "write material graph",
+        "apply material parameters",
+        "edit Free_Spells material",
+        "material graph round trip"
+      ],
+      "do_not_use_for": [
+        "Niagara graph submit",
+        "silent delete of production masters"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "no_change_required",
+        "partially_completed",
+        "failed_validation"
+      ],
+      "recovery": "Prefer dry_run first. Re-InspectMaterial after apply. Never wipe production masters. round_trip_supported stays false.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "submit_material_graph",
+        "request_id": "mat-submit-1",
+        "target": {
+          "asset_path": "/Game/__UeremcpTests/Materials/MI_WS08_GraphProbe"
+        },
+        "options": {
+          "dry_run": true
+        },
+        "specification": {
+          "parameters": {
+            "scalar": {
+              "EmissiveScale": 2.0
+            }
+          }
+        }
+      },
+      "next_actions": [
+        {
+          "action": "inspect_material",
+          "why": "re-read after submit",
+          "specification_hint": {}
+        },
+        {
+          "action": "capture_material_frames",
+          "why": "visual proof",
+          "specification_hint": {}
+        }
+      ]
     },
     {
       "qualified": "UeremcpMaterial.UeremcpMaterialToolset.CreateVfxMaterial",
@@ -2786,6 +2942,70 @@
         }
       },
       "next_actions": []
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.BindInventorySheet",
+      "action": "bind_inventory_sheet",
+      "use_when": [
+        "bind inventory WBP to HUD",
+        "UMG shell for Tab inventory",
+        "sync inventory slot icons"
+      ],
+      "do_not_use_for": [
+        "create inventory layout from scratch"
+      ],
+      "destructive": false,
+      "idempotent": true,
+      "requires_revision": false,
+      "expected_statuses": [
+        "modified_and_validated",
+        "partially_completed",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "Start PIE, ensure local pawn has REInventoryComponent, then retry.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "bind_inventory_sheet",
+        "specification": {
+          "widget_blueprint": "/Game/UI/MCPProbe/WBP_InvProbe",
+          "allow_umg_shell": true,
+          "sync_slots": true
+        }
+      },
+      "next_actions": [
+        "verify_inventory_toggle",
+        "capture_ui_frame"
+      ]
+    },
+    {
+      "qualified": "UeremcpUI.UeremcpUIToolset.VerifyInventoryToggle",
+      "action": "verify_inventory_toggle",
+      "use_when": [
+        "verify Tab inventory open close",
+        "PIE inventory toggle assert"
+      ],
+      "do_not_use_for": [],
+      "destructive": false,
+      "idempotent": false,
+      "requires_revision": false,
+      "expected_statuses": [
+        "created_and_validated",
+        "failed_validation",
+        "rejected",
+        "no_change_required"
+      ],
+      "recovery": "Start PIE with a possessed pawn that owns REInventoryComponent.",
+      "example_request": {
+        "protocol_version": "1.0",
+        "action": "verify_inventory_toggle",
+        "specification": {
+          "restore": true
+        }
+      },
+      "next_actions": [
+        "capture_ui_frame"
+      ]
     }
   ],
   "asset_role_patterns": {

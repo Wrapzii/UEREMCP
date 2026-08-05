@@ -104,6 +104,18 @@ namespace UeremcpNiagaraCreateIdempotency
 			EmitterNames.Add(Handle.GetName().ToString());
 		}
 
+		if (Spec.Emitters.Num() > 0)
+		{
+			for (const FUeremcpNiagaraEmitterPlan& Plan : Spec.Emitters)
+			{
+				if (!EmitterNames.Contains(Plan.Name))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
 		if (Spec.ComponentRoles.Num() == 0)
 		{
 			return EmitterNames.Num() > 0;

@@ -13,8 +13,9 @@
 /**
  * Agent-facing material operations for UEREMCP.
  *
- * Prefer CreateVfxMaterial / CreateProceduralTexture over Epic MaterialTools
- * expression graphs for VFX materials. Use ResolveIntent if unsure.
+ * Prefer InspectMaterial → SubmitMaterialGraph for existing masters/MIs (Free_Spells
+ * included). Prefer CreateVfxMaterial / CreateMasterMaterial for new VFX masters.
+ * Use ResolveIntent if unsure. CaptureMaterialFrames for visual proof.
  */
 UCLASS()
 class UEREMCPMATERIAL_API UUeremcpMaterialToolset : public UToolsetDefinition
@@ -23,7 +24,7 @@ class UEREMCPMATERIAL_API UUeremcpMaterialToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.2.2-intent-vocab"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.3.0-material-graph"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.
@@ -123,4 +124,61 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
 	static FString CreateLandscapeMaterial(const FString& RequestJson);
+
+	/**
+	 * Set scalar/vector/texture parameter overrides on an existing MaterialInstanceConstant.
+	 *
+	 * Use when: tuning surface MI params (voxel cave anti-tile, roughness breakup, tiling)
+	 *   on assets that already exist — e.g. MI_CaveVoxel_DryRock WorldTiling / AntiTileBlend /
+	 *   WallStripeBreak without Epic MaterialInstanceTools.
+	 * Inputs: action=update_material_instance_parameters, target.asset_path (MIC package path);
+	 *   specification.scalar_overrides {string:float} required unless vector/texture overrides present;
+	 *   optional specification.vector_overrides {string:[r,g,b,a]};
+	 *   optional specification.texture_overrides {string:texture_asset_path};
+	 *   options.dry_run (default false), options.save (default true).
+	 * Outputs: parameter_changes with before/after per key, errors for refused keys.
+	 * Do not use for: authoring new VFX materials — use CreateVfxMaterial; graph edits — use
+	 *   CreateMasterMaterial.
+	 * Next tool: CaptureWorldFrames to verify wall anti-tile in viewport.
+	 * Example: {"protocol_version":"1.0","action":"update_material_instance_parameters","target":{"asset_path":"/Game/RE/Caves/Materials/MI_CaveVoxel_DryRock"},"options":{"dry_run":false,"save":true},"specification":{"scalar_overrides":{"AntiTileBlend":0.58,"WallStripeBreak":0.18,"WorldTiling":840.0}}}
+	 *
+	 * @param RequestJson  Request with action update_material_instance_parameters and target.asset_path set.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
+	static FString UpdateMaterialInstanceParameters(const FString& RequestJson);
+
+	/**
+	 * Read a UMaterial or MaterialInstanceConstant into ADR-0004 MaterialGraph JSON.
+	 *
+	 * Use when: inspecting Free_Spells / production / scratch materials by path or name —
+	 *   one call returns result.graphs[] (masters) and/or full parameter inventory with values.
+	 * Inputs: action=inspect_material; target.asset_path OR specification.query/asset_name
+	 *   under search_root (default /Game). Defaults to response_detail=complete.
+	 * Outputs: result.asset_path, asset_class, graphs[], parameters, fidelity.round_trip_supported=false.
+	 * Do not use for: Niagara systems — use InspectSystem; mutating edits — use SubmitMaterialGraph.
+	 * Next tool: edit result.graphs[] / parameters then SubmitMaterialGraph; CaptureMaterialFrames for proof.
+	 * Example: {"protocol_version":"1.0","action":"inspect_material","specification":{"query":"M_Free_Spells_Flash","search_root":"/Game"}}
+	 *
+	 * @param RequestJson  Request with action inspect_material.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
+	static FString InspectMaterial(const FString& RequestJson);
+
+	/**
+	 * Apply edited MaterialGraph JSON and/or parameter maps to an existing material.
+	 *
+	 * Use when: writing back InspectMaterial edits (MIC params or master link/property rewires).
+	 * Inputs: action=submit_material_graph, target.asset_path; specification.graphs and/or parameters;
+	 *   options.dry_run supported. Production: in-place only; never silent-deletes masters.
+	 * Outputs: planned/applied changes; fidelity.round_trip_supported=false; status partially_completed
+	 *   or no_change_required (never *_validated until hash proof).
+	 * Do not use for: authoring brand-new masters from empty graphs — use CreateMasterMaterial /
+	 *   CreateVfxMaterial; Niagara — use SubmitNiagaraGraph.
+	 * Next tool: InspectMaterial to re-read; CaptureMaterialFrames for visual proof.
+	 * Example: {"protocol_version":"1.0","action":"submit_material_graph","target":{"asset_path":"/Game/.../MI_Free_Spells_Flash2"},"options":{"dry_run":true},"specification":{"parameters":{"scalar":{"EmissiveScale":4.0}}}}
+	 *
+	 * @param RequestJson  Request with action submit_material_graph.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Material")
+	static FString SubmitMaterialGraph(const FString& RequestJson);
 };

@@ -83,6 +83,14 @@ bool FUeremcpNiagaraPocBEmitterPlanOfflineTest::RunTest(const FString& Parameter
 		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("mist")),
 		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/HangingParticulates")));
 	TestEqual(
+		TEXT("ice_creep uses BlowingParticles"),
+		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("ice_creep")),
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/BlowingParticles")));
+	TestEqual(
+		TEXT("freeze_dome uses HangingParticulates"),
+		UeremcpNiagaraRoles::ResolveEmitterTemplatePath(TEXT("freeze_dome")),
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/HangingParticulates")));
+	TestEqual(
 		TEXT("rain emitter name"),
 		UeremcpNiagaraRoles::RoleToEmitterName(TEXT("rain")),
 		FString(TEXT("Rain")));
@@ -90,6 +98,14 @@ bool FUeremcpNiagaraPocBEmitterPlanOfflineTest::RunTest(const FString& Parameter
 	TestEqual(TEXT("precipitation default role count"), PrecipRoles.Num(), 2);
 	TestTrue(TEXT("precipitation includes rain"), PrecipRoles.Contains(TEXT("rain")));
 	TestTrue(TEXT("precipitation includes mist"), PrecipRoles.Contains(TEXT("mist")));
+	const TArray<FString> IceRoles = UeremcpNiagaraRoles::DefaultIceFreezeComponentRoles();
+	TestEqual(TEXT("ice default role count"), IceRoles.Num(), 3);
+	TestTrue(TEXT("ice includes creep"), IceRoles.Contains(TEXT("ice_creep")));
+	TestTrue(TEXT("ice includes dome"), IceRoles.Contains(TEXT("freeze_dome")));
+	TestTrue(TEXT("ice includes sparks"), IceRoles.Contains(TEXT("sparks")));
+	const TArray<FString> IceEffectDefaults =
+		UeremcpNiagaraRoles::DefaultComponentRolesForEffectType(TEXT("freeze"));
+	TestEqual(TEXT("effect_type=freeze defaults to ice plan"), IceEffectDefaults.Num(), 3);
 	TestEqual(
 		TEXT("rain material purpose"),
 		UeremcpNiagaraRoles::DefaultPurposeForMaterialRole(TEXT("rain")),

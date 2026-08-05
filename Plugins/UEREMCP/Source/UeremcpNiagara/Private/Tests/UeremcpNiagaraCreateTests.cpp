@@ -126,6 +126,109 @@ bool FUeremcpNiagaraCreateReplaceDryRunTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraCreateCustomModuleStackParseTest,
+	"UEREMCP.Niagara.Create.CustomModuleStackParse",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraCreateCustomModuleStackParseTest::RunTest(const FString& Parameters)
+{
+	const FString RequestJson = TEXT(
+		R"({"protocol_version":"1.0","request_id":"ws07-custom-parse","action":"create_niagara_effect","target":{"asset_path":"/Game/__UeremcpPoc/Magecraft/NS_UeremcpCustomTripleStack"},"specification":{"name":"NS_UeremcpCustomTripleStack","effect_type":"custom","element":"arcane","emitters":[{"name":"GroundMist","renderer":{"type":"sprite"},"modules":[{"primitive_id":"spawn_rate","script":"EmitterUpdateScript","inputs":{"SpawnRate":40}},{"primitive_id":"initialize_particle"},{"primitive_id":"update_age"}]},{"name":"RisingWisps","modules":[{"primitive_id":"spawn_rate"},{"primitive_id":"add_velocity"}]},{"name":"ImpactFlash","modules":[{"asset_path":"/Niagara/Modules/Emitter/SpawnBurst_Instantaneous","script":"EmitterUpdateScript"},{"primitive_id":"color"}]}],"parameters":{"intensity":5.0}},"options":{"dry_run":true}})");
+	FUeremcpRequest Request;
+	FString Error;
+	TestTrue(TEXT("custom envelope parses"), FUeremcpEnvelope::ParseRequest(RequestJson, Request, Error));
+
+	FUeremcpNiagaraCreateSpec Spec;
+	TestTrue(TEXT("custom specification parses"), FUeremcpNiagaraCreate::ParseSpecification(Request, Spec, Error));
+	TestEqual(TEXT("three LLM-named emitters"), Spec.Emitters.Num(), 3);
+	TestEqual(TEXT("GroundMist"), Spec.Emitters[0].Name, FString(TEXT("GroundMist")));
+	TestEqual(TEXT("RisingWisps"), Spec.Emitters[1].Name, FString(TEXT("RisingWisps")));
+	TestEqual(TEXT("ImpactFlash"), Spec.Emitters[2].Name, FString(TEXT("ImpactFlash")));
+	TestTrue(TEXT("no ice_creep role"), Spec.Emitters[0].Role.IsEmpty());
+	TestTrue(TEXT("custom stack flag"), Spec.Emitters[0].bCustomModuleStack);
+	TestEqual(
+		TEXT("Minimal substrate"),
+		Spec.Emitters[0].TemplatePath,
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/Minimal")));
+	TestTrue(TEXT("GroundMist has modules"), Spec.Emitters[0].Modules.Num() >= 3);
+	TestEqual(
+		TEXT("spawn_rate resolved"),
+		Spec.Emitters[0].Modules[0].AssetPath,
+		FString(TEXT("/Niagara/Modules/Emitter/SpawnRate")));
+	TestTrue(TEXT("SpawnRate inputs present"), Spec.Emitters[0].Modules[0].Inputs.IsValid());
+	TestEqual(TEXT("sprite renderer hint"), Spec.Emitters[0].RendererType, FString(TEXT("sprite")));
+
+	const FString DryJson = UUeremcpNiagaraToolset::CreateNiagaraEffect(RequestJson);
+	TSharedPtr<FJsonObject> Root;
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(DryJson);
+	TestTrue(TEXT("dry_run JSON"), FJsonSerializer::Deserialize(Reader, Root) && Root.IsValid());
+	if (Root.IsValid())
+	{
+		const TArray<TSharedPtr<FJsonValue>>* Notes = nullptr;
+		TestTrue(TEXT("capability_notes"), Root->TryGetArrayField(TEXT("capability_notes"), Notes));
+		bool bMentionsPrimary = false;
+		if (Notes)
+		{
+			for (const TSharedPtr<FJsonValue>& N : *Notes)
+			{
+				if (N->AsString().Contains(TEXT("PRIMARY PATH")))
+				{
+					bMentionsPrimary = true;
+					break;
+				}
+			}
+		}
+		TestTrue(TEXT("notes say PRIMARY PATH modules[]"), bMentionsPrimary);
+	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FUeremcpNiagaraCreateIceEmittersParseTest,
+	"UEREMCP.Niagara.Create.IceMultiEmitterParse",
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FUeremcpNiagaraCreateIceEmittersParseTest::RunTest(const FString& Parameters)
+{
+	const FString RequestJson = TEXT(
+		R"({"protocol_version":"1.0","request_id":"ws07-ice-parse","action":"create_niagara_effect","target":{"asset_path":"/Game/__UeremcpPoc/Magecraft/NS_UeremcpIceFreezeDome"},"specification":{"effect_type":"ice","element":"ice","emitters":[{"role":"ice_creep","name":"IceCreep"},{"role":"freeze_dome","name":"FreezeDome"},{"role":"sparks","name":"FrostSparks"}],"parameters":{"primary_color":[0.55,0.85,1.0,1.0],"intensity":6.0}},"options":{"dry_run":true}})");
+	FUeremcpRequest Request;
+	FString Error;
+	TestTrue(TEXT("ice envelope parses"), FUeremcpEnvelope::ParseRequest(RequestJson, Request, Error));
+
+	FUeremcpNiagaraCreateSpec Spec;
+	TestTrue(TEXT("ice specification parses"), FUeremcpNiagaraCreate::ParseSpecification(Request, Spec, Error));
+	TestEqual(TEXT("three emitter plans"), Spec.Emitters.Num(), 3);
+	TestEqual(TEXT("first name IceCreep"), Spec.Emitters[0].Name, FString(TEXT("IceCreep")));
+	TestEqual(
+		TEXT("ice_creep template"),
+		Spec.Emitters[0].TemplatePath,
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/BlowingParticles")));
+	TestEqual(
+		TEXT("freeze_dome template"),
+		Spec.Emitters[1].TemplatePath,
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/HangingParticulates")));
+	TestEqual(
+		TEXT("sparks template"),
+		Spec.Emitters[2].TemplatePath,
+		FString(TEXT("/Niagara/DefaultAssets/Templates/Emitters/SimpleSpriteBurst")));
+
+	// Omitting emitters/components still defaults for effect_type=ice.
+	const FString DefaultJson = TEXT(
+		R"({"protocol_version":"1.0","request_id":"ws07-ice-default","action":"create_niagara_effect","target":{"asset_path":"/Game/__UeremcpPoc/Magecraft/NS_UeremcpIceDefault"},"specification":{"effect_type":"freeze","element":"ice"},"options":{"dry_run":true}})");
+	FUeremcpRequest DefaultRequest;
+	TestTrue(
+		TEXT("default ice envelope parses"),
+		FUeremcpEnvelope::ParseRequest(DefaultJson, DefaultRequest, Error));
+	FUeremcpNiagaraCreateSpec DefaultSpec;
+	TestTrue(
+		TEXT("default ice specification parses"),
+		FUeremcpNiagaraCreate::ParseSpecification(DefaultRequest, DefaultSpec, Error));
+	TestEqual(TEXT("default ice three emitters"), DefaultSpec.Emitters.Num(), 3);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FUeremcpNiagaraPocCVariationParseTest,
 	"UEREMCP.Niagara.Create.PocCVariationParse",
 	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)

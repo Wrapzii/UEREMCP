@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://uneremcp.dev/schemas/domains/niagara/inspect_system.schema.json",
   "title": "inspect_system specification",
-  "description": "Optional knobs for niagara.inspect_system (read a Niagara system into graph.schema.json). Target asset path lives on the envelope target, not here. Owned by WS-07.",
+  "description": "Optional knobs for niagara.inspect_system. Response always includes result.topology_summary (emitters→modules→renderers) at top; response_detail=summary omits full graphs[], complete (default) includes graphs[]. Target path is on the envelope. Owned by WS-07.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -50,7 +50,7 @@
     },
     "response_detail": {
       "$ref": "../../common/defs.schema.json#/$defs/responseDetail",
-      "description": "Overrides envelope options.response_detail for graph payload size."
+      "description": "summary = topology_summary + counts (no graphs[]). complete = topology_summary + full graphs[]. Overrides envelope options.response_detail."
     }
   },
   "examples": [

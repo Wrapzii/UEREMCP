@@ -1,129 +1,521 @@
 {
+
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+
   "$id": "https://uneremcp.dev/schemas/domains/niagara/create_niagara_effect.schema.json",
+
   "title": "create_niagara_effect specification",
-  "description": "Goal-level Niagara effect creation (POC B). Duplicate-and-modify from a template system; compose emitter archetypes; expose user parameters. Use envelope mode replace for idempotent probes under /Game/__UeremcpTests/ only (ADR-0010 destructive tier). Elemental variants are one parameterized family (pending ADR-0008), not per-element tools. Owned by WS-07.",
+
+  "description": "ONE-SHOT Niagara system authoring (WS-07). PRIMARY path: specification.emitters[{name, modules[{primitive_id|asset_path, script, inputs}]}]. Epic AddEmitter requires a template — custom stacks clone Minimal then AddModule per JSON (LLM-defined stacks on Minimal substrate, NOT preset spell kits). Optional role/template_path shortcuts remain. WRITE roots: /Game/__UeremcpTests, /Game/__UeremcpPoc, /Game/RE/VFX/Magecraft. round_trip_supported=false is a hash gate, not an authoring disable. Owned by WS-07.",
+
   "type": "object",
+
   "required": ["effect_type"],
+
   "additionalProperties": false,
+
   "properties": {
+
     "name": {
+
       "type": "string",
+
       "minLength": 1,
+
       "description": "Asset name (without path). Target path comes from envelope target.asset_path."
+
     },
+
     "effect_type": {
+
       "type": "string",
+
       "minLength": 1,
-      "description": "Open-ended category (projectile, explosion, beam, aura, precipitation, rain, weather, …). precipitation/rain/weather default to rain+mist emitters when components omitted. New values add WS-15 templates, not schema forks."
+
+      "description": "Category label. Use custom|authored when emitters[].modules[] fully defines the system. Optional defaults when emitters omitted: projectile|fireball, explosion|burst, ice|freeze, spell, beam, precipitation, … — these are OPTIONAL shortcuts only."
+
     },
+
     "element": {
+
       "type": "string",
-      "description": "Elemental palette for parameterized variation (fire, water, wind, earth, ice, lightning, arcane, custom). One family, not per-element actions."
+
+      "description": "Elemental palette for parameterized variation (fire, water, wind, earth, ice, lightning, arcane, custom)."
+
     },
+
     "components": {
+
       "type": "array",
+
       "items": {
+
         "oneOf": [
+
           { "type": "string", "minLength": 1 },
+
           {
+
             "type": "object",
+
             "required": ["role"],
+
             "additionalProperties": false,
+
             "properties": {
-              "role": {
-                "type": "string",
-                "description": "Semantic role: core, flame_shell, sparks, smoke, ribbon_trail, impact_burst, rain, precipitation, mist, …"
-              },
-              "archetype": {
-                "type": "string",
-                "description": "WS-15 template id, e.g. niagara.emitter.sparks"
-              },
+
+              "role": { "type": "string" },
+
+              "archetype": { "type": "string" },
+
               "enabled": { "type": "boolean", "default": true },
-              "overrides": {
-                "type": "object",
-                "description": "Per-component parameter/material overrides applied after instantiate."
-              }
+
+              "overrides": { "type": "object" }
+
             }
+
           }
+
         ]
+
       },
-      "description": "Emitter roles to compose. Strings are shorthand role names; objects allow archetype + overrides."
+
+      "description": "OPTIONAL role shortcuts (legacy). Prefer emitters[].modules[] for LLM-authored stacks."
+
     },
-    "parameters": {
-      "type": "object",
-      "description": "User-exposed Niagara parameters (User.* namespace).",
-      "additionalProperties": true,
-      "properties": {
-        "primary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
-        "secondary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
-        "scale": { "type": "number", "exclusiveMinimum": 0 },
-        "intensity": { "type": "number", "minimum": 0 }
-      }
-    },
-    "materials": {
-      "type": "object",
-      "additionalProperties": {
-        "oneOf": [
-          { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
-          {
-            "type": "object",
-            "required": ["create_spec"],
-            "additionalProperties": false,
-            "properties": {
-              "create_spec": { "type": "object", "description": "Delegated to WS-08 create_vfx_material." },
-              "reuse_if_present": { "type": "boolean", "default": true }
-            }
-          }
-        ]
-      },
-      "description": "Role → material path or create spec (core, shell, sparks, …)."
-    },
-    "template_system": {
-      "$ref": "../../common/defs.schema.json#/$defs/assetRef",
-      "description": "Base Niagara system to duplicate. Required by Epic CreateNiagaraSystem (template mandatory — RB-07 B.11)."
-    },
-    "base_system": {
-      "$ref": "../../common/defs.schema.json#/$defs/assetRef",
-      "description": "Alias for variation flows: existing system to derive from (POC C)."
-    },
+
     "emitters": {
+
       "type": "array",
-      "description": "Advanced: explicit per-emitter stack plans. Prefer components + archetypes for POC B.",
-      "items": { "type": "object" }
-    }
-  },
-  "examples": [
-    {
-      "name": "Fireball",
-      "effect_type": "projectile",
-      "element": "fire",
-      "components": ["core", "flame_shell", "sparks", "smoke", "ribbon_trail", "impact_burst"],
-      "parameters": {
-        "primary_color": [1.0, 0.12, 0.01, 1.0],
-        "secondary_color": [1.0, 0.75, 0.05, 1.0],
-        "scale": 1.0,
-        "intensity": 8.0
-      },
-      "template_system": {
-        "asset_path": "/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight"
+
+      "description": "PRIMARY one-shot emitter plans. Each entry: name + modules[] (primitive templates) and/or optional role|template_path shortcut. Entire system configured in this array.",
+
+      "items": {
+
+        "oneOf": [
+
+          { "type": "string", "minLength": 1, "description": "Shorthand optional role (e.g. sparks)." },
+
+          {
+
+            "type": "object",
+
+            "additionalProperties": false,
+
+            "properties": {
+
+              "name": {
+
+                "type": "string",
+
+                "description": "Final emitter name on the system (LLM-chosen; not a role enum)."
+
+              },
+
+              "role": {
+
+                "type": "string",
+
+                "description": "OPTIONAL shortcut mapped to a /Niagara/.../Emitters/* template. Prefer modules[] for custom stacks."
+
+              },
+
+              "template_path": {
+
+                "type": "string",
+
+                "description": "OPTIONAL emitter template soft path. When modules[] set without role/template, defaults to Minimal substrate."
+
+              },
+
+              "emitter_template": {
+
+                "type": "string",
+
+                "description": "Alias for template_path."
+
+              },
+
+              "enabled": { "type": "boolean", "default": true },
+
+              "sim_target": {
+                "type": "string",
+                "description": "CPUSim | GPUComputeSim (aliases CPU|GPU). Applied via SetEmitterData PropertyValues.SimTarget."
+              },
+
+              "life_cycle": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Emitter State Life Cycle panel fields (Details). Applied via SetStackInputData on Emitter State.",
+                "properties": {
+                  "mode": { "type": "string", "description": "Life Cycle Mode enum name (e.g. Self)." },
+                  "life_cycle_mode": { "type": "string" },
+                  "loop_behavior": { "type": "string", "description": "Once | Multiple | Infinite." },
+                  "loop_duration": { "type": "number", "minimum": 0 },
+                  "inactive_response": { "type": "string" }
+                }
+              },
+
+              "loop_duration": { "type": "number", "minimum": 0, "description": "Flat alias for life_cycle.loop_duration." },
+              "life_cycle_mode": { "type": "string" },
+              "loop_behavior": { "type": "string" },
+              "inactive_response": { "type": "string" },
+
+              "renderer": {
+
+                "oneOf": [
+
+                  { "type": "string", "description": "sprite|mesh|ribbon|light" },
+
+                  {
+
+                    "type": "object",
+
+                    "additionalProperties": true,
+
+                    "properties": {
+
+                      "type": { "type": "string" },
+
+                      "renderer_type": { "type": "string" }
+
+                    }
+
+                  }
+
+                ],
+
+                "description": "Optional AddRenderer hint after modules (sprite|mesh|ribbon|light)."
+
+              },
+
+              "renderer_type": { "type": "string" },
+
+              "modules": {
+
+                "type": "array",
+
+                "description": "Declarative module stack — each entry is a primitive (AddModule). ONE request configures the full stack.",
+
+                "items": {
+
+                  "oneOf": [
+
+                    { "type": "string", "minLength": 1, "description": "primitive_id or catalog name (SpawnRate, spawn_rate)." },
+
+                    {
+
+                      "type": "object",
+
+                      "additionalProperties": false,
+
+                      "properties": {
+
+                        "primitive_id": {
+
+                          "type": "string",
+
+                          "description": "Catalog id: spawn_rate, initialize_particle, emitter_state, update_age, color, particle_state, add_velocity, solve_forces_and_velocity, …"
+
+                        },
+
+                        "name": { "type": "string" },
+
+                        "asset_path": {
+
+                          "type": "string",
+
+                          "description": "Explicit UNiagaraScript soft path (/Niagara/Modules/…)."
+
+                        },
+
+                        "module_script": { "type": "string", "description": "Alias for asset_path." },
+
+                        "script_path": { "type": "string" },
+
+                        "script": {
+
+                          "type": "string",
+
+                          "description": "Script stack: EmitterUpdateScript|ParticleSpawnScript|ParticleUpdateScript|EmitterSpawnScript (aliases ok)."
+
+                        },
+
+                        "script_usage": { "type": "string" },
+
+                        "enabled": { "type": "boolean", "default": true },
+
+                        "inputs": {
+
+                          "type": "object",
+
+                          "additionalProperties": true,
+
+                          "description": "Stack inputs: number|bool|[r,g,b,a] or {mode:linked|hlsl_expression|data_interface|dynamic_input|enum|local}."
+
+                        }
+
+                      }
+
+                    }
+
+                  ]
+
+                }
+
+              }
+
+            }
+
+          }
+
+        ]
+
       }
+
     },
-    {
-      "name": "Fireball_Ice",
-      "effect_type": "projectile",
-      "element": "ice",
-      "base_system": { "asset_path": "/Game/VFX/Spells/NS_Fireball" },
-      "components": [
-        { "role": "core", "enabled": true },
-        { "role": "crystalline", "archetype": "niagara.emitter.sparks", "enabled": true }
-      ],
-      "parameters": {
-        "primary_color": [0.6, 0.85, 1.0, 1.0],
-        "secondary_color": [0.9, 0.95, 1.0, 1.0],
-        "scale": 1.0,
-        "intensity": 6.0
+
+    "parameters": {
+
+      "type": "object",
+
+      "description": "User-exposed Niagara parameters (User.* namespace).",
+
+      "additionalProperties": true,
+
+      "properties": {
+
+        "primary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+
+        "secondary_color": { "$ref": "../../common/defs.schema.json#/$defs/linearColor" },
+
+        "scale": { "type": "number", "exclusiveMinimum": 0 },
+
+        "intensity": { "type": "number", "minimum": 0 }
+
       }
+
+    },
+
+    "materials": {
+
+      "type": "object",
+
+      "additionalProperties": {
+
+        "oneOf": [
+
+          { "$ref": "../../common/defs.schema.json#/$defs/assetPath" },
+
+          {
+
+            "type": "object",
+
+            "required": ["create_spec"],
+
+            "additionalProperties": false,
+
+            "properties": {
+
+              "create_spec": { "type": "object", "description": "Delegated to WS-08 create_vfx_material." },
+
+              "reuse_if_present": { "type": "boolean", "default": true }
+
+            }
+
+          }
+
+        ]
+
+      },
+
+      "description": "Role → material path or create spec."
+
+    },
+
+    "template_system": {
+
+      "$ref": "../../common/defs.schema.json#/$defs/assetRef",
+
+      "description": "Base Niagara system to duplicate. CreateNiagaraSystem template; null→empty allowed by API but we default Fountain/MinimalLightweight."
+
+    },
+
+    "base_system": {
+
+      "$ref": "../../common/defs.schema.json#/$defs/assetRef",
+
+      "description": "Existing system to inherit emitters from (variation)."
+
     }
+
+  },
+
+  "examples": [
+
+    {
+
+      "name": "NS_UeremcpCustomTripleStack",
+
+      "effect_type": "custom",
+
+      "element": "arcane",
+
+      "emitters": [
+
+        {
+
+          "name": "GroundMist",
+
+          "enabled": true,
+
+          "renderer": { "type": "sprite" },
+
+          "modules": [
+
+            { "primitive_id": "emitter_state", "script": "EmitterUpdateScript" },
+
+            { "primitive_id": "spawn_rate", "script": "EmitterUpdateScript", "inputs": { "SpawnRate": 40 } },
+
+            { "primitive_id": "initialize_particle", "script": "ParticleSpawnScript" },
+
+            { "primitive_id": "update_age", "script": "ParticleUpdateScript" },
+
+            { "primitive_id": "color", "script": "ParticleUpdateScript" },
+
+            { "primitive_id": "solve_forces_and_velocity", "script": "ParticleUpdateScript" }
+
+          ],
+
+          "sim_target": "CPUSim",
+
+          "life_cycle": {
+
+            "loop_behavior": "Infinite",
+
+            "loop_duration": 5.0
+
+          }
+
+        },
+
+        {
+
+          "name": "RisingWisps",
+
+          "renderer": "sprite",
+
+          "modules": [
+
+            { "primitive_id": "spawn_rate", "inputs": { "SpawnRate": 12 } },
+
+            { "primitive_id": "initialize_particle" },
+
+            { "primitive_id": "add_velocity" },
+
+            { "primitive_id": "update_age" },
+
+            { "primitive_id": "particle_state" }
+
+          ]
+
+        },
+
+        {
+
+          "name": "ImpactFlash",
+
+          "modules": [
+
+            {
+
+              "name": "SpawnBurst_Instantaneous",
+
+              "asset_path": "/Niagara/Modules/Emitter/SpawnBurst_Instantaneous",
+
+              "script": "EmitterUpdateScript"
+
+            },
+
+            { "primitive_id": "initialize_particle" },
+
+            { "primitive_id": "color", "inputs": { "Colors": [0.7, 0.9, 1.0, 1.0] } }
+
+          ]
+
+        }
+
+      ],
+
+      "parameters": {
+
+        "primary_color": [0.55, 0.75, 1.0, 1.0],
+
+        "intensity": 5.0
+
+      }
+
+    },
+
+    {
+
+      "name": "NS_UeremcpIceFreezeDome",
+
+      "effect_type": "ice",
+
+      "element": "ice",
+
+      "emitters": [
+
+        { "role": "ice_creep", "name": "IceCreep" },
+
+        { "role": "freeze_dome", "name": "FreezeDome" },
+
+        { "role": "sparks", "name": "FrostSparks" }
+
+      ],
+
+      "parameters": {
+
+        "primary_color": [0.55, 0.85, 1.0, 1.0],
+
+        "intensity": 6.0
+
+      }
+
+    },
+
+    {
+
+      "name": "Fireball",
+
+      "effect_type": "projectile",
+
+      "element": "fire",
+
+      "components": ["core", "flame_shell", "sparks", "smoke", "ribbon_trail", "impact_burst"],
+
+      "parameters": {
+
+        "primary_color": [1.0, 0.12, 0.01, 1.0],
+
+        "secondary_color": [1.0, 0.75, 0.05, 1.0],
+
+        "scale": 1.0,
+
+        "intensity": 8.0
+
+      },
+
+      "template_system": {
+
+        "asset_path": "/Niagara/DefaultAssets/Templates/Systems/MinimalLightweight"
+
+      }
+
+    }
+
   ]
+
 }
+
