@@ -4,16 +4,20 @@
 
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraDependencySurvey.h"
+#include "UeremcpNiagaraEmitterProperties.h"
 #include "UeremcpNiagaraGraphHash.h"
 #include "UeremcpNiagaraInspectMapping.h"
 #include "UeremcpNiagaraPaths.h"
 
+#include "AssetRegistry/ARFilter.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraEmitter.h"
 #include "NiagaraSystem.h"
 #include "NiagaraRendererProperties.h"
 
 #include "Misc/PackageName.h"
+#include "Modules/ModuleManager.h"
 #include "UObject/SoftObjectPath.h"
 
 namespace
@@ -417,18 +421,151 @@ bool FUeremcpNiagaraInspect::ParseSpecification(
 	ReadBool(TEXT("include_compile_state"), OutSpec.bIncludeCompileState);
 	ReadBool(TEXT("include_stack_issues"), OutSpec.bIncludeStackIssues);
 
+	Spec->TryGetStringField(TEXT("query"), OutSpec.Query);
+	Spec->TryGetStringField(TEXT("asset_name"), OutSpec.AssetName);
+	FString SearchRoot;
+	if (Spec->TryGetStringField(TEXT("search_root"), SearchRoot) && !SearchRoot.IsEmpty())
+	{
+		OutSpec.SearchRoot = SearchRoot;
+	}
+	Spec->TryGetStringField(TEXT("response_detail"), OutSpec.ResponseDetail);
+
 	OutError.Reset();
 	return true;
 }
 
 bool FUeremcpNiagaraInspect::IsAllowedProbePath(const FString& AssetPath)
 {
-	return UeremcpNiagaraPaths::IsAllowedProbePath(AssetPath);
+	// Legacy name: WRITE roots (sandbox + Magecraft). Sandbox-only stays on Paths::IsAllowedProbePath.
+	return UeremcpNiagaraPaths::IsAllowedMutatePath(AssetPath);
+}
+
+bool FUeremcpNiagaraInspect::IsAllowedInspectPath(const FString& AssetPath)
+{
+	return UeremcpNiagaraPaths::IsAllowedInspectPath(AssetPath);
+}
+
+bool FUeremcpNiagaraInspect::ResolveTargetPath(
+	const FUeremcpRequest& Request,
+	const FUeremcpNiagaraInspectSpec& Spec,
+	FString& OutAssetPath,
+	FString& OutError,
+	TArray<FString>& OutCandidates)
+{
+	OutCandidates.Reset();
+	OutAssetPath.Reset();
+
+	if (!Request.TargetAssetPath.IsEmpty())
+	{
+		if (!IsAllowedInspectPath(Request.TargetAssetPath))
+		{
+			OutError = FString::Printf(
+				TEXT("inspect_system path '%s' is outside /Game."),
+				*Request.TargetAssetPath);
+			return false;
+		}
+		OutAssetPath = Request.TargetAssetPath;
+		OutError.Reset();
+		return true;
+	}
+
+	const FString Query = !Spec.Query.IsEmpty() ? Spec.Query : Spec.AssetName;
+	if (Query.IsEmpty())
+	{
+		OutError = TEXT("inspect_system requires target.asset_path or specification.query / asset_name.");
+		return false;
+	}
+
+	FString SearchRoot = Spec.SearchRoot.IsEmpty() ? FString(TEXT("/Game")) : Spec.SearchRoot;
+	SearchRoot.TrimStartAndEndInline();
+	if (!SearchRoot.StartsWith(TEXT("/")))
+	{
+		SearchRoot = TEXT("/") + SearchRoot;
+	}
+	if (!UeremcpNiagaraPaths::IsAllowedInspectPath(SearchRoot)
+		&& !SearchRoot.Equals(TEXT("/Game"), ESearchCase::CaseSensitive))
+	{
+		// Allow /Game itself even when path is exactly the root token.
+		if (!SearchRoot.StartsWith(TEXT("/Game")))
+		{
+			OutError = FString::Printf(TEXT("search_root '%s' is outside /Game."), *SearchRoot);
+			return false;
+		}
+	}
+
+	FAssetRegistryModule& ARM =
+		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+	IAssetRegistry& Registry = ARM.Get();
+
+	FARFilter Filter;
+	Filter.PackagePaths.Add(*SearchRoot);
+	Filter.bRecursivePaths = true;
+	Filter.ClassPaths.Add(UNiagaraSystem::StaticClass()->GetClassPathName());
+	Filter.bRecursiveClasses = true;
+
+	TArray<FAssetData> Assets;
+	Registry.GetAssets(Filter, Assets);
+
+	TArray<FString> AllCandidates;
+	for (const FAssetData& Asset : Assets)
+	{
+		const FString Soft = Asset.GetSoftObjectPath().ToString();
+		if (Soft.IsEmpty())
+		{
+			continue;
+		}
+		FString PackagePath = Soft;
+		if (PackagePath.Contains(TEXT(".")))
+		{
+			PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
+		}
+		AllCandidates.AddUnique(PackagePath);
+	}
+
+	const FString QueryLower = Query.ToLower();
+	TArray<FString> Exact;
+	TArray<FString> Substring;
+	for (const FString& Candidate : AllCandidates)
+	{
+		const FString Name = FPackageName::GetShortName(Candidate).ToLower();
+		if (Name.Equals(QueryLower))
+		{
+			Exact.Add(Candidate);
+		}
+		else if (Name.Contains(QueryLower) || Candidate.ToLower().Contains(QueryLower))
+		{
+			Substring.Add(Candidate);
+		}
+	}
+
+	const TArray<FString>& Matches = Exact.Num() > 0 ? Exact : Substring;
+	OutCandidates = Matches;
+	if (Matches.Num() == 0)
+	{
+		OutError = FString::Printf(
+			TEXT("No UNiagaraSystem matching '%s' under %s."),
+			*Query,
+			*SearchRoot);
+		return false;
+	}
+	if (Matches.Num() > 1)
+	{
+		OutError = FString::Printf(
+			TEXT("Ambiguous Niagara query '%s' matched %d assets; pass target.asset_path or a more specific name."),
+			*Query,
+			Matches.Num());
+		return false;
+	}
+
+	OutAssetPath = Matches[0];
+	OutError.Reset();
+	return true;
 }
 
 bool FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(const FString& AssetPath)
 {
-	return IsAllowedProbePath(AssetPath);
+	// Sandbox only — Magecraft/production may collect GetStackIssues.
+	return UeremcpNiagaraPaths::IsAllowedProbePath(AssetPath);
 }
 
 bool FUeremcpNiagaraInspect::Run(
@@ -438,11 +575,10 @@ bool FUeremcpNiagaraInspect::Run(
 {
 	OutResult = FUeremcpNiagaraInspectResult();
 
-	if (!IsAllowedProbePath(Request.TargetAssetPath))
+	if (!IsAllowedInspectPath(Request.TargetAssetPath))
 	{
 		OutResult.Error = FString::Printf(
-			TEXT("inspect_system probes only assets under %s (got '%s')."),
-			*UeremcpNiagaraPaths::AllowedContentRootsDescription(),
+			TEXT("inspect_system only assets under /Game (got '%s')."),
 			*Request.TargetAssetPath);
 		return false;
 	}
@@ -456,6 +592,7 @@ bool FUeremcpNiagaraInspect::Run(
 		return false;
 	}
 	AddTrace(OutResult.ExecutionTrace, TEXT("load_system"), true, System->GetName());
+	OutResult.ResolvedAssetPath = Request.TargetAssetPath;
 
 	FString SummaryPreflightError;
 	if (!ValidateSystemForSummary(System, SummaryPreflightError))
@@ -527,12 +664,17 @@ bool FUeremcpNiagaraInspect::Run(
 			VarObj->SetStringField(TEXT("type"), Var.Type.GetName());
 		}
 		UserVars.Add(MakeShared<FJsonValueObject>(VarObj));
+		OutResult.UserParameters.Add(MakeShared<FJsonValueObject>(VarObj));
 	}
 	SystemGraph->SetArrayField(TEXT("variables"), UserVars);
 
 	TArray<FString> EmitterSubgraphIds;
 	TArray<TSharedPtr<FJsonValue>> SystemNodes;
 	FUeremcpNiagaraDependencySurveyCounts DependencySurvey;
+
+	// Topology summary at top of result — agents scan stacks without Python (docs/WHY.md).
+	OutResult.TopologySummary = MakeShared<FJsonObject>();
+	TArray<TSharedPtr<FJsonValue>> TopologyEmitterVals;
 
 	for (const FNiagaraExt_EmitterSummary& EmitterSummary : Summary.Emitters)
 	{
@@ -565,6 +707,50 @@ bool FUeremcpNiagaraInspect::Run(
 			{
 				InputValuesByModule.Add(ModuleValues.ModuleName, &ModuleValues);
 			}
+		}
+
+		// Compact per-emitter topology row (always; independent of response_detail).
+		{
+			TSharedPtr<FJsonObject> TopoEmitter = MakeShared<FJsonObject>();
+			TopoEmitter->SetStringField(TEXT("name"), EmitterName);
+			TopoEmitter->SetBoolField(TEXT("enabled"), Topology.bEnabled);
+			TArray<TSharedPtr<FJsonValue>> TopoMods;
+			auto AppendStackMods = [&TopoMods](
+				const FNiagaraExt_ScriptStackTopology& Stack,
+				const TCHAR* ScriptUsage)
+			{
+				for (const FNiagaraExt_ModuleTopology& Mod : Stack.Modules)
+				{
+					TSharedPtr<FJsonObject> M = MakeShared<FJsonObject>();
+					M->SetStringField(TEXT("name"), Mod.ModuleName.ToString());
+					M->SetStringField(TEXT("script_usage"), ScriptUsage);
+					M->SetBoolField(TEXT("enabled"), Mod.Enabled);
+					if (Mod.ModuleScript)
+					{
+						M->SetStringField(TEXT("module_script"), Mod.ModuleScript->GetPathName());
+						M->SetStringField(
+							TEXT("primitive_id"),
+							Mod.ModuleScript->GetName());
+					}
+					M->SetBoolField(TEXT("is_set_parameters"), Mod.bIsSetParametersModule);
+					TopoMods.Add(MakeShared<FJsonValueObject>(M));
+				}
+			};
+			AppendStackMods(Topology.EmitterSpawnScript, TEXT("EmitterSpawnScript"));
+			AppendStackMods(Topology.EmitterUpdateScript, TEXT("EmitterUpdateScript"));
+			AppendStackMods(Topology.ParticleSpawnScript, TEXT("ParticleSpawnScript"));
+			AppendStackMods(Topology.ParticleUpdateScript, TEXT("ParticleUpdateScript"));
+			TopoEmitter->SetArrayField(TEXT("modules"), TopoMods);
+			TArray<TSharedPtr<FJsonValue>> TopoRenderers;
+			for (const TSubclassOf<UNiagaraRendererProperties>& Cls : Topology.RendererClasses)
+			{
+				if (Cls)
+				{
+					TopoRenderers.Add(MakeShared<FJsonValueString>(Cls->GetName()));
+				}
+			}
+			TopoEmitter->SetArrayField(TEXT("renderers"), TopoRenderers);
+			TopologyEmitterVals.Add(MakeShared<FJsonValueObject>(TopoEmitter));
 		}
 
 		// --- Emitter graph ---
@@ -628,6 +814,14 @@ bool FUeremcpNiagaraInspect::Run(
 		EmitterExt->SetStringField(TEXT("emitter_name"), EmitterName);
 		EmitterExt->SetBoolField(TEXT("bEnabled"), Topology.bEnabled);
 		EmitterExt->SetStringField(TEXT("sim_target"), SimTargetToString(Topology.SimTarget));
+
+		if (TSharedPtr<FJsonObject> LifeCycle =
+			FUeremcpNiagaraEmitterProperties::ReadLifeCycleFromEmitterState(
+				System, Context, EmitterName, OutResult.InternalOperations))
+		{
+			EmitterExt->SetObjectField(TEXT("life_cycle"), LifeCycle);
+			OutResult.ChecksPerformed.Add(TEXT("niagara.emitter_life_cycle_read"));
+		}
 
 		if (Topology.RendererClasses.Num() > 0)
 		{
@@ -699,6 +893,7 @@ bool FUeremcpNiagaraInspect::Run(
 		}
 
 		OutResult.Graphs.Add(MakeShared<FJsonValueObject>(EmitterGraph));
+		OutResult.EmitterNames.Add(EmitterName);
 		++OutResult.EmitterCount;
 
 		TSharedPtr<FJsonObject> EmitterNode = MakeShared<FJsonObject>();
@@ -813,20 +1008,62 @@ bool FUeremcpNiagaraInspect::Run(
 		OutResult.ChecksSkipped.Add(TEXT("niagara.stack_issues"));
 	}
 
-	if (bHasCompileState || bHasStackIssues)
 	{
-		FNiagaraExt_SystemCompileState EmptyCompile;
-		FNiagaraExt_StackIssues EmptyIssues;
-		const TArray<TSharedPtr<FJsonValue>> EventHandlers =
-			FUeremcpNiagaraInspectMapping::BuildEventHandlerPlaceholders(
-				bHasStackIssues ? StackIssues : EmptyIssues,
-				bHasCompileState ? CompileState : EmptyCompile);
+		TArray<TSharedPtr<FJsonValue>> EventHandlers =
+			FUeremcpNiagaraInspectMapping::BuildEventHandlersFromEmitterData(
+				System, OutResult.InternalOperations);
+		OutResult.ChecksPerformed.Add(TEXT("niagara.event_handlers_from_GetEventHandlers"));
+
+		if (bHasCompileState || bHasStackIssues)
+		{
+			FNiagaraExt_SystemCompileState EmptyCompile;
+			FNiagaraExt_StackIssues EmptyIssues;
+			const TArray<TSharedPtr<FJsonValue>> Inferred =
+				FUeremcpNiagaraInspectMapping::BuildEventHandlerPlaceholders(
+					bHasStackIssues ? StackIssues : EmptyIssues,
+					bHasCompileState ? CompileState : EmptyCompile);
+			// Merge inferred-only entries (systems where GetEventHandlers empty but issues mention handlers).
+			TSet<FString> Seen;
+			for (const TSharedPtr<FJsonValue>& H : EventHandlers)
+			{
+				const TSharedPtr<FJsonObject> Obj = H.IsValid() ? H->AsObject() : nullptr;
+				if (!Obj.IsValid())
+				{
+					continue;
+				}
+				FString Emitter;
+				FString Event;
+				Obj->TryGetStringField(TEXT("source_emitter"), Emitter);
+				Obj->TryGetStringField(TEXT("event_name"), Event);
+				Seen.Add(Emitter + TEXT("|") + Event);
+			}
+			for (const TSharedPtr<FJsonValue>& H : Inferred)
+			{
+				const TSharedPtr<FJsonObject> Obj = H.IsValid() ? H->AsObject() : nullptr;
+				if (!Obj.IsValid())
+				{
+					continue;
+				}
+				FString Emitter;
+				FString Event;
+				Obj->TryGetStringField(TEXT("source_emitter"), Emitter);
+				Obj->TryGetStringField(TEXT("event_name"), Event);
+				const FString Key = Emitter + TEXT("|") + Event;
+				if (!Seen.Contains(Key))
+				{
+					Seen.Add(Key);
+					EventHandlers.Add(H);
+				}
+			}
+		}
+
 		SystemExt->SetArrayField(TEXT("event_handlers"), EventHandlers);
 		if (EventHandlers.Num() > 0)
 		{
 			SystemExt->SetStringField(
 				TEXT("event_handlers_fidelity"),
-				TEXT("inferred_from_GetStackIssues_and_GetSystemCompileState_per_script"));
+				TEXT("GetEventHandlers metadata + NodeGraph module samples; "
+					 "write blocked (no UsageId on StackItemReference)"));
 		}
 	}
 
@@ -836,7 +1073,10 @@ bool FUeremcpNiagaraInspect::Run(
 	TSharedPtr<FJsonObject> SysDiag = MakeShared<FJsonObject>();
 	TArray<TSharedPtr<FJsonValue>> Warnings;
 	Warnings.Add(MakeShared<FJsonValueString>(
-		TEXT("event_handler module stacks not exposed by GetEmitterTopology; event_handlers[] are inferred placeholders only")));
+		TEXT("event_handlers: READ via GetEventHandlers + NodeGraph samples. "
+			 "WRITE AddModule/enable on ParticleEventScript blocked — "
+			 "FNiagaraExt_StackItemReference has no UsageId (FindScriptGroup needs Guid). "
+			 "script_graph_internals: READ summary only; no EdGraph mutate API.")));
 	SysDiag->SetArrayField(TEXT("warnings"), Warnings);
 	SystemGraph->SetObjectField(TEXT("diagnostics"), SysDiag);
 
@@ -853,8 +1093,21 @@ bool FUeremcpNiagaraInspect::Run(
 		true,
 		FString::Printf(TEXT("%d emitters, %d module nodes"), OutResult.EmitterCount, OutResult.ModuleCount));
 
+	if (OutResult.TopologySummary.IsValid())
+	{
+		OutResult.TopologySummary->SetArrayField(TEXT("emitters"), TopologyEmitterVals);
+		OutResult.TopologySummary->SetNumberField(TEXT("emitter_count"), OutResult.EmitterCount);
+		OutResult.TopologySummary->SetNumberField(TEXT("module_count"), OutResult.ModuleCount);
+		OutResult.TopologySummary->SetNumberField(TEXT("renderer_count"), OutResult.RendererCount);
+		OutResult.TopologySummary->SetBoolField(TEXT("round_trip_supported"), false);
+		OutResult.ChecksPerformed.Add(TEXT("niagara.topology_summary"));
+	}
+
 	OutResult.Summary = FString::Printf(
-		TEXT("Inspected Niagara system '%s': %d emitter graph(s), %d module stack node(s), %d renderer ref(s), %d content_hash(es) via UNiagaraExternalEditUtilities + FUeremcpContentHash. Event handler stacks and renderer material bindings remain lossy. round_trip_supported=false."),
+		TEXT("Inspected Niagara system '%s': %d emitter graph(s), %d module stack node(s), %d renderer ref(s), %d content_hash(es) via UNiagaraExternalEditUtilities + FUeremcpContentHash. "
+			 "result.topology_summary lists emitters→modules→renderers at top. "
+			 "event_handlers from GetEventHandlers (write blocked). "
+			 "sim_target + life_cycle readable. round_trip_supported=false until retrieve→submit→retrieve proven."),
 		*Summary.SystemName.ToString(),
 		OutResult.EmitterCount,
 		OutResult.ModuleCount,

@@ -68,6 +68,9 @@ bool FUeremcpMaterialPlanHandlers::Register(FString& OutError)
 	if (!Bind(TEXT("create_master_material"), &UUeremcpMaterialToolset::CreateMasterMaterial)) return false;
 	if (!Bind(TEXT("create_landscape_material"), &UUeremcpMaterialToolset::CreateLandscapeMaterial)) return false;
 	if (!Bind(TEXT("create_vfx_material"), &UUeremcpMaterialToolset::CreateVfxMaterial)) return false;
+	if (!Bind(TEXT("update_material_instance_parameters"), &UUeremcpMaterialToolset::UpdateMaterialInstanceParameters)) return false;
+	if (!Bind(TEXT("inspect_material"), &UUeremcpMaterialToolset::InspectMaterial)) return false;
+	if (!Bind(TEXT("submit_material_graph"), &UUeremcpMaterialToolset::SubmitMaterialGraph)) return false;
 
 	OutError.Reset();
 	return true;
@@ -79,4 +82,7 @@ void FUeremcpMaterialPlanHandlers::Unregister()
 	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_master_material"));
 	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_landscape_material"));
 	FUeremcpPlanExecutor::UnregisterAction(TEXT("create_vfx_material"));
+	FUeremcpPlanExecutor::UnregisterAction(TEXT("update_material_instance_parameters"));
+	FUeremcpPlanExecutor::UnregisterAction(TEXT("inspect_material"));
+	FUeremcpPlanExecutor::UnregisterAction(TEXT("submit_material_graph"));
 }

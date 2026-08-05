@@ -1,0 +1,49 @@
+---
+description: Force UEREMCP MCP bootstrap — GetStarted/ResolveIntent before Epic primitives
+alwaysApply: true
+---
+
+# Unreal MCP — bootstrap or you are wrong
+
+When the task touches the live Unreal editor, assets, UI, Niagara, materials,
+Blueprints, landscape, capture, inventory, or any in-editor change:
+
+## Niagara path policy (Magecraft is a first-class authoring surface)
+
+- Prefer `UeremcpNiagara.InspectSystem` to **READ** any `/Game/…` path, including Magecraft — **one call** returns `result.graphs[]` (emitters, modules, User.*, renderers). Do **not** browse Epic `NiagaraToolsets.*` for discover/inspect.
+- Prefer **InspectSystem → SubmitNiagaraGraph** for structural graph JSON edits; `AdaptNiagaraEffect` for light User.*/material tweaks only.
+- `CreateNiagaraEffect` — **WRITE** new systems under `/Game/__UeremcpTests`, `/Game/__UeremcpPoc`, or `/Game/RE/VFX/Magecraft`
+- `AdaptNiagaraEffect` — **in-place** User.*/material edits on existing Magecraft/sandbox systems (never deletes)
+- `mode=replace` / delete — **sandbox only**; never wipe Magecraft (submit replace on Magecraft = in-place stack reconcile)
+- `CaptureEffectFrames` — proof on sandbox **or** production paths
+- Full graph JSON → rebuild (`round_trip_supported`) is **not** shipped yet (`false`); do not pretend Epic primitives are the preferred Magecraft path meanwhile
+
+## Required first calls (every session / every new Unreal goal)
+
+1. Confirm editor via `user-unreal-watch` `get_editor_status` (or `check_unreal`) if MCP may be wedged.
+2. Call `user-unreal-mcp` → `call_tool`:
+   - toolset: `UeremcpCore.UeremcpReferenceToolset`
+   - tool: `GetStarted`
+   - args: `{ "protocol_version":"1.0", "action":"get_started", "specification":{} }`
+3. Then `ResolveIntent` with the user's plain-text goal:
+   - tool: `ResolveIntent`
+   - args: `{ "protocol_version":"1.0", "action":"resolve_intent", "specification":{ "intent":"<goal>", "mode":"recommend" } }`
+4. Execute the returned `plan[]` via `call_tool` using each step's `toolset` / `tool` / `request_json`. Prefer one semantic Ueremcp* call over many Epic primitives.
+
+## Banned as first discovery
+
+- Starting with `list_toolsets` or browsing 70+ Epic toolsets
+- Chains of Epic `create_node` / `connect_pins` / MaterialTools / UMGToolSet primitives when a Ueremcp* action exists
+- Inventing tool names — only names from ResolveIntent / live registry
+- Treating Python repo scripts as a substitute for live editor MCP when the editor is up
+
+## When Epic / Python is fine
+
+- Epic: read-only gap after ResolveIntent abstains or catalog says planned/research
+- Python: schema validation, ownership checks, unit tests, offline harnesses — not live asset surgery when `:8000` MCP is up
+
+## One-shot context (not drip feeds)
+
+Prefer tools that return complete structure in one response (`read_graph`, `InspectSystem`, `InspectEnvironment`, `DescribeOperation` with needed detail, ResolveIntent plan). Do not drip-feed with many tiny inspect calls. Cost is superlinear in call count (`docs/WHY.md`).
+
+Policy detail: `docs/guide/tool-selection-policy.md`.

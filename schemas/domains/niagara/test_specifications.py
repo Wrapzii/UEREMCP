@@ -36,14 +36,21 @@ EXPECTED_LOSSY_AREAS = frozenset({
 })
 
 EXPECTED_CREATE_CAPABILITY_SNIPPETS = (
+    "PRIMARY PATH",
+    "emitters[",
+    "modules[",
+    "primitive_id",
+    "Minimal",
+    "OPTIONAL shortcuts",
     "material_bindings",
     "partially_completed",
     "orphaned_inline_creates",
-    "POC B",
-    "six emitter",
-    "post-create inspect",
-    "mode 'replace'",
+    "round_trip_supported=false",
     "execute_plan",
+    "sim_target",
+    "life_cycle",
+    "linked",
+    "SetEmitterData",
 )
 
 # Mirrors FUeremcpEnvelope::ParseRequest OptAllowed (UeremcpEnvelope.cpp).
@@ -587,6 +594,49 @@ class NiagaraSpecificationTests(unittest.TestCase):
 
         for check in expectations["checks_skipped"]:
             self.assertIn("round_trip", check)
+
+    def test_adapt_niagara_effect_examples(self) -> None:
+        self._validate_examples("adapt_niagara_effect.schema.json")
+
+    def test_submit_niagara_graph_examples(self) -> None:
+        self._validate_examples("submit_niagara_graph.schema.json")
+
+    def test_create_sim_target_life_cycle_fixture(self) -> None:
+        schema = load_schema("create_niagara_effect.schema.json")
+        validator = Draft202012Validator(schema, registry=self.registry)
+        fixture = load_fixture("create_sim_target_life_cycle.json")
+        validator.validate(fixture)
+        emitter = fixture["emitters"][0]
+        self.assertEqual(emitter["sim_target"], "CPUSim")
+        self.assertEqual(emitter["life_cycle"]["loop_duration"], 1.5)
+
+    def test_submit_linked_input_fixture(self) -> None:
+        schema = load_schema("submit_niagara_graph.schema.json")
+        validator = Draft202012Validator(schema, registry=self.registry)
+        fixture = load_fixture("submit_linked_input.json")
+        validator.validate(fixture)
+        spawn = fixture["emitters"][0]["modules"][0]["inputs"]["SpawnRate"]
+        self.assertEqual(spawn["mode"], "linked")
+        self.assertEqual(spawn["linked_variable"], "User.Intensity")
+
+    def test_hash_round_trip_retrieve_submit_fixture(self) -> None:
+        fixture = load_fixture("hash_round_trip_retrieve_submit.json")
+        expectations = fixture["hash_scaffold_expectations"]
+        self.assertFalse(expectations["round_trip_supported_default"])
+        self.assertTrue(expectations["retrieve_retrieve_does_not_flip"])
+        self.assertTrue(expectations["retrieve_submit_retrieve_flips_only_on_match"])
+        self.assertIn("hash_drift_after_submit", expectations["failure_modes"])
+
+    def test_capability_header_emitter_properties(self) -> None:
+        header = (
+            REPO_ROOT
+            / "Plugins/UEREMCP/Source/UeremcpNiagara/Public/UeremcpNiagaraCapabilityNotes.h"
+        ).read_text(encoding="utf-8")
+        self.assertIn("GetEventHandlers", header)
+        self.assertIn("sim_target", header)
+        self.assertIn("life_cycle", header)
+        self.assertIn("UsageId", header)
+        self.assertIn("NodeGraph", header)
 
 
 if __name__ == "__main__":

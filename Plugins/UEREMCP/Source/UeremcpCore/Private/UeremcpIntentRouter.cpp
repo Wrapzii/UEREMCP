@@ -66,6 +66,9 @@ namespace UeremcpIntentRouterInternal
 			{TEXT("explosion"), TEXT("niagara effect burst")},
 			{TEXT("shader"), TEXT("material")},
 			{TEXT("texture"), TEXT("material texture")},
+			{TEXT("free_spells"), TEXT("inspect material Free_Spells material graph")},
+			{TEXT("m_free_spells"), TEXT("inspect material Free_Spells")},
+			{TEXT("mi_free_spells"), TEXT("inspect material Free_Spells material instance")},
 			{TEXT("screenshot"), TEXT("capture viewport image render")},
 			{TEXT("picture"), TEXT("capture viewport image render")},
 			{TEXT("look"), TEXT("capture viewport image render")},
@@ -466,6 +469,17 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpTemplates.UeremcpTemplatesToolset")));
 	Prefer.Add(MakeShared<FJsonValueString>(TEXT("UeremcpValidation.UeremcpVisualCaptureToolset")));
 	Payload->SetArrayField(TEXT("prefer_toolsets"), Prefer);
+	Payload->SetStringField(TEXT("niagara_path_policy"),
+		TEXT("YES you can create NEW multi-emitter effects under Magecraft+sandbox. "
+			 "READ: UeremcpNiagara.InspectSystem for any /Game/… including Magecraft — one call returns result.graphs[]. "
+			 "WRITE new (ONE SHOT): CreateNiagaraEffect with specification.components[] or emitters[{role|template_path,name}] "
+			 "under /Game/__UeremcpTests|/Game/__UeremcpPoc|/Game/RE/VFX/Magecraft — adds real emitters (not empty shell). "
+			 "Example ice: emitters ice_creep+freeze_dome+sparks. "
+			 "WRITE light tweaks: AdaptNiagaraEffect (User.*/materials, never deletes). "
+			 "WRITE structural edits: InspectSystem → SubmitNiagaraGraph (add modules / add emitters from template_path). "
+			 "mode=replace delete is sandbox-only — Magecraft replace is in-place stack reconcile. "
+			 "round_trip_supported=false means hash not proven — NOT that authoring is disabled. "
+			 "CaptureEffectFrames for visual proof."));
 	Payload->SetStringField(TEXT("detail"), Detail.IsEmpty() ? TEXT("summary") : Detail);
 	Payload->SetStringField(TEXT("set_name_filters_note"),
 		TEXT("FToolset::SetNameFilters exists [VERIFIED: Toolset.h:59-60] but UEREMCP does not apply global hides; router demotes SUPERSEDED instead."));
@@ -504,6 +518,12 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 	Payload->SetStringField(
 		TEXT("capture_beauty"),
 		TEXT("Prefer editor viewport / CaptureMaterialFrames for beauty review — not a structural gate."));
+	Payload->SetStringField(
+		TEXT("material_path_policy"),
+		TEXT("READ any /Game material/MI (incl. Free_Spells): InspectMaterial → result.graphs[] + parameters. "
+			 "WRITE existing: SubmitMaterialGraph (in-place; never silent-delete production masters). "
+			 "WRITE new VFX: CreateVfxMaterial / CreateMasterMaterial under scratch. "
+			 "fidelity.round_trip_supported=false until proven. Proof: CaptureMaterialFrames."));
 	Payload->SetStringField(
 		TEXT("capture_structural"),
 		TEXT("UeremcpValidation.UeremcpVisualCaptureToolset.CaptureWorldFrames — structural world evidence after env builds."));
@@ -920,6 +940,52 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 		}
 		Hits.Add(H);
 	}
+
+	// Material / Free_Spells intents must not misfire onto Niagara InspectSystem.
+	{
+		const FString IntentJoined = FString::Join(QueryToks, TEXT(" "));
+		const bool bHasMaterialCue =
+			IntentJoined.Contains(TEXT("material"))
+			|| IntentJoined.Contains(TEXT("shader"))
+			|| IntentJoined.Contains(TEXT("free_spells"))
+			|| IntentJoined.Contains(TEXT("m_free"))
+			|| IntentJoined.Contains(TEXT("mi_free"))
+			|| (IntentJoined.Contains(TEXT("free")) && IntentJoined.Contains(TEXT("spells")));
+		const bool bHasNiagaraCue =
+			IntentJoined.Contains(TEXT("niagara"))
+			|| IntentJoined.Contains(TEXT("emitter"))
+			|| IntentJoined.Contains(TEXT("particle"))
+			|| IntentJoined.Contains(TEXT("ns_"));
+		if (bHasMaterialCue && !bHasNiagaraCue)
+		{
+			for (FHit& H : Hits)
+			{
+				FString Action;
+				if (Docs.IsValidIndex(H.DocIndex) && Docs[H.DocIndex].CatalogOp.IsValid())
+				{
+					Docs[H.DocIndex].CatalogOp->TryGetStringField(TEXT("action"), Action);
+				}
+				const FString ToolLower = Docs.IsValidIndex(H.DocIndex)
+					? Docs[H.DocIndex].Tool.ToLower()
+					: FString();
+				if (Action.Equals(TEXT("inspect_system"))
+					|| ToolLower.Contains(TEXT("inspectsystem"))
+					|| (ToolLower.Contains(TEXT("niagara")) && ToolLower.Contains(TEXT("inspect"))))
+				{
+					H.Score *= 0.2;
+					H.Why = TEXT("demoted — material/Free_Spells intent; prefer InspectMaterial");
+				}
+				else if (Action.Equals(TEXT("inspect_material"))
+					|| ToolLower.Contains(TEXT("inspectmaterial")))
+				{
+					H.Score *= 1.45;
+					H.Why = TEXT("boosted — material/Free_Spells inspect intent");
+					H.Matched.AddUnique(TEXT("material_intent"));
+				}
+			}
+		}
+	}
+
 	Hits.Sort([](const FHit& A, const FHit& B) { return A.Score > B.Score; });
 
 	// Dedupe by ACTION when the catalog knows one, else by toolset.

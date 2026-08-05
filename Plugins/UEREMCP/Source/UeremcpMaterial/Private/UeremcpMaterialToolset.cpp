@@ -4,8 +4,11 @@
 
 #include "UeremcpEnvelope.h"
 #include "UeremcpMaterialAssetLoad.h"
+#include "UeremcpMaterialCapabilityNotes.h"
+#include "UeremcpMaterialInspect.h"
 #include "UeremcpMaterialMasterBuilder.h"
 #include "UeremcpMaterialService.h"
+#include "UeremcpMaterialSubmit.h"
 #include "UeremcpMutatingDispatch.h"
 #include "UeremcpProceduralTextureService.h"
 #include "UeremcpSecurityDomainAdoption.h"
@@ -412,6 +415,341 @@ FString UUeremcpMaterialToolset::CreateMasterMaterial(const FString& RequestJson
 	Response.CapabilityNotes.Append(BuildResult.CapabilityNotes);
 	Response.Metrics.InternalOperations = BuildResult.InternalOperations;
 	Response.Metrics.AssetsAffected = BuildResult.bCreated ? 1 : 0;
+
+	return bDispatchStarted
+		? MutatingDispatch.Complete(Response)
+		: FUeremcpEnvelope::SerializeResponse(Response);
+}
+
+FString UUeremcpMaterialToolset::UpdateMaterialInstanceParameters(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
+				*Request.ProtocolVersion,
+				*FUeremcpEnvelope::ProtocolVersion()));
+	}
+
+	if (!Request.Action.Equals(TEXT("update_material_instance_parameters"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("update_material_instance_parameters tool received action '%s'."),
+				*Request.Action));
+	}
+
+	if (Request.TargetAssetPath.IsEmpty())
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			TEXT("update_material_instance_parameters requires target.asset_path (MaterialInstanceConstant)."));
+	}
+
+	bool bTargetExists = false;
+	const int32 PredictedDeleted = PredictedDeletedForTarget(Request, bTargetExists);
+	FUeremcpMutatingDispatch MutatingDispatch;
+	const bool bDispatchStarted = !Request.bDryRun;
+	if (bDispatchStarted)
+	{
+		FString BlockingResponse;
+		if (!MutatingDispatch.TryBegin(
+			RequestJson,
+			bTargetExists,
+			PredictedDeleted,
+			false,
+			BlockingResponse))
+		{
+			return BlockingResponse;
+		}
+		Request.bDryRun = MutatingDispatch.IsEffectiveDryRun();
+	}
+
+	const FUeremcpMaterialInstanceUpdateResult UpdateResult =
+		UeremcpMaterialService::ExecuteUpdateMaterialInstanceParameters(Request);
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.Status = UpdateResult.Status;
+	Response.Summary = UpdateResult.Summary;
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = Request.TargetAssetPath;
+	Response.ModifiedAssets = UpdateResult.ModifiedAssets;
+	Response.InterpretationNotes = UpdateResult.InterpretationNotes;
+	Response.CapabilityNotes = UpdateResult.CapabilityNotes;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = UpdateResult.InternalOperations;
+	Response.Metrics.AssetsAffected = UpdateResult.ModifiedAssets.Num();
+
+	TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+	if (UpdateResult.ParameterChangesJson.IsValid())
+	{
+		Extra->SetObjectField(TEXT("parameter_changes"), UpdateResult.ParameterChangesJson);
+	}
+	TArray<TSharedPtr<FJsonValue>> ErrorValues;
+	for (const FString& Error : UpdateResult.Errors)
+	{
+		ErrorValues.Add(MakeShared<FJsonValueString>(Error));
+	}
+	Extra->SetArrayField(TEXT("errors"), ErrorValues);
+	Extra->SetBoolField(TEXT("saved"), UpdateResult.bSaved);
+	Response.ExtraFields = Extra;
+
+	return bDispatchStarted
+		? MutatingDispatch.Complete(Response)
+		: FUeremcpEnvelope::SerializeResponse(Response);
+}
+
+FString UUeremcpMaterialToolset::InspectMaterial(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
+				*Request.ProtocolVersion,
+				*FUeremcpEnvelope::ProtocolVersion()));
+	}
+
+	if (!Request.Action.Equals(TEXT("inspect_material"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("inspect_material tool received action '%s'."),
+				*Request.Action));
+	}
+
+	FUeremcpMaterialInspectSpec Spec;
+	FString SpecError;
+	if (!FUeremcpMaterialInspect::ParseSpecification(Request.Specification, Spec, SpecError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(TEXT("Invalid inspect_material specification: %s"), *SpecError));
+	}
+
+	if (Spec.ResponseDetail.IsEmpty() && Request.ResponseDetail.IsEmpty())
+	{
+		Request.ResponseDetail = TEXT("complete");
+	}
+
+	FUeremcpMaterialInspectResult InspectResult;
+	if (!FUeremcpMaterialInspect::Run(Request, Spec, InspectResult))
+	{
+		TSharedPtr<FJsonObject> NextArgs;
+		if (InspectResult.Candidates.Num() > 0)
+		{
+			NextArgs = MakeShared<FJsonObject>();
+			TArray<TSharedPtr<FJsonValue>> Candidates;
+			for (const FString& Candidate : InspectResult.Candidates)
+			{
+				Candidates.Add(MakeShared<FJsonValueString>(Candidate));
+			}
+			NextArgs->SetArrayField(TEXT("candidates"), Candidates);
+		}
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			InspectResult.Error.IsEmpty() ? TEXT("inspect_material failed.") : InspectResult.Error,
+			FString(),
+			NextArgs);
+	}
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.Status = TEXT("partially_completed");
+	Response.Summary = InspectResult.Summary;
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = InspectResult.ResolvedAssetPath;
+	Response.CapabilityNotes = UeremcpMaterialCapability::DefaultInspectCapabilityNotes();
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = InspectResult.InternalOperations;
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("primary_asset"), InspectResult.ResolvedAssetPath);
+	Result->SetStringField(TEXT("asset_path"), InspectResult.ResolvedAssetPath);
+	Result->SetStringField(TEXT("asset_class"), InspectResult.AssetClass);
+	if (!InspectResult.ParentMaterialPath.IsEmpty())
+	{
+		Result->SetStringField(TEXT("parent_material"), InspectResult.ParentMaterialPath);
+	}
+	Result->SetNumberField(TEXT("expression_count"), InspectResult.ExpressionCount);
+	Result->SetNumberField(TEXT("parameter_count"), InspectResult.ParameterCount);
+	if (InspectResult.Parameters.IsValid())
+	{
+		Result->SetObjectField(TEXT("parameters"), InspectResult.Parameters);
+	}
+	if (InspectResult.Fidelity.IsValid())
+	{
+		Result->SetObjectField(TEXT("fidelity"), InspectResult.Fidelity);
+	}
+	Result->SetArrayField(TEXT("graphs"), InspectResult.Graphs);
+
+	TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+	Extra->SetObjectField(TEXT("result"), Result);
+
+	TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
+	if (InspectResult.ExecutionTrace.Num() > 0)
+	{
+		Diagnostics->SetArrayField(TEXT("execution_trace"), InspectResult.ExecutionTrace);
+	}
+	if (Diagnostics->Values.Num() > 0)
+	{
+		Extra->SetObjectField(TEXT("diagnostics"), Diagnostics);
+	}
+
+	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+	TArray<TSharedPtr<FJsonValue>> ChecksPerformed;
+	for (const FString& Check : InspectResult.ChecksPerformed)
+	{
+		ChecksPerformed.Add(MakeShared<FJsonValueString>(Check));
+	}
+	Validation->SetArrayField(TEXT("checks_performed"), ChecksPerformed);
+	TArray<TSharedPtr<FJsonValue>> ChecksSkipped;
+	for (const FString& Check : InspectResult.ChecksSkipped)
+	{
+		ChecksSkipped.Add(MakeShared<FJsonValueString>(Check));
+	}
+	Validation->SetArrayField(TEXT("checks_skipped"), ChecksSkipped);
+	Extra->SetObjectField(TEXT("validation"), Validation);
+
+	Response.ExtraFields = Extra;
+	return FUeremcpEnvelope::SerializeResponse(Response);
+}
+
+FString UUeremcpMaterialToolset::SubmitMaterialGraph(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString ParseError;
+
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
+				*Request.ProtocolVersion,
+				*FUeremcpEnvelope::ProtocolVersion()));
+	}
+
+	if (!Request.Action.Equals(TEXT("submit_material_graph"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("submit_material_graph tool received action '%s'."),
+				*Request.Action));
+	}
+
+	FUeremcpMaterialSubmitSpec Spec;
+	FString SpecError;
+	if (!FUeremcpMaterialSubmit::ParseSpecification(Request.Specification, Spec, SpecError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(TEXT("Invalid submit_material_graph specification: %s"), *SpecError));
+	}
+
+	bool bTargetExists = false;
+	const int32 PredictedDeleted = PredictedDeletedForTarget(Request, bTargetExists);
+	FUeremcpMutatingDispatch MutatingDispatch;
+	const bool bDispatchStarted = !Request.bDryRun;
+	if (bDispatchStarted)
+	{
+		FString BlockingResponse;
+		if (!MutatingDispatch.TryBegin(
+			RequestJson,
+			bTargetExists,
+			PredictedDeleted,
+			false,
+			BlockingResponse))
+		{
+			return BlockingResponse;
+		}
+		Request.bDryRun = MutatingDispatch.IsEffectiveDryRun();
+	}
+
+	FUeremcpMaterialSubmitResult SubmitResult;
+	if (!FUeremcpMaterialSubmit::Run(Request, Spec, SubmitResult))
+	{
+		FUeremcpResponse Reject;
+		Reject.RequestId = Request.RequestId;
+		Reject.Status = TEXT("rejected");
+		Reject.Summary = SubmitResult.Error.IsEmpty()
+			? TEXT("submit_material_graph failed.")
+			: SubmitResult.Error;
+		Reject.UnderstoodAction = Request.Action;
+		Reject.UnderstoodTarget = Request.TargetAssetPath;
+		Reject.InterpretationNotes = SubmitResult.InterpretationNotes;
+		Reject.CapabilityNotes = SubmitResult.CapabilityNotes;
+		Reject.Metrics.McpRoundTrips = 1;
+		return bDispatchStarted
+			? MutatingDispatch.Complete(Reject)
+			: FUeremcpEnvelope::SerializeResponse(Reject);
+	}
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.Status = SubmitResult.Status;
+	Response.Summary = SubmitResult.Summary;
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.CreatedAssets = SubmitResult.CreatedAssets;
+	Response.ModifiedAssets = SubmitResult.ModifiedAssets;
+	Response.InterpretationNotes = SubmitResult.InterpretationNotes;
+	Response.CapabilityNotes = SubmitResult.CapabilityNotes;
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = SubmitResult.InternalOperations;
+	Response.Metrics.AssetsAffected =
+		SubmitResult.CreatedAssets.Num() + SubmitResult.ModifiedAssets.Num();
+
+	TSharedPtr<FJsonObject> Extra = MakeShared<FJsonObject>();
+	if (SubmitResult.ResultPayload.IsValid())
+	{
+		Extra->SetObjectField(TEXT("result"), SubmitResult.ResultPayload);
+	}
+	if (SubmitResult.Errors.Num() > 0)
+	{
+		TArray<TSharedPtr<FJsonValue>> Errors;
+		for (const FString& Error : SubmitResult.Errors)
+		{
+			Errors.Add(MakeShared<FJsonValueString>(Error));
+		}
+		Extra->SetArrayField(TEXT("errors"), Errors);
+	}
+	Response.ExtraFields = Extra;
 
 	return bDispatchStarted
 		? MutatingDispatch.Complete(Response)

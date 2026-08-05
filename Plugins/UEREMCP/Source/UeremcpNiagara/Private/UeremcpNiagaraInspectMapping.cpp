@@ -5,9 +5,16 @@
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraMaterialBinding.h"
 #include "UeremcpNiagaraRendererResolve.h"
+#include "NiagaraEmitter.h"
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraMeshRendererProperties.h"
+#include "NiagaraNodeFunctionCall.h"
+#include "NiagaraNodeCustomHlsl.h"
+#include "NiagaraScript.h"
+#include "NiagaraScriptSource.h"
 #include "NiagaraSystem.h"
+#include "EdGraph/EdGraph.h"
+#include "EdGraph/EdGraphNode.h"
 
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -41,7 +48,8 @@ namespace
 		Handler->SetStringField(TEXT("inferred_from"), InferredFrom);
 		Handler->SetStringField(
 			TEXT("fidelity_note"),
-			TEXT("Modules empty: GetEmitterTopology omits ParticleEventScript stacks; placeholder only."));
+			TEXT("Placeholder only — prefer GetEventHandlers() for metadata; "
+				 "module stacks not addressable via ExternalEditUtilities (no UsageId)."));
 		Handler->SetArrayField(TEXT("modules"), TArray<TSharedPtr<FJsonValue>>());
 		return Handler;
 	}
@@ -278,6 +286,147 @@ TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildRendererGraph
 	}
 
 	return Nodes;
+}
+
+TSharedPtr<FJsonObject> FUeremcpNiagaraInspectMapping::BuildScriptGraphInternalsSummary(
+	UNiagaraScript* ModuleScript)
+{
+	if (!ModuleScript)
+	{
+		return nullptr;
+	}
+
+	UNiagaraScriptSourceBase* SourceBase = ModuleScript->GetLatestSource();
+	UNiagaraScriptSource* Source = Cast<UNiagaraScriptSource>(SourceBase);
+	if (!Source || !Source->NodeGraph)
+	{
+		TSharedPtr<FJsonObject> Empty = MakeShared<FJsonObject>();
+		Empty->SetStringField(TEXT("fidelity"), TEXT("no_script_source_graph"));
+		Empty->SetBoolField(TEXT("write_supported"), false);
+		return Empty;
+	}
+
+	int32 NodeCount = 0;
+	int32 FunctionCallCount = 0;
+	int32 CustomHlslCount = 0;
+	TArray<TSharedPtr<FJsonValue>> SampleNodes;
+	for (UEdGraphNode* Node : Source->NodeGraph->Nodes)
+	{
+		if (!Node)
+		{
+			continue;
+		}
+		++NodeCount;
+		if (Cast<UNiagaraNodeCustomHlsl>(Node))
+		{
+			++CustomHlslCount;
+		}
+		if (UNiagaraNodeFunctionCall* Fn = Cast<UNiagaraNodeFunctionCall>(Node))
+		{
+			++FunctionCallCount;
+			if (SampleNodes.Num() < 16)
+			{
+				TSharedPtr<FJsonObject> Sample = MakeShared<FJsonObject>();
+				Sample->SetStringField(TEXT("function_name"), Fn->GetFunctionName());
+				if (Fn->FunctionScript)
+				{
+					Sample->SetStringField(TEXT("script"), Fn->FunctionScript->GetPathName());
+				}
+				SampleNodes.Add(MakeShared<FJsonValueObject>(Sample));
+			}
+		}
+	}
+
+	TSharedPtr<FJsonObject> Summary = MakeShared<FJsonObject>();
+	Summary->SetNumberField(TEXT("node_count"), NodeCount);
+	Summary->SetNumberField(TEXT("function_call_count"), FunctionCallCount);
+	Summary->SetNumberField(TEXT("custom_hlsl_node_count"), CustomHlslCount);
+	Summary->SetArrayField(TEXT("sample_function_calls"), SampleNodes);
+	Summary->SetBoolField(TEXT("write_supported"), false);
+	Summary->SetStringField(
+		TEXT("write_blocker"),
+		TEXT("UNiagaraExternalEditUtilities has no NiagaraScriptGraph / EdGraph mutate API; "
+			 "NodeGraph is read-only via UNiagaraScriptSource::NodeGraph UPROPERTY."));
+	Summary->SetStringField(TEXT("fidelity"), TEXT("read_summary_only"));
+	return Summary;
+}
+
+TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildEventHandlersFromEmitterData(
+	UNiagaraSystem* System,
+	int32& InOutInternalOperations)
+{
+	TArray<TSharedPtr<FJsonValue>> Handlers;
+	if (!System)
+	{
+		return Handlers;
+	}
+
+	for (const FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+	{
+		const FVersionedNiagaraEmitterData* EmitterData = Handle.GetEmitterData();
+		if (!EmitterData)
+		{
+			continue;
+		}
+		++InOutInternalOperations;
+
+		// [VERIFIED: GetEventHandlers — NiagaraEmitter.h:427]
+		for (const FNiagaraEventScriptProperties& EventProps : EmitterData->GetEventHandlers())
+		{
+			TSharedPtr<FJsonObject> Handler = MakeShared<FJsonObject>();
+			Handler->SetStringField(TEXT("source_emitter"), Handle.GetName().ToString());
+			Handler->SetStringField(TEXT("script_usage"), TEXT("ParticleEventScript"));
+			Handler->SetStringField(TEXT("event_name"), EventProps.SourceEventName.ToString());
+			Handler->SetStringField(
+				TEXT("source_emitter_id"),
+				EventProps.SourceEmitterID.ToString(EGuidFormats::DigitsWithHyphens));
+			if (EventProps.Script)
+			{
+				Handler->SetStringField(
+					TEXT("usage_guid"),
+					EventProps.Script->GetUsageId().ToString(EGuidFormats::DigitsWithHyphens));
+				Handler->SetStringField(TEXT("script_path"), EventProps.Script->GetPathName());
+			}
+			if (const UEnum* ExecEnum = StaticEnum<EScriptExecutionMode>())
+			{
+				Handler->SetStringField(
+					TEXT("execution_mode"),
+					ExecEnum->GetNameStringByValue(static_cast<int64>(EventProps.ExecutionMode)));
+			}
+			Handler->SetNumberField(TEXT("spawn_number"), static_cast<double>(EventProps.SpawnNumber));
+			Handler->SetNumberField(
+				TEXT("max_events_per_frame"),
+				static_cast<double>(EventProps.MaxEventsPerFrame));
+			Handler->SetStringField(TEXT("inferred_from"), TEXT("FVersionedNiagaraEmitterData::GetEventHandlers"));
+			Handler->SetStringField(
+				TEXT("fidelity_note"),
+				TEXT("Metadata from GetEventHandlers. Module list is NodeGraph best-effort; "
+					 "ExternalEditUtilities cannot AddModule/SetModuleEnabled on ParticleEventScript "
+					 "(StackItemReference has no UsageId; FindScriptGroup needs Guid)."));
+
+			TArray<TSharedPtr<FJsonValue>> Modules;
+			if (EventProps.Script)
+			{
+				if (TSharedPtr<FJsonObject> GraphSummary =
+					BuildScriptGraphInternalsSummary(EventProps.Script))
+				{
+					Handler->SetObjectField(TEXT("script_graph_internals"), GraphSummary);
+					const TArray<TSharedPtr<FJsonValue>>* Samples = nullptr;
+					if (GraphSummary->TryGetArrayField(TEXT("sample_function_calls"), Samples)
+						&& Samples)
+					{
+						for (const TSharedPtr<FJsonValue>& Sample : *Samples)
+						{
+							Modules.Add(Sample);
+						}
+					}
+				}
+			}
+			Handler->SetArrayField(TEXT("modules"), Modules);
+			Handlers.Add(MakeShared<FJsonValueObject>(Handler));
+		}
+	}
+	return Handlers;
 }
 
 TArray<TSharedPtr<FJsonValue>> FUeremcpNiagaraInspectMapping::BuildEventHandlerPlaceholders(

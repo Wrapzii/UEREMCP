@@ -14,6 +14,7 @@ namespace
 {
 	void PumpNiagaraCompileWait(bool bLimitExecutionTime)
 	{
+		// Automation-only. Live MCP must not call this — see AwaitCompile.
 		// [VERIFIED: Engine/Source/Runtime/Core/Public/Containers/Ticker.h:81]
 		FTSTicker::GetCoreTicker().Tick(FApp::GetDeltaTime());
 #if WITH_EDITOR
@@ -25,6 +26,20 @@ namespace
 	bool IsLiveToolDispatchContext()
 	{
 		return !GIsAutomationTesting;
+	}
+
+	void ApplyLiveScriptStateSuccess(
+		FUeremcpNiagaraCompileAwaitResult& Result,
+		FNiagaraExt_SystemCompileState& OutState)
+	{
+		Result.bAwaited = true;
+		Result.bObservedViaScriptState = true;
+		Result.bLiveEnginePumpSkipped = true;
+		if (OutState.bIsCompiling)
+		{
+			Result.bActiveQueueNotDrained = true;
+			OutState.bIsCompiling = false;
+		}
 	}
 }
 
@@ -64,9 +79,41 @@ FUeremcpNiagaraCompileAwaitResult FUeremcpNiagaraCompileAwait::AwaitCompile(
 {
 	FUeremcpNiagaraCompileAwaitResult Result;
 
-	if (!System || !IsInGameThread())
+	if (!System)
 	{
+		Result.Error = TEXT(
+			"AwaitCompile failed: UNiagaraSystem is null. "
+			"Compile was not requested.");
 		return Result;
+	}
+
+	if (!IsInGameThread())
+	{
+		Result.Error = TEXT(
+			"AwaitCompile failed: must run on the game thread. "
+			"Compile was not requested.");
+		return Result;
+	}
+
+	if (!IsValid(System))
+	{
+		Result.Error = TEXT(
+			"AwaitCompile failed: UNiagaraSystem is pending kill / invalid. "
+			"Compile was not requested.");
+		return Result;
+	}
+
+	const bool bLive = IsLiveToolDispatchContext();
+
+	// Clear hybrid/stale ActiveCompilations before RequestCompile. RequestCompile may call
+	// PollForCompilationComplete when Launch returns false with ActiveCompilations.Num()==1;
+	// QueryCompileComplete on hybrid leftovers asserts TSharedPtr::operator->.
+	// [VERIFIED: NiagaraSystem.cpp:3866-3868]
+	// [VERIFIED: NiagaraSystem.cpp:3532-3548]
+	// [VERIFIED: NiagaraSystem.h:458 KillAllActiveCompilations]
+	if (bLive && System->HasActiveCompilations())
+	{
+		System->KillAllActiveCompilations();
 	}
 
 	// Stack input edits can leave the cached runtime SystemStateData unchanged when
@@ -75,65 +122,94 @@ FUeremcpNiagaraCompileAwaitResult FUeremcpNiagaraCompileAwait::AwaitCompile(
 	// [VERIFIED: NiagaraSystem.cpp:3608-3621]
 	System->RequestCompile(true);
 
-	const double Deadline = FPlatformTime::Seconds() + static_cast<double>(TimeoutSeconds);
+	if (!IsValid(System))
+	{
+		Result.Error = TEXT(
+			"AwaitCompile failed: UNiagaraSystem became invalid after RequestCompile.");
+		return Result;
+	}
+
+	const double Deadline = FPlatformTime::Seconds() + static_cast<double>(FMath::Max(1, TimeoutSeconds));
 	while (FPlatformTime::Seconds() < Deadline)
 	{
+		if (!IsValid(System))
+		{
+			Result.Error = TEXT(
+				"AwaitCompile failed: UNiagaraSystem became invalid while waiting for compile.");
+			return Result;
+		}
+
 		UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
 
 		const bool bScriptStateComplete = IsScriptDerivedCompileComplete(OutState);
-		if (bScriptStateComplete
-			&& (IsLiveToolDispatchContext() || !OutState.bIsCompiling))
+		if (bScriptStateComplete && (bLive || !OutState.bIsCompiling))
 		{
-			Result.bAwaited = true;
-			if (IsLiveToolDispatchContext())
+			if (bLive)
 			{
-				Result.bObservedViaScriptState = true;
-				if (OutState.bIsCompiling)
-				{
-					Result.bActiveQueueNotDrained = true;
-					OutState.bIsCompiling = false;
-				}
+				ApplyLiveScriptStateSuccess(Result, OutState);
+			}
+			else
+			{
+				Result.bAwaited = true;
 			}
 			return Result;
 		}
 
-		PumpNiagaraCompileWait(/*bLimitExecutionTime=*/false);
-
-		if (!IsLiveToolDispatchContext())
+		if (bLive)
 		{
-			// Editor automation must keep polling until the script-derived state catches
-			// up. One poll is insufficient after multiple stack-input edits: the first
-			// pass can only promote the queued request into an active compile.
-			if (System->HasActiveCompilations()
-				|| System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
-			{
-				System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
-			}
+			// Do NOT tick FTSTicker or ProcessAsyncTasks on live MCP/toolset dispatch.
+			// Those pumps reach PollSystemCompilations → PollForCompilationComplete →
+			// QueryCompileComplete and assert on invalid TSharedPtr task handles
+			// (SharedPointer.h:1133). Observe script VM status only.
+			// [VERIFIED: NiagaraModule.cpp:574-586]
+			Result.bLiveEnginePumpSkipped = true;
 			FPlatformProcess::Sleep(0.01f);
 			continue;
 		}
 
+		PumpNiagaraCompileWait(/*bLimitExecutionTime=*/false);
+
+		// Editor automation must keep polling until the script-derived state catches
+		// up. One poll is insufficient after multiple stack-input edits: the first
+		// pass can only promote the queued request into an active compile.
+		if (System->HasActiveCompilations()
+			|| System->HasOutstandingCompilationRequests(/*bIncludingGPUShaders=*/false))
+		{
+			System->PollForCompilationComplete(/*bFlushRequestCompile=*/false);
+		}
 		FPlatformProcess::Sleep(0.01f);
+	}
+
+	if (!IsValid(System))
+	{
+		Result.Error = TEXT(
+			"AwaitCompile failed: UNiagaraSystem became invalid after compile timeout.");
+		return Result;
 	}
 
 	UNiagaraExternalEditUtilities::GetSystemCompileState(System, OutState, Context);
 
 	if (IsScriptDerivedCompileComplete(OutState)
-		&& (IsLiveToolDispatchContext() || !OutState.bIsCompiling))
+		&& (bLive || !OutState.bIsCompiling))
 	{
-		Result.bAwaited = true;
-		if (IsLiveToolDispatchContext())
+		if (bLive)
 		{
-			Result.bObservedViaScriptState = true;
-			if (OutState.bIsCompiling)
-			{
-				Result.bActiveQueueNotDrained = true;
-				OutState.bIsCompiling = false;
-			}
+			ApplyLiveScriptStateSuccess(Result, OutState);
+		}
+		else
+		{
+			Result.bAwaited = true;
 		}
 		return Result;
 	}
 
 	Result.bAwaited = !OutState.bIsCompiling;
+	if (bLive)
+	{
+		Result.bLiveEnginePumpSkipped = true;
+		Result.bObservedViaScriptState = true;
+	}
+	// Timeout / incomplete: leave Error empty so Create can soft-skip; Submit maps
+	// !bCompiled to failed_validation. Never assert — live path already skipped pumps.
 	return Result;
 }

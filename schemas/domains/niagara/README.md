@@ -6,8 +6,10 @@
 
 | Action | Specification schema | Status |
 |---|---|---|
-| `inspect_system` | `inspect_system.schema.json` | topology read via UNiagaraExternalEditUtilities |
-| `create_niagara_effect` | `create_niagara_effect.schema.json` | POC B probe compose (template + emitters + User.*) |
+| `inspect_system` | `inspect_system.schema.json` | topology_summary at top + graphs[]; response_detail summary\|complete |
+| `create_niagara_effect` | `create_niagara_effect.schema.json` | PRIMARY: emitters[].modules[{primitive_id\|asset_path,inputs}] on Minimal substrate |
+| `submit_niagara_graph` | `submit_niagara_graph.schema.json` | graphs[] and/or emitters[].modules[]; Minimal when adding |
+| `adapt_niagara_effect` | `adapt_niagara_effect.schema.json` | User.* + materials + emitters[{sim_target,life_cycle}] |
 
 Register `inspect_system` in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 when the
 tool leaves scaffold status.
@@ -48,7 +50,9 @@ parameter bindings:
 |---|---|
 | Value modes (local, linked, DI, HLSL, dynamic chain) | `extensions.niagara.inputs[pin_id]` |
 | Renderer `propertyValues` JSON | `extensions.niagara.renderers[]` (+ optional `material_path`, unvalidated) |
-| Event handler stacks (topology gap) | `extensions.niagara.event_handlers[]` (inferred placeholders from `GetStackIssues` / compile `per_script`; modules empty) |
+| Event handler stacks | `extensions.niagara.event_handlers[]` from `GetEventHandlers` (+ NodeGraph samples). WRITE blocked (no UsageId on `StackItemReference`) |
+| SimTarget / Life Cycle | `extensions.niagara.sim_target` + `life_cycle{mode,loop_behavior,loop_duration,inactive_response}` |
+| Script graph internals | READ summary via `UNiagaraScriptSource::NodeGraph`; WRITE unsupported |
 | Inheritance metadata | `extensions.niagara.inheritance` |
 | Compile aggregate + per-script | `extensions.niagara.compile` |
 
@@ -71,9 +75,11 @@ Every retrieved graph includes:
 
 These keys match `UeremcpNiagaraCapabilityNotes.h` and `inspect_system` `capability_notes`.
 
-POC B multi-graph hash scaffold (`hash_round_trip_poc_b_scaffold.json`) documents a seven-graph
-manifest (1 system + 6 emitters) with `diagnostics.hash_scaffold.round_trip_supported: false`
-until WS-11 proves retrieve → replace → retrieve stability.
+POC B multi-graph hash scaffold (`hash_round_trip_poc_b_scaffold.json`) and
+`hash_round_trip_retrieve_submit.json` document the harness.
+`EvaluateRetrieveSubmitRetrieveStability` flips `round_trip_supported` **only** when
+pre/post submit hashes match on a live system; otherwise stays false with an explicit
+`failure_mode`.
 
 ### POC B gate scaffolding (`extra.poc_b_gates`)
 
@@ -111,7 +117,7 @@ UEREMCP does **not** re-expose NiagaraToolsets' 46 primitives. Internal batching
 
 | Gap | Severity | Mitigation |
 |---|---|---|
-| Event handler stacks omitted from `GetEmitterTopology` | High | `extensions.niagara.event_handlers[]` inferred placeholders; modules remain lossy |
+| Event handler stacks omitted from `GetEmitterTopology` | High | READ via `GetEventHandlers` + NodeGraph samples; WRITE blocked (no UsageId) |
 | Renderer material paths from `GetRendererData` | Medium | `material_path` best-effort extract; `renderer_material_bindings` on emitter graphs |
 | No `ReorderModule` AICallable | High | remove+re-add or internal `MoveModule` proposal to WS-03 |
 | `CreateNiagaraSystem` requires template | By design | duplicate-and-modify |

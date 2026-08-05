@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/materials/graph-ext.schema.json",
+  "title": "Material graph extensions",
+  "description": "Shape of graph.schema.json extensions.material per ADR-0004. Owned by WS-08. Honest lossy defaults until round-trip proven.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "asset_class": {
+      "type": "string",
+      "enum": ["Material", "MaterialInstanceConstant", "MaterialFunction"],
+      "description": "UObject class of the inspected asset."
+    },
+    "parent_material": {
+      "type": "string",
+      "description": "Parent master soft path when asset_class is MaterialInstanceConstant."
+    },
+    "blend_mode": { "type": "string" },
+    "shading_model": { "type": "string" },
+    "material_domain": { "type": "string" },
+    "two_sided": { "type": "boolean" },
+    "property_inputs": {
+      "type": "object",
+      "description": "MP_* output property wiring: property name → { node_id, output_name }.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "node_id": { "type": "string" },
+          "output_name": { "type": "string" },
+          "expression_class": { "type": "string" }
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scalar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "value"],
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "number" },
+              "group": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          }
+        },
+        "vector": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "value"],
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "value": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 4
+              },
+              "group": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          }
+        },
+        "texture": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": ["string", "null"] },
+              "group": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          }
+        },
+        "static_switch": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "value"],
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "boolean" },
+              "group": { "type": "string" },
+              "source": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

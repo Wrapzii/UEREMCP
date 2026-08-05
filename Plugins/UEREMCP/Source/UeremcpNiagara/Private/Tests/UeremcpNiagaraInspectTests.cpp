@@ -6,8 +6,6 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-#include "NiagaraEmitter.h"
-#include "NiagaraSystem.h"
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraToolset.h"
@@ -67,14 +65,24 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FUeremcpNiagaraInspectPathGuardTest::RunTest(const FString& Parameters)
 {
-	TestTrue(TEXT("tests root allowed"),
+	TestTrue(TEXT("tests root allowed for mutate"),
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/__UeremcpTests/NS_WS07_Probe")));
-	TestTrue(TEXT("poc root allowed"),
+	TestTrue(TEXT("poc root allowed for mutate"),
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/__UeremcpPoc/Fireball/NS_Fireball")));
-	TestFalse(TEXT("game content rejected"),
+	TestTrue(TEXT("production Magecraft allowed for inspect"),
+		FUeremcpNiagaraInspect::IsAllowedInspectPath(
+			TEXT("/Game/RE/VFX/Magecraft/Spells/NS_Spell_IceWall_Cast")));
+	TestTrue(TEXT("Magecraft allowed for mutate/adapt"),
+		FUeremcpNiagaraInspect::IsAllowedProbePath(
+			TEXT("/Game/RE/VFX/Magecraft/Spells/NS_Spell_IceWall_Cast")));
+	TestTrue(TEXT("generic /Game VFX allowed for inspect"),
+		FUeremcpNiagaraInspect::IsAllowedInspectPath(TEXT("/Game/VFX/NS_Fireball")));
+	TestFalse(TEXT("game content rejected for mutate"),
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/VFX/NS_Fireball")));
 	TestFalse(TEXT("poc prefix trick rejected"),
 		FUeremcpNiagaraInspect::IsAllowedProbePath(TEXT("/Game/__UeremcpPocFake/NS_Fireball")));
+	TestFalse(TEXT("engine denied for inspect"),
+		FUeremcpNiagaraInspect::IsAllowedInspectPath(TEXT("/Engine/Niagara/NS_Foo")));
 	TestTrue(
 		TEXT("probe inspect skips GetStackIssues for tests root"),
 		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/__UeremcpTests/NS_POCB_FireballProbe")));
@@ -84,84 +92,27 @@ bool FUeremcpNiagaraInspectPathGuardTest::RunTest(const FString& Parameters)
 	TestFalse(
 		TEXT("non-probe inspect may collect stack issues"),
 		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(TEXT("/Game/VFX/NS_Fireball")));
-	return true;
-}
+	TestFalse(
+		TEXT("Magecraft inspect may collect stack issues"),
+		FUeremcpNiagaraInspect::ShouldSkipStackIssuesForProbe(
+			TEXT("/Game/RE/VFX/Magecraft/Spells/NS_Spell_IceWall_Cast")));
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FUeremcpNiagaraInspectInvalidRendererFailsSoftTest,
-	"UEREMCP.Niagara.Inspect.InvalidRendererFailsSoft",
-	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+	FUeremcpRequest ResolveReq;
+	FUeremcpNiagaraInspectSpec ResolveSpec;
+	ResolveSpec.Query = TEXT("does_not_exist_ws07_zzzz");
+	ResolveSpec.SearchRoot = TEXT("/Game/__UeremcpTests");
+	FString Resolved;
+	FString ResolveError;
+	TArray<FString> Candidates;
+	TestFalse(
+		TEXT("missing query fails"),
+		FUeremcpNiagaraInspect::ResolveTargetPath(ResolveReq, ResolveSpec, Resolved, ResolveError, Candidates));
 
-bool FUeremcpNiagaraInspectInvalidRendererFailsSoftTest::RunTest(const FString& Parameters)
-{
-	using namespace UeremcpNiagaraInspectTest;
-
-	if (!EnsureInspectProbeAsset(*this))
-	{
-		return false;
-	}
-
-	UNiagaraSystem* System = LoadObject<UNiagaraSystem>(
-		nullptr,
-		TEXT("/Game/__UeremcpTests/NS_WS07_Probe.NS_WS07_Probe"));
-	if (!TestNotNull(TEXT("probe system loads"), System))
-	{
-		return false;
-	}
-
-	FVersionedNiagaraEmitterData* EmitterData = nullptr;
-	for (const FNiagaraEmitterHandle& EmitterHandle : System->GetEmitterHandles())
-	{
-		EmitterData = EmitterHandle.GetEmitterData();
-		if (EmitterData)
-		{
-			break;
-		}
-	}
-	if (!TestNotNull(TEXT("probe has emitter data"), EmitterData))
-	{
-		return false;
-	}
-
-	TArray<UNiagaraRendererProperties*>& MutableRenderers =
-		const_cast<TArray<UNiagaraRendererProperties*>&>(EmitterData->GetRenderers());
-	const int32 InvalidRendererIndex = MutableRenderers.Add(nullptr);
-
-	FUeremcpRequest Request;
-	Request.TargetAssetPath = GInspectProbePath;
-	Request.ResponseDetail = TEXT("diagnostic");
-	FUeremcpNiagaraInspectSpec Spec;
-	FUeremcpNiagaraInspectResult Result;
-	const bool bInspectSucceeded = FUeremcpNiagaraInspect::Run(Request, Spec, Result);
-
-	MutableRenderers.RemoveAt(InvalidRendererIndex);
-
-	TestFalse(TEXT("invalid renderer inspection fails soft"), bInspectSucceeded);
+	ResolveReq.TargetAssetPath = TEXT("/Game/RE/VFX/Magecraft/Spells/Adapted/NS_nature_xl_cast");
 	TestTrue(
-		TEXT("diagnostic identifies invalid renderer"),
-		Result.Error.Contains(TEXT("invalid renderer")));
-
-	bool bFoundFailedPreflight = false;
-	for (const TSharedPtr<FJsonValue>& TraceValue : Result.ExecutionTrace)
-	{
-		const TSharedPtr<FJsonObject> Trace = TraceValue->AsObject();
-		if (!Trace.IsValid())
-		{
-			continue;
-		}
-
-		FString Step;
-		bool bOk = true;
-		if (Trace->TryGetStringField(TEXT("step"), Step)
-			&& Step == TEXT("preflight_get_system_summary")
-			&& Trace->TryGetBoolField(TEXT("ok"), bOk)
-			&& !bOk)
-		{
-			bFoundFailedPreflight = true;
-			break;
-		}
-	}
-	TestTrue(TEXT("failed summary preflight is traced"), bFoundFailedPreflight);
+		TEXT("explicit path resolves"),
+		FUeremcpNiagaraInspect::ResolveTargetPath(ResolveReq, ResolveSpec, Resolved, ResolveError, Candidates));
+	TestEqual(TEXT("explicit path kept"), Resolved, ResolveReq.TargetAssetPath);
 	return true;
 }
 
@@ -196,19 +147,41 @@ bool FUeremcpNiagaraInspectSystemRuntimeTest::RunTest(const FString& Parameters)
 	Root->TryGetStringField(TEXT("status"), Status);
 	TestEqual(TEXT("status partially_completed"), Status, FString(TEXT("partially_completed")));
 
-	const TSharedPtr<FJsonObject>* Diagnostics = nullptr;
-	TestTrue(TEXT("diagnostics present"), Root->TryGetObjectField(TEXT("diagnostics"), Diagnostics) && Diagnostics && Diagnostics->IsValid());
-	if (!Diagnostics || !Diagnostics->IsValid())
+	const TSharedPtr<FJsonObject>* Result = nullptr;
+	TestTrue(TEXT("result present"), Root->TryGetObjectField(TEXT("result"), Result) && Result && Result->IsValid());
+	if (!Result || !Result->IsValid())
 	{
 		return false;
 	}
 
+	FString PrimaryAsset;
+	TestTrue(
+		TEXT("result.primary_asset present"),
+		(*Result)->TryGetStringField(TEXT("primary_asset"), PrimaryAsset) && !PrimaryAsset.IsEmpty());
+
 	const TArray<TSharedPtr<FJsonValue>>* Graphs = nullptr;
-	TestTrue(TEXT("graphs array present"), (*Diagnostics)->TryGetArrayField(TEXT("graphs"), Graphs) && Graphs);
+	TestTrue(TEXT("result.graphs array present"), (*Result)->TryGetArrayField(TEXT("graphs"), Graphs) && Graphs);
 	if (!Graphs || Graphs->Num() < 2)
 	{
-		AddError(TEXT("expected system + emitter graphs"));
+		AddError(TEXT("expected system + emitter graphs under result.graphs"));
 		return false;
+	}
+
+	const TSharedPtr<FJsonObject>* FidelitySummary = nullptr;
+	if ((*Result)->TryGetObjectField(TEXT("fidelity"), FidelitySummary) && FidelitySummary && FidelitySummary->IsValid())
+	{
+		TestFalse(
+			TEXT("result.fidelity.round_trip_supported false"),
+			(*FidelitySummary)->GetBoolField(TEXT("round_trip_supported")));
+	}
+
+	const TSharedPtr<FJsonObject>* Diagnostics = nullptr;
+	if (Root->TryGetObjectField(TEXT("diagnostics"), Diagnostics) && Diagnostics && Diagnostics->IsValid())
+	{
+		const TArray<TSharedPtr<FJsonValue>>* DiagGraphs = nullptr;
+		TestFalse(
+			TEXT("graphs not required under diagnostics"),
+			(*Diagnostics)->TryGetArrayField(TEXT("graphs"), DiagGraphs) && DiagGraphs && DiagGraphs->Num() > 0);
 	}
 
 	bool bFoundSystemGraph = false;

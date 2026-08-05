@@ -15,6 +15,7 @@ struct FNiagaraExt_StackIssues;
 struct FNiagaraExt_SystemCompileState;
 struct FNiagaraExternalEditContext;
 class UNiagaraSystem;
+class UNiagaraScript;
 
 /** Lossy event-handler placeholders — not from GetEmitterTopology. */
 class FUeremcpNiagaraInspectMapping
@@ -44,13 +45,34 @@ public:
 	/** Best-effort material soft path from GetRendererData PropertyValues JSON blob. */
 	static FString TryExtractMaterialPath(const FString& PropertyValuesJson);
 	/**
-	 * Infer event-handler entries from GetStackIssues + compile script list.
-	 * GetEmitterTopology omits ParticleEventScript stacks
-	 * [VERIFIED: RB-07 / NiagaraExternalSystemEditorUtilities usage gap].
+	 * Build event_handlers[] from FVersionedNiagaraEmitterData::GetEventHandlers()
+	 * plus optional inferred placeholders from issues/compile state.
+	 * Module nodes: best-effort walk of UNiagaraScriptSource::NodeGraph (read-only).
+	 * WRITE remains blocked: FNiagaraExt_StackItemReference has no UsageId for
+	 * ParticleEventScript (FindScriptGroup requires matching Guid).
+	 * [VERIFIED: GetEventHandlers — NiagaraEmitter.h:427]
+	 * [VERIFIED: FNiagaraEventScriptProperties — NiagaraEmitter.h:161-205]
+	 * [VERIFIED: UNiagaraScriptSource::NodeGraph — NiagaraScriptSource.h:24-25]
+	 */
+	static TArray<TSharedPtr<FJsonValue>> BuildEventHandlersFromEmitterData(
+		UNiagaraSystem* System,
+		int32& InOutInternalOperations);
+
+	/**
+	 * Infer event-handler entries from GetStackIssues + compile script list (fallback).
+	 * Prefer BuildEventHandlersFromEmitterData when System is available.
 	 */
 	static TArray<TSharedPtr<FJsonValue>> BuildEventHandlerPlaceholders(
 		const FNiagaraExt_StackIssues& Issues,
 		const FNiagaraExt_SystemCompileState& CompileState);
+
+	/**
+	 * Read-only NiagaraScriptGraph summary for a module script asset (node counts,
+	 * custom HLSL presence). WRITE of EdGraph internals is not supported via
+	 * UNiagaraExternalEditUtilities.
+	 * [VERIFIED: UNiagaraScriptSource::NodeGraph public UPROPERTY — NiagaraScriptSource.h:24-25]
+	 */
+	static TSharedPtr<FJsonObject> BuildScriptGraphInternalsSummary(UNiagaraScript* ModuleScript);
 
 	/** Locate the NiagaraSystemGraph object inside an inspect graphs array. */
 	static TSharedPtr<FJsonObject> FindSystemGraph(const TArray<TSharedPtr<FJsonValue>>& Graphs);

@@ -1,0 +1,16 @@
+{
+  "$comment": "Offline fixture: retrieve→submit→retrieve hash harness expectations. round_trip_supported flips only when EvaluateRetrieveSubmitRetrieveStability proves stable hashes.",
+  "hash_scaffold_expectations": {
+    "round_trip_supported_default": false,
+    "retrieve_retrieve_does_not_flip": true,
+    "retrieve_submit_retrieve_flips_only_on_match": true,
+    "failure_modes": [
+      "scaffold_only",
+      "no_content_hash_on_graphs",
+      "retrieve_retrieve_ok_but_submit_pass_not_executed",
+      "hash_drift_after_submit"
+    ],
+    "checks_performed_on_full_proof": ["niagara.content_hash_retrieve_submit_retrieve_compare"],
+    "validation_never_claims_without_proof": ["created_and_validated", "modified_and_validated"]
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "$comment": "Offline fixture: dry_run submit_niagara_graph envelope for Magecraft (WS-07). graphs[] normally comes from InspectSystem result.graphs.",
+  "protocol_version": "1.0",
+  "request_id": "ws07-submit-dry-fixture",
+  "action": "submit_niagara_graph",
+  "mode": "replace",
+  "target": {
+    "asset_path": "/Game/RE/VFX/Magecraft/Spells/Adapted/NS_nature_xl_cast"
+  },
+  "options": {
+    "dry_run": true,
+    "validate": true
+  },
+  "specification": {
+    "graphs": [
+      {
+        "graph_type": "NiagaraSystemGraph",
+        "graph_id": "/Game/RE/VFX/Magecraft/Spells/Adapted/NS_nature_xl_cast::System",
+        "variables": [],
+        "fidelity": {
+          "round_trip_supported": false,
+          "lossy_areas": [
+            "event_handler_stacks",
+            "module_reorder_without_readd",
+            "script_graph_internals"
+          ]
+        }
+      }
+    ],
+    "apply": {
+      "modules": true,
+      "user_parameters": true,
+      "renderer_materials": true,
+      "emitter_enabled": true
+    }
+  },
+  "expectations": {
+    "status": "no_change_required",
+    "never_claims": ["created_and_validated", "modified_and_validated"],
+    "round_trip_supported": false,
+    "magecraft_never_deletes_asset": true
+  }
+}

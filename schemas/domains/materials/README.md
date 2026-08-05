@@ -6,10 +6,14 @@
 
 | Action | Specification schema | Status |
 |---|---|---|
+| `inspect_material` | `inspect_material.schema.json` | Wave 2 — path/query under `/Game`; masters → `result.graphs[]` MaterialGraph; MIs → parent + parameter inventory; `round_trip_supported=false` |
+| `submit_material_graph` | `submit_material_graph.schema.json` | Wave 2 — in-place params/links; production never silent-deleted; create-from-empty-graphs deferred |
 | `create_vfx_material` | `create_vfx_material.schema.json` | Wave 2 slice — elemental projectile core/trail wired via MaterialEditingLibrary |
 | `create_procedural_texture` | `create_procedural_texture.schema.json` | Wave 2 slice — CPU pixel fill via FImageUtils::CreateTexture2D; also invoked from `textures.generate` slots |
 
-Register `create_vfx_material` in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 when the tool leaves scaffold status.
+**Preferred existing-asset loop:** `InspectMaterial` → edit `result.graphs[]` / `parameters` → `SubmitMaterialGraph`. Visual proof: `CaptureMaterialFrames` (Validation). Epic MaterialTools primitives stay internal.
+
+Register new actions in `docs/CAPABILITY_CATALOG.md` via proposal to WS-01 (`docs/proposals/ws-08-material-graph-inspect-submit.md`).
 
 ## Element-parameter model (ADR-0008)
 

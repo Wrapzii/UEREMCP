@@ -1,6 +1,6 @@
 // UEREMCP — Niagara domain toolset (WS-07).
 //
-// Wave 2 scaffold: envelope echo + inspect_system stub with honest capability_notes.
+// Goal-level inspect / create / adapt over UNiagaraExternalEditUtilities.
 // Composes Epic NiagaraToolsets internally — does not re-expose primitives (RB-07).
 
 #pragma once
@@ -13,8 +13,9 @@
 /**
  * Agent-facing Niagara operations for UEREMCP.
  *
- * START HERE for particle/VFX goals: prefer CreateNiagaraEffect / InspectSystem over
- * Epic NiagaraToolsets primitives. Use ResolveIntent first if unsure which tool.
+ * START HERE for particle/VFX goals: prefer InspectSystem / CreateNiagaraEffect /
+ * AdaptNiagaraEffect over Epic NiagaraToolsets primitives. Use ResolveIntent first
+ * if unsure which tool.
  *
  * Per ADR-0002 one UToolsetDefinition per domain. Primitives from NiagaraToolsets.*
  * are internalised; agents see goal-level actions.
@@ -26,7 +27,7 @@ class UEREMCPNIAGARA_API UUeremcpNiagaraToolset : public UToolsetDefinition
 
 public:
 
-	virtual FString GetToolsetVersion() const override { return TEXT("0.9.6-intent-vocab"); }
+	virtual FString GetToolsetVersion() const override { return TEXT("0.10.0-custom-module-stacks"); }
 
 	/**
 	 * Protocol probe — mirrors UUeremcpReferenceToolset::Echo without touching assets.
@@ -42,37 +43,79 @@ public:
 	static FString Echo(const FString& RequestJson);
 
 	/**
-	 * Inspect a Niagara system into graph.schema.json + extensions.niagara.
+	 * One-shot inspect: resolve a Niagara system and return full graph JSON.
 	 *
-	 * Use when: read emitters/renderers/user params; verify a system after create.
-	 * Inputs: action=inspect_system, target.asset_path required.
-	 * Outputs: structured topology + diagnostics; some stacks intentionally lossy.
-	 * Do not use for: creating effects — use CreateNiagaraEffect.
-	 * Next tool: CreateNiagaraEffect to author; CaptureEffectFrames for visual proof.
-	 * Specification has no required keys.
-	 * Example: {"protocol_version":"1.0","action":"inspect_system","target":{"asset_path":"/Game/VFX/NS_FrostNova"},"specification":{}}
+	 * Use when: find/read emitters, modules, timings, User.*, renderers for any /Game path
+	 *   (including Magecraft) — prefer over Epic NiagaraToolsets discovery chains.
+	 * Inputs: action=inspect_system; target.asset_path OR specification.query/asset_name
+	 *   (e.g. NS_nature_xl_cast under search_root=/Game/RE/VFX/Magecraft).
+	 * Outputs: result.topology_summary (emitters→modules→renderers) FIRST, then graphs[] when complete.
+	 * Do not use for: mutation — use SubmitNiagaraGraph / AdaptNiagaraEffect / CreateNiagaraEffect.
+	 * Next tool: SubmitNiagaraGraph after editing; AdaptNiagaraEffect for User params/materials;
+	 *   CaptureEffectFrames for visual proof.
+	 * response_detail=summary|complete (default complete). summary = topology_summary + counts; complete adds graphs[].
+	 * Example: {"protocol_version":"1.0","action":"inspect_system","target":{"asset_path":"/Game/RE/VFX/Magecraft/Spells/Adapted/NS_nature_xl_cast"},"specification":{}}
+	 * Example query: {"protocol_version":"1.0","action":"inspect_system","specification":{"query":"NS_nature_xl_cast","search_root":"/Game/RE/VFX/Magecraft"}}
 	 *
-	 * @param RequestJson  Request with action inspect_system and target.asset_path set.
+	 * @param RequestJson  Request with action inspect_system.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Niagara")
 	static FString InspectSystem(const FString& RequestJson);
 
 	/**
-	 * Goal-level Niagara effect creation (spell/projectile/beam/explosion VFX).
+	 * ONE-SHOT Niagara system authoring — entire system in one request.
 	 *
-	 * Use when: create a particle/Niagara effect, helix/ribbon/projectile, spell VFX.
-	 * Inputs: action=create_niagara_effect, target.asset_path, specification.effect_type;
-	 * prefer options.dry_run first; idempotency_key recommended.
-	 * Outputs: honest statuses — may be partially_completed until visual gates close.
-	 * Do not use for: Epic NiagaraToolsets module primitives; material-only edits.
-	 * Next tool: InspectSystem to verify; CaptureEffectFrames to show what it looks like.
-	 * Example: {"protocol_version":"1.0","action":"create_niagara_effect","target":{"asset_path":"/Game/__UeremcpTests/NS_FireProjectile"},"options":{"dry_run":true,"validate":true},"specification":{"effect_type":"projectile","element":"fire","components":["core","ribbon_trail"]}}
+	 * Use when: create a NEW particle system under sandbox OR Magecraft.
+	 * PRIMARY Inputs: specification.emitters[{name, modules[{primitive_id|asset_path, script, inputs}],
+	 *   renderer?, enabled}] — LLM-defined stacks on Minimal substrate (AddEmitter+AddModule).
+	 * Optional: role/template_path/components[] shortcuts (NOT required).
+	 * Outputs: partially_completed / created_with_warnings after structural re-read.
+	 *   round_trip_supported=false is a hash gate — authoring still adds emitters+modules.
+	 * Do not use for: wiping Magecraft; custom HLSL / script-graph authorship (lossy).
+	 * Next tool: InspectSystem (topology_summary); CaptureEffectFrames for visual proof.
+	 * Example custom (no preset roles): see schemas/domains/niagara/fixtures/create_custom_three_emitter_stack.json
 	 *
-	 * [VERIFIED: composes UNiagaraExternalEditUtilities — same substrate as NiagaraToolsets]
+	 * [VERIFIED: UNiagaraExternalEditUtilities::CreateNiagaraSystem / AddEmitter / AddModule /
+	 *  SetModuleEnabled / SetStackInputData / AddRenderer — NiagaraExternalSystemEditorUtilities.h]
 	 *
 	 * @param RequestJson  Request with action create_niagara_effect, target.asset_path,
 	 *                     and specification per create_niagara_effect.schema.json.
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Niagara")
 	static FString CreateNiagaraEffect(const FString& RequestJson);
+
+	/**
+	 * In-place adapt of an existing Niagara system (User.* + material bindings).
+	 *
+	 * Use when: tweak Magecraft/sandbox systems without delete/recreate.
+	 * Inputs: action=adapt_niagara_effect, target.asset_path under mutate roots,
+	 *   specification.parameters and/or specification.materials.
+	 * Outputs: modified_and_validated / partially_completed with honest checks.
+	 * Do not use for: full graph JSON rebuild — use SubmitNiagaraGraph;
+	 *   Magecraft materials.*.create_spec (sandbox-only).
+	 * Next tool: InspectSystem to verify; CaptureEffectFrames for visual proof.
+	 * Example: {"protocol_version":"1.0","action":"adapt_niagara_effect","target":{"asset_path":"/Game/RE/VFX/Magecraft/Spells/Adapted/NS_nature_xl_cast"},"options":{"dry_run":true},"specification":{"parameters":{"include_adaptation":true,"dirtiness":0.3}}}
+	 *
+	 * @param RequestJson  Request with action adapt_niagara_effect.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Niagara")
+	static FString AdaptNiagaraEffect(const FString& RequestJson);
+
+	/**
+	 * Apply edited inspect_system graphs[] to an existing Niagara system.
+	 *
+	 * Use when: agent edited graphs[] OR wants declarative emitters[].modules[] on an existing system.
+	 * Inputs: action=submit_niagara_graph; specification.graphs and/or specification.emitters[{name,modules[]}].
+	 *   Missing emitters → Minimal substrate + AddModule. mode=replace may remove modules;
+	 *   Magecraft never deletes the UAsset. Destructive modes default dry_run (ADR-0010).
+	 * Outputs: partially_completed with planned/applied changes; round_trip_supported stays false.
+	 * Do not use for: creating a brand-new system (CreateNiagaraEffect); User-param/material-only
+	 *   tweaks (AdaptNiagaraEffect is lighter).
+	 * Next tool: InspectSystem to re-read; CaptureEffectFrames for visual proof.
+	 * Example emitters: {"protocol_version":"1.0","action":"submit_niagara_graph","target":{"asset_path":"/Game/__UeremcpTests/NS_X"},"options":{"dry_run":true},"specification":{"emitters":[{"name":"CustomSpark","modules":[{"primitive_id":"spawn_rate","inputs":{"SpawnRate":8}}]}]}}
+	 *
+	 * @param RequestJson  Request with action submit_niagara_graph.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Niagara")
+	static FString SubmitNiagaraGraph(const FString& RequestJson);
 };

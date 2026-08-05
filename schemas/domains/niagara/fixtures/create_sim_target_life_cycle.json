@@ -1,0 +1,34 @@
+{
+  "name": "NS_UeremcpSimTargetLifeCycle",
+  "effect_type": "custom",
+  "element": "fire",
+  "emitters": [
+    {
+      "name": "Sparks1",
+      "enabled": true,
+      "sim_target": "CPUSim",
+      "life_cycle": {
+        "loop_behavior": "Infinite",
+        "loop_duration": 1.5,
+        "inactive_response": "Complete"
+      },
+      "renderer": { "type": "sprite" },
+      "modules": [
+        { "primitive_id": "emitter_state", "script": "EmitterUpdateScript" },
+        { "primitive_id": "spawn_rate", "script": "EmitterUpdateScript", "inputs": { "SpawnRate": 24 } },
+        { "primitive_id": "initialize_particle", "script": "ParticleSpawnScript" },
+        { "primitive_id": "update_age", "script": "ParticleUpdateScript" },
+        {
+          "primitive_id": "color",
+          "script": "ParticleUpdateScript",
+          "inputs": {
+            "Colors": [1.0, 0.4, 0.05, 1.0]
+          }
+        }
+      ]
+    }
+  ],
+  "parameters": {
+    "intensity": 4.0
+  }
+}

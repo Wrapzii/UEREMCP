@@ -1340,3 +1340,430 @@ FUeremcpMaterialCreateResult UeremcpMaterialService::ExecuteCreateVfxMaterial(co
 
 	return Result;
 }
+
+namespace
+{
+	static TSharedPtr<FJsonValue> MakeScalarJsonValue(float Value)
+	{
+		return MakeShared<FJsonValueNumber>(static_cast<double>(Value));
+	}
+
+	static TSharedPtr<FJsonValue> MakeVectorJsonValue(const FLinearColor& Color)
+	{
+		TArray<TSharedPtr<FJsonValue>> Components;
+		Components.Add(MakeShared<FJsonValueNumber>(static_cast<double>(Color.R)));
+		Components.Add(MakeShared<FJsonValueNumber>(static_cast<double>(Color.G)));
+		Components.Add(MakeShared<FJsonValueNumber>(static_cast<double>(Color.B)));
+		Components.Add(MakeShared<FJsonValueNumber>(static_cast<double>(Color.A)));
+		return MakeShared<FJsonValueArray>(MoveTemp(Components));
+	}
+
+	static TSharedPtr<FJsonValue> MakeTextureJsonValue(const FString& TexturePath)
+	{
+		return MakeShared<FJsonValueString>(TexturePath);
+	}
+
+	static bool TryParseVectorOverride(
+		const TArray<TSharedPtr<FJsonValue>>& Components,
+		FLinearColor& OutColor,
+		FString& OutError)
+	{
+		if (Components.Num() < 3 || Components.Num() > 4)
+		{
+			OutError = TEXT("vector_overrides values must be [r,g,b] or [r,g,b,a].");
+			return false;
+		}
+
+		double R = 0.0;
+		double G = 0.0;
+		double B = 0.0;
+		double A = 1.0;
+		if (!Components[0]->TryGetNumber(R)
+			|| !Components[1]->TryGetNumber(G)
+			|| !Components[2]->TryGetNumber(B))
+		{
+			OutError = TEXT("vector_overrides components must be numeric.");
+			return false;
+		}
+		if (Components.Num() == 4 && !Components[3]->TryGetNumber(A))
+		{
+			OutError = TEXT("vector_overrides alpha component must be numeric.");
+			return false;
+		}
+
+		OutColor = FLinearColor(
+			static_cast<float>(R),
+			static_cast<float>(G),
+			static_cast<float>(B),
+			static_cast<float>(A));
+		return true;
+	}
+
+	static TSharedPtr<FJsonObject> BuildParameterChangesObject(
+		const TArray<FUeremcpMaterialInstanceParameterDelta>& Deltas)
+	{
+		TSharedPtr<FJsonObject> Changes = MakeShared<FJsonObject>();
+		for (const FUeremcpMaterialInstanceParameterDelta& Delta : Deltas)
+		{
+			TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+			Entry->SetStringField(TEXT("type"), Delta.Type);
+			if (Delta.Before.IsValid())
+			{
+				Entry->SetField(TEXT("before"), Delta.Before);
+			}
+			if (Delta.After.IsValid())
+			{
+				Entry->SetField(TEXT("after"), Delta.After);
+			}
+			Entry->SetBoolField(TEXT("applied"), Delta.bApplied);
+			if (!Delta.Error.IsEmpty())
+			{
+				Entry->SetStringField(TEXT("error"), Delta.Error);
+			}
+			Changes->SetObjectField(Delta.Name, Entry);
+		}
+		return Changes;
+	}
+
+	static int32 CountRequestedOverrides(const TSharedPtr<FJsonObject>& Spec)
+	{
+		if (!Spec.IsValid())
+		{
+			return 0;
+		}
+
+		int32 Count = 0;
+		const TSharedPtr<FJsonObject>* Obj = nullptr;
+		if (Spec->TryGetObjectField(TEXT("scalar_overrides"), Obj) && Obj && Obj->IsValid())
+		{
+			Count += (*Obj)->Values.Num();
+		}
+		if (Spec->TryGetObjectField(TEXT("vector_overrides"), Obj) && Obj && Obj->IsValid())
+		{
+			Count += (*Obj)->Values.Num();
+		}
+		if (Spec->TryGetObjectField(TEXT("texture_overrides"), Obj) && Obj && Obj->IsValid())
+		{
+			Count += (*Obj)->Values.Num();
+		}
+		return Count;
+	}
+}
+
+FUeremcpMaterialInstanceUpdateResult UeremcpMaterialService::ExecuteUpdateMaterialInstanceParameters(
+	const FUeremcpRequest& Request)
+{
+	FUeremcpMaterialInstanceUpdateResult Result;
+	Result.Status = TEXT("failed_validation");
+
+	if (Request.TargetAssetPath.IsEmpty())
+	{
+		Result.Summary = TEXT("update_material_instance_parameters requires target.asset_path.");
+		Result.Errors.Add(Result.Summary);
+		return Result;
+	}
+
+	const int32 RequestedCount = CountRequestedOverrides(Request.Specification);
+	if (RequestedCount == 0)
+	{
+		Result.Summary = TEXT(
+			"update_material_instance_parameters requires at least one override in "
+			"specification.scalar_overrides, vector_overrides, or texture_overrides.");
+		Result.Errors.Add(Result.Summary);
+		return Result;
+	}
+
+	UMaterialInstanceConstant* Instance =
+		UeremcpMaterialAssetLoad::TryLoadMaterialInstance(Request.TargetAssetPath);
+	if (!Instance)
+	{
+		Result.Summary = FString::Printf(
+			TEXT("No loadable MaterialInstanceConstant at '%s'."),
+			*Request.TargetAssetPath);
+		Result.Errors.Add(Result.Summary);
+		return Result;
+	}
+
+	TOptional<FScopedTransaction> Transaction;
+	if (!Request.bDryRun)
+	{
+		Transaction.Emplace(
+			NSLOCTEXT(
+				"UeremcpMaterial",
+				"UpdateMaterialInstanceParameters",
+				"UEREMCP update_material_instance_parameters"),
+			!Request.bSave);
+	}
+
+	auto QueueScalar = [&](const FString& Name, double Value)
+	{
+		FUeremcpMaterialInstanceParameterDelta Delta;
+		Delta.Name = Name;
+		Delta.Type = TEXT("scalar");
+		const float BeforeValue = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(*Name));
+		Delta.Before = MakeScalarJsonValue(BeforeValue);
+		Delta.After = MakeScalarJsonValue(static_cast<float>(Value));
+
+		if (Request.bDryRun)
+		{
+			Delta.bApplied = false;
+			Result.Deltas.Add(MoveTemp(Delta));
+			return;
+		}
+
+		UMaterialEditingLibrary::SetMaterialInstanceScalarParameterValue(
+			Instance, FName(*Name), static_cast<float>(Value));
+		const float ReadBack = UMaterialEditingLibrary::GetMaterialInstanceScalarParameterValue(
+			Instance, FName(*Name));
+		Delta.After = MakeScalarJsonValue(ReadBack);
+		if (!FMath::IsNearlyEqual(ReadBack, static_cast<float>(Value), KINDA_SMALL_NUMBER))
+		{
+			Delta.Error = FString::Printf(
+				TEXT("Scalar '%s' read-back %.4f did not match requested %.4f."),
+				*Name,
+				ReadBack,
+				static_cast<float>(Value));
+			Result.Errors.Add(Delta.Error);
+		}
+		else
+		{
+			Delta.bApplied = true;
+			++Result.InternalOperations;
+		}
+		Result.Deltas.Add(MoveTemp(Delta));
+	};
+
+	auto QueueVector = [&](const FString& Name, const FLinearColor& Value)
+	{
+		FUeremcpMaterialInstanceParameterDelta Delta;
+		Delta.Name = Name;
+		Delta.Type = TEXT("vector");
+		const FLinearColor BeforeValue = UMaterialEditingLibrary::GetMaterialInstanceVectorParameterValue(
+			Instance, FName(*Name));
+		Delta.Before = MakeVectorJsonValue(BeforeValue);
+		Delta.After = MakeVectorJsonValue(Value);
+
+		if (Request.bDryRun)
+		{
+			Delta.bApplied = false;
+			Result.Deltas.Add(MoveTemp(Delta));
+			return;
+		}
+
+		UMaterialEditingLibrary::SetMaterialInstanceVectorParameterValue(
+			Instance, FName(*Name), Value);
+		const FLinearColor ReadBack = UMaterialEditingLibrary::GetMaterialInstanceVectorParameterValue(
+			Instance, FName(*Name));
+		Delta.After = MakeVectorJsonValue(ReadBack);
+		if (!Value.Equals(ReadBack, KINDA_SMALL_NUMBER))
+		{
+			Delta.Error = FString::Printf(TEXT("Vector '%s' read-back did not match requested value."), *Name);
+			Result.Errors.Add(Delta.Error);
+		}
+		else
+		{
+			Delta.bApplied = true;
+			++Result.InternalOperations;
+		}
+		Result.Deltas.Add(MoveTemp(Delta));
+	};
+
+	auto QueueTexture = [&](const FString& Name, const FString& TexturePath)
+	{
+		FUeremcpMaterialInstanceParameterDelta Delta;
+		Delta.Name = Name;
+		Delta.Type = TEXT("texture");
+		UTexture* BeforeTexture = UMaterialEditingLibrary::GetMaterialInstanceTextureParameterValue(
+			Instance, FName(*Name));
+		const FString BeforePath = BeforeTexture ? BeforeTexture->GetPathName() : FString();
+		Delta.Before = MakeTextureJsonValue(BeforePath);
+		Delta.After = MakeTextureJsonValue(TexturePath);
+
+		if (Request.bDryRun)
+		{
+			Delta.bApplied = false;
+			Result.Deltas.Add(MoveTemp(Delta));
+			return;
+		}
+
+		UTexture* ResolvedTexture = UeremcpMaterialAssetLoad::TryLoadTexture(TexturePath);
+		if (!ResolvedTexture)
+		{
+			Delta.Error = FString::Printf(
+				TEXT("Texture override '%s' could not load '%s'."),
+				*Name,
+				*TexturePath);
+			Result.Errors.Add(Delta.Error);
+			Result.Deltas.Add(MoveTemp(Delta));
+			return;
+		}
+
+		UMaterialEditingLibrary::SetMaterialInstanceTextureParameterValue(
+			Instance, FName(*Name), ResolvedTexture);
+		UTexture* ReadBack = UMaterialEditingLibrary::GetMaterialInstanceTextureParameterValue(
+			Instance, FName(*Name));
+		const FString ReadBackPath = ReadBack ? ReadBack->GetPathName() : FString();
+		Delta.After = MakeTextureJsonValue(ReadBackPath);
+		if (ReadBack != ResolvedTexture)
+		{
+			Delta.Error = FString::Printf(
+				TEXT("Texture '%s' read-back did not match requested asset."),
+				*Name);
+			Result.Errors.Add(Delta.Error);
+		}
+		else
+		{
+			Delta.bApplied = true;
+			++Result.InternalOperations;
+		}
+		Result.Deltas.Add(MoveTemp(Delta));
+	};
+
+	const TSharedPtr<FJsonObject>* ScalarOverrides = nullptr;
+	if (Request.Specification.IsValid()
+		&& Request.Specification->TryGetObjectField(TEXT("scalar_overrides"), ScalarOverrides)
+		&& ScalarOverrides
+		&& ScalarOverrides->IsValid())
+	{
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*ScalarOverrides)->Values)
+		{
+			double NumericValue = 0.0;
+			if (!Pair.Value.IsValid() || !Pair.Value->TryGetNumber(NumericValue))
+			{
+				Result.Errors.Add(FString::Printf(
+					TEXT("scalar_overrides['%s'] must be a number."),
+					*Pair.Key));
+				continue;
+			}
+			QueueScalar(Pair.Key, NumericValue);
+		}
+	}
+
+	const TSharedPtr<FJsonObject>* VectorOverrides = nullptr;
+	if (Request.Specification.IsValid()
+		&& Request.Specification->TryGetObjectField(TEXT("vector_overrides"), VectorOverrides)
+		&& VectorOverrides
+		&& VectorOverrides->IsValid())
+	{
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*VectorOverrides)->Values)
+		{
+			const TArray<TSharedPtr<FJsonValue>>* Components = nullptr;
+			if (!Pair.Value.IsValid()
+				|| !Pair.Value->TryGetArray(Components)
+				|| !Components)
+			{
+				Result.Errors.Add(FString::Printf(
+					TEXT("vector_overrides['%s'] must be an array [r,g,b,a]."),
+					*Pair.Key));
+				continue;
+			}
+
+			FLinearColor VectorValue;
+			FString ParseError;
+			if (!TryParseVectorOverride(*Components, VectorValue, ParseError))
+			{
+				Result.Errors.Add(FString::Printf(
+					TEXT("vector_overrides['%s']: %s"),
+					*Pair.Key,
+					*ParseError));
+				continue;
+			}
+			QueueVector(Pair.Key, VectorValue);
+		}
+	}
+
+	const TSharedPtr<FJsonObject>* TextureOverrides = nullptr;
+	if (Request.Specification.IsValid()
+		&& Request.Specification->TryGetObjectField(TEXT("texture_overrides"), TextureOverrides)
+		&& TextureOverrides
+		&& TextureOverrides->IsValid())
+	{
+		for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*TextureOverrides)->Values)
+		{
+			FString TexturePath;
+			if (!Pair.Value.IsValid() || !Pair.Value->TryGetString(TexturePath) || TexturePath.IsEmpty())
+			{
+				Result.Errors.Add(FString::Printf(
+					TEXT("texture_overrides['%s'] must be a texture asset path string."),
+					*Pair.Key));
+				continue;
+			}
+			QueueTexture(Pair.Key, TexturePath);
+		}
+	}
+
+	int32 AppliedCount = 0;
+	for (const FUeremcpMaterialInstanceParameterDelta& Delta : Result.Deltas)
+	{
+		if (Delta.bApplied)
+		{
+			++AppliedCount;
+		}
+	}
+
+	if (Request.bDryRun)
+	{
+		Result.bSuccess = true;
+		Result.Status = TEXT("no_change_required");
+		Result.Summary = FString::Printf(
+			TEXT("Dry run: would apply %d parameter override(s) on %s."),
+			Result.Deltas.Num(),
+			*Request.TargetAssetPath);
+		Result.InterpretationNotes.Add(
+			FString::Printf(TEXT("requested_overrides: %d"), Result.Deltas.Num()));
+		Result.ParameterChangesJson = BuildParameterChangesObject(Result.Deltas);
+		return Result;
+	}
+
+	if (AppliedCount == 0)
+	{
+		Result.bSuccess = false;
+		Result.Status = TEXT("failed_validation");
+		Result.Summary = FString::Printf(
+			TEXT("No parameter overrides were applied on '%s'."),
+			*Request.TargetAssetPath);
+		Result.ParameterChangesJson = BuildParameterChangesObject(Result.Deltas);
+		return Result;
+	}
+
+	Instance->MarkPackageDirty();
+	if (UPackage* Package = Instance->GetOutermost())
+	{
+		Package->MarkPackageDirty();
+	}
+
+	if (Request.bSave)
+	{
+		FString SaveError;
+		Result.bSaved = SaveAssetObject(Instance, Request.TargetAssetPath, &SaveError);
+		if (!Result.bSaved)
+		{
+			Result.CapabilityNotes.Add(
+				FString::Printf(TEXT("Save failed for '%s': %s"), *Request.TargetAssetPath, *SaveError));
+		}
+	}
+
+	FUeremcpAssetRef InstanceRef;
+	InstanceRef.AssetPath = Request.TargetAssetPath;
+	InstanceRef.AssetClass = TEXT("MaterialInstanceConstant");
+	Result.ModifiedAssets.Add(InstanceRef);
+
+	Result.bSuccess = true;
+	Result.Status = (AppliedCount < Result.Deltas.Num() || Result.Errors.Num() > 0)
+		? TEXT("partially_completed")
+		: TEXT("modified");
+	Result.Summary = FString::Printf(
+		TEXT("Applied %d of %d parameter override(s) on %s%s."),
+		AppliedCount,
+		Result.Deltas.Num(),
+		*Request.TargetAssetPath,
+		Result.bSaved ? TEXT(" and saved") : TEXT(""));
+	if (!Request.bSave)
+	{
+		Result.CapabilityNotes.Add(TEXT("options.save=false — changes are in-memory until saved."));
+	}
+
+	Result.ParameterChangesJson = BuildParameterChangesObject(Result.Deltas);
+	return Result;
+}

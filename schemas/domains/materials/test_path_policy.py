@@ -37,8 +37,23 @@ class MaterialPathPolicyTests(unittest.TestCase):
     def test_paths_header_declares_both_scratch_roots(self) -> None:
         self.assertIn('PocContentRoot = TEXT("/Game/__UeremcpPoc")', self.paths_h)
         self.assertIn("IsUnderAllowedScratchRoot", self.paths_h)
+        self.assertIn("IsAllowedInspectPath", self.paths_h)
+        self.assertIn("IsAllowedMutateCreatePath", self.paths_h)
         self.assertIn("ResolveScratchContentRoot", self.paths_h)
         self.assertIn("MastersFolderForContentRoot", self.paths_h)
+
+    def test_inspect_allows_game_mutate_create_scratch_only(self) -> None:
+        self.assertIn("IsAllowedInspectPath", self.paths_cpp)
+        self.assertIn("IsAllowedMutateCreatePath", self.paths_cpp)
+        inspect_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialInspect.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("IsAllowedInspectPath", inspect_cpp)
+        submit_cpp = (
+            REPO_ROOT / "Plugins/UEREMCP/Source/UeremcpMaterial/Private/UeremcpMaterialSubmit.cpp"
+        ).read_text(encoding="utf-8")
+        self.assertIn("never silent-delete", submit_cpp.lower())
+        self.assertIn("delete_missing_expressions", submit_cpp)
 
     def test_write_guards_use_allowed_scratch_root(self) -> None:
         self.assertIn("IsUnderAllowedScratchRoot(Request.TargetAssetPath)", self.material_cpp)

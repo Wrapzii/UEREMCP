@@ -1,0 +1,22 @@
+{
+  "emitters": [
+    {
+      "name": "LinkedSpark",
+      "sim_target": "CPUSim",
+      "modules": [
+        {
+          "primitive_id": "spawn_rate",
+          "inputs": {
+            "SpawnRate": { "mode": "linked", "linked_variable": "User.Intensity" }
+          }
+        },
+        { "primitive_id": "initialize_particle" }
+      ]
+    }
+  ],
+  "apply": {
+    "modules": true,
+    "add_emitters": true,
+    "emitter_properties": true
+  }
+}

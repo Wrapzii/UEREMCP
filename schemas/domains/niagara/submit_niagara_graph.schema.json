@@ -1,0 +1,312 @@
+{
+
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+  "$id": "https://uneremcp.dev/schemas/domains/niagara/submit_niagara_graph.schema.json",
+
+  "title": "submit_niagara_graph specification",
+
+  "description": "Apply edited inspect graphs[] OR declarative emitters[{name,modules[]}] to an existing Niagara system (WS-07). Missing emitters clone Minimal (or role/template_path) then AddModule. mode=replace may remove modules; Magecraft never deletes the UAsset. fidelity.round_trip_supported remains false. Owned by WS-07.",
+
+  "type": "object",
+
+  "additionalProperties": false,
+
+  "properties": {
+
+    "graphs": {
+
+      "type": "array",
+
+      "minItems": 1,
+
+      "description": "ADR-0004 graphs from inspect_system (system + emitter + module stacks).",
+
+      "items": {
+
+        "type": "object",
+
+        "required": ["graph_type"],
+
+        "additionalProperties": true,
+
+        "properties": {
+
+          "graph_type": {
+
+            "type": "string",
+
+            "enum": [
+
+              "NiagaraSystemGraph",
+
+              "NiagaraEmitterGraph",
+
+              "NiagaraModuleStack",
+
+              "NiagaraScriptGraph"
+
+            ]
+
+          },
+
+          "graph_id": { "type": "string" },
+
+          "nodes": { "type": "array" },
+
+          "links": { "type": "array" },
+
+          "variables": { "type": "array" },
+
+          "extensions": { "type": "object" },
+
+          "fidelity": { "type": "object" },
+
+          "content_hash": { "type": "string" },
+
+          "revision": { "type": "string" }
+
+        }
+
+      }
+
+    },
+
+    "emitters": {
+
+      "type": "array",
+
+      "description": "Declarative authoring shortcut (same shape as create_niagara_effect.emitters). Synthesizes emitter + module-stack graphs in one request. Missing emitters use Minimal substrate when role/template omitted.",
+
+      "items": {
+
+        "type": "object",
+
+        "additionalProperties": true,
+
+        "properties": {
+
+          "name": { "type": "string" },
+
+          "role": { "type": "string" },
+
+          "template_path": { "type": "string" },
+
+          "enabled": { "type": "boolean" },
+
+          "sim_target": { "type": "string" },
+
+          "life_cycle": { "type": "object", "additionalProperties": true },
+
+          "loop_duration": { "type": "number" },
+
+          "modules": {
+
+            "type": "array",
+
+            "items": {
+
+              "oneOf": [
+
+                { "type": "string" },
+
+                {
+
+                  "type": "object",
+
+                  "additionalProperties": true,
+
+                  "properties": {
+
+                    "primitive_id": { "type": "string" },
+
+                    "name": { "type": "string" },
+
+                    "asset_path": { "type": "string" },
+
+                    "module_script": { "type": "string" },
+
+                    "script": { "type": "string" },
+
+                    "script_usage": { "type": "string" },
+
+                    "enabled": { "type": "boolean" },
+
+                    "inputs": { "type": "object", "additionalProperties": true }
+
+                  }
+
+                }
+
+              ]
+
+            }
+
+          }
+
+        }
+
+      }
+
+    },
+
+    "apply": {
+
+      "type": "object",
+
+      "additionalProperties": false,
+
+      "description": "Optional knobs; all default true.",
+
+      "properties": {
+
+        "modules": { "type": "boolean", "default": true },
+
+        "user_parameters": { "type": "boolean", "default": true },
+
+        "renderer_materials": { "type": "boolean", "default": true },
+
+        "emitter_enabled": { "type": "boolean", "default": true },
+
+        "emitter_properties": {
+          "type": "boolean",
+          "default": true,
+          "description": "Apply sim_target + life_cycle from emitter graphs / emitters[]."
+        },
+
+        "add_emitters": {
+
+          "type": "boolean",
+
+          "default": true,
+
+          "description": "Add missing emitters (Minimal substrate when no role/template_path)."
+
+        }
+
+      }
+
+    }
+
+  },
+
+  "anyOf": [
+
+    { "required": ["graphs"] },
+
+    { "required": ["emitters"] }
+
+  ],
+
+  "examples": [
+
+    {
+
+      "emitters": [
+
+        {
+
+          "name": "CustomSpark",
+
+          "modules": [
+
+            { "primitive_id": "spawn_rate", "inputs": { "SpawnRate": 8 } },
+
+            { "primitive_id": "initialize_particle" },
+
+            { "primitive_id": "update_age" }
+
+          ],
+
+          "sim_target": "CPUSim",
+
+          "life_cycle": { "loop_duration": 2.0 }
+
+        }
+
+      ],
+
+      "apply": { "modules": true, "add_emitters": true, "emitter_properties": true }
+
+    },
+
+    {
+
+      "graphs": [
+
+        {
+
+          "graph_type": "NiagaraSystemGraph",
+
+          "graph_id": "/Game/RE/VFX/Magecraft/Spells/Adapted/NS_nature_xl_cast::System",
+
+          "variables": [
+
+            { "name": "User.Dirtiness", "type": "float", "default_value": 0.3 }
+
+          ],
+
+          "fidelity": { "round_trip_supported": false }
+
+        },
+
+        {
+
+          "graph_type": "NiagaraModuleStack",
+
+          "graph_id": "/Game/…::Emitter::ParticleUpdateScript",
+
+          "extensions": {
+
+            "niagara": {
+
+              "emitter_name": "Main",
+
+              "script_usage": "ParticleUpdateScript"
+
+            }
+
+          },
+
+          "nodes": [
+
+            {
+
+              "title": "ParticleState",
+
+              "enabled": true,
+
+              "semantic_type": "niagara_module",
+
+              "properties": {
+
+                "module_script": "/Niagara/Modules/Update/Life/ParticleState",
+
+                "stack_index": 0
+
+              }
+
+            }
+
+          ]
+
+        }
+
+      ],
+
+      "apply": {
+
+        "modules": true,
+
+        "user_parameters": true,
+
+        "renderer_materials": true
+
+      }
+
+    }
+
+  ]
+
+}
+

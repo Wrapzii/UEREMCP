@@ -33,4 +33,27 @@ namespace UeremcpMaterialCapability
 			LossyAreaEditorChrome,
 		};
 	}
+
+	inline TArray<FString> DefaultInspectCapabilityNotes()
+	{
+		return {
+			TEXT("PREFER InspectMaterial for masters/MIs under /Game (incl. Free_Spells) — one call returns result.graphs[] + parameter values."),
+			TEXT("fidelity.round_trip_supported=false (honest) until retrieve→submit→retrieve content_hash stability is proven."),
+			TEXT("expression_subclass_properties: MaterialEditingLibrary has no generic expression property setter — constants/defaults beyond ParameterName/position are lossy."),
+			TEXT("material_function_internals: nested MaterialFunction graphs are not expanded."),
+			TEXT("editor_chrome: comment boxes beyond Desc, preview settings, and layout beyond x/y are not round-tripped."),
+			TEXT("Visual proof: CaptureMaterialFrames (UeremcpValidation) — not a structural gate."),
+		};
+	}
+
+	inline TArray<FString> DefaultSubmitCapabilityNotes()
+	{
+		return {
+			TEXT("SubmitMaterialGraph: prefer in-place MIC parameters and existing-node link/property rewires. Never silent-deletes production masters."),
+			TEXT("create_missing_expressions / delete_missing_expressions: scratch roots only; delete also requires mode=replace and is not auto-executed until round-trip proven."),
+			TEXT("fidelity.round_trip_supported=false — status stays partially_completed / no_change_required (never *_validated for submit yet)."),
+			TEXT("New masters from empty graphs[]: use CreateMasterMaterial / CreateVfxMaterial; submit applies to existing assets."),
+			TEXT("Proof path after submit: InspectMaterial then CaptureMaterialFrames."),
+		};
+	}
 }

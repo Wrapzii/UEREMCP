@@ -19,6 +19,14 @@ struct FUeremcpNiagaraInspectSpec
 	bool bIncludeDependencies = true;
 	bool bIncludeCompileState = true;
 	bool bIncludeStackIssues = true;
+
+	/** Optional AssetRegistry name / substring query when target.asset_path is empty. */
+	FString Query;
+	FString AssetName;
+	/** Package path root for query search (default /Game). */
+	FString SearchRoot = TEXT("/Game");
+	/** Optional override for envelope options.response_detail. */
+	FString ResponseDetail;
 };
 
 /** Result of a read-only Niagara inspection pass. */
@@ -39,6 +47,17 @@ struct FUeremcpNiagaraInspectResult
 	int32 EmitterCount = 0;
 	int32 ModuleCount = 0;
 	int32 RendererCount = 0;
+
+	FString ResolvedAssetPath;
+	TArray<FString> EmitterNames;
+	TArray<TSharedPtr<FJsonValue>> UserParameters;
+	TArray<FString> Candidates;
+
+	/**
+	 * Agent-facing topology summary (emitters → modules → renderers) placed at the
+	 * top of result so agents need no Python to scan stacks. Always populated.
+	 */
+	TSharedPtr<FJsonObject> TopologySummary;
 };
 
 /** Maps Epic Niagara topology into ADR-0004 graph shapes + extensions.niagara. */
@@ -50,13 +69,28 @@ public:
 		FUeremcpNiagaraInspectSpec& OutSpec,
 		FString& OutError);
 
-	/** Wave 2 probe guard — only /Game/__UeremcpTests/ or /Game/__UeremcpPoc/ assets. */
+	/** Mutate/create/adapt WRITE guard — sandbox + Magecraft (legacy name kept for tests). */
 	static bool IsAllowedProbePath(const FString& AssetPath);
+
+	/** READ inspect guard — any /Game/… path. */
+	static bool IsAllowedInspectPath(const FString& AssetPath);
+
+	/**
+	 * Resolve target.asset_path from an exact soft path and/or specification.query /
+	 * asset_name via AssetRegistry (UNiagaraSystem).
+	 */
+	static bool ResolveTargetPath(
+		const FUeremcpRequest& Request,
+		const FUeremcpNiagaraInspectSpec& Spec,
+		FString& OutAssetPath,
+		FString& OutError,
+		TArray<FString>& OutCandidates);
 
 	/**
 	 * Probe inspect must not call GetStackIssues: diagnostics VM builds renderer stack
 	 * items that evaluate FNiagaraMeshMaterialOverride::ExplicitMat edit conditions
 	 * (bOverrideMaterials on parent UNiagaraMeshRendererProperties) in struct scope.
+	 * Sandbox roots only — Magecraft/production may collect stack issues.
 	 * [VERIFIED: GetStackIssues → GetDiagnosticsSystemViewModel — NiagaraExternalSystemEditorUtilities.cpp:3367]
 	 */
 	static bool ShouldSkipStackIssuesForProbe(const FString& AssetPath);

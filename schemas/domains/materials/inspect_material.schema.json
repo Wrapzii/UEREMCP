@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/materials/inspect_material.schema.json",
+  "title": "inspect_material specification",
+  "description": "Optional knobs for materials.inspect_material (read a UMaterial or UMaterialInstanceConstant into ADR-0004 MaterialGraph JSON + parameter inventory). Target asset path lives on the envelope target when known; otherwise use query/asset_name. Owned by WS-08.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "AssetRegistry name/substring search for UMaterial / UMaterialInstanceConstant when target.asset_path is omitted (e.g. M_Free_Spells_Flash, Free_Spells)."
+    },
+    "asset_name": {
+      "type": "string",
+      "description": "Alias for query — exact or substring asset name under search_root."
+    },
+    "search_root": {
+      "type": "string",
+      "default": "/Game",
+      "description": "Package path root for query resolution (e.g. /Game or a Free_Spells folder)."
+    },
+    "include_expression_graph": {
+      "type": "boolean",
+      "default": true,
+      "description": "When true and the asset is a UMaterial master, include result.graphs[] MaterialGraph (nodes/links/property inputs)."
+    },
+    "include_parameters": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include scalar/vector/texture/static_switch parameter inventory with current values."
+    },
+    "include_property_inputs": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include MP_* material property wiring (emissive, opacity, base color, …) under extensions.material.property_inputs."
+    },
+    "response_detail": {
+      "$ref": "../../common/defs.schema.json#/$defs/responseDetail",
+      "description": "Overrides envelope options.response_detail. Inspect defaults to complete when omitted."
+    }
+  },
+  "examples": [
+    {
+      "query": "M_Free_Spells_Flash",
+      "search_root": "/Game",
+      "include_expression_graph": true,
+      "include_parameters": true,
+      "response_detail": "complete"
+    },
+    {
+      "asset_name": "MI_Free_Spells_Flash2",
+      "include_expression_graph": false,
+      "include_parameters": true
+    }
+  ]
+}

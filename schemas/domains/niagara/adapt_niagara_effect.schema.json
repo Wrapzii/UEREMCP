@@ -1,0 +1,221 @@
+{
+
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+  "$id": "https://uneremcp.dev/schemas/domains/niagara/adapt_niagara_effect.schema.json",
+
+  "title": "adapt_niagara_effect specification",
+
+  "description": "In-place User.* / material / Emitter Properties (sim_target + life_cycle) updates on an existing Niagara system under sandbox or /Game/RE/VFX/Magecraft. Never deletes. Owned by WS-07.",
+
+  "type": "object",
+
+  "additionalProperties": false,
+
+  "properties": {
+
+    "parameters": {
+
+      "type": "object",
+
+      "description": "User.* knobs (primary_color, scale, intensity, density, Magecraft adaptation floats).",
+
+      "additionalProperties": true,
+
+      "properties": {
+
+        "primary_color": {
+
+          "type": "array",
+
+          "items": { "type": "number" },
+
+          "minItems": 3,
+
+          "maxItems": 4
+
+        },
+
+        "scale": { "type": "number" },
+
+        "intensity": { "type": "number" },
+
+        "density": { "type": "number" },
+
+        "mist_density": { "type": "number" },
+
+        "include_adaptation": { "type": "boolean" },
+
+        "dirtiness": { "type": "number" },
+
+        "wetness": { "type": "number" },
+
+        "scorch": { "type": "number" },
+
+        "vegetation": { "type": "number" },
+
+        "temperature": { "type": "number" },
+
+        "mastery": { "type": "number" },
+
+        "adapt_secondary_color": {
+
+          "type": "array",
+
+          "items": { "type": "number" },
+
+          "minItems": 3,
+
+          "maxItems": 4
+
+        }
+
+      }
+
+    },
+
+    "materials": {
+
+      "type": "object",
+
+      "description": "Role→material bindings. On Magecraft use existing asset paths only (no create_spec).",
+
+      "additionalProperties": {
+
+        "oneOf": [
+
+          { "type": "string" },
+
+          {
+
+            "type": "object",
+
+            "additionalProperties": true,
+
+            "properties": {
+
+              "path": { "type": "string" },
+
+              "create_spec": { "type": "object", "additionalProperties": true }
+
+            }
+
+          }
+
+        ]
+
+      }
+
+    },
+
+    "emitters": {
+
+      "type": "array",
+
+      "description": "First-class Emitter Properties / Emitter State Life Cycle patches (sim_target, life_cycle).",
+
+      "items": {
+
+        "type": "object",
+
+        "additionalProperties": true,
+
+        "properties": {
+
+          "name": { "type": "string" },
+
+          "emitter_name": { "type": "string" },
+
+          "sim_target": { "type": "string" },
+
+          "enabled": { "type": "boolean" },
+
+          "life_cycle": {
+
+            "type": "object",
+
+            "additionalProperties": true,
+
+            "properties": {
+
+              "mode": { "type": "string" },
+
+              "loop_behavior": { "type": "string" },
+
+              "loop_duration": { "type": "number" },
+
+              "inactive_response": { "type": "string" }
+
+            }
+
+          },
+
+          "loop_duration": { "type": "number" }
+
+        }
+
+      }
+
+    }
+
+  },
+
+  "anyOf": [
+
+    { "required": ["parameters"] },
+
+    { "required": ["materials"] },
+
+    { "required": ["emitters"] }
+
+  ],
+
+  "examples": [
+
+    {
+
+      "parameters": {
+
+        "include_adaptation": true,
+
+        "dirtiness": 0.35,
+
+        "primary_color": [0.2, 0.8, 0.3, 1.0]
+
+      }
+
+    },
+
+    {
+
+      "materials": {
+
+        "core": "/Game/RE/VFX/Magecraft/RuntimeMaterials/MI_NatureCore"
+
+      }
+
+    },
+
+    {
+
+      "emitters": [
+
+        {
+
+          "name": "Sparks1",
+
+          "sim_target": "CPUSim",
+
+          "life_cycle": { "loop_duration": 1.5, "loop_behavior": "Infinite" }
+
+        }
+
+      ]
+
+    }
+
+  ]
+
+}
+
+

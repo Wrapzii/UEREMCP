@@ -4,20 +4,28 @@
 
 #include "UeremcpNiagaraCapabilityNotes.h"
 #include "UeremcpNiagaraCompileAwait.h"
+#include "UeremcpNiagaraEmitterProperties.h"
 #include "UeremcpNiagaraMaterialBinding.h"
 #include "UeremcpNiagaraMaterialBindingDiagnostics.h"
+#include "UeremcpNiagaraModuleResolve.h"
 #include "UeremcpNiagaraPaths.h"
 #include "UeremcpNiagaraProbeAssets.h"
 #include "UeremcpNiagaraRoleNames.h"
+#include "UeremcpNiagaraStackInputs.h"
 
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraEmitter.h"
+#include "NiagaraRendererProperties.h"
+#include "NiagaraScript.h"
 #include "NiagaraSystem.h"
 #include "NiagaraTypes.h"
 #include "NiagaraVariant.h"
 
 #include "HAL/PlatformTime.h"
 #include "Misc/PackageName.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "Serialization/JsonWriter.h"
 #include "UObject/SavePackage.h"
 #include "UObject/SoftObjectPath.h"
 
@@ -424,6 +432,136 @@ namespace
 		OutChecks.Add(TEXT("niagara.remove_template_emitters"));
 		return true;
 	}
+
+	bool ApplyCustomEmitterStack(
+		UNiagaraSystem* System,
+		FNiagaraExternalEditContext& Context,
+		const FUeremcpNiagaraEmitterPlan& Plan,
+		FUeremcpNiagaraCreateResult& OutResult)
+	{
+		for (const FUeremcpNiagaraModulePlan& Mod : Plan.Modules)
+		{
+			FString LoadError;
+			UNiagaraScript* Script =
+				UeremcpNiagaraModuleResolve::LoadModuleScript(Mod.AssetPath, LoadError);
+			if (!Script)
+			{
+				OutResult.Error = FString::Printf(
+					TEXT("emitter '%s' module '%s': %s"),
+					*Plan.Name,
+					*Mod.Name,
+					*LoadError);
+				return false;
+			}
+
+			FNiagaraExt_StackItemReference LocationRef(
+				System, FName(*Plan.Name), FName(*Mod.ScriptUsage));
+			FNiagaraExt_ModuleTopology Added;
+			// [VERIFIED: NiagaraExternalSystemEditorUtilities.h:1367 AddModule]
+			UNiagaraExternalEditUtilities::AddModule(LocationRef, Script, Added, Context);
+			++OutResult.InternalOperations;
+			if (Context.HasErrors())
+			{
+				OutResult.Error = ContextErrorsToString(Context);
+				return false;
+			}
+
+			const FName AddedName = Added.ModuleName.IsNone()
+				? FName(*Mod.Name)
+				: Added.ModuleName;
+			const FString Key = FString::Printf(
+				TEXT("%s/%s/%s (%s)"),
+				*Plan.Name,
+				*Mod.ScriptUsage,
+				*AddedName.ToString(),
+				*Mod.AssetPath);
+			OutResult.ModulesAdded.Add(Key);
+
+			if (!Mod.bEnabled)
+			{
+				FNiagaraExt_StackItemReference ModuleRef(
+					System, FName(*Plan.Name), FName(*Mod.ScriptUsage), AddedName);
+				UNiagaraExternalEditUtilities::SetModuleEnabled(ModuleRef, false, Context);
+				++OutResult.InternalOperations;
+				if (Context.HasErrors())
+				{
+					OutResult.LossyWarnings.Add(ContextErrorsToString(Context));
+					Context.Errors.Reset();
+				}
+			}
+
+			TArray<FString> AppliedInputs;
+			FUeremcpNiagaraStackInputs::ApplyModuleInputs(
+				System,
+				Context,
+				Plan.Name,
+				Mod.ScriptUsage,
+				AddedName,
+				Mod.Inputs,
+				OutResult.InternalOperations,
+				OutResult.LossyWarnings,
+				AppliedInputs);
+		}
+
+		if (!Plan.RendererType.IsEmpty())
+		{
+			FString RendererError;
+			TSubclassOf<UNiagaraRendererProperties> RendererClass =
+				UeremcpNiagaraModuleResolve::ResolveRendererClass(Plan.RendererType, RendererError);
+			if (!RendererClass)
+			{
+				OutResult.LossyWarnings.Add(RendererError.IsEmpty()
+					? FString::Printf(TEXT("emitter '%s': unknown renderer"), *Plan.Name)
+					: RendererError);
+			}
+			else
+			{
+				FNiagaraExt_StackItemReference EmitterRef(System, FName(*Plan.Name));
+				FNiagaraExt_RendererRef OutRef;
+				// [VERIFIED: NiagaraExternalSystemEditorUtilities.h:1364 AddRenderer]
+				UNiagaraExternalEditUtilities::AddRenderer(
+					EmitterRef, RendererClass, OutRef, Context);
+				++OutResult.InternalOperations;
+				if (Context.HasErrors())
+				{
+					OutResult.LossyWarnings.Add(ContextErrorsToString(Context));
+					Context.Errors.Reset();
+				}
+				else
+				{
+					OutResult.RenderersAdded.Add(FString::Printf(
+						TEXT("%s:%s"), *Plan.Name, *Plan.RendererType));
+				}
+			}
+		}
+
+		FUeremcpNiagaraEmitterPropertyPlan Props;
+		Props.SimTarget = Plan.SimTarget;
+		Props.bHasEnabled = Plan.bHasEnabled;
+		Props.bEnabled = Plan.bEnabled;
+		Props.LifeCycleMode = Plan.LifeCycleMode;
+		Props.LoopBehavior = Plan.LoopBehavior;
+		Props.LoopDuration = Plan.LoopDuration;
+		Props.InactiveResponse = Plan.InactiveResponse;
+		if (Props.HasAny())
+		{
+			TArray<FString> AppliedProps;
+			FUeremcpNiagaraEmitterProperties::ApplyAll(
+				System,
+				Context,
+				Plan.Name,
+				Props,
+				OutResult.InternalOperations,
+				AppliedProps,
+				OutResult.LossyWarnings);
+			OutResult.ChecksPerformed.Append(AppliedProps);
+			if (AppliedProps.Num() > 0)
+			{
+				OutResult.ChecksPerformed.Add(TEXT("niagara.emitter_properties_write"));
+			}
+		}
+		return true;
+	}
 }
 
 bool FUeremcpNiagaraCreate::ParseSpecification(
@@ -506,16 +644,250 @@ bool FUeremcpNiagaraCreate::ParseSpecification(
 		return false;
 	}
 
-	if (OutSpec.ComponentRoles.Num() == 0)
+	// specification.emitters[{name, modules[]}] — PRIMARY path for LLM-authored stacks.
+	// role / template_path remain optional shortcuts (preset kits), not required.
+	const TArray<TSharedPtr<FJsonValue>>* EmittersArr = nullptr;
+	if (Spec->TryGetArrayField(TEXT("emitters"), EmittersArr) && EmittersArr)
 	{
-		const bool bPrecipitation =
-			OutSpec.EffectType.Equals(TEXT("precipitation"), ESearchCase::IgnoreCase)
-			|| OutSpec.EffectType.Equals(TEXT("rain"), ESearchCase::IgnoreCase)
-			|| OutSpec.EffectType.Equals(TEXT("weather"), ESearchCase::IgnoreCase);
-		if (bPrecipitation)
+		for (const TSharedPtr<FJsonValue>& Entry : *EmittersArr)
 		{
-			OutSpec.ComponentRoles = UeremcpNiagaraRoles::DefaultPrecipitationComponentRoles();
+			FUeremcpNiagaraEmitterPlan Plan;
+			if (Entry->TryGetString(Plan.Role))
+			{
+				// Shorthand: emitters: ["sparks", "circle"] — optional role shortcut.
+			}
+			else
+			{
+				const TSharedPtr<FJsonObject>* EmitterObj = nullptr;
+				if (!Entry->TryGetObject(EmitterObj) || !EmitterObj || !EmitterObj->IsValid())
+				{
+					OutError = TEXT("specification.emitters entries must be strings or objects.");
+					return false;
+				}
+				(*EmitterObj)->TryGetStringField(TEXT("name"), Plan.Name);
+				(*EmitterObj)->TryGetStringField(TEXT("role"), Plan.Role);
+				(*EmitterObj)->TryGetStringField(TEXT("template_path"), Plan.TemplatePath);
+				if (Plan.TemplatePath.IsEmpty())
+				{
+					(*EmitterObj)->TryGetStringField(TEXT("emitter_template"), Plan.TemplatePath);
+				}
+				if ((*EmitterObj)->HasField(TEXT("enabled")))
+				{
+					Plan.bEnabled = (*EmitterObj)->GetBoolField(TEXT("enabled"));
+					Plan.bHasEnabled = true;
+				}
+
+				FUeremcpNiagaraEmitterPropertyPlan PropPlan;
+				FUeremcpNiagaraEmitterProperties::ParseFromJsonObject(*EmitterObj, PropPlan);
+				Plan.SimTarget = PropPlan.SimTarget;
+				Plan.LifeCycleMode = PropPlan.LifeCycleMode;
+				Plan.LoopBehavior = PropPlan.LoopBehavior;
+				Plan.LoopDuration = PropPlan.LoopDuration;
+				Plan.InactiveResponse = PropPlan.InactiveResponse;
+				if (PropPlan.bHasEnabled)
+				{
+					Plan.bEnabled = PropPlan.bEnabled;
+					Plan.bHasEnabled = true;
+				}
+
+				const TSharedPtr<FJsonObject>* RendererObj = nullptr;
+				if ((*EmitterObj)->TryGetObjectField(TEXT("renderer"), RendererObj)
+					&& RendererObj && (*RendererObj).IsValid())
+				{
+					(*RendererObj)->TryGetStringField(TEXT("type"), Plan.RendererType);
+					if (Plan.RendererType.IsEmpty())
+					{
+						(*RendererObj)->TryGetStringField(TEXT("renderer_type"), Plan.RendererType);
+					}
+				}
+				else
+				{
+					(*EmitterObj)->TryGetStringField(TEXT("renderer"), Plan.RendererType);
+					if (Plan.RendererType.IsEmpty())
+					{
+						(*EmitterObj)->TryGetStringField(TEXT("renderer_type"), Plan.RendererType);
+					}
+				}
+
+				const TArray<TSharedPtr<FJsonValue>>* ModulesArr = nullptr;
+				if ((*EmitterObj)->TryGetArrayField(TEXT("modules"), ModulesArr) && ModulesArr)
+				{
+					for (const TSharedPtr<FJsonValue>& ModVal : *ModulesArr)
+					{
+						FUeremcpNiagaraModulePlan Mod;
+						if (ModVal->TryGetString(Mod.Name))
+						{
+							// Shorthand: modules: ["SpawnRate", "spawn_rate"]
+							Mod.PrimitiveId = Mod.Name;
+						}
+						else
+						{
+							const TSharedPtr<FJsonObject>* ModObj = nullptr;
+							if (!ModVal->TryGetObject(ModObj) || !ModObj || !ModObj->IsValid())
+							{
+								OutError = TEXT(
+									"specification.emitters[].modules entries must be strings or objects.");
+								return false;
+							}
+							(*ModObj)->TryGetStringField(TEXT("primitive_id"), Mod.PrimitiveId);
+							(*ModObj)->TryGetStringField(TEXT("name"), Mod.Name);
+							(*ModObj)->TryGetStringField(TEXT("asset_path"), Mod.AssetPath);
+							if (Mod.AssetPath.IsEmpty())
+							{
+								(*ModObj)->TryGetStringField(TEXT("module_script"), Mod.AssetPath);
+							}
+							if (Mod.AssetPath.IsEmpty())
+							{
+								(*ModObj)->TryGetStringField(TEXT("script_path"), Mod.AssetPath);
+							}
+							(*ModObj)->TryGetStringField(TEXT("script"), Mod.ScriptUsage);
+							if (Mod.ScriptUsage.IsEmpty())
+							{
+								(*ModObj)->TryGetStringField(TEXT("script_usage"), Mod.ScriptUsage);
+							}
+							if ((*ModObj)->HasField(TEXT("enabled")))
+							{
+								Mod.bEnabled = (*ModObj)->GetBoolField(TEXT("enabled"));
+							}
+							const TSharedPtr<FJsonObject>* InputsObj = nullptr;
+							if ((*ModObj)->TryGetObjectField(TEXT("inputs"), InputsObj)
+								&& InputsObj && (*InputsObj).IsValid())
+							{
+								Mod.Inputs = *InputsObj;
+							}
+						}
+						if (Mod.PrimitiveId.IsEmpty() && Mod.Name.IsEmpty() && Mod.AssetPath.IsEmpty())
+						{
+							OutError = TEXT(
+								"emitters[].modules[] requires primitive_id or name "
+								"and/or asset_path (module_script).");
+							return false;
+						}
+						Plan.Modules.Add(Mod);
+					}
+				}
+			}
+
+			const bool bHasCustomModules = Plan.Modules.Num() > 0;
+			if (Plan.Role.IsEmpty() && Plan.TemplatePath.IsEmpty() && !bHasCustomModules
+				&& Plan.Name.IsEmpty())
+			{
+				OutError = TEXT(
+					"specification.emitters[] requires name + modules[], and/or role, "
+					"and/or template_path.");
+				return false;
+			}
+			if (bHasCustomModules)
+			{
+				Plan.bCustomModuleStack = true;
+			}
+			OutSpec.Emitters.Add(Plan);
+			if (!Plan.Role.IsEmpty() && !OutSpec.ComponentRoles.Contains(Plan.Role))
+			{
+				OutSpec.ComponentRoles.Add(Plan.Role);
+			}
 		}
+	}
+
+	if (OutSpec.ComponentRoles.Num() == 0 && OutSpec.Emitters.Num() == 0)
+	{
+		// Optional shortcut only: default by effect_type when agents omit emitters entirely.
+		OutSpec.ComponentRoles =
+			UeremcpNiagaraRoles::DefaultComponentRolesForEffectType(OutSpec.EffectType);
+	}
+
+	// Resolve template substrate + names. Custom modules[] → Minimal substrate.
+	TSet<FString> PlannedNames;
+	int32 AnonymousIndex = 0;
+	for (FUeremcpNiagaraEmitterPlan& Plan : OutSpec.Emitters)
+	{
+		if (Plan.Name.IsEmpty())
+		{
+			if (!Plan.Role.IsEmpty())
+			{
+				Plan.Name = UeremcpNiagaraRoles::RoleToEmitterName(Plan.Role);
+			}
+			else
+			{
+				++AnonymousIndex;
+				Plan.Name = FString::Printf(TEXT("CustomEmitter%d"), AnonymousIndex);
+			}
+		}
+
+		for (FUeremcpNiagaraModulePlan& Mod : Plan.Modules)
+		{
+			const FString LookupKey = !Mod.PrimitiveId.IsEmpty()
+				? Mod.PrimitiveId
+				: Mod.Name;
+			Mod.ScriptUsage = UeremcpNiagaraModuleResolve::NormalizeScriptUsage(Mod.ScriptUsage);
+			if (Mod.ScriptUsage.IsEmpty())
+			{
+				Mod.ScriptUsage = UeremcpNiagaraModuleResolve::DefaultScriptUsageForModule(
+					LookupKey.IsEmpty() ? Mod.AssetPath : LookupKey);
+			}
+			FString ResolvedPath;
+			FString ResolveError;
+			if (!UeremcpNiagaraModuleResolve::ResolveModuleAssetPath(
+				LookupKey, Mod.AssetPath, ResolvedPath, ResolveError))
+			{
+				OutError = FString::Printf(
+					TEXT("emitter '%s': %s"),
+					*Plan.Name,
+					*ResolveError);
+				return false;
+			}
+			Mod.AssetPath = ResolvedPath;
+			if (Mod.Name.IsEmpty())
+			{
+				Mod.Name = FPackageName::GetLongPackageAssetName(ResolvedPath);
+			}
+		}
+
+		if (Plan.TemplatePath.IsEmpty())
+		{
+			if (Plan.bCustomModuleStack || Plan.Modules.Num() > 0)
+			{
+				// LLM-defined stacks: clone Minimal then AddModule — not a preset spell kit.
+				// [VERIFIED: DefaultNiagara.ini DefaultEmptyEmitter → Minimal]
+				Plan.TemplatePath = UeremcpNiagaraModuleResolve::MinimalEmitterTemplatePath();
+				Plan.bCustomModuleStack = true;
+			}
+			else if (!Plan.Role.IsEmpty())
+			{
+				Plan.TemplatePath = UeremcpNiagaraRoles::ResolveEmitterTemplatePath(Plan.Role);
+			}
+			else
+			{
+				OutError = FString::Printf(
+					TEXT("emitter '%s' needs modules[], role, or template_path."),
+					*Plan.Name);
+				return false;
+			}
+		}
+		PlannedNames.Add(Plan.Name);
+	}
+	for (const FString& Role : OutSpec.ComponentRoles)
+	{
+		const FString EmitterName = UeremcpNiagaraRoles::RoleToEmitterName(Role);
+		if (PlannedNames.Contains(EmitterName))
+		{
+			continue;
+		}
+		FUeremcpNiagaraEmitterPlan Plan;
+		Plan.Role = Role;
+		Plan.Name = EmitterName;
+		Plan.TemplatePath = UeremcpNiagaraRoles::ResolveEmitterTemplatePath(Role);
+		OutSpec.Emitters.Add(Plan);
+		PlannedNames.Add(Plan.Name);
+	}
+
+	if (OutSpec.Emitters.Num() == 0 && OutSpec.BaseSystemPath.IsEmpty())
+	{
+		OutError = TEXT(
+			"create_niagara_effect requires specification.emitters[{name,modules[]}] "
+			"(primary), specification.components / emitters role shortcuts, "
+			"or a known effect_type default. Empty shells are rejected.");
+		return false;
 	}
 
 	return true;
@@ -528,11 +900,11 @@ bool FUeremcpNiagaraCreate::Run(
 {
 	OutResult = FUeremcpNiagaraCreateResult();
 
-	if (!UeremcpNiagaraPaths::IsAllowedProbePath(Request.TargetAssetPath))
+	if (!UeremcpNiagaraPaths::IsAllowedMutatePath(Request.TargetAssetPath))
 	{
 		OutResult.Error = FString::Printf(
-			TEXT("create_niagara_effect probes only assets under %s (got '%s')."),
-			*UeremcpNiagaraPaths::AllowedContentRootsDescription(),
+			TEXT("create_niagara_effect only assets under %s (got '%s')."),
+			*UeremcpNiagaraPaths::AllowedMutateRootsDescription(),
 			*Request.TargetAssetPath);
 		return false;
 	}
@@ -578,12 +950,29 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		OutResult.bSuccess = true;
 		OutResult.CreatedAssetPath = CreatedPath;
+		const int32 EmitterPlanCount = Spec.Emitters.Num() > 0
+			? Spec.Emitters.Num()
+			: Spec.ComponentRoles.Num();
+		int32 ModulePlanCount = 0;
+		int32 CustomEmitterCount = 0;
+		for (const FUeremcpNiagaraEmitterPlan& Plan : Spec.Emitters)
+		{
+			ModulePlanCount += Plan.Modules.Num();
+			if (Plan.bCustomModuleStack)
+			{
+				++CustomEmitterCount;
+			}
+		}
 		const FString StructureIntent = Spec.BaseSystemPath.IsEmpty()
-			? FString::Printf(TEXT("create from template with %d emitter role(s)"), Spec.ComponentRoles.Num())
+			? FString::Printf(
+				TEXT("create from template with %d emitter(s), %d module(s) (%d custom Minimal stacks)"),
+				EmitterPlanCount,
+				ModulePlanCount,
+				CustomEmitterCount)
 			: FString::Printf(
-				TEXT("inherit emitter structure from '%s' and add %d variation role(s)"),
+				TEXT("inherit emitter structure from '%s' and add %d variation emitter(s)"),
 				*Spec.BaseSystemPath,
-				Spec.ComponentRoles.Num());
+				EmitterPlanCount);
 		if (bReplaceMode)
 		{
 			if (bAssetExists)
@@ -623,6 +1012,14 @@ bool FUeremcpNiagaraCreate::Run(
 	{
 		if (bReplaceMode)
 		{
+			if (UeremcpNiagaraPaths::IsAllowedMagecraftPath(CreatedPath)
+				&& !UeremcpNiagaraPaths::IsAllowedProbePath(CreatedPath))
+			{
+				OutResult.Error = FString::Printf(
+					TEXT("mode=replace delete is sandbox-only; Magecraft path '%s' already exists — use adapt_niagara_effect or submit_niagara_graph."),
+					*CreatedPath);
+				return false;
+			}
 			if (!UeremcpNiagaraProbeAssets::DeleteProbeAssetAtPath(CreatedPath, OutResult.Error))
 			{
 				return false;
@@ -633,9 +1030,9 @@ bool FUeremcpNiagaraCreate::Run(
 		else
 		{
 			OutResult.Error = FString::Printf(
-				TEXT("Asset already exists at '%s'. Use envelope mode 'replace' for idempotent probes under %s."),
+				TEXT("Asset already exists at '%s'. Use envelope mode 'replace' for idempotent probes under %s, or adapt_niagara_effect on Magecraft."),
 				*CreatedPath,
-				*UeremcpNiagaraPaths::AllowedContentRootsDescription());
+				*UeremcpNiagaraPaths::AllowedMutateRootsDescription());
 			return false;
 		}
 	}
@@ -723,24 +1120,38 @@ bool FUeremcpNiagaraCreate::Run(
 		return false;
 	}
 
-	for (const FString& Role : Spec.ComponentRoles)
+	TArray<FUeremcpNiagaraEmitterPlan> Plans = Spec.Emitters;
+	if (Plans.Num() == 0)
 	{
-		const FString EmitterName = RoleToEmitterName(Role);
-		const FString EmitterTemplatePath = ResolveEmitterTemplatePath(Role);
-		UNiagaraEmitter* EmitterTemplate = Cast<UNiagaraEmitter>(LoadSoftPath(EmitterTemplatePath));
+		for (const FString& Role : Spec.ComponentRoles)
+		{
+			FUeremcpNiagaraEmitterPlan Plan;
+			Plan.Role = Role;
+			Plan.Name = RoleToEmitterName(Role);
+			Plan.TemplatePath = ResolveEmitterTemplatePath(Role);
+			Plans.Add(Plan);
+		}
+	}
+
+	int32 CustomStackCount = 0;
+	for (const FUeremcpNiagaraEmitterPlan& Plan : Plans)
+	{
+		UNiagaraEmitter* EmitterTemplate = Cast<UNiagaraEmitter>(LoadSoftPath(Plan.TemplatePath));
 		if (!EmitterTemplate)
 		{
 			OutResult.Error = FString::Printf(
-				TEXT("Could not load emitter template '%s' for role '%s'."),
-				*EmitterTemplatePath,
-				*Role);
+				TEXT("Could not load emitter template '%s' for role '%s' / name '%s'."),
+				*Plan.TemplatePath,
+				*Plan.Role,
+				*Plan.Name);
 			return false;
 		}
 
 		FNiagaraExt_EmitterTopology Topology;
+		// [VERIFIED: NiagaraExternalSystemEditorUtilities.h:1361 AddEmitter]
 		UNiagaraExternalEditUtilities::AddEmitter(
 			EmitterTemplate,
-			FName(*EmitterName),
+			FName(*Plan.Name),
 			Topology,
 			Context);
 		++OutResult.InternalOperations;
@@ -751,10 +1162,53 @@ bool FUeremcpNiagaraCreate::Run(
 			return false;
 		}
 
-		OutResult.EmittersAdded.Add(EmitterName);
+		OutResult.EmittersAdded.Add(Plan.Name);
+
+		// LLM-defined stacks: Minimal substrate + AddModule per modules[] (+ inputs).
+		if (Plan.Modules.Num() > 0)
+		{
+			if (!ApplyCustomEmitterStack(System, Context, Plan, OutResult))
+			{
+				return false;
+			}
+			++CustomStackCount;
+		}
+		else
+		{
+			// Role/template shortcut path — still apply first-class Emitter Properties.
+			FUeremcpNiagaraEmitterPropertyPlan Props;
+			Props.SimTarget = Plan.SimTarget;
+			Props.bHasEnabled = Plan.bHasEnabled;
+			Props.bEnabled = Plan.bEnabled;
+			Props.LifeCycleMode = Plan.LifeCycleMode;
+			Props.LoopBehavior = Plan.LoopBehavior;
+			Props.LoopDuration = Plan.LoopDuration;
+			Props.InactiveResponse = Plan.InactiveResponse;
+			if (Props.HasAny())
+			{
+				TArray<FString> AppliedProps;
+				FUeremcpNiagaraEmitterProperties::ApplyAll(
+					System,
+					Context,
+					Plan.Name,
+					Props,
+					OutResult.InternalOperations,
+					AppliedProps,
+					OutResult.LossyWarnings);
+				if (AppliedProps.Num() > 0)
+				{
+					OutResult.ChecksPerformed.Add(TEXT("niagara.emitter_properties_write"));
+				}
+			}
+		}
 	}
 
-	OutResult.ChecksPerformed.Add(TEXT("niagara.add_emitters_from_roles"));
+	if (CustomStackCount > 0)
+	{
+		OutResult.ChecksPerformed.Add(TEXT("niagara.add_emitters_custom_module_stacks"));
+		OutResult.ChecksPerformed.Add(TEXT("niagara.add_modules_from_emitters_json"));
+	}
+	OutResult.ChecksPerformed.Add(TEXT("niagara.add_emitters_from_plan"));
 	TArray<FString> VariationEmitterNames = OutResult.EmittersInherited;
 	VariationEmitterNames.Append(OutResult.EmittersAdded);
 	const TArray<FString>& TargetEmitterNames = bVariation
@@ -895,9 +1349,19 @@ bool FUeremcpNiagaraCreate::Run(
 		{
 			OutResult.ChecksPerformed.Add(TEXT("niagara.compile_await_observed_via_script_state"));
 		}
+		if (AwaitResult.bLiveEnginePumpSkipped)
+		{
+			OutResult.ChecksPerformed.Add(TEXT("niagara.compile_await_live_engine_pump_skipped"));
+		}
 		if (AwaitResult.bActiveQueueNotDrained)
 		{
 			OutResult.ChecksSkipped.Add(TEXT("niagara.compile_active_queue_not_drained"));
+		}
+		if (!AwaitResult.Error.IsEmpty())
+		{
+			OutResult.Error = AwaitResult.Error;
+			OutResult.bCompiled = false;
+			return false;
 		}
 
 		const bool bUpToDate =
@@ -941,31 +1405,128 @@ bool FUeremcpNiagaraCreate::Run(
 
 	PhaseTimer.MarkPhase(TEXT("save"));
 
-	// POC B gaps — structural re-read, PIE smoke (material_bindings handled above when verified).
-	OutResult.ChecksSkipped.Add(TEXT("niagara.structural_re_read"));
+	// Structural re-read: confirm emitters (+ custom modules) exist (honest success gate).
+	{
+		FNiagaraExt_SystemSummary VerifySummary;
+		UNiagaraExternalEditUtilities::GetSystemSummary(System, VerifySummary, Context);
+		++OutResult.InternalOperations;
+		TSet<FString> LiveNames;
+		for (const FNiagaraExt_EmitterSummary& Emitter : VerifySummary.Emitters)
+		{
+			LiveNames.Add(Emitter.EmitterName.ToString());
+		}
+		TArray<FString> Missing;
+		for (const FString& Expected : OutResult.EmittersAdded)
+		{
+			if (!LiveNames.Contains(Expected))
+			{
+				Missing.Add(Expected);
+			}
+		}
+		if (Missing.Num() > 0)
+		{
+			OutResult.Error = FString::Printf(
+				TEXT("Structural re-read failed: missing emitter(s) after AddEmitter: %s"),
+				*FString::Join(Missing, TEXT(", ")));
+			OutResult.ChecksSkipped.Add(TEXT("niagara.structural_re_read"));
+			return false;
+		}
+		if (OutResult.EmittersAdded.Num() == 0 && !bVariation)
+		{
+			OutResult.Error = TEXT(
+				"Structural re-read: create produced zero emitters. "
+				"Pass specification.emitters[{name,modules[]}] or role shortcuts.");
+			OutResult.ChecksSkipped.Add(TEXT("niagara.structural_re_read"));
+			return false;
+		}
+
+		// Re-inspect custom stacks: each planned module name must appear on some script stack.
+		for (const FUeremcpNiagaraEmitterPlan& Plan : Plans)
+		{
+			if (Plan.Modules.Num() == 0)
+			{
+				continue;
+			}
+			FNiagaraExt_StackItemReference EmitterRef(System, FName(*Plan.Name));
+			FNiagaraExt_EmitterTopology LiveTopo;
+			UNiagaraExternalEditUtilities::GetEmitterTopology(EmitterRef, LiveTopo, Context);
+			++OutResult.InternalOperations;
+			TSet<FString> LiveModuleNames;
+			auto Collect = [&LiveModuleNames](const FNiagaraExt_ScriptStackTopology& Stack)
+			{
+				for (const FNiagaraExt_ModuleTopology& M : Stack.Modules)
+				{
+					LiveModuleNames.Add(M.ModuleName.ToString());
+				}
+			};
+			Collect(LiveTopo.EmitterSpawnScript);
+			Collect(LiveTopo.EmitterUpdateScript);
+			Collect(LiveTopo.ParticleSpawnScript);
+			Collect(LiveTopo.ParticleUpdateScript);
+			for (const FUeremcpNiagaraModulePlan& Mod : Plan.Modules)
+			{
+				const FString AssetLeaf = FPackageName::GetLongPackageAssetName(Mod.AssetPath);
+				bool bFound = LiveModuleNames.Contains(Mod.Name) || LiveModuleNames.Contains(AssetLeaf);
+				if (!bFound)
+				{
+					for (const FString& Live : LiveModuleNames)
+					{
+						if (Live.Contains(Mod.Name)
+							|| (!AssetLeaf.IsEmpty() && Live.Contains(AssetLeaf)))
+						{
+							bFound = true;
+							break;
+						}
+					}
+				}
+				if (!bFound)
+				{
+					OutResult.LossyWarnings.Add(FString::Printf(
+						TEXT("structural re-read: module '%s' not found by name on emitter '%s' "
+							 "(AddModule may rename; check Inspect topology_summary)"),
+						*Mod.Name,
+						*Plan.Name));
+				}
+			}
+		}
+		OutResult.ChecksPerformed.Add(TEXT("niagara.structural_re_read"));
+	}
 	OutResult.ChecksSkipped.Add(TEXT("niagara.runtime_smoke_test"));
 
 	OutResult.CreatedAssetPath = CreatedPath;
 	OutResult.bSuccess = true;
+	const FString PathKind = UeremcpNiagaraPaths::IsAllowedMagecraftPath(CreatedPath)
+		? TEXT("Magecraft")
+		: TEXT("sandbox");
 	if (OutResult.bReplacedExisting)
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Replaced Niagara probe effect '%s' (effect_type=%s): inherited %d emitter(s), added %d emitter(s), %d user variable(s), %d verified material binding(s)."),
+			TEXT("Replaced Niagara %s effect '%s' (effect_type=%s): inherited %d emitter(s), added %d emitter(s), "
+				 "%d module(s) via AddModule, %d renderer(s), %d user variable(s), %d verified material binding(s). "
+				 "round_trip_supported=false = hash not proven — authoring DID add emitters/modules."),
+			*PathKind,
 			*CreatedPath,
 			*Spec.EffectType,
 			OutResult.EmittersInherited.Num(),
 			OutResult.EmittersAdded.Num(),
+			OutResult.ModulesAdded.Num(),
+			OutResult.RenderersAdded.Num(),
 			OutResult.UserVariablesAdded.Num(),
 			OutResult.MaterialBindings.RendererBindingsVerified.Num());
 	}
 	else
 	{
 		OutResult.Summary = FString::Printf(
-			TEXT("Created Niagara probe effect '%s' (effect_type=%s): inherited %d emitter(s), added %d emitter(s), %d user variable(s), %d verified material binding(s)."),
+			TEXT("Created Niagara %s effect '%s' (effect_type=%s): inherited %d emitter(s), added %d emitter(s), "
+				 "%d module(s) via AddModule, %d renderer(s), %d user variable(s), %d verified material binding(s). "
+				 "round_trip_supported=false = hash not proven — authoring DID add emitters/modules."),
+			*PathKind,
 			*CreatedPath,
 			*Spec.EffectType,
 			OutResult.EmittersInherited.Num(),
 			OutResult.EmittersAdded.Num(),
+			OutResult.ModulesAdded.Num(),
+			OutResult.RenderersAdded.Num(),
 			OutResult.UserVariablesAdded.Num(),
 			OutResult.MaterialBindings.RendererBindingsVerified.Num());
 	}
