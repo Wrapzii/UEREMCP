@@ -136,6 +136,8 @@
 
             "additionalProperties": true,
 
+            "description": "Full Emitter State Life Cycle + Timeline. delay|start_time = Loop Delay = Timeline Start.",
+
             "properties": {
 
               "mode": { "type": "string" },
@@ -144,13 +146,31 @@
 
               "loop_duration": { "type": "number" },
 
-              "inactive_response": { "type": "string" }
+              "delay": { "type": "number", "description": "Loop Delay (= Timeline Start)." },
+
+              "start_time": { "type": "number" },
+
+              "inactive_response": { "type": "string" },
+
+              "loop_count": { "type": "integer" },
+
+              "loop_duration_mode": { "type": "string" },
+
+              "use_loop_delay": { "type": "boolean" },
+
+              "delay_first_loop_only": { "type": "boolean" },
+
+              "recalculate_duration_each_loop": { "type": "boolean" }
 
             }
 
           },
 
-          "loop_duration": { "type": "number" }
+          "loop_duration": { "type": "number" },
+
+          "delay": { "type": "number" },
+
+          "start_time": { "type": "number" }
 
         }
 

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/blueprints/describe_node_catalog.schema.json",
+  "title": "describe_node_catalog specification",
+  "description": "specification payload for action=describe_node_catalog (Blueprint domain, WS-06). Read-only discovery of node types placeable in target.graph_id, with the exact pin names submit_graph edges must use. Backed by Epic FBlueprintActionDatabase, the same source as the editor palette.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "graph_id": {
+      "type": "string",
+      "description": "Graph within the target Blueprint whose schema decides what is placeable. When omitted, the primary event graph is used. target.graph_id takes precedence."
+    },
+    "search": {
+      "type": "string",
+      "description": "Case-insensitive substring matched against menu name, category and keywords. Omit to enumerate everything up to max_results."
+    },
+    "node_classes": {
+      "type": "array",
+      "description": "Keep only these UEdGraphNode short class names, e.g. K2Node_CallFunction. Empty or omitted means any class.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "categories": {
+      "type": "array",
+      "description": "Keep only entries whose palette category starts with one of these, e.g. \"Utilities|String\". Empty or omitted means any category.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "include_pins": {
+      "type": "boolean",
+      "default": true,
+      "description": "Read pin signatures off each returned node's template. Set false for a cheaper name-only sweep when narrowing a broad search."
+    },
+    "max_results": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 500,
+      "default": 100,
+      "description": "Cap on returned entries. Template nodes are instantiated only for entries within the cap; diagnostics.node_catalog.total_matched reports how many passed the filters."
+    }
+  },
+  "examples": [
+    {
+      "search": "print string",
+      "max_results": 25
+    },
+    {
+      "node_classes": ["K2Node_CallFunction"],
+      "categories": ["Utilities|String"],
+      "include_pins": true,
+      "max_results": 50
+    },
+    {
+      "search": "delay",
+      "include_pins": false,
+      "max_results": 200
+    }
+  ]
+}

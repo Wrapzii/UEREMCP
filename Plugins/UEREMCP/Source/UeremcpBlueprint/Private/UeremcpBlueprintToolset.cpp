@@ -1,10 +1,13 @@
 #include "UeremcpBlueprintToolset.h"
 
+#include "UeremcpBlueprintEpicBridge.h"
 #include "UeremcpBlueprintGraphReader.h"
 #include "UeremcpBlueprintGraphWriter.h"
 #include "UeremcpBlueprintMutatingGate.h"
+#include "UeremcpBlueprintNodeCatalog.h"
 #include "UeremcpEnvelope.h"
 
+#include "EdGraph/EdGraph.h"
 #include "Engine/Blueprint.h"
 #include "UObject/SoftObjectPath.h"
 
@@ -778,4 +781,210 @@ FString UUeremcpBlueprintToolset::SubmitGraph(const FString& RequestJson)
 		Request.bCompile,
 		Request.bSave);
 	return FinishSubmitResponse(Response);
+}
+
+namespace UeremcpBlueprintToolset
+{
+	static int32 ReadSpecificationInt(
+		const FUeremcpRequest& Request,
+		const TCHAR* Field,
+		int32 Default)
+	{
+		if (Request.Specification.IsValid() && Request.Specification->HasTypedField<EJson::Number>(Field))
+		{
+			return Request.Specification->GetIntegerField(Field);
+		}
+		return Default;
+	}
+
+	static TArray<FString> ReadSpecificationStringArray(
+		const FUeremcpRequest& Request,
+		const TCHAR* Field)
+	{
+		TArray<FString> Values;
+		if (!Request.Specification.IsValid() || !Request.Specification->HasTypedField<EJson::Array>(Field))
+		{
+			return Values;
+		}
+		for (const TSharedPtr<FJsonValue>& Value : Request.Specification->GetArrayField(Field))
+		{
+			FString AsString;
+			if (Value.IsValid() && Value->TryGetString(AsString) && !AsString.IsEmpty())
+			{
+				Values.Add(MoveTemp(AsString));
+			}
+		}
+		return Values;
+	}
+
+	static TSharedPtr<FJsonObject> NodeCatalogPinToJson(const FUeremcpNodeCatalogPin& Pin)
+	{
+		TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
+		Json->SetStringField(TEXT("name"), Pin.Name);
+		Json->SetStringField(TEXT("direction"), Pin.Direction);
+		Json->SetStringField(TEXT("category"), Pin.Category);
+		Json->SetStringField(TEXT("container_type"), Pin.ContainerType);
+		Json->SetBoolField(TEXT("is_reference"), Pin.bIsReference);
+		if (!Pin.FriendlyName.IsEmpty())
+		{
+			Json->SetStringField(TEXT("friendly_name"), Pin.FriendlyName);
+		}
+		if (!Pin.SubCategory.IsEmpty())
+		{
+			Json->SetStringField(TEXT("sub_category"), Pin.SubCategory);
+		}
+		if (!Pin.SubCategoryObject.IsEmpty())
+		{
+			Json->SetStringField(TEXT("sub_category_object"), Pin.SubCategoryObject);
+		}
+		if (!Pin.DefaultValue.IsEmpty())
+		{
+			Json->SetStringField(TEXT("default_value"), Pin.DefaultValue);
+		}
+		return Json;
+	}
+
+	static TSharedPtr<FJsonObject> NodeCatalogEntryToJson(const FUeremcpNodeCatalogEntry& Entry)
+	{
+		TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
+		Json->SetStringField(TEXT("node_class"), Entry.NodeClass);
+		Json->SetStringField(TEXT("node_class_name"), Entry.NodeClassName);
+		Json->SetStringField(TEXT("menu_name"), Entry.MenuName);
+		Json->SetStringField(TEXT("category"), Entry.Category);
+		Json->SetStringField(TEXT("tooltip"), Entry.Tooltip);
+		if (!Entry.Keywords.IsEmpty())
+		{
+			Json->SetStringField(TEXT("keywords"), Entry.Keywords);
+		}
+		Json->SetBoolField(TEXT("pins_resolved"), Entry.bPinsResolved);
+
+		TArray<TSharedPtr<FJsonValue>> Pins;
+		for (const FUeremcpNodeCatalogPin& Pin : Entry.Pins)
+		{
+			Pins.Add(MakeShared<FJsonValueObject>(NodeCatalogPinToJson(Pin)));
+		}
+		Json->SetArrayField(TEXT("pins"), Pins);
+		return Json;
+	}
+
+	static const TArray<FString>& NodeCatalogCapabilityNotes()
+	{
+		static const TArray<FString> Notes = {
+			TEXT("node_catalog.source_is_editor_action_database"),
+			TEXT("node_catalog.pin_names_are_submit_graph_ready"),
+			TEXT("node_catalog.entries_capped_by_max_results"),
+			TEXT("node_catalog.pins_unresolved_entries_report_pins_resolved_false"),
+		};
+		return Notes;
+	}
+}
+
+FString UUeremcpBlueprintToolset::DescribeNodeCatalog(const FString& RequestJson)
+{
+	FUeremcpRequest Request;
+	FString Error;
+	if (!ParseAndValidateRequest(RequestJson, TEXT("describe_node_catalog"), Request, Error))
+	{
+		return FUeremcpEnvelope::MakeRejection(Request.RequestId, Error);
+	}
+
+	FUeremcpBlueprintMutatingGate ReadGate;
+	FString BlockingResponse;
+	if (!ReadGate.TryBeginRead(RequestJson, BlockingResponse))
+	{
+		return BlockingResponse;
+	}
+
+	FString LoadError;
+	UBlueprint* Blueprint = LoadBlueprintAsset(Request.TargetAssetPath, LoadError);
+	if (!Blueprint)
+	{
+		return FUeremcpEnvelope::MakeRejection(Request.RequestId, LoadError);
+	}
+
+	const FString GraphId = !Request.TargetGraphId.IsEmpty()
+		? Request.TargetGraphId
+		: ReadGraphSpecificationString(Request, TEXT("graph_id"));
+
+	FString ResolvedGraphName;
+	UEdGraph* ContextGraph = FUeremcpBlueprintEpicBridge::ResolveGraph(
+		Blueprint, GraphId, ResolvedGraphName);
+	if (!ContextGraph)
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Graph '%s' not found on '%s'; call ReadGraph to list graphs."),
+				GraphId.IsEmpty() ? TEXT("EventGraph") : *GraphId,
+				*Request.TargetAssetPath));
+	}
+
+	FUeremcpNodeCatalogQuery Query;
+	Query.Search = ReadGraphSpecificationString(Request, TEXT("search"));
+	Query.NodeClassNames = ReadSpecificationStringArray(Request, TEXT("node_classes"));
+	Query.Categories = ReadSpecificationStringArray(Request, TEXT("categories"));
+	Query.bIncludePins = ReadGraphSpecificationBool(Request, TEXT("include_pins"), true);
+	Query.MaxResults = ReadSpecificationInt(Request, TEXT("max_results"), 100);
+
+	FUeremcpNodeCatalogResult CatalogResult;
+	FString CatalogError;
+	if (!FUeremcpBlueprintNodeCatalog::Query(ContextGraph, Query, CatalogResult, CatalogError))
+	{
+		return FUeremcpEnvelope::MakeRejection(Request.RequestId, CatalogError);
+	}
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.Status = TEXT("no_change_required");
+	Response.Summary = FString::Printf(
+		TEXT("Catalogued %d of %d matching node types placeable in '%s' on '%s' (%d spawners scanned%s)."),
+		CatalogResult.Entries.Num(),
+		CatalogResult.TotalMatched,
+		*ResolvedGraphName,
+		*Request.TargetAssetPath,
+		CatalogResult.TotalScanned,
+		CatalogResult.bTruncated ? TEXT("; raise specification.max_results for more") : TEXT(""));
+	Response.UnderstoodAction = Request.Action;
+	Response.UnderstoodTarget = Request.TargetAssetPath;
+	Response.PrimaryAsset = Request.TargetAssetPath;
+	Response.CapabilityNotes = NodeCatalogCapabilityNotes();
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = CatalogResult.TotalScanned;
+
+	TArray<TSharedPtr<FJsonValue>> Entries;
+	for (const FUeremcpNodeCatalogEntry& Entry : CatalogResult.Entries)
+	{
+		Entries.Add(MakeShared<FJsonValueObject>(NodeCatalogEntryToJson(Entry)));
+	}
+
+	TSharedPtr<FJsonObject> Catalog = MakeShared<FJsonObject>();
+	Catalog->SetStringField(TEXT("graph_id"), ResolvedGraphName);
+	Catalog->SetNumberField(TEXT("total_scanned"), CatalogResult.TotalScanned);
+	Catalog->SetNumberField(TEXT("total_matched"), CatalogResult.TotalMatched);
+	Catalog->SetNumberField(TEXT("returned"), CatalogResult.Entries.Num());
+	Catalog->SetBoolField(TEXT("truncated"), CatalogResult.bTruncated);
+	Catalog->SetNumberField(TEXT("pins_unresolved"), CatalogResult.PinsUnresolved);
+	Catalog->SetArrayField(TEXT("entries"), Entries);
+
+	Response.ExtraFields = MakeShared<FJsonObject>();
+	TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
+	Diagnostics->SetObjectField(TEXT("node_catalog"), Catalog);
+	Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
+
+	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+	Validation->SetBoolField(TEXT("structurally_valid"), true);
+	TArray<TSharedPtr<FJsonValue>> Checks;
+	Checks.Add(MakeShared<FJsonValueString>(TEXT("blueprint.node_catalog.context_graph_resolved")));
+	Checks.Add(MakeShared<FJsonValueString>(TEXT("blueprint.node_catalog.action_database_queried")));
+	if (Query.bIncludePins)
+	{
+		Checks.Add(MakeShared<FJsonValueString>(TEXT("blueprint.node_catalog.template_pins_read")));
+	}
+	Validation->SetArrayField(TEXT("checks_performed"), Checks);
+	TArray<TSharedPtr<FJsonValue>> Skipped;
+	Skipped.Add(MakeShared<FJsonValueString>(TEXT("blueprint.reread_after_write")));
+	Validation->SetArrayField(TEXT("checks_skipped"), Skipped);
+	Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
+
+	return ReadGate.Complete(Response);
 }

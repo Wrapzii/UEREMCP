@@ -1,6 +1,7 @@
 #include "UeremcpReferenceToolset.h"
 
 #include "UeremcpEnvelope.h"
+#include "UeremcpCapabilityService.h"
 #include "UeremcpIntentRouter.h"
 #include "UeremcpJobActions.h"
 #include "UeremcpPlanActions.h"
@@ -122,6 +123,26 @@ FString UUeremcpReferenceToolset::ResolveIntent(const FString& RequestJson)
 		Request.RequestId,
 		Request.Action,
 		FUeremcpIntentRouter::ResolveIntent(Intent, Mode, ContextObj, ExpectedHash, MaxSteps));
+}
+
+FString UUeremcpReferenceToolset::ResolveAndPrepare(const FString& RequestJson)
+{
+	return FUeremcpCapabilityService::ResolveAndPrepare(RequestJson);
+}
+
+FString UUeremcpReferenceToolset::ExecutePreparedAction(const FString& RequestJson)
+{
+	return FUeremcpCapabilityService::ExecutePreparedAction(RequestJson);
+}
+
+FString UUeremcpReferenceToolset::GetCapabilityContract(const FString& RequestJson)
+{
+	return FUeremcpCapabilityService::GetCapabilityContract(RequestJson);
+}
+
+FString UUeremcpReferenceToolset::SearchCapabilities(const FString& RequestJson)
+{
+	return FUeremcpCapabilityService::SearchCapabilities(RequestJson);
 }
 
 FString UUeremcpReferenceToolset::DescribeOperation(const FString& RequestJson)

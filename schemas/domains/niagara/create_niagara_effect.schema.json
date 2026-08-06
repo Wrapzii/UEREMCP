@@ -146,20 +146,34 @@
               "life_cycle": {
                 "type": "object",
                 "additionalProperties": false,
-                "description": "Emitter State Life Cycle panel fields (Details). Applied via SetStackInputData on Emitter State.",
+                "description": "Emitter State Life Cycle + Timeline (Details). Mode applied first. delay|start_time = Loop Delay = Timeline Start.",
                 "properties": {
-                  "mode": { "type": "string", "description": "Life Cycle Mode enum name (e.g. Self)." },
+                  "mode": { "type": "string", "description": "Life Cycle Mode (Self|System). Auto Self when duration/delay set." },
                   "life_cycle_mode": { "type": "string" },
                   "loop_behavior": { "type": "string", "description": "Once | Multiple | Infinite." },
                   "loop_duration": { "type": "number", "minimum": 0 },
-                  "inactive_response": { "type": "string" }
+                  "delay": { "type": "number", "minimum": 0, "description": "Loop Delay seconds (= Timeline Start stagger)." },
+                  "start_time": { "type": "number", "minimum": 0, "description": "Alias for delay / Timeline Start." },
+                  "loop_delay": { "type": "number", "minimum": 0, "description": "Alias for delay." },
+                  "inactive_response": { "type": "string" },
+                  "loop_count": { "type": "integer", "minimum": 0 },
+                  "num_loops": { "type": "integer", "minimum": 0 },
+                  "loop_duration_mode": { "type": "string" },
+                  "use_loop_delay": { "type": "boolean", "description": "UseLoopDelay (= Timeline UseStartTime). Auto true when delay set." },
+                  "use_start_time": { "type": "boolean" },
+                  "delay_first_loop_only": { "type": "boolean" },
+                  "start_time_included_in_first_loop_only": { "type": "boolean" },
+                  "recalculate_duration_each_loop": { "type": "boolean" }
                 }
               },
 
               "loop_duration": { "type": "number", "minimum": 0, "description": "Flat alias for life_cycle.loop_duration." },
+              "delay": { "type": "number", "minimum": 0, "description": "Flat alias for life_cycle.delay (Timeline Start)." },
+              "start_time": { "type": "number", "minimum": 0 },
               "life_cycle_mode": { "type": "string" },
               "loop_behavior": { "type": "string" },
               "inactive_response": { "type": "string" },
+              "loop_count": { "type": "integer", "minimum": 0 },
 
               "renderer": {
 

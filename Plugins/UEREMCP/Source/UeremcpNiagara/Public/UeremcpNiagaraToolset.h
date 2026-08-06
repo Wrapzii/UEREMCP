@@ -118,4 +118,43 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Niagara")
 	static FString SubmitNiagaraGraph(const FString& RequestJson);
+
+	/**
+	 * The authoring vocabulary for CreateNiagaraEffect / SubmitNiagaraGraph, in one call.
+	 *
+	 * This returns UEREMCP's OWN accepted vocabulary — not a browse of Niagara's module
+	 * library. The primitive_id aliases, renderer hints, script usages and stack-input
+	 * modes below exist only in this plugin's resolver, so nothing in Epic's toolsets
+	 * can tell an agent what they are.
+	 *
+	 * Use when: before authoring emitters[].modules[] — returns every primitive_id
+	 * ResolveModuleAssetPath accepts, the module asset each resolves to, its default
+	 * script usage, plus the renderer hints, script usages and input modes this plugin's
+	 * submit path understands.
+	 * Inputs: action=describe_niagara_catalog; specification.search (substring over
+	 * primitive_id and asset path), specification.verify_assets (default true — loads each
+	 * module script and reports whether it actually resolves).
+	 * Outputs: diagnostics.niagara_catalog with modules[], renderer_hints[],
+	 * script_usages[], input_modes[].
+	 * Do not use for: browsing Niagara's full module library — Epic
+	 * NiagaraToolset_Assets.FindNiagaraScripts searches every UNiagaraScript from asset
+	 * registry tags and is strictly better for that; modules[].asset_path here is a
+	 * curated shortlist, and any /Niagara/Modules/… path it does not list is still
+	 * accepted via a module's asset_path. Also not for reading an existing system's
+	 * stacks — that is InspectSystem.
+	 * Next tool: CreateNiagaraEffect or SubmitNiagaraGraph using modules[].primitive_ids[0].
+	 * Example: {"protocol_version":"1.0","action":"describe_niagara_catalog","specification":{"search":"spawn"}}
+	 *
+	 * Deliberately NOT returned: per-module input names. Epic
+	 * NiagaraToolset_System.GetModuleSchemaFromAsset already returns a module asset's
+	 * input schema standalone, with no system context, and duplicating it here would be
+	 * the defect AGENTS.md rule 2 warns about. Call that tool, or add the module and use
+	 * InspectSystem.
+	 * [VERIFIED: docs/audit/raw/schemas/NiagaraToolsets.NiagaraToolset_System.json — GetModuleSchemaFromAsset]
+	 * [VERIFIED: docs/audit/raw/schemas/NiagaraToolsets.NiagaraToolset_Assets.json — FindNiagaraScripts]
+	 *
+	 * @param RequestJson  Request with action describe_niagara_catalog; no target required.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Niagara")
+	static FString DescribeNiagaraCatalog(const FString& RequestJson);
 };

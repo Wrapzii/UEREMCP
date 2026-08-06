@@ -51,7 +51,7 @@ parameter bindings:
 | Value modes (local, linked, DI, HLSL, dynamic chain) | `extensions.niagara.inputs[pin_id]` |
 | Renderer `propertyValues` JSON | `extensions.niagara.renderers[]` (+ optional `material_path`, unvalidated) |
 | Event handler stacks | `extensions.niagara.event_handlers[]` from `GetEventHandlers` (+ NodeGraph samples). WRITE blocked (no UsageId on `StackItemReference`) |
-| SimTarget / Life Cycle | `extensions.niagara.sim_target` + `life_cycle{mode,loop_behavior,loop_duration,inactive_response}` |
+| SimTarget / Life Cycle / Timeline | `extensions.niagara.sim_target` + `life_cycle{mode,loop_behavior,loop_duration,delay|start_time,inactive_response,loop_count,use_loop_delay,delay_first_loop_only,loop_duration_mode,recalculate_duration_each_loop}` — delay = Loop Delay = Timeline Start |
 | Script graph internals | READ summary via `UNiagaraScriptSource::NodeGraph`; WRITE unsupported |
 | Inheritance metadata | `extensions.niagara.inheritance` |
 | Compile aggregate + per-script | `extensions.niagara.compile` |

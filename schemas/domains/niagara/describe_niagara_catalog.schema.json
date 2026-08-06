@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/niagara/describe_niagara_catalog.schema.json",
+  "title": "describe_niagara_catalog specification",
+  "description": "specification payload for action=describe_niagara_catalog (Niagara domain, WS-07). Read-only, no target required. Returns UEREMCP's OWN accepted authoring vocabulary for create_niagara_effect and submit_niagara_graph: the primitive_id values this plugin's resolver accepts and the module asset each maps to, plus supported renderer hints, script usages and stack-input value modes. These exist only in this plugin, so no Epic toolset can report them. This is NOT a browse of Niagara's module library — Epic NiagaraToolset_Assets.FindNiagaraScripts searches every UNiagaraScript and is better for that; modules[].asset_path here is a curated shortlist, and unlisted /Niagara/Modules/ paths remain usable via a module's asset_path. Per-module input names are deliberately not returned: Epic NiagaraToolset_System.GetModuleSchemaFromAsset already returns them standalone.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "search": {
+      "type": "string",
+      "description": "Case-insensitive substring matched against primitive_id and module asset path. Omit to return the whole catalog."
+    },
+    "verify_assets": {
+      "type": "boolean",
+      "default": true,
+      "description": "Load each module script and report modules[].resolves, so a stale table row is caught before it is authored against. Set false for a cheaper name-only listing."
+    }
+  },
+  "examples": [
+    {},
+    {
+      "search": "spawn"
+    },
+    {
+      "search": "color",
+      "verify_assets": false
+    }
+  ]
+}

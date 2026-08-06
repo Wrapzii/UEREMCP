@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/ui/verify_inventory_toggle.schema.json",
+  "title": "verify_inventory_toggle specification",
+  "description": "PIE assert that Tab inventory open/close flips via ToggleGridOpen.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "restore": { "type": "boolean", "default": true },
+    "expect_open": { "type": "boolean" }
+  }
+}

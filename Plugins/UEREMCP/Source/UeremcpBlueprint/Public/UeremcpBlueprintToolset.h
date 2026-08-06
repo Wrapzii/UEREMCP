@@ -86,4 +86,30 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
 	static FString SubmitGraph(const FString& RequestJson);
+
+	/**
+	 * List node types placeable in a graph, with their exact pin names, in one call.
+	 *
+	 * Use when: you are about to author graph JSON for SubmitGraph and need the real
+	 * node_class and pin names rather than guessing them; "what node does X" discovery.
+	 * Inputs: action=describe_node_catalog, target.asset_path (+ target.graph_id, default
+	 * EventGraph); specification.search / node_classes / categories / include_pins /
+	 * max_results — all optional.
+	 * Outputs: diagnostics.node_catalog.entries[] with node_class, menu_name, category,
+	 * tooltip and pins[] (name, direction, category, container_type, default_value).
+	 * Do not use for: placing nodes — that is SubmitGraph; or for reading an existing
+	 * graph's contents — that is ReadGraph.
+	 * Next tool: SubmitGraph, using entries[].node_class and pins[].name verbatim.
+	 * Example: {"protocol_version":"1.0","action":"describe_node_catalog","target":{"asset_path":"/Game/BP_Mage","graph_id":"EventGraph"},"specification":{"search":"print string","max_results":25}}
+	 *
+	 * Composes Epic's FBlueprintActionDatabase — the same source the editor palette
+	 * uses — so the catalog cannot drift from what the editor will place.
+	 * [VERIFIED: Editor/BlueprintGraph/Public/BlueprintActionDatabase.h:66,94]
+	 * [VERIFIED: Editor/BlueprintGraph/Public/BlueprintNodeSpawner.h:149,152,178,235]
+	 *
+	 * @param RequestJson Request envelope; target.asset_path required.
+	 * @return Response envelope with diagnostics.node_catalog; status no_change_required.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Blueprints")
+	static FString DescribeNodeCatalog(const FString& RequestJson);
 };

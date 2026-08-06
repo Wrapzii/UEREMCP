@@ -21,6 +21,19 @@ namespace UeremcpNiagaraModuleResolve
 	}
 
 	/**
+	 * Canonical-key → module soft path table backing ResolveModuleAssetPath.
+	 * Exposed so DescribeNiagaraCatalog advertises exactly what resolution accepts;
+	 * keys are canonicalized (lowercase, separators stripped).
+	 */
+	const TMap<FString, FString>& ModuleAliasTable();
+
+	/** Renderer hints ResolveRendererClass accepts. */
+	const TArray<FString>& SupportedRendererHints();
+
+	/** Script usages NormalizeScriptUsage resolves to. */
+	const TArray<FString>& SupportedScriptUsages();
+
+	/**
 	 * Resolve a module asset soft path from primitive_id / name and/or explicit asset_path.
 	 * Known short names + primitive_ids map to /Niagara/Modules/... scripts; unknown
 	 * names fail honestly (custom HLSL / script-graph authorship unsupported).

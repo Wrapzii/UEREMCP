@@ -48,4 +48,33 @@ public:
 	 */
 	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Animation")
 	static FString ReadAnimBp(const FString& RequestJson);
+
+	/**
+	 * Replace a montage's section list from complete submitted state (ADR-0004).
+	 *
+	 * The Animation domain's first write path — InspectMontage and ReadAnimBp are
+	 * read-only.
+	 *
+	 * Use when: define montage sections and their chaining (combo windows, loop
+	 * segments, hit windows) in one call.
+	 * Inputs: action=submit_montage_sections, target.asset_path to a UAnimMontage,
+	 * specification.sections[{name, start_time, next_section?}] — the COMPLETE desired
+	 * set; sections absent from it are removed. options.dry_run defaults TRUE because
+	 * removal is destructive (ADR-0010); pass dry_run:false to write.
+	 * options.save controls package save. expected_revision is honoured when supplied.
+	 * Outputs: modified_and_validated only after a post-write re-read confirms every
+	 * section's start time and chaining; otherwise failed_validation with the specific
+	 * mismatches. Dry run returns no_change_required with diagnostics.montage_sections.plan.
+	 * Do not use for: notifies, slots or segments — not covered; use Epic AnimationTools.
+	 * Next tool: InspectMontage to verify independently.
+	 * Example: {"protocol_version":"1.0","action":"submit_montage_sections","target":{"asset_path":"/Game/Anim/AM_Attack"},"options":{"dry_run":true},"specification":{"sections":[{"name":"Windup","start_time":0.0,"next_section":"Strike"},{"name":"Strike","start_time":0.35}]}}
+	 *
+	 * [VERIFIED: Engine/Classes/Animation/AnimMontage.h:697,819,906,912]
+	 * [VERIFIED: Engine/Classes/Animation/AnimLinkableElement.h:77,83]
+	 *
+	 * @param RequestJson Request envelope; target.asset_path and specification.sections required.
+	 * @return Response envelope with diagnostics.montage_sections.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Animation")
+	static FString SubmitMontageSections(const FString& RequestJson);
 };

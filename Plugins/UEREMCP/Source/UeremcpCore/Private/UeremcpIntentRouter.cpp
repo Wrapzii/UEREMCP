@@ -8,6 +8,7 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 #include "ToolsetRegistry/UToolsetRegistry.h"
+#include "UeremcpCapabilityService.h"
 #include "UeremcpSchemaPublishing.h"
 
 namespace UeremcpIntentRouterInternal
@@ -423,15 +424,7 @@ namespace UeremcpIntentRouterInternal
 
 FString FUeremcpIntentRouter::ComputeLiveRegistryHash()
 {
-	using namespace UeremcpIntentRouterInternal;
-	TArray<FToolDoc> Docs;
-	TSet<FString> Names;
-	FString Error;
-	if (!ParseLiveSchemas(Docs, Names, Error))
-	{
-		return FString();
-	}
-	return Sha256Names(Names);
+	return FUeremcpCapabilityService::ComputeLiveRegistryHash();
 }
 
 bool FUeremcpIntentRouter::LiveRegistryContains(const FString& QualifiedToolName)
@@ -457,7 +450,7 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::GetStarted(const FString& Detai
 	Payload->SetStringField(TEXT("also"), TEXT("DescribeOperation for one tool; Ping for reachability"));
 	Payload->SetStringField(TEXT("policy"), TEXT("Prefer Ueremcp* goal-level tools; use Epic for read-only discovery gaps only"));
 	Payload->SetStringField(TEXT("envelope"),
-		TEXT("protocol_version + action + specification; dry_run is options.dry_run"));
+		TEXT("protocol_version + action + specification; domain tools use options.dry_run, while ExecutePreparedAction uses top-level dry_run"));
 	Payload->SetStringField(TEXT("next_call"),
 		TEXT("ResolveIntent with specification.intent = your goal, mode=recommend"));
 	TArray<TSharedPtr<FJsonValue>> Prefer;
@@ -795,13 +788,13 @@ FUeremcpIntentRouterResult FUeremcpIntentRouter::ResolveIntent(
 	}
 	ApplyCatalogEnrichment(Docs, Catalog);
 
-	const FString LiveHash = Sha256Names(Names);
+	const FString LiveHash = FUeremcpCapabilityService::ComputeLiveRegistryHash();
 	TSharedPtr<FJsonObject> Payload = MakeShared<FJsonObject>();
 	Payload->SetStringField(TEXT("intent"), Intent);
 	Payload->SetStringField(TEXT("mode"), Mode.IsEmpty() ? TEXT("recommend") : Mode);
 	Payload->SetStringField(TEXT("registry_hash"), LiveHash);
 	Payload->SetStringField(TEXT("envelope_contract"),
-		TEXT("UEREMCP tools take ONE string arg requestJson. dry_run is options.dry_run, NOT top-level."));
+		TEXT("UEREMCP tools take ONE string arg requestJson. Domain tool envelopes use options.dry_run; ExecutePreparedAction accepts canonical top-level dry_run."));
 
 	if (!ExpectedRegistryHash.IsEmpty() && !ExpectedRegistryHash.Equals(LiveHash, ESearchCase::IgnoreCase))
 	{

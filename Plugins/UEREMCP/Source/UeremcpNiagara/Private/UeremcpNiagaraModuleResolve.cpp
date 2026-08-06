@@ -53,6 +53,58 @@ namespace UeremcpNiagaraModuleResolve
 		return ResolveModuleAssetPath(PrimitiveId, FString(), OutPath, OutError);
 	}
 
+	// Common engine modules used when building stacks on Minimal substrate.
+	// Paths verified under Engine/Plugins/FX/Niagara/Content/Modules/
+	// [VERIFIED: NiagaraEmitterFactoryNew.cpp AddModuleFromAssetPath examples]
+	// Package soft paths — LoadSoftPath appends .AssetName when needed.
+	// [VERIFIED: Engine/Plugins/FX/Niagara/Content/Modules/**/*.uasset]
+	//
+	// Single source of truth for both resolution and DescribeNiagaraCatalog, so the
+	// advertised vocabulary cannot drift from what ResolveModuleAssetPath accepts.
+	const TMap<FString, FString>& ModuleAliasTable()
+	{
+		static const TMap<FString, FString> Aliases = {
+			{ TEXT("emitterstate"), TEXT("/Niagara/Modules/Emitter/EmitterState") },
+			{ TEXT("spawnrate"), TEXT("/Niagara/Modules/Emitter/SpawnRate") },
+			{ TEXT("spawnburstinstantaneous"), TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous") },
+			{ TEXT("spawnburst"), TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous") },
+			{ TEXT("initializeparticle"), TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle") },
+			{ TEXT("systemlocation"), TEXT("/Niagara/Modules/Spawn/Location/SystemLocation") },
+			{ TEXT("addvelocity"), TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity") },
+			{ TEXT("updateage"), TEXT("/Niagara/Modules/Update/Life/UpdateAge") },
+			{ TEXT("color"), TEXT("/Niagara/Modules/Update/Color/Color") },
+			{ TEXT("particlestate"), TEXT("/Niagara/Modules/Update/Life/ParticleState") },
+			{ TEXT("solveforcesandvelocity"), TEXT("/Niagara/Modules/Solvers/SolveForcesAndVelocity") },
+			{ TEXT("gravityforce"), TEXT("/Niagara/Modules/Update/Forces/GravityForce") },
+			{ TEXT("drag"), TEXT("/Niagara/Modules/Update/Forces/Drag") },
+			{ TEXT("scalecolor"), TEXT("/Niagara/Modules/Update/Color/ScaleColor") },
+			{ TEXT("scalesprite"), TEXT("/Niagara/Modules/Update/Size/ScaleSpriteSize") },
+			{ TEXT("scalespritesize"), TEXT("/Niagara/Modules/Update/Size/ScaleSpriteSize") },
+		};
+		return Aliases;
+	}
+
+	const TArray<FString>& SupportedRendererHints()
+	{
+		// Mirrors ResolveRendererClass below; extend both together.
+		static const TArray<FString> Hints = {
+			TEXT("sprite"), TEXT("mesh"), TEXT("ribbon"), TEXT("light"),
+		};
+		return Hints;
+	}
+
+	const TArray<FString>& SupportedScriptUsages()
+	{
+		// Mirrors NormalizeScriptUsage below; extend both together.
+		static const TArray<FString> Usages = {
+			TEXT("EmitterSpawnScript"),
+			TEXT("EmitterUpdateScript"),
+			TEXT("ParticleSpawnScript"),
+			TEXT("ParticleUpdateScript"),
+		};
+		return Usages;
+	}
+
 	bool ResolveModuleAssetPath(
 		const FString& NameOrAlias,
 		const FString& ExplicitAssetPath,
@@ -82,32 +134,8 @@ namespace UeremcpNiagaraModuleResolve
 			return true;
 		}
 
-		// Common engine modules used when building stacks on Minimal substrate.
-		// Paths verified under Engine/Plugins/FX/Niagara/Content/Modules/
-		// [VERIFIED: NiagaraEmitterFactoryNew.cpp AddModuleFromAssetPath examples]
-		// Package soft paths — LoadSoftPath appends .AssetName when needed.
-		// [VERIFIED: Engine/Plugins/FX/Niagara/Content/Modules/**/*.uasset]
-		static const TMap<FString, FString> Aliases = {
-			{ TEXT("emitterstate"), TEXT("/Niagara/Modules/Emitter/EmitterState") },
-			{ TEXT("spawnrate"), TEXT("/Niagara/Modules/Emitter/SpawnRate") },
-			{ TEXT("spawnburstinstantaneous"), TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous") },
-			{ TEXT("spawnburst"), TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous") },
-			{ TEXT("initializeparticle"), TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle") },
-			{ TEXT("systemlocation"), TEXT("/Niagara/Modules/Spawn/Location/SystemLocation") },
-			{ TEXT("addvelocity"), TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity") },
-			{ TEXT("updateage"), TEXT("/Niagara/Modules/Update/Life/UpdateAge") },
-			{ TEXT("color"), TEXT("/Niagara/Modules/Update/Color/Color") },
-			{ TEXT("particlestate"), TEXT("/Niagara/Modules/Update/Life/ParticleState") },
-			{ TEXT("solveforcesandvelocity"), TEXT("/Niagara/Modules/Solvers/SolveForcesAndVelocity") },
-			{ TEXT("gravityforce"), TEXT("/Niagara/Modules/Update/Forces/GravityForce") },
-			{ TEXT("drag"), TEXT("/Niagara/Modules/Update/Forces/Drag") },
-			{ TEXT("scalecolor"), TEXT("/Niagara/Modules/Update/Color/ScaleColor") },
-			{ TEXT("scalesprite"), TEXT("/Niagara/Modules/Update/Size/ScaleSpriteSize") },
-			{ TEXT("scalespritesize"), TEXT("/Niagara/Modules/Update/Size/ScaleSpriteSize") },
-		};
-
 		const FString Key = CanonicalModuleKey(NameOrAlias);
-		if (const FString* Found = Aliases.Find(Key))
+		if (const FString* Found = ModuleAliasTable().Find(Key))
 		{
 			OutPath = *Found;
 			return true;

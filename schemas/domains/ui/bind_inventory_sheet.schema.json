@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://uneremcp.dev/schemas/domains/ui/bind_inventory_sheet.schema.json",
+  "title": "bind_inventory_sheet specification",
+  "description": "Soft-bind a WBP onto RE inventory HUD UMGSheetClass (PIE).",
+  "type": "object",
+  "required": ["widget_blueprint"],
+  "additionalProperties": true,
+  "properties": {
+    "widget_blueprint": { "type": "string", "minLength": 1 },
+    "asset_path": { "type": "string" },
+    "allow_umg_shell": { "type": "boolean", "default": true },
+    "sync_slots": { "type": "boolean", "default": true }
+  }
+}
