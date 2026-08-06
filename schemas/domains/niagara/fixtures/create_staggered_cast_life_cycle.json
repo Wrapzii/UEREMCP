@@ -1,0 +1,71 @@
+{
+  "name": "NS_UeremcpStaggeredCast",
+  "effect_type": "custom",
+  "element": "fire",
+  "emitters": [
+    {
+      "name": "HandCharge",
+      "enabled": true,
+      "sim_target": "CPUSim",
+      "life_cycle": {
+        "mode": "Self",
+        "loop_behavior": "Once",
+        "loop_duration": 0.4,
+        "delay": 0.0,
+        "inactive_response": "Complete"
+      },
+      "renderer": { "type": "sprite" },
+      "modules": [
+        { "primitive_id": "emitter_state", "script": "EmitterUpdateScript" },
+        { "primitive_id": "spawn_burst", "script": "EmitterUpdateScript" },
+        { "primitive_id": "initialize_particle", "script": "ParticleSpawnScript" },
+        { "primitive_id": "update_age", "script": "ParticleUpdateScript" },
+        { "primitive_id": "color", "script": "ParticleUpdateScript", "inputs": { "Colors": [1.0, 0.55, 0.1, 1.0] } }
+      ]
+    },
+    {
+      "name": "BoltCore",
+      "enabled": true,
+      "sim_target": "CPUSim",
+      "life_cycle": {
+        "mode": "Self",
+        "loop_behavior": "Once",
+        "loop_duration": 0.6,
+        "delay": 0.3,
+        "inactive_response": "Complete"
+      },
+      "renderer": { "type": "sprite" },
+      "modules": [
+        { "primitive_id": "emitter_state", "script": "EmitterUpdateScript" },
+        { "primitive_id": "spawn_burst", "script": "EmitterUpdateScript" },
+        { "primitive_id": "initialize_particle", "script": "ParticleSpawnScript" },
+        { "primitive_id": "add_velocity", "script": "ParticleSpawnScript" },
+        { "primitive_id": "update_age", "script": "ParticleUpdateScript" },
+        { "primitive_id": "color", "script": "ParticleUpdateScript", "inputs": { "Colors": [1.0, 0.25, 0.05, 1.0] } }
+      ]
+    },
+    {
+      "name": "ReleaseFlash",
+      "enabled": true,
+      "sim_target": "CPUSim",
+      "life_cycle": {
+        "mode": "Self",
+        "loop_behavior": "Once",
+        "loop_duration": 0.25,
+        "start_time": 0.8,
+        "inactive_response": "Complete"
+      },
+      "renderer": { "type": "sprite" },
+      "modules": [
+        { "primitive_id": "emitter_state", "script": "EmitterUpdateScript" },
+        { "primitive_id": "spawn_burst", "script": "EmitterUpdateScript" },
+        { "primitive_id": "initialize_particle", "script": "ParticleSpawnScript" },
+        { "primitive_id": "update_age", "script": "ParticleUpdateScript" },
+        { "primitive_id": "scale_color", "script": "ParticleUpdateScript" }
+      ]
+    }
+  ],
+  "parameters": {
+    "intensity": 6.0
+  }
+}

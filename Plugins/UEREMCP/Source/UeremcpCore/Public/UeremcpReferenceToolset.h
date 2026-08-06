@@ -85,6 +85,32 @@ public:
 	static FString ResolveIntent(const FString& RequestJson);
 
 	/**
+	 * Resolve a goal into compact resources and server-owned expiring prepared actions.
+	 *
+	 * The returned action_id is the only supported handle for ExecutePreparedAction;
+	 * tool names and arguments supplied by a caller are never executed directly.
+	 * Inputs use action=resolve_and_prepare with goal/scope/intent/risk_ceiling in
+	 * specification, or the equivalent direct JSON object for connector callers.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Capabilities")
+	static FString ResolveAndPrepare(const FString& RequestJson);
+
+	/**
+	 * Execute one previously prepared action after expiry, registry, contract, scope,
+	 * revision, override, risk, and confirmation checks.
+	 */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Capabilities")
+	static FString ExecutePreparedAction(const FString& RequestJson);
+
+	/** Retrieve one compact or full contract for a fully-qualified live tool. */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Capabilities")
+	static FString GetCapabilityContract(const FString& RequestJson);
+
+	/** Bounded live registry search; full schemas are never returned by default. */
+	UFUNCTION(meta = (AICallable), Category = "UEREMCP|Capabilities")
+	static FString SearchCapabilities(const FString& RequestJson);
+
+	/**
 	 * Describe one registry-verified operation: schema, example, safety notes.
 	 *
 	 * Use when: you already know the tool name and need the envelope/example.

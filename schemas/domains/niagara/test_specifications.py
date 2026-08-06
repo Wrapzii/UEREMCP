@@ -610,6 +610,18 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertEqual(emitter["sim_target"], "CPUSim")
         self.assertEqual(emitter["life_cycle"]["loop_duration"], 1.5)
 
+    def test_create_staggered_cast_life_cycle_fixture(self) -> None:
+        schema = load_schema("create_niagara_effect.schema.json")
+        validator = Draft202012Validator(schema, registry=self.registry)
+        fixture = load_fixture("create_staggered_cast_life_cycle.json")
+        validator.validate(fixture)
+        emitters = fixture["emitters"]
+        self.assertEqual(len(emitters), 3)
+        self.assertEqual(emitters[0]["name"], "HandCharge")
+        self.assertEqual(emitters[0]["life_cycle"]["delay"], 0.0)
+        self.assertEqual(emitters[1]["life_cycle"]["delay"], 0.3)
+        self.assertEqual(emitters[2]["life_cycle"]["start_time"], 0.8)
+
     def test_submit_linked_input_fixture(self) -> None:
         schema = load_schema("submit_niagara_graph.schema.json")
         validator = Draft202012Validator(schema, registry=self.registry)
@@ -635,6 +647,8 @@ class NiagaraSpecificationTests(unittest.TestCase):
         self.assertIn("GetEventHandlers", header)
         self.assertIn("sim_target", header)
         self.assertIn("life_cycle", header)
+        self.assertIn("delay", header)
+        self.assertIn("Timeline Start", header)
         self.assertIn("UsageId", header)
         self.assertIn("NodeGraph", header)
 

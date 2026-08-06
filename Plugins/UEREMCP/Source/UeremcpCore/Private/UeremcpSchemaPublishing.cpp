@@ -248,7 +248,7 @@ namespace
 			TEXT("description"),
 			TEXT("ADR-0003 request envelope. Pass these fields as MCP tool arguments (preferred), "
 				 "or pass a single requestJson string containing this object. "
-				 "dry_run lives under options.dry_run — never top-level."));
+				 "ExecutePreparedAction uses canonical top-level dry_run; domain tool envelopes use options.dry_run."));
 		Envelope->SetStringField(TEXT("x-ueremcp-call-convention"), TEXT("nested_envelope_or_requestJson_string"));
 
 		TArray<TSharedPtr<FJsonValue>> Required;

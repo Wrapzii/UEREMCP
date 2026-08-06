@@ -21,6 +21,7 @@ public class UeremcpCore : ModuleRules
 			"Json",
 			"JsonUtilities",
 			"Projects",
+			"AssetRegistry",
 
 			// ADR-0003 envelope parse/serialize (WS-05). Reference Ping/Echo route here.
 			"UeremcpProtocol",

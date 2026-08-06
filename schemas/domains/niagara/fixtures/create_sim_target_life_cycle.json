@@ -8,8 +8,10 @@
       "enabled": true,
       "sim_target": "CPUSim",
       "life_cycle": {
+        "mode": "Self",
         "loop_behavior": "Infinite",
         "loop_duration": 1.5,
+        "delay": 0.0,
         "inactive_response": "Complete"
       },
       "renderer": { "type": "sprite" },

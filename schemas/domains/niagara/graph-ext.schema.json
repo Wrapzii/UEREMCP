@@ -84,12 +84,19 @@
     "life_cycle": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Emitter State Life Cycle panel (mode, loop_behavior, loop_duration, inactive_response).",
+      "description": "Emitter State Life Cycle + Timeline. delay|start_time = Loop Delay = Timeline Start column. mode applied first (Self auto when duration/delay set).",
       "properties": {
-        "mode": { "type": "string" },
+        "mode": { "type": "string", "description": "Life Cycle Mode (Self|System)." },
         "loop_behavior": { "type": "string" },
         "loop_duration": { "type": "number" },
-        "inactive_response": { "type": "string" }
+        "delay": { "type": "number", "description": "Loop Delay seconds (= Timeline Start)." },
+        "start_time": { "type": "number", "description": "Alias for delay / Timeline Start." },
+        "inactive_response": { "type": "string" },
+        "loop_count": { "type": "integer" },
+        "loop_duration_mode": { "type": "string" },
+        "use_loop_delay": { "type": "boolean" },
+        "delay_first_loop_only": { "type": "boolean" },
+        "recalculate_duration_each_loop": { "type": "boolean" }
       }
     },
     "event_handlers": {

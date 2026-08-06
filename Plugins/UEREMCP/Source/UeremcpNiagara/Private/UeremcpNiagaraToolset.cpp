@@ -12,6 +12,7 @@
 #include "UeremcpNiagaraHashRoundTrip.h"
 #include "UeremcpNiagaraInspect.h"
 #include "UeremcpNiagaraMaterialBindingDiagnostics.h"
+#include "UeremcpNiagaraModuleResolve.h"
 #include "UeremcpNiagaraPaths.h"
 #include "UeremcpNiagaraPocBGates.h"
 #include "UeremcpNiagaraProbeAssets.h"
@@ -1218,4 +1219,220 @@ FString UUeremcpNiagaraToolset::SubmitNiagaraGraph(const FString& RequestJson)
 	return bDispatchStarted
 		? MutatingDispatch.Complete(Response)
 		: FUeremcpEnvelope::SerializeResponse(Response);
+}
+
+namespace UeremcpNiagaraCatalog
+{
+	/** Groups the alias table by module asset so each module appears once with all its ids. */
+	struct FModuleEntry
+	{
+		FString AssetPath;
+		TArray<FString> PrimitiveIds;
+	};
+
+	static TArray<FModuleEntry> BuildModuleEntries(const FString& Search)
+	{
+		TMap<FString, FModuleEntry> ByPath;
+		for (const TPair<FString, FString>& Alias : UeremcpNiagaraModuleResolve::ModuleAliasTable())
+		{
+			FModuleEntry& Entry = ByPath.FindOrAdd(Alias.Value);
+			Entry.AssetPath = Alias.Value;
+			Entry.PrimitiveIds.Add(Alias.Key);
+		}
+
+		TArray<FModuleEntry> Entries;
+		for (TPair<FString, FModuleEntry>& Pair : ByPath)
+		{
+			FModuleEntry& Entry = Pair.Value;
+			if (!Search.IsEmpty())
+			{
+				bool bMatches = Entry.AssetPath.Contains(Search, ESearchCase::IgnoreCase);
+				for (const FString& Id : Entry.PrimitiveIds)
+				{
+					bMatches = bMatches || Id.Contains(Search, ESearchCase::IgnoreCase);
+				}
+				if (!bMatches)
+				{
+					continue;
+				}
+			}
+			Entry.PrimitiveIds.Sort();
+			Entries.Add(Entry);
+		}
+
+		Entries.Sort([](const FModuleEntry& A, const FModuleEntry& B)
+		{
+			return A.AssetPath < B.AssetPath;
+		});
+		return Entries;
+	}
+
+	static TArray<TSharedPtr<FJsonValue>> ToStringArray(const TArray<FString>& Values)
+	{
+		TArray<TSharedPtr<FJsonValue>> Json;
+		for (const FString& Value : Values)
+		{
+			Json.Add(MakeShared<FJsonValueString>(Value));
+		}
+		return Json;
+	}
+
+	/** Stack-input value modes FUeremcpNiagaraStackInputs::TryBuildStackInputValue accepts. */
+	static TArray<FString> SupportedInputModes()
+	{
+		return {
+			TEXT("local"),
+			TEXT("linked"),
+			TEXT("hlsl_expression"),
+			TEXT("data_interface"),
+			TEXT("dynamic_input"),
+			TEXT("enum"),
+		};
+	}
+
+	static const TArray<FString>& CatalogCapabilityNotes()
+	{
+		static const TArray<FString> Notes = {
+			TEXT("niagara_catalog.primitive_ids_are_authoritative_for_create_and_submit"),
+			TEXT("niagara_catalog.this_is_ueremcp_vocabulary_not_a_niagara_module_library_browse"),
+			TEXT("niagara_catalog.for_module_input_names_use_epic_GetModuleSchemaFromAsset"),
+			TEXT("niagara_catalog.for_full_module_library_use_epic_FindNiagaraScripts"),
+			TEXT("niagara_catalog.asset_path_accepted_for_modules_outside_this_table"),
+			TEXT("niagara_catalog.custom_hlsl_and_script_graph_authorship_unsupported"),
+		};
+		return Notes;
+	}
+}
+
+FString UUeremcpNiagaraToolset::DescribeNiagaraCatalog(const FString& RequestJson)
+{
+	using namespace UeremcpNiagaraCatalog;
+
+	FUeremcpRequest Request;
+	FString ParseError;
+	if (!FUeremcpEnvelope::ParseRequest(RequestJson, Request, ParseError))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			FString(),
+			FString::Printf(TEXT("Malformed request envelope: %s"), *ParseError));
+	}
+	if (!FUeremcpEnvelope::IsProtocolCompatible(Request.ProtocolVersion))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("Unsupported protocol_version '%s'; this server speaks %s."),
+				*Request.ProtocolVersion,
+				*FUeremcpEnvelope::ProtocolVersion()));
+	}
+	if (!Request.Action.Equals(TEXT("describe_niagara_catalog"), ESearchCase::CaseSensitive))
+	{
+		return FUeremcpEnvelope::MakeRejection(
+			Request.RequestId,
+			FString::Printf(
+				TEXT("DescribeNiagaraCatalog received action '%s'; expected 'describe_niagara_catalog'."),
+				*Request.Action));
+	}
+
+	FString Search;
+	bool bVerifyAssets = true;
+	if (Request.Specification.IsValid())
+	{
+		Request.Specification->TryGetStringField(TEXT("search"), Search);
+		Request.Specification->TryGetBoolField(TEXT("verify_assets"), bVerifyAssets);
+	}
+
+	const TArray<FModuleEntry> Entries = BuildModuleEntries(Search);
+
+	int32 Resolved = 0;
+	int32 Unresolved = 0;
+	TArray<TSharedPtr<FJsonValue>> ModuleJson;
+	for (const FModuleEntry& Entry : Entries)
+	{
+		TSharedPtr<FJsonObject> Module = MakeShared<FJsonObject>();
+		Module->SetStringField(TEXT("asset_path"), Entry.AssetPath);
+		Module->SetArrayField(TEXT("primitive_ids"), ToStringArray(Entry.PrimitiveIds));
+		Module->SetStringField(
+			TEXT("default_script_usage"),
+			UeremcpNiagaraModuleResolve::DefaultScriptUsageForModule(Entry.AssetPath));
+
+		if (bVerifyAssets)
+		{
+			// Loading proves the table row is not stale, and catches a module that
+			// moved between engine versions before the agent authors against it.
+			FString LoadError;
+			const bool bLoaded =
+				UeremcpNiagaraModuleResolve::LoadModuleScript(Entry.AssetPath, LoadError) != nullptr;
+			Module->SetBoolField(TEXT("resolves"), bLoaded);
+			if (!bLoaded)
+			{
+				Module->SetStringField(TEXT("resolve_error"), LoadError);
+				++Unresolved;
+			}
+			else
+			{
+				++Resolved;
+			}
+		}
+
+		ModuleJson.Add(MakeShared<FJsonValueObject>(Module));
+	}
+
+	FUeremcpResponse Response;
+	Response.RequestId = Request.RequestId;
+	Response.Status = TEXT("no_change_required");
+	Response.Summary = bVerifyAssets
+		? FString::Printf(
+			TEXT("UEREMCP Niagara authoring vocabulary: %d module alias(es) (%d resolved, %d unresolved), %d renderer hint(s), %d script usage(s). ")
+			TEXT("For a module's input names call Epic GetModuleSchemaFromAsset; for the full module library, Epic FindNiagaraScripts."),
+			Entries.Num(),
+			Resolved,
+			Unresolved,
+			UeremcpNiagaraModuleResolve::SupportedRendererHints().Num(),
+			UeremcpNiagaraModuleResolve::SupportedScriptUsages().Num())
+		: FString::Printf(
+			TEXT("UEREMCP Niagara authoring vocabulary: %d module alias(es) (assets not verified), %d renderer hint(s), %d script usage(s). ")
+			TEXT("For a module's input names call Epic GetModuleSchemaFromAsset; for the full module library, Epic FindNiagaraScripts."),
+			Entries.Num(),
+			UeremcpNiagaraModuleResolve::SupportedRendererHints().Num(),
+			UeremcpNiagaraModuleResolve::SupportedScriptUsages().Num());
+	Response.UnderstoodAction = Request.Action;
+	Response.CapabilityNotes = CatalogCapabilityNotes();
+	Response.Metrics.McpRoundTrips = 1;
+	Response.Metrics.InternalOperations = bVerifyAssets ? Entries.Num() : 0;
+
+	TSharedPtr<FJsonObject> Catalog = MakeShared<FJsonObject>();
+	Catalog->SetArrayField(TEXT("modules"), ModuleJson);
+	Catalog->SetArrayField(
+		TEXT("renderer_hints"),
+		ToStringArray(UeremcpNiagaraModuleResolve::SupportedRendererHints()));
+	Catalog->SetArrayField(
+		TEXT("script_usages"),
+		ToStringArray(UeremcpNiagaraModuleResolve::SupportedScriptUsages()));
+	Catalog->SetArrayField(TEXT("input_modes"), ToStringArray(SupportedInputModes()));
+	Catalog->SetStringField(
+		TEXT("emitter_substrate"),
+		UeremcpNiagaraModuleResolve::MinimalEmitterTemplatePath());
+	Catalog->SetBoolField(TEXT("assets_verified"), bVerifyAssets);
+
+	Response.ExtraFields = MakeShared<FJsonObject>();
+	TSharedPtr<FJsonObject> Diagnostics = MakeShared<FJsonObject>();
+	Diagnostics->SetObjectField(TEXT("niagara_catalog"), Catalog);
+	Response.ExtraFields->SetObjectField(TEXT("diagnostics"), Diagnostics);
+
+	TSharedPtr<FJsonObject> Validation = MakeShared<FJsonObject>();
+	Validation->SetBoolField(TEXT("structurally_valid"), true);
+	TArray<TSharedPtr<FJsonValue>> Checks;
+	Checks.Add(MakeShared<FJsonValueString>(TEXT("niagara.catalog.alias_table_enumerated")));
+	if (bVerifyAssets)
+	{
+		Checks.Add(MakeShared<FJsonValueString>(TEXT("niagara.catalog.module_scripts_loaded")));
+	}
+	Validation->SetArrayField(TEXT("checks_performed"), Checks);
+	TArray<TSharedPtr<FJsonValue>> Skipped;
+	Skipped.Add(MakeShared<FJsonValueString>(TEXT("niagara.catalog.module_input_enumeration")));
+	Validation->SetArrayField(TEXT("checks_skipped"), Skipped);
+	Response.ExtraFields->SetObjectField(TEXT("validation"), Validation);
+
+	return FUeremcpEnvelope::SerializeResponse(Response);
 }
